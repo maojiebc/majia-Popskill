@@ -26,7 +26,7 @@ Useful envelope fields:
 
 ## Current MVP Strategy
 
-The first Insights implementation only computes aggregate usage:
+The Insights MVP computes aggregate usage without storing or displaying message text:
 
 - transcript files scanned
 - sessions observed
@@ -36,8 +36,10 @@ The first Insights implementation only computes aggregate usage:
 - cache creation tokens
 - cache read tokens
 - total tokens
+- model-level usage totals
+- recent session activity sorted by latest `timestamp`
 
-It intentionally does not store or display message text.
+Recent session labels prefer the transcript `cwd` field so names like `projects/skill-creator` preserve meaningful hyphens. If `cwd` is absent, Popskill falls back to a compact suffix derived from the encoded Claude project folder name.
 
 ## Attribution Status
 
