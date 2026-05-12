@@ -4,7 +4,7 @@
 > 一款看齐 Mac App Store 的 Claude Code Agent Skills 桌面客户端。
 
 <p align="center">
-  <strong>Status: Pre-alpha — sidecar + SwiftUI Library MVP compiling locally.</strong>
+  <strong>Status: Pre-alpha — sidecar, Library, Updates, and aggregate Insights MVP compile locally.</strong>
 </p>
 
 ---
@@ -21,7 +21,7 @@ Popskill aims to be the App Store experience that Claude Code skills deserve on 
 
 **Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
 
-**Current stage**: design + planning complete; Day 1 scaffolding started. `skill-cli list --json` is wired to CC Switch and the SwiftUI Library shell compiles locally. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
+**Current stage**: design + planning complete; MVP scaffolding started. `skill-cli` is wired to CC Switch for list/detail/toggle/update flows, SwiftUI Library + Updates + aggregate Insights compile locally, and `scripts/dev-build.sh` verifies Rust + Swift + tests. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
 
 ---
 
@@ -45,7 +45,7 @@ Popskill 就是来填这个坑的。
 **Popskill 的差异点**：
 
 1. **Mac App Store 级别的视觉**——SwiftUI 原生，配 Surge for Mac 设计语言
-2. **使用统计 / Insights 页**（全网独家）——告诉你装的 47 个 skill 里哪些值得保留
+2. **使用统计 / Insights 页**（全网独家）——告诉你装的几十个 skill 里哪些值得保留
 3. **行内多 app toggle**——Library 列表行内直接切 Claude/Codex/Gemini
 4. **Stub 状态**——60 天没用的 skill 本地清掉内容、留 metadata 卡片，要用一键再装
 5. **WebDAV 跨设备同步**——白嫖 CC Switch 已有能力，不重做
@@ -70,9 +70,26 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 | A. Sidecar 剥离可行性 | ✅ 静态分析通过（lib.rs:52-56 已 pub use SkillService） |
 | C. 产品形态 V1 | ✅ 5 个页面 wireframe + 状态机 + 16 条决策 |
 | D-prep. 视觉设计语言 | ✅ Surge.app 拆解 + 22 个 design token |
-| **D. 脚手架 init + Day 1** | 🚧 **已启动：sidecar + SwiftUI Library MVP 可编译** |
+| **D. 脚手架 init + Day 1** | 🚧 **已启动：sidecar + SwiftUI Library/Updates/Insights MVP 可编译** |
 
-**这个仓库目前是 pre-alpha**：已有最小 Rust sidecar 和 SwiftUI Library 壳，安装/发现/统计/打包还没完成。
+**这个仓库目前是 pre-alpha**：已有最小 Rust sidecar、SwiftUI Library/Updates/Insights 壳和 transcript scanner 单测，发现页、安装流程、Stub/WebDAV 和打包还没完成。
+
+### 已落地的 MVP 能力
+
+```bash
+./skill-cli/target/debug/skill-cli list --json
+./skill-cli/target/debug/skill-cli detail <skill-id> --json
+./skill-cli/target/debug/skill-cli toggle <skill-id> --app codex --enabled true
+./skill-cli/target/debug/skill-cli scan-unmanaged --json
+./skill-cli/target/debug/skill-cli check-updates --json
+./skill-cli/target/debug/skill-cli update <skill-id> --json
+```
+
+SwiftUI 端已接入：
+
+- Library：本机 skill 列表、All/Active/Inactive 过滤、Claude/Codex/Gemini 行内 toggle、右侧详情 pane
+- Updates：按需检查更新、逐条更新
+- Insights：本地扫描 `~/.claude/projects/**/*.jsonl`，聚合 token/session/file 指标
 
 ### 文档导航
 
@@ -85,6 +102,8 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
   - 附录 A：新电脑接手 6 步 checklist
 
 - **[STYLE.md](./STYLE.md)**（~840 行）—— 视觉设计语言，含立即可用的 SwiftUI design token 代码。
+- **[docs/ipc.md](./docs/ipc.md)** —— SwiftUI ↔ `skill-cli` JSON 合约。
+- **[docs/transcript-parsing.md](./docs/transcript-parsing.md)** —— Claude transcript 字段观察和 Insights MVP 策略。
 
 ### 在新机器上接手
 
