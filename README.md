@@ -4,7 +4,7 @@
 > 一款看齐 Mac App Store 的 Claude Code Agent Skills 桌面客户端。
 
 <p align="center">
-  <strong>Status: 📋 Planning / Pre-alpha — no code yet, only docs.</strong>
+  <strong>Status: Pre-alpha — sidecar + SwiftUI Library MVP compiling locally.</strong>
 </p>
 
 ---
@@ -21,7 +21,7 @@ Popskill aims to be the App Store experience that Claude Code skills deserve on 
 
 **Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
 
-**Current stage**: design + planning complete; Day 1 scaffolding pending. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
+**Current stage**: design + planning complete; Day 1 scaffolding started. `skill-cli list --json` is wired to CC Switch and the SwiftUI Library shell compiles locally. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
 
 ---
 
@@ -70,9 +70,9 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 | A. Sidecar 剥离可行性 | ✅ 静态分析通过（lib.rs:52-56 已 pub use SkillService） |
 | C. 产品形态 V1 | ✅ 5 个页面 wireframe + 状态机 + 16 条决策 |
 | D-prep. 视觉设计语言 | ✅ Surge.app 拆解 + 22 个 design token |
-| **D. 脚手架 init + Day 1** | ⏳ **等待启动** |
+| **D. 脚手架 init + Day 1** | 🚧 **已启动：sidecar + SwiftUI Library MVP 可编译** |
 
-**这个仓库目前只有规划和设计文档**，还没写一行代码。
+**这个仓库目前是 pre-alpha**：已有最小 Rust sidecar 和 SwiftUI Library 壳，安装/发现/统计/打包还没完成。
 
 ### 文档导航
 
@@ -94,10 +94,11 @@ xcode-select --install
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # 拉项目
-gh repo clone maojiebc/majia-Popskill ~/projects/popskill
+gh repo clone maojiebc/majia-Popskill ~/projects/popskill -- --recurse-submodules
 cd ~/projects/popskill
 
-# 跟着 PLAN.md §9 干 Day 1
+# 一键开发构建
+./scripts/dev-build.sh
 ```
 
 详见 [PLAN.md 附录 A](./PLAN.md#附录-a新电脑接手-checklist)。

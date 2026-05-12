@@ -2,14 +2,14 @@
 
 > 这是一份**自包含的项目规划文档**。可以原样拷到任何一台电脑，扔给 AI 工程师就能从零接手。
 >
-> 最后更新：2026-05-12
+> 最后更新：2026-05-13
 > 作者：majia + Claude（讨论沉淀）
 > 当前阶段：
 > - ✅ B 阶段：CC Switch 源码刨完（services 层 0 个 Tauri 依赖，可干净剥离）
 > - ✅ A 阶段：Sidecar 剥离可行性静态验证（lib.rs 已 pub use SkillService）
 > - ✅ C 阶段：产品形态 V1（5 页 wireframe + 状态机 + 决策表）
 > - ✅ D-prep 阶段：视觉设计语言（STYLE.md）+ Surge.app teardown 验证
-> - ⏳ Day 1 启动：等待在另一台设备上执行 §9
+> - 🚧 Day 1 启动：Rust sidecar + SwiftUI Library MVP 已开始落盘
 
 ---
 
@@ -1260,14 +1260,17 @@ open swift-app/Popskill.xcodeproj
 # 完事
 ```
 
-## 附录 B：Day 0 现状
+## 附录 B：Day 0/1 现状
 
-截至文档创建时，**还没有任何代码落盘**。已完成的事：
+截至 2026-05-13，Day 1 已经启动。已完成的事：
 
 - ✅ 调研 GitHub 生态（10+ 项目）
 - ✅ 刨 CC Switch 源码（B 阶段）
 - ✅ 静态验证剥离可行性（A 阶段）
 - ✅ 产品形态设计 V1（C 阶段）
-- ✅ 项目目录 `~/projects/popskill/` 已创建（空目录 + 这份 PLAN.md）
+- ✅ `cc-switch` 作为 git submodule 固定到 v3.14.1
+- ✅ `skill-cli` 最小 sidecar 已落盘，`list --json` 可读本机 61 个 skill
+- ✅ SwiftUI Library shell 已落盘并可通过 `swift build` 编译
+- ✅ `scripts/dev-build.sh` 可一键构建 Rust + Swift 并验证 `list`
 
-下一个动作：**§9 Day 1 开始 init**。
+下一个动作：继续 Day 2/Day 4 的纵切，把更多 sidecar 命令和 Library 交互补齐。

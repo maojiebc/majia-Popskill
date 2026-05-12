@@ -25,6 +25,7 @@ xcuserdata/
 
 # Swift Package Manager
 .swiftpm/
+.build/
 Package.resolved
 
 # Rust

@@ -1,0 +1,85 @@
+import Foundation
+
+enum TargetApp: String, CaseIterable, Identifiable, Codable {
+    case claude
+    case codex
+    case gemini
+    case opencode
+    case hermes
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .claude: "Claude"
+        case .codex: "Codex"
+        case .gemini: "Gemini"
+        case .opencode: "OpenCode"
+        case .hermes: "Hermes"
+        }
+    }
+}
+
+struct Skill: Identifiable, Codable, Equatable {
+    let id: String
+    let name: String
+    let description: String
+    let directory: String
+    let repoOwner: String?
+    let repoName: String?
+    let readmeUrl: String?
+    var apps: SkillApps
+    let installedAt: Int?
+    let updatedAt: Int?
+    let contentHash: String?
+
+    var sourceLabel: String {
+        if let repoOwner, let repoName {
+            return "\(repoOwner)/\(repoName)"
+        }
+        return directory
+    }
+
+    var enabledAppCount: Int {
+        TargetApp.allCases.filter { apps.isEnabled($0) }.count
+    }
+}
+
+struct SkillApps: Codable, Equatable {
+    var claude: Bool
+    var codex: Bool
+    var gemini: Bool
+    var opencode: Bool
+    var hermes: Bool
+
+    func isEnabled(_ app: TargetApp) -> Bool {
+        switch app {
+        case .claude: claude
+        case .codex: codex
+        case .gemini: gemini
+        case .opencode: opencode
+        case .hermes: hermes
+        }
+    }
+
+    mutating func setEnabled(_ enabled: Bool, for app: TargetApp) {
+        switch app {
+        case .claude: claude = enabled
+        case .codex: codex = enabled
+        case .gemini: gemini = enabled
+        case .opencode: opencode = enabled
+        case .hermes: hermes = enabled
+        }
+    }
+}
+
+struct CLIResponse<T: Decodable>: Decodable {
+    let ok: Bool
+    let data: T?
+    let error: CLIErrorPayload?
+}
+
+struct CLIErrorPayload: Decodable, Error {
+    let code: String
+    let message: String
+}
