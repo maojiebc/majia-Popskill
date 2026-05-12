@@ -107,6 +107,8 @@ struct RootView: View {
                 InsightsView(viewModel: insights)
             case .tokenSpend:
                 TokenSpendView(viewModel: insights)
+            case .idleCandidates:
+                IdleCandidatesView(viewModel: library)
             default:
                 PlaceholderView(selection: selection ?? .installed)
             }
