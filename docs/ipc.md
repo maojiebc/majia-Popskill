@@ -101,3 +101,26 @@ Returns local skills found in app skill directories that are not currently manag
   ]
 }
 ```
+
+### `skill-cli detail <skill-id> --json`
+
+Returns one installed skill by id. The shape matches one item from `list`.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "owner/repo:directory",
+    "name": "skill-name",
+    "description": "Skill description",
+    "directory": "skill-name",
+    "apps": {
+      "claude": false,
+      "codex": true,
+      "gemini": false,
+      "opencode": false,
+      "hermes": false
+    }
+  }
+}
+```

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LibraryView: View {
     @Bindable var viewModel: LibraryViewModel
+    @State private var selectedSkillID: Skill.ID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -16,32 +17,52 @@ struct LibraryView: View {
                 Divider()
             }
 
-            List(viewModel.filteredSkills) { skill in
-                SkillRow(
-                    skill: skill,
-                    isToggling: { app in
-                        viewModel.isToggling(skillID: skill.id, app: app)
+            HStack(spacing: 0) {
+                List(viewModel.filteredSkills, selection: $selectedSkillID) { skill in
+                    SkillRow(
+                        skill: skill,
+                        isToggling: { app in
+                            viewModel.isToggling(skillID: skill.id, app: app)
+                        }
+                    ) { app, enabled in
+                        Task {
+                            await viewModel.setEnabled(enabled, for: skill, app: app)
+                        }
                     }
-                ) { app, enabled in
-                    Task {
-                        await viewModel.setEnabled(enabled, for: skill, app: app)
+                    .tag(skill.id)
+                    .listRowSeparator(.visible)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                }
+                .listStyle(.plain)
+                .overlay {
+                    if viewModel.isLoading && viewModel.skills.isEmpty {
+                        ProgressView()
+                            .controlSize(.large)
+                    } else if viewModel.filteredSkills.isEmpty {
+                        ContentUnavailableView("No Skills", systemImage: "shippingbox")
                     }
                 }
-                .listRowSeparator(.visible)
-                .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+
+                Divider()
+
+                SkillDetailPane(skill: selectedSkill)
+                    .frame(width: 320)
             }
-            .listStyle(.plain)
-            .overlay {
-                if viewModel.isLoading && viewModel.skills.isEmpty {
-                    ProgressView()
-                        .controlSize(.large)
-                } else if viewModel.filteredSkills.isEmpty {
-                    ContentUnavailableView("No Skills", systemImage: "shippingbox")
+            .onChange(of: viewModel.skills) { _, skills in
+                if selectedSkillID == nil {
+                    selectedSkillID = skills.first?.id
                 }
             }
         }
         .background(Color.popMainBackground)
         .searchable(text: $viewModel.searchText, placement: .toolbar, prompt: "Search Library")
+    }
+
+    private var selectedSkill: Skill? {
+        guard let selectedSkillID else {
+            return viewModel.filteredSkills.first
+        }
+        return viewModel.skills.first { $0.id == selectedSkillID }
     }
 
     private var header: some View {
@@ -88,6 +109,103 @@ struct LibraryView: View {
         .padding(.horizontal, 28)
         .padding(.vertical, 18)
         .background(Color.popMainBackground)
+    }
+}
+
+struct SkillDetailPane: View {
+    let skill: Skill?
+
+    var body: some View {
+        Group {
+            if let skill {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        HStack(spacing: 12) {
+                            InitialAvatarView(name: skill.name, identifier: skill.id)
+                                .frame(width: 52, height: 52)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(skill.name)
+                                    .font(.title2.weight(.bold))
+                                    .lineLimit(2)
+                                Text(skill.sourceLabel)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+
+                        Text(skill.description)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        DetailSection(title: "Enabled In") {
+                            ForEach([TargetApp.claude, .codex, .gemini, .opencode, .hermes], id: \.id) { app in
+                                HStack {
+                                    Image(systemName: skill.apps.isEnabled(app) ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(skill.apps.isEnabled(app) ? Color.accentColor : Color.popStatusNeutral)
+                                    Text(app.title)
+                                    Spacer()
+                                }
+                            }
+                        }
+
+                        DetailSection(title: "Metadata") {
+                            DetailField(title: "Directory", value: skill.directory)
+                            DetailField(title: "Identifier", value: skill.id)
+                            if let contentHash = skill.contentHash, !contentHash.isEmpty {
+                                DetailField(title: "Hash", value: String(contentHash.prefix(12)))
+                            }
+                        }
+
+                        if let readmeUrl = skill.readmeUrl, let url = URL(string: readmeUrl) {
+                            Link(destination: url) {
+                                Label("Open Source", systemImage: "arrow.up.right.square")
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                    .padding(22)
+                }
+            } else {
+                ContentUnavailableView("No Selection", systemImage: "sidebar.right")
+            }
+        }
+        .background(Color.popHeaderBackground.opacity(0.45))
+    }
+}
+
+struct DetailSection<Content: View>: View {
+    let title: String
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title.uppercased())
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.popSecondaryLabel)
+            VStack(alignment: .leading, spacing: 8) {
+                content
+            }
+        }
+    }
+}
+
+struct DetailField: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.caption)
+                .textSelection(.enabled)
+                .lineLimit(3)
+        }
     }
 }
 

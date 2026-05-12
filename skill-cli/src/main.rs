@@ -32,6 +32,13 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Return one installed skill by id.
+    Detail {
+        skill_id: String,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// Enable or disable a skill for one target app.
     Toggle {
         skill_id: String,
@@ -73,6 +80,13 @@ async fn run() -> Result<()> {
             let skills =
                 SkillService::scan_unmanaged(&db).context("failed to scan unmanaged skills")?;
             print_json(&ApiResponse::ok(skills))
+        }
+        Commands::Detail { skill_id, json: _ } => {
+            let skill = db
+                .get_installed_skill(&skill_id)
+                .context("failed to read installed skill")?
+                .with_context(|| format!("skill not found: {skill_id}"))?;
+            print_json(&ApiResponse::ok(skill))
         }
         Commands::Toggle {
             skill_id,

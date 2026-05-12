@@ -25,6 +25,15 @@ actor SkillCLIClient {
         throw response.error ?? CLIClientError.invalidResponse
     }
 
+    func detail(skillID: String) async throws -> Skill {
+        let data = try run(arguments: ["detail", skillID, "--json"])
+        let response = try Self.makeDecoder().decode(CLIResponse<Skill>.self, from: data)
+        if let skill = response.data, response.ok {
+            return skill
+        }
+        throw response.error ?? CLIClientError.invalidResponse
+    }
+
     func toggle(skillID: String, app: TargetApp, enabled: Bool) async throws {
         _ = try run(arguments: [
             "toggle",
