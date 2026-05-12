@@ -4,7 +4,12 @@
 >
 > 最后更新：2026-05-12
 > 作者：majia + Claude（讨论沉淀）
-> 当前阶段：B（CC Switch 源码刨完）+ A（剥离可行性静态验证完）+ C（产品形态 V1）已结束，待进入 D（脚手架 init）
+> 当前阶段：
+> - ✅ B 阶段：CC Switch 源码刨完（services 层 0 个 Tauri 依赖，可干净剥离）
+> - ✅ A 阶段：Sidecar 剥离可行性静态验证（lib.rs 已 pub use SkillService）
+> - ✅ C 阶段：产品形态 V1（5 页 wireframe + 状态机 + 决策表）
+> - ✅ D-prep 阶段：视觉设计语言（STYLE.md）+ Surge.app teardown 验证
+> - ⏳ Day 1 启动：等待在另一台设备上执行 §9
 
 ---
 
