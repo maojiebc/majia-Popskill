@@ -4,7 +4,7 @@
 > 一款看齐 Mac App Store 的 Claude Code Agent Skills 桌面客户端。
 
 <p align="center">
-  <strong>Status: Pre-alpha — sidecar, Library, Updates, and aggregate Insights MVP compile locally.</strong>
+  <strong>Status: Pre-alpha — sidecar + native Library / Discover / Updates / Backups / Insights MVP compile locally.</strong>
 </p>
 
 ---
@@ -21,7 +21,7 @@ Popskill aims to be the App Store experience that Claude Code skills deserve on 
 
 **Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
 
-**Current stage**: design + planning complete; MVP scaffolding started. `skill-cli` is wired to CC Switch for list/detail/toggle/update flows, SwiftUI Library + Updates + aggregate Insights compile locally, and `scripts/dev-build.sh` verifies Rust + Swift + tests. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
+**Current stage**: design + planning complete; MVP scaffolding is underway. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install/update/uninstall/import/backup flows, SwiftUI Library + Discover + Updates + Backups + Insights compile locally, and `scripts/dev-build.sh` verifies Rust + read-only sidecar smoke + Swift tests. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
 
 ---
 
@@ -70,9 +70,9 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 | A. Sidecar 剥离可行性 | ✅ 静态分析通过（lib.rs:52-56 已 pub use SkillService） |
 | C. 产品形态 V1 | ✅ 5 个页面 wireframe + 状态机 + 16 条决策 |
 | D-prep. 视觉设计语言 | ✅ Surge.app 拆解 + 22 个 design token |
-| **D. 脚手架 init + Day 1** | 🚧 **已启动：sidecar + SwiftUI Library/Updates/Insights MVP 可编译** |
+| **D. 脚手架 init + Day 1** | 🚧 **已启动：sidecar + SwiftUI Library/Discover/Updates/Backups/Insights MVP 可编译** |
 
-**这个仓库目前是 pre-alpha**：已有最小 Rust sidecar、SwiftUI Library/Updates/Insights 壳和 transcript scanner 单测，发现页、安装流程、Stub/WebDAV 和打包还没完成。
+**这个仓库目前是 pre-alpha**：已有 Rust sidecar、SwiftUI Library/Discover/Updates/Backups/Insights 页面、transcript scanner 单测和本地开发脚本。Stub/WebDAV、正式打包签名和 App Store 分发还没完成。
 
 ### 已落地的 MVP 能力
 
@@ -81,15 +81,25 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 ./skill-cli/target/debug/skill-cli detail <skill-id> --json
 ./skill-cli/target/debug/skill-cli toggle <skill-id> --app codex --enabled true
 ./skill-cli/target/debug/skill-cli scan-unmanaged --json
+./skill-cli/target/debug/skill-cli discover --query pdf --limit 20 --json
+./skill-cli/target/debug/skill-cli install <skill-key> --app codex --json
 ./skill-cli/target/debug/skill-cli check-updates --json
 ./skill-cli/target/debug/skill-cli update <skill-id> --json
+./skill-cli/target/debug/skill-cli uninstall <skill-id> --json
+./skill-cli/target/debug/skill-cli backup-list --json
+./skill-cli/target/debug/skill-cli backup-restore <backup-id> --app codex --json
+./skill-cli/target/debug/skill-cli backup-delete <backup-id> --json
+./skill-cli/target/debug/skill-cli import-unmanaged <directory> --app codex --json
 ```
 
 SwiftUI 端已接入：
 
-- Library：本机 skill 列表、All/Active/Inactive 过滤、Claude/Codex/Gemini 行内 toggle、右侧详情 pane
+- Library：本机 skill 列表、All/Active/Inactive 过滤、Claude/Codex/Gemini 行内 toggle、右侧详情 pane、unmanaged import banner
+- Discover：搜索 CC Switch 启用的 skill repositories，按 Claude/Codex/Gemini 安装
 - Updates：按需检查更新、逐条更新
-- Insights：本地扫描 `~/.claude/projects/**/*.jsonl`，聚合 token/session/file 指标
+- Backups：查看、恢复、删除 CC Switch uninstall backups
+- Insights：本地扫描 `~/.claude/projects/**/*.jsonl`，聚合 token/session/file/model 指标，含 Recently Used、Token Spend、Idle Candidates
+- Settings：sidecar 路径、`POPSKILL_CLI` override、CC Switch skill store 与 Keychain 策略诊断
 
 ### 文档导航
 
