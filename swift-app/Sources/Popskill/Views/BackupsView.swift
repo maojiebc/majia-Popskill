@@ -53,28 +53,33 @@ final class BackupsViewModel {
         restoringIDs.remove(backup.backupId)
     }
 
-    func delete(_ backup: SkillBackup) async {
+    @discardableResult
+    func delete(_ backup: SkillBackup) async -> Bool {
         guard !deletingIDs.contains(backup.backupId) else {
-            return
+            return false
         }
 
         deletingIDs.insert(backup.backupId)
         errorMessage = nil
+        var didDelete = false
 
         do {
             _ = try await client.deleteBackup(backupID: backup.backupId)
             backups.removeAll { $0.backupId == backup.backupId }
+            didDelete = true
         } catch {
             errorMessage = error.localizedDescription
         }
 
         deletingIDs.remove(backup.backupId)
+        return didDelete
     }
 }
 
 struct BackupsView: View {
     @Bindable var viewModel: BackupsViewModel
     let onRestored: () async -> Void
+    let onBackupsChanged: () async -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -98,7 +103,11 @@ struct BackupsView: View {
                 ) {
                     Task { await viewModel.restore(backup, onRestored: onRestored) }
                 } onDelete: {
-                    Task { await viewModel.delete(backup) }
+                    Task {
+                        if await viewModel.delete(backup) {
+                            await onBackupsChanged()
+                        }
+                    }
                 }
                 .listRowSeparator(.visible)
                 .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))

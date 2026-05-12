@@ -97,6 +97,8 @@ struct RootView: View {
                 BackupsView(viewModel: backups) {
                     await library.load()
                     await settings.load()
+                } onBackupsChanged: {
+                    await settings.load()
                 }
             case .recentlyUsed:
                 RecentActivityView(viewModel: insights)
