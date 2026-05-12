@@ -101,6 +101,8 @@ struct RootView: View {
                 BackupsView(viewModel: backups) {
                     await library.load()
                 }
+            case .recentlyUsed:
+                RecentActivityView(viewModel: insights)
             case .usage:
                 InsightsView(viewModel: insights)
             default:

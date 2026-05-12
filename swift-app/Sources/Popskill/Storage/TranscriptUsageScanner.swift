@@ -12,8 +12,8 @@ struct TranscriptUsageScanner {
 
     func scan() throws -> UsageSummary {
         var summary = UsageSummary()
-        var sessionIDs = Set<String>()
         var modelStats: [String: ModelUsageStat] = [:]
+        var sessionStats: [String: SessionUsageStat] = [:]
 
         guard let enumerator = FileManager.default.enumerator(
             at: projectsURL,
@@ -28,17 +28,32 @@ struct TranscriptUsageScanner {
             try scan(
                 fileURL: fileURL,
                 summary: &summary,
-                sessionIDs: &sessionIDs,
-                modelStats: &modelStats
+                modelStats: &modelStats,
+                sessionStats: &sessionStats
             )
         }
 
-        summary.sessions = sessionIDs.count
+        summary.sessions = sessionStats.count
         summary.modelStats = modelStats.values.sorted {
             if $0.totalTokens == $1.totalTokens {
                 return $0.model < $1.model
             }
             return $0.totalTokens > $1.totalTokens
+        }
+        summary.recentSessions = sessionStats.values.sorted {
+            switch ($0.lastActivityAt, $1.lastActivityAt) {
+            case let (left?, right?):
+                if left == right {
+                    return $0.sessionID < $1.sessionID
+                }
+                return left > right
+            case (.some, .none):
+                return true
+            case (.none, .some):
+                return false
+            case (.none, .none):
+                return $0.sessionID < $1.sessionID
+            }
         }
         return summary
     }
@@ -46,13 +61,15 @@ struct TranscriptUsageScanner {
     private func scan(
         fileURL: URL,
         summary: inout UsageSummary,
-        sessionIDs: inout Set<String>,
-        modelStats: inout [String: ModelUsageStat]
+        modelStats: inout [String: ModelUsageStat],
+        sessionStats: inout [String: SessionUsageStat]
     ) throws {
         let data = try Data(contentsOf: fileURL, options: [.mappedIfSafe])
         guard let content = String(data: data, encoding: .utf8) else {
             return
         }
+
+        let projectName = fileURL.deletingLastPathComponent().lastPathComponent
 
         for line in content.split(separator: "\n", omittingEmptySubsequences: true) {
             guard let lineData = String(line).data(using: .utf8),
@@ -61,8 +78,22 @@ struct TranscriptUsageScanner {
                 continue
             }
 
-            if let sessionID = object["sessionId"] as? String {
-                sessionIDs.insert(sessionID)
+            let sessionID = object["sessionId"] as? String
+            let timestamp = dateValue(object["timestamp"])
+            if let sessionID {
+                var session = sessionStats[sessionID] ?? SessionUsageStat(
+                    sessionID: sessionID,
+                    projectName: projectName,
+                    startedAt: nil,
+                    lastActivityAt: nil,
+                    usageEvents: 0,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 0
+                )
+                session.observe(timestamp: timestamp)
+                sessionStats[sessionID] = session
             }
 
             guard let message = object["message"] as? [String: Any],
@@ -81,6 +112,28 @@ struct TranscriptUsageScanner {
             summary.outputTokens += outputTokens
             summary.cacheCreationTokens += cacheCreationTokens
             summary.cacheReadTokens += cacheReadTokens
+
+            if let sessionID {
+                var session = sessionStats[sessionID] ?? SessionUsageStat(
+                    sessionID: sessionID,
+                    projectName: projectName,
+                    startedAt: timestamp,
+                    lastActivityAt: timestamp,
+                    usageEvents: 0,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 0
+                )
+                session.observe(timestamp: timestamp)
+                session.addUsage(
+                    inputTokens: inputTokens,
+                    outputTokens: outputTokens,
+                    cacheCreationTokens: cacheCreationTokens,
+                    cacheReadTokens: cacheReadTokens
+                )
+                sessionStats[sessionID] = session
+            }
 
             let model = (message["model"] as? String) ?? "unknown"
             var stat = modelStats[model] ?? ModelUsageStat(
@@ -112,4 +165,27 @@ struct TranscriptUsageScanner {
         }
         return 0
     }
+
+    private func dateValue(_ value: Any?) -> Date? {
+        guard let timestamp = value as? String else {
+            return nil
+        }
+
+        if let date = Self.iso8601WithFractionalSeconds.date(from: timestamp) {
+            return date
+        }
+        return Self.iso8601.date(from: timestamp)
+    }
+
+    private static let iso8601WithFractionalSeconds: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private static let iso8601: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
 }
