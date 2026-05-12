@@ -83,6 +83,13 @@ struct UnmanagedSkill: Identifiable, Codable, Equatable {
     let path: String
 }
 
+struct SkillUpdateInfo: Identifiable, Codable, Equatable {
+    let id: String
+    let name: String
+    let currentHash: String?
+    let remoteHash: String
+}
+
 struct CLIResponse<T: Decodable>: Decodable {
     let ok: Bool
     let data: T?

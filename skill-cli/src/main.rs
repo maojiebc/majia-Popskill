@@ -39,6 +39,12 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Check remote content hashes for installed skills with GitHub sources.
+    CheckUpdates {
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// Enable or disable a skill for one target app.
     Toggle {
         skill_id: String,
@@ -87,6 +93,14 @@ async fn run() -> Result<()> {
                 .context("failed to read installed skill")?
                 .with_context(|| format!("skill not found: {skill_id}"))?;
             print_json(&ApiResponse::ok(skill))
+        }
+        Commands::CheckUpdates { json: _ } => {
+            let service = SkillService::new();
+            let updates = service
+                .check_updates(&db)
+                .await
+                .context("failed to check skill updates")?;
+            print_json(&ApiResponse::ok(updates))
         }
         Commands::Toggle {
             skill_id,

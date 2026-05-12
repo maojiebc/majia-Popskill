@@ -51,6 +51,7 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
 struct RootView: View {
     @State private var selection: SidebarSelection? = .installed
     @State private var library = LibraryViewModel()
+    @State private var updates = UpdatesViewModel()
 
     var body: some View {
         NavigationSplitView {
@@ -63,7 +64,7 @@ struct RootView: View {
 
                 Section("My Library") {
                     sidebarLink(.installed, badge: library.skills.count)
-                    sidebarLink(.updates)
+                    sidebarLink(.updates, badge: updates.updates.isEmpty ? nil : updates.updates.count)
                     sidebarLink(.recentlyUsed)
                     sidebarLink(.stubs)
                 }
@@ -83,6 +84,8 @@ struct RootView: View {
             switch selection ?? .installed {
             case .installed:
                 LibraryView(viewModel: library)
+            case .updates:
+                UpdatesView(viewModel: updates)
             default:
                 PlaceholderView(selection: selection ?? .installed)
             }

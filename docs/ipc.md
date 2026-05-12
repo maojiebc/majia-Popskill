@@ -124,3 +124,21 @@ Returns one installed skill by id. The shape matches one item from `list`.
   }
 }
 ```
+
+### `skill-cli check-updates --json`
+
+Checks GitHub-backed installed skills for remote content changes. This can take a while because CC Switch downloads source repository archives to compare content hashes.
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "owner/repo:directory",
+      "name": "skill-name",
+      "currentHash": "local-sha256",
+      "remoteHash": "remote-sha256"
+    }
+  ]
+}
+```
