@@ -148,13 +148,13 @@ struct UnmanagedSkillsBanner: View {
                     .font(.headline)
                 Spacer()
                 Picker("Import In", selection: $selectedImportApp) {
-                    ForEach([TargetApp.claude, .codex, .gemini], id: \.id) { app in
+                    ForEach(TargetApp.allCases, id: \.id) { app in
                         Text(app.title).tag(app)
                     }
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.menu)
                 .labelsHidden()
-                .frame(width: 220)
+                .frame(width: 150)
             }
 
             ForEach(viewModel.unmanagedSkills.prefix(3)) { skill in

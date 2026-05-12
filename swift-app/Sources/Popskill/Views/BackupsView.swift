@@ -142,12 +142,12 @@ struct BackupsView: View {
             Spacer()
 
             Picker("Restore In", selection: $viewModel.selectedRestoreApp) {
-                ForEach([TargetApp.claude, .codex, .gemini], id: \.id) { app in
+                ForEach(TargetApp.allCases, id: \.id) { app in
                     Text(app.title).tag(app)
                 }
             }
-            .pickerStyle(.segmented)
-            .frame(width: 240)
+            .pickerStyle(.menu)
+            .frame(width: 160)
 
             Button {
                 Task { await viewModel.load() }

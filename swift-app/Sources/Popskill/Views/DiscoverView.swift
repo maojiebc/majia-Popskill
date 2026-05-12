@@ -118,12 +118,12 @@ struct DiscoverView: View {
                 Spacer()
 
                 Picker("Install In", selection: $viewModel.selectedInstallApp) {
-                    ForEach([TargetApp.claude, .codex, .gemini], id: \.id) { app in
+                    ForEach(TargetApp.allCases, id: \.id) { app in
                         Text(app.title).tag(app)
                     }
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 240)
+                .pickerStyle(.menu)
+                .frame(width: 160)
             }
 
             HStack(spacing: 10) {
