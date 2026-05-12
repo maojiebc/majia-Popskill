@@ -14,6 +14,11 @@ let package = Package(
         .executableTarget(
             name: "Popskill",
             path: "Sources/Popskill"
+        ),
+        .testTarget(
+            name: "PopskillTests",
+            dependencies: ["Popskill"],
+            path: "Tests/PopskillTests"
         )
     ]
 )

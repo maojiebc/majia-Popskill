@@ -15,4 +15,7 @@ echo "==> Verifying skill-cli list"
 echo "==> Building SwiftUI app"
 swift build --package-path "$ROOT_DIR/swift-app"
 
+echo "==> Running Swift tests"
+swift test --package-path "$ROOT_DIR/swift-app"
+
 echo "==> Done"
