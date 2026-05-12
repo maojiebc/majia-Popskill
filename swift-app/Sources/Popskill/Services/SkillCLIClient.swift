@@ -22,38 +22,22 @@ actor SkillCLIClient {
 
     func list() async throws -> [Skill] {
         let data = try run(arguments: ["list", "--json"])
-        let response = try Self.makeDecoder().decode(CLIResponse<[Skill]>.self, from: data)
-        if let skills = response.data, response.ok {
-            return skills
-        }
-        throw response.error ?? CLIClientError.invalidResponse
+        return try Self.decodeResponse([Skill].self, from: data)
     }
 
     func scanUnmanaged() async throws -> [UnmanagedSkill] {
         let data = try run(arguments: ["scan-unmanaged", "--json"])
-        let response = try Self.makeDecoder().decode(CLIResponse<[UnmanagedSkill]>.self, from: data)
-        if let skills = response.data, response.ok {
-            return skills
-        }
-        throw response.error ?? CLIClientError.invalidResponse
+        return try Self.decodeResponse([UnmanagedSkill].self, from: data)
     }
 
     func detail(skillID: String) async throws -> Skill {
         let data = try run(arguments: ["detail", skillID, "--json"])
-        let response = try Self.makeDecoder().decode(CLIResponse<Skill>.self, from: data)
-        if let skill = response.data, response.ok {
-            return skill
-        }
-        throw response.error ?? CLIClientError.invalidResponse
+        return try Self.decodeResponse(Skill.self, from: data)
     }
 
     func checkUpdates() async throws -> [SkillUpdateInfo] {
         let data = try run(arguments: ["check-updates", "--json"])
-        let response = try Self.makeDecoder().decode(CLIResponse<[SkillUpdateInfo]>.self, from: data)
-        if let updates = response.data, response.ok {
-            return updates
-        }
-        throw response.error ?? CLIClientError.invalidResponse
+        return try Self.decodeResponse([SkillUpdateInfo].self, from: data)
     }
 
     func discover(query: String?, limit: Int = 80) async throws -> [CatalogSkill] {
@@ -63,11 +47,7 @@ actor SkillCLIClient {
         }
 
         let data = try run(arguments: arguments)
-        let response = try Self.makeDecoder().decode(CLIResponse<[CatalogSkill]>.self, from: data)
-        if let skills = response.data, response.ok {
-            return skills
-        }
-        throw response.error ?? CLIClientError.invalidResponse
+        return try Self.decodeResponse([CatalogSkill].self, from: data)
     }
 
     func install(skillKey: String, app: TargetApp) async throws -> Skill {
@@ -78,38 +58,22 @@ actor SkillCLIClient {
             app.rawValue,
             "--json",
         ])
-        let response = try Self.makeDecoder().decode(CLIResponse<Skill>.self, from: data)
-        if let skill = response.data, response.ok {
-            return skill
-        }
-        throw response.error ?? CLIClientError.invalidResponse
+        return try Self.decodeResponse(Skill.self, from: data)
     }
 
     func update(skillID: String) async throws -> Skill {
         let data = try run(arguments: ["update", skillID, "--json"])
-        let response = try Self.makeDecoder().decode(CLIResponse<Skill>.self, from: data)
-        if let skill = response.data, response.ok {
-            return skill
-        }
-        throw response.error ?? CLIClientError.invalidResponse
+        return try Self.decodeResponse(Skill.self, from: data)
     }
 
     func uninstall(skillID: String) async throws -> SkillUninstallResult {
         let data = try run(arguments: ["uninstall", skillID, "--json"])
-        let response = try Self.makeDecoder().decode(CLIResponse<SkillUninstallResult>.self, from: data)
-        if let result = response.data, response.ok {
-            return result
-        }
-        throw response.error ?? CLIClientError.invalidResponse
+        return try Self.decodeResponse(SkillUninstallResult.self, from: data)
     }
 
     func listBackups() async throws -> [SkillBackup] {
         let data = try run(arguments: ["backup-list", "--json"])
-        let response = try Self.makeDecoder().decode(CLIResponse<[SkillBackup]>.self, from: data)
-        if let backups = response.data, response.ok {
-            return backups
-        }
-        throw response.error ?? CLIClientError.invalidResponse
+        return try Self.decodeResponse([SkillBackup].self, from: data)
     }
 
     func restoreBackup(backupID: String, app: TargetApp) async throws -> Skill {
@@ -120,20 +84,12 @@ actor SkillCLIClient {
             app.rawValue,
             "--json",
         ])
-        let response = try Self.makeDecoder().decode(CLIResponse<Skill>.self, from: data)
-        if let skill = response.data, response.ok {
-            return skill
-        }
-        throw response.error ?? CLIClientError.invalidResponse
+        return try Self.decodeResponse(Skill.self, from: data)
     }
 
     func deleteBackup(backupID: String) async throws -> SkillBackupDeleteResult {
         let data = try run(arguments: ["backup-delete", backupID, "--json"])
-        let response = try Self.makeDecoder().decode(CLIResponse<SkillBackupDeleteResult>.self, from: data)
-        if let result = response.data, response.ok {
-            return result
-        }
-        throw response.error ?? CLIClientError.invalidResponse
+        return try Self.decodeResponse(SkillBackupDeleteResult.self, from: data)
     }
 
     func importUnmanaged(directory: String, apps: [TargetApp]) async throws -> [Skill] {
@@ -143,11 +99,7 @@ actor SkillCLIClient {
         }
 
         let data = try run(arguments: arguments)
-        let response = try Self.makeDecoder().decode(CLIResponse<[Skill]>.self, from: data)
-        if let skills = response.data, response.ok {
-            return skills
-        }
-        throw response.error ?? CLIClientError.invalidResponse
+        return try Self.decodeResponse([Skill].self, from: data)
     }
 
     func toggle(skillID: String, app: TargetApp, enabled: Bool) async throws {
@@ -223,6 +175,14 @@ actor SkillCLIClient {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         return decoder
+    }
+
+    private static func decodeResponse<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+        let response = try makeDecoder().decode(CLIResponse<T>.self, from: data)
+        if let payload = response.data, response.ok {
+            return payload
+        }
+        throw response.error ?? CLIClientError.invalidResponse
     }
 
     private static func resolveExecutableURL() -> URL {
