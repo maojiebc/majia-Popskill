@@ -24,7 +24,7 @@ struct PlaceholderView: View {
         switch selection {
         case .featured, .categories, .topCharts:
             "Discover scaffolding is next"
-        case .updates, .recentlyUsed, .stubs:
+        case .updates, .backups, .recentlyUsed, .stubs:
             "Library filters are next"
         case .usage, .tokenSpend, .idleCandidates:
             "Transcript insights are next"

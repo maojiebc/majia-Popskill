@@ -6,6 +6,7 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
     case topCharts
     case installed
     case updates
+    case backups
     case recentlyUsed
     case stubs
     case usage
@@ -22,6 +23,7 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
         case .topCharts: "Top Charts"
         case .installed: "Installed"
         case .updates: "Updates"
+        case .backups: "Backups"
         case .recentlyUsed: "Recently Used"
         case .stubs: "Stubs"
         case .usage: "Usage"
@@ -38,6 +40,7 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
         case .topCharts: "chart.bar"
         case .installed: "shippingbox"
         case .updates: "arrow.down.circle"
+        case .backups: "clock.arrow.circlepath"
         case .recentlyUsed: "clock"
         case .stubs: "icloud"
         case .usage: "chart.xyaxis.line"
@@ -53,6 +56,7 @@ struct RootView: View {
     @State private var discover = DiscoverViewModel()
     @State private var library = LibraryViewModel()
     @State private var updates = UpdatesViewModel()
+    @State private var backups = BackupsViewModel()
     @State private var insights = InsightsViewModel()
 
     var body: some View {
@@ -67,6 +71,7 @@ struct RootView: View {
                 Section("My Library") {
                     sidebarLink(.installed, badge: library.skills.count)
                     sidebarLink(.updates, badge: updates.updates.isEmpty ? nil : updates.updates.count)
+                    sidebarLink(.backups, badge: backups.backups.isEmpty ? nil : backups.backups.count)
                     sidebarLink(.recentlyUsed)
                     sidebarLink(.stubs)
                 }
@@ -92,6 +97,10 @@ struct RootView: View {
                 LibraryView(viewModel: library)
             case .updates:
                 UpdatesView(viewModel: updates)
+            case .backups:
+                BackupsView(viewModel: backups) {
+                    await library.load()
+                }
             case .usage:
                 InsightsView(viewModel: insights)
             default:

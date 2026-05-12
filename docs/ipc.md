@@ -176,6 +176,56 @@ Uninstalls one managed skill through CC Switch. CC Switch removes app-folder cop
 }
 ```
 
+### `skill-cli backup-list --json`
+
+Returns uninstall backups created by CC Switch.
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "backupId": "20260512_162451_skill-name",
+      "backupPath": "/Users/example/.cc-switch/skill-backups/20260512_162451_skill-name",
+      "createdAt": 1778603091,
+      "skill": {
+        "id": "owner/repo:directory",
+        "name": "skill-name",
+        "directory": "directory"
+      }
+    }
+  ]
+}
+```
+
+### `skill-cli backup-restore <backup-id> --app <app> --json`
+
+Restores one uninstall backup into CC Switch's managed skill store and enables it for the requested app.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "owner/repo:directory",
+    "name": "skill-name",
+    "directory": "directory"
+  }
+}
+```
+
+### `skill-cli backup-delete <backup-id> --json`
+
+Deletes one uninstall backup directory through CC Switch.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "backupId": "20260512_162451_skill-name"
+  }
+}
+```
+
 ### `skill-cli import-unmanaged <directory> [--app <app>]... --json`
 
 Imports one unmanaged local skill directory into CC Switch. If no `--app` is provided, it enables Claude by default.

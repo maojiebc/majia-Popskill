@@ -70,6 +70,19 @@ struct SkillUninstallResult: Codable, Equatable {
     let backupPath: String?
 }
 
+struct SkillBackup: Identifiable, Codable, Equatable {
+    var id: String { backupId }
+
+    let backupId: String
+    let backupPath: String
+    let createdAt: Int
+    let skill: Skill
+}
+
+struct SkillBackupDeleteResult: Codable, Equatable {
+    let backupId: String
+}
+
 struct SkillApps: Codable, Equatable {
     var claude: Bool
     var codex: Bool

@@ -78,6 +78,28 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// List uninstall backups created by CC Switch.
+    BackupList {
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Restore one uninstall backup and enable it for one target app.
+    BackupRestore {
+        backup_id: String,
+        #[arg(long, default_value = "claude")]
+        app: String,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Delete one uninstall backup.
+    BackupDelete {
+        backup_id: String,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// Import an unmanaged local skill directory into CC Switch.
     ImportUnmanaged {
         directory: String,
@@ -229,6 +251,25 @@ async fn run() -> Result<()> {
             let result = SkillService::uninstall(&db, &skill_id)
                 .with_context(|| format!("failed to uninstall skill '{skill_id}'"))?;
             print_json(&ApiResponse::ok(result))
+        }
+        Commands::BackupList { json: _ } => {
+            let backups = SkillService::list_backups().context("failed to list skill backups")?;
+            print_json(&ApiResponse::ok(backups))
+        }
+        Commands::BackupRestore {
+            backup_id,
+            app,
+            json: _,
+        } => {
+            let app_type = parse_target_app(&app)?;
+            let skill = SkillService::restore_from_backup(&db, &backup_id, &app_type)
+                .with_context(|| format!("failed to restore skill backup '{backup_id}'"))?;
+            print_json(&ApiResponse::ok(skill))
+        }
+        Commands::BackupDelete { backup_id, json: _ } => {
+            SkillService::delete_backup(&backup_id)
+                .with_context(|| format!("failed to delete skill backup '{backup_id}'"))?;
+            print_json(&ApiResponse::ok(json!({ "backupId": backup_id })))
         }
         Commands::ImportUnmanaged {
             directory,

@@ -90,6 +90,39 @@ actor SkillCLIClient {
         throw response.error ?? CLIClientError.invalidResponse
     }
 
+    func listBackups() async throws -> [SkillBackup] {
+        let data = try run(arguments: ["backup-list", "--json"])
+        let response = try Self.makeDecoder().decode(CLIResponse<[SkillBackup]>.self, from: data)
+        if let backups = response.data, response.ok {
+            return backups
+        }
+        throw response.error ?? CLIClientError.invalidResponse
+    }
+
+    func restoreBackup(backupID: String, app: TargetApp) async throws -> Skill {
+        let data = try run(arguments: [
+            "backup-restore",
+            backupID,
+            "--app",
+            app.rawValue,
+            "--json",
+        ])
+        let response = try Self.makeDecoder().decode(CLIResponse<Skill>.self, from: data)
+        if let skill = response.data, response.ok {
+            return skill
+        }
+        throw response.error ?? CLIClientError.invalidResponse
+    }
+
+    func deleteBackup(backupID: String) async throws -> SkillBackupDeleteResult {
+        let data = try run(arguments: ["backup-delete", backupID, "--json"])
+        let response = try Self.makeDecoder().decode(CLIResponse<SkillBackupDeleteResult>.self, from: data)
+        if let result = response.data, response.ok {
+            return result
+        }
+        throw response.error ?? CLIClientError.invalidResponse
+    }
+
     func importUnmanaged(directory: String, apps: [TargetApp]) async throws -> [Skill] {
         var arguments = ["import-unmanaged", directory, "--json"]
         for app in apps {
