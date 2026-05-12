@@ -53,10 +53,10 @@ struct SessionUsageStat: Identifiable, Equatable {
             return
         }
 
-        if startedAt == nil || timestamp < startedAt! {
+        if startedAt.map({ timestamp < $0 }) ?? true {
             startedAt = timestamp
         }
-        if lastActivityAt == nil || timestamp > lastActivityAt! {
+        if lastActivityAt.map({ timestamp > $0 }) ?? true {
             lastActivityAt = timestamp
         }
     }
