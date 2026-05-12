@@ -85,7 +85,9 @@ struct RootView: View {
             case .installed:
                 LibraryView(viewModel: library)
             case .updates:
-                UpdatesView(viewModel: updates)
+                UpdatesView(viewModel: updates) {
+                    await library.load()
+                }
             case .backups:
                 BackupsView(viewModel: backups) {
                     await library.load()

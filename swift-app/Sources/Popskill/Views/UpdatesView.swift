@@ -29,27 +29,32 @@ final class UpdatesViewModel {
         updatingIDs.contains(id)
     }
 
-    func update(_ update: SkillUpdateInfo) async {
+    @discardableResult
+    func update(_ update: SkillUpdateInfo) async -> Bool {
         guard !updatingIDs.contains(update.id) else {
-            return
+            return false
         }
 
         updatingIDs.insert(update.id)
         errorMessage = nil
+        var didUpdate = false
 
         do {
             _ = try await client.update(skillID: update.id)
             updates.removeAll { $0.id == update.id }
+            didUpdate = true
         } catch {
             errorMessage = error.localizedDescription
         }
 
         updatingIDs.remove(update.id)
+        return didUpdate
     }
 }
 
 struct UpdatesView: View {
     @Bindable var viewModel: UpdatesViewModel
+    let onUpdated: () async -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -106,7 +111,11 @@ struct UpdatesView: View {
                     Spacer()
 
                     Button {
-                        Task { await viewModel.update(update) }
+                        Task {
+                            if await viewModel.update(update) {
+                                await onUpdated()
+                            }
+                        }
                     } label: {
                         if viewModel.isUpdating(update.id) {
                             ProgressView()
