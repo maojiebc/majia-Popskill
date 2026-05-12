@@ -53,7 +53,15 @@ struct LibraryView: View {
 
                 SkillDetailPane(
                     skill: selectedSkill,
-                    isUninstalling: selectedSkill.map { viewModel.isUninstalling(skillID: $0.id) } ?? false
+                    isUninstalling: selectedSkill.map { viewModel.isUninstalling(skillID: $0.id) } ?? false,
+                    isToggling: { skill, app in
+                        viewModel.isToggling(skillID: skill.id, app: app)
+                    },
+                    onToggle: { skill, app, enabled in
+                        Task {
+                            await viewModel.setEnabled(enabled, for: skill, app: app)
+                        }
+                    }
                 ) { skill in
                     Task {
                         if await viewModel.uninstall(skill) {
@@ -191,6 +199,8 @@ struct UnmanagedSkillsBanner: View {
 struct SkillDetailPane: View {
     let skill: Skill?
     let isUninstalling: Bool
+    let isToggling: (Skill, TargetApp) -> Bool
+    let onToggle: (Skill, TargetApp, Bool) -> Void
     let onUninstall: (Skill) -> Void
     @State private var isConfirmingUninstall = false
 
@@ -220,12 +230,15 @@ struct SkillDetailPane: View {
                             .fixedSize(horizontal: false, vertical: true)
 
                         DetailSection(title: "Enabled In") {
-                            ForEach([TargetApp.claude, .codex, .gemini, .opencode, .hermes], id: \.id) { app in
-                                HStack {
-                                    Image(systemName: skill.apps.isEnabled(app) ? "checkmark.circle.fill" : "circle")
-                                        .foregroundStyle(skill.apps.isEnabled(app) ? Color.accentColor : Color.popStatusNeutral)
-                                    Text(app.title)
-                                    Spacer()
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 82), spacing: 8)], spacing: 8) {
+                                ForEach(TargetApp.allCases, id: \.id) { app in
+                                    AppToggle(
+                                        title: app.title,
+                                        isOn: skill.apps.isEnabled(app),
+                                        isPending: isToggling(skill, app)
+                                    ) { enabled in
+                                        onToggle(skill, app, enabled)
+                                    }
                                 }
                             }
                         }
