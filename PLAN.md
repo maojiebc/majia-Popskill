@@ -103,6 +103,7 @@
 | D13 | 图标系统（v1） | 抓 GitHub 头像 / hash identicon / **首字母 + 底色** | **首字母 + 底色** | 最便宜，零网络依赖。v2 再优化 |
 | D14 | Stub 触发 | 仅手动 / **手动 + 60 天自动建议** | **手动 + 自动建议** | Insights 页推荐，不强制 |
 | D15 | App 自身更新 | 手动检查 / **Sparkle 自动更新** | **Sparkle** | Mac App 标配 |
+| D16 | 视觉设计参考 | 自创 / **Surge for Mac** / Setapp / 其他 | **Surge for Mac** | 用户挑选。设计语言落到独立的 [STYLE.md](./STYLE.md) |
 
 ---
 
@@ -328,7 +329,19 @@ SwiftUI 实现用 `NavigationSplitView`（三栏：sidebar + content list + deta
      → 叠加 "Has Update" 标记
 ```
 
-### 3.4 UX 关键决策
+### 3.4 视觉设计语言
+
+**详见独立文档 [STYLE.md](./STYLE.md)**。
+
+灵感来源：**Surge for Mac**（用户审美 anchor）。核心要素：
+- 浅紫白渐变背景 + 大量白色圆角卡片
+- 彩色 section heading 循环（橙/紫/蓝/绿）替代分块背景
+- 关键数据用 56pt+ 大字号 SF Pro Rounded
+- 页面级 toggle 直接挂 H1 旁边
+- 两套图标体系：导航单色 SF Symbols / 设置入口彩色拟物
+- Skill 头像 v1：首字母 + hash 到固定底色（用 `.gradient` 自带渐变）
+
+### 3.5 UX 关键决策
 
 | 决策 | 选项 | 选了 | 理由 |
 |---|---|---|---|
