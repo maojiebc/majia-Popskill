@@ -95,40 +95,48 @@ final class LibraryViewModel {
         pendingToggles.remove(key)
     }
 
-    func uninstall(_ skill: Skill) async {
+    @discardableResult
+    func uninstall(_ skill: Skill) async -> Bool {
         guard !uninstallingIDs.contains(skill.id) else {
-            return
+            return false
         }
 
         uninstallingIDs.insert(skill.id)
         errorMessage = nil
+        var didUninstall = false
 
         do {
             _ = try await client.uninstall(skillID: skill.id)
             skills.removeAll { $0.id == skill.id }
+            didUninstall = true
         } catch {
             errorMessage = error.localizedDescription
         }
 
         uninstallingIDs.remove(skill.id)
+        return didUninstall
     }
 
-    func importUnmanaged(_ unmanaged: UnmanagedSkill, apps: [TargetApp] = [.claude]) async {
+    @discardableResult
+    func importUnmanaged(_ unmanaged: UnmanagedSkill, apps: [TargetApp] = [.claude]) async -> Bool {
         guard !importingDirectories.contains(unmanaged.directory) else {
-            return
+            return false
         }
 
         importingDirectories.insert(unmanaged.directory)
         errorMessage = nil
+        var didImport = false
 
         do {
             _ = try await client.importUnmanaged(directory: unmanaged.directory, apps: apps)
             await load()
+            didImport = true
         } catch {
             errorMessage = error.localizedDescription
         }
 
         importingDirectories.remove(unmanaged.directory)
+        return didImport
     }
 
     private func toggleKey(skillID: String, app: TargetApp) -> String {

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LibraryView: View {
     @Bindable var viewModel: LibraryViewModel
+    let onLibraryMutation: () async -> Void
     @State private var selectedSkillID: Skill.ID?
 
     var body: some View {
@@ -18,7 +19,7 @@ struct LibraryView: View {
             }
 
             if !viewModel.unmanagedSkills.isEmpty {
-                UnmanagedSkillsBanner(viewModel: viewModel)
+                UnmanagedSkillsBanner(viewModel: viewModel, onImported: onLibraryMutation)
                 Divider()
             }
 
@@ -55,8 +56,10 @@ struct LibraryView: View {
                     isUninstalling: selectedSkill.map { viewModel.isUninstalling(skillID: $0.id) } ?? false
                 ) { skill in
                     Task {
-                        await viewModel.uninstall(skill)
-                        selectedSkillID = viewModel.filteredSkills.first?.id
+                        if await viewModel.uninstall(skill) {
+                            selectedSkillID = viewModel.filteredSkills.first?.id
+                            await onLibraryMutation()
+                        }
                     }
                 }
                     .frame(width: 320)
@@ -127,6 +130,7 @@ struct LibraryView: View {
 
 struct UnmanagedSkillsBanner: View {
     @Bindable var viewModel: LibraryViewModel
+    let onImported: () async -> Void
     @State private var selectedImportApp: TargetApp = .codex
 
     var body: some View {
@@ -159,7 +163,11 @@ struct UnmanagedSkillsBanner: View {
                     Spacer()
 
                     Button {
-                        Task { await viewModel.importUnmanaged(skill, apps: [selectedImportApp]) }
+                        Task {
+                            if await viewModel.importUnmanaged(skill, apps: [selectedImportApp]) {
+                                await onImported()
+                            }
+                        }
                     } label: {
                         if viewModel.isImporting(directory: skill.directory) {
                             ProgressView()

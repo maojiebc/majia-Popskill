@@ -81,16 +81,22 @@ struct RootView: View {
             case .featured:
                 DiscoverView(viewModel: discover) {
                     await library.load()
+                    await settings.load()
                 }
             case .installed:
-                LibraryView(viewModel: library)
+                LibraryView(viewModel: library) {
+                    await backups.load()
+                    await settings.load()
+                }
             case .updates:
                 UpdatesView(viewModel: updates) {
                     await library.load()
+                    await settings.load()
                 }
             case .backups:
                 BackupsView(viewModel: backups) {
                     await library.load()
+                    await settings.load()
                 }
             case .recentlyUsed:
                 RecentActivityView(viewModel: insights)
