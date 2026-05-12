@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, bail};
-use cc_switch_lib::{AppType, Database, SkillService};
+use cc_switch_lib::{AppType, Database, ImportSkillSelection, SkillApps, SkillService};
 use clap::{Parser, Subcommand};
 use serde::Serialize;
 use serde_json::json;
@@ -74,6 +74,16 @@ enum Commands {
     /// Uninstall one installed skill.
     Uninstall {
         skill_id: String,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Import an unmanaged local skill directory into CC Switch.
+    ImportUnmanaged {
+        directory: String,
+        /// Target apps to enable after import. Can be passed multiple times.
+        #[arg(long = "app")]
+        apps: Vec<String>,
         /// Kept for the Swift client contract; output is JSON either way.
         #[arg(long)]
         json: bool,
@@ -220,6 +230,19 @@ async fn run() -> Result<()> {
                 .with_context(|| format!("failed to uninstall skill '{skill_id}'"))?;
             print_json(&ApiResponse::ok(result))
         }
+        Commands::ImportUnmanaged {
+            directory,
+            apps,
+            json: _,
+        } => {
+            let apps = parse_skill_apps(&apps)?;
+            let imported = SkillService::import_from_apps(
+                &db,
+                vec![ImportSkillSelection { directory, apps }],
+            )
+            .context("failed to import unmanaged skill")?;
+            print_json(&ApiResponse::ok(imported))
+        }
         Commands::Toggle {
             skill_id,
             app,
@@ -249,6 +272,21 @@ fn parse_target_app(app: &str) -> Result<AppType> {
         bail!("OpenClaw does not support skills");
     }
     Ok(app_type)
+}
+
+fn parse_skill_apps(apps: &[String]) -> Result<SkillApps> {
+    let targets: Vec<&str> = if apps.is_empty() {
+        vec!["claude"]
+    } else {
+        apps.iter().map(String::as_str).collect()
+    };
+
+    let mut skill_apps = SkillApps::default();
+    for app in targets {
+        let app_type = parse_target_app(app)?;
+        skill_apps.set_enabled_for(&app_type, true);
+    }
+    Ok(skill_apps)
 }
 
 fn format_error(error: &anyhow::Error) -> String {

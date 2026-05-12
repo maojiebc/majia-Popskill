@@ -14,6 +14,7 @@ final class LibraryViewModel {
     private let client = SkillCLIClient()
     private var pendingToggles: Set<String> = []
     private var uninstallingIDs: Set<String> = []
+    private var importingDirectories: Set<String> = []
 
     var filteredSkills: [Skill] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -47,6 +48,10 @@ final class LibraryViewModel {
 
     func isUninstalling(skillID: String) -> Bool {
         uninstallingIDs.contains(skillID)
+    }
+
+    func isImporting(directory: String) -> Bool {
+        importingDirectories.contains(directory)
     }
 
     func load() async {
@@ -106,6 +111,24 @@ final class LibraryViewModel {
         }
 
         uninstallingIDs.remove(skill.id)
+    }
+
+    func importUnmanaged(_ unmanaged: UnmanagedSkill, apps: [TargetApp] = [.claude]) async {
+        guard !importingDirectories.contains(unmanaged.directory) else {
+            return
+        }
+
+        importingDirectories.insert(unmanaged.directory)
+        errorMessage = nil
+
+        do {
+            _ = try await client.importUnmanaged(directory: unmanaged.directory, apps: apps)
+            await load()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        importingDirectories.remove(unmanaged.directory)
     }
 
     private func toggleKey(skillID: String, app: TargetApp) -> String {

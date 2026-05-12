@@ -176,6 +176,23 @@ Uninstalls one managed skill through CC Switch. CC Switch removes app-folder cop
 }
 ```
 
+### `skill-cli import-unmanaged <directory> [--app <app>]... --json`
+
+Imports one unmanaged local skill directory into CC Switch. If no `--app` is provided, it enables Claude by default.
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "local:directory",
+      "name": "skill-name",
+      "directory": "directory"
+    }
+  ]
+}
+```
+
 ### `skill-cli check-updates --json`
 
 Checks GitHub-backed installed skills for remote content changes. This can take a while because CC Switch downloads source repository archives to compare content hashes.

@@ -17,6 +17,11 @@ struct LibraryView: View {
                 Divider()
             }
 
+            if !viewModel.unmanagedSkills.isEmpty {
+                UnmanagedSkillsBanner(viewModel: viewModel)
+                Divider()
+            }
+
             HStack(spacing: 0) {
                 List(viewModel.filteredSkills, selection: $selectedSkillID) { skill in
                     SkillRow(
@@ -117,6 +122,52 @@ struct LibraryView: View {
         .padding(.horizontal, 28)
         .padding(.vertical, 18)
         .background(Color.popMainBackground)
+    }
+}
+
+struct UnmanagedSkillsBanner: View {
+    @Bindable var viewModel: LibraryViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("\(viewModel.unmanagedCount) unmanaged skill\(viewModel.unmanagedCount == 1 ? "" : "s") found", systemImage: "tray.and.arrow.down")
+                    .font(.headline)
+                Spacer()
+            }
+
+            ForEach(viewModel.unmanagedSkills.prefix(3)) { skill in
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(skill.name)
+                            .font(.subheadline.weight(.semibold))
+                        Text(skill.path)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        Task { await viewModel.importUnmanaged(skill) }
+                    } label: {
+                        if viewModel.isImporting(directory: skill.directory) {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "plus.circle")
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(viewModel.isImporting(directory: skill.directory))
+                    .help("Import into CC Switch")
+                }
+            }
+        }
+        .padding(.horizontal, 28)
+        .padding(.vertical, 12)
+        .background(Color.popStatusWarning.opacity(0.08))
     }
 }
 

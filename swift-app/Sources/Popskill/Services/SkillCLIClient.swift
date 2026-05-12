@@ -90,6 +90,20 @@ actor SkillCLIClient {
         throw response.error ?? CLIClientError.invalidResponse
     }
 
+    func importUnmanaged(directory: String, apps: [TargetApp]) async throws -> [Skill] {
+        var arguments = ["import-unmanaged", directory, "--json"]
+        for app in apps {
+            arguments.append(contentsOf: ["--app", app.rawValue])
+        }
+
+        let data = try run(arguments: arguments)
+        let response = try Self.makeDecoder().decode(CLIResponse<[Skill]>.self, from: data)
+        if let skills = response.data, response.ok {
+            return skills
+        }
+        throw response.error ?? CLIClientError.invalidResponse
+    }
+
     func toggle(skillID: String, app: TargetApp, enabled: Bool) async throws {
         _ = try run(arguments: [
             "toggle",
