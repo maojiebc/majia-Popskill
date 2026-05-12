@@ -132,12 +132,45 @@ actor SkillCLIClient {
         let errorOutput = stderr.fileHandleForReading.readDataToEndOfFile()
 
         guard process.terminationStatus == 0 else {
-            let message = String(data: errorOutput, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            throw CLIClientError.commandFailed(message ?? "skill-cli exited with \(process.terminationStatus)")
+            let message = Self.commandFailureMessage(
+                stdout: output,
+                stderr: errorOutput,
+                status: process.terminationStatus
+            )
+            throw CLIClientError.commandFailed(message)
         }
 
         return output
+    }
+
+    static func commandFailureMessage(stdout: Data, stderr: Data, status: Int32) -> String {
+        for data in [stderr, stdout] where !data.isEmpty {
+            if let message = decodedErrorMessage(from: data) {
+                return message
+            }
+        }
+
+        for data in [stderr, stdout] where !data.isEmpty {
+            let message = String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if let message, !message.isEmpty {
+                return message
+            }
+        }
+
+        return "skill-cli exited with \(status)"
+    }
+
+    private static func decodedErrorMessage(from data: Data) -> String? {
+        guard
+            let envelope = try? makeDecoder().decode(CLIErrorEnvelope.self, from: data),
+            let error = envelope.error
+        else {
+            return nil
+        }
+
+        let message = error.message.trimmingCharacters(in: .whitespacesAndNewlines)
+        return message.isEmpty ? error.code : message
     }
 
     private static func makeDecoder() -> JSONDecoder {
@@ -165,6 +198,10 @@ actor SkillCLIClient {
             .appendingPathComponent("debug")
             .appendingPathComponent("skill-cli")
     }
+}
+
+private struct CLIErrorEnvelope: Decodable {
+    let error: CLIErrorPayload?
 }
 
 enum CLIClientError: LocalizedError {

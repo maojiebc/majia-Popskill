@@ -121,7 +121,11 @@ struct CLIResponse<T: Decodable>: Decodable {
     let error: CLIErrorPayload?
 }
 
-struct CLIErrorPayload: Decodable, Error {
+struct CLIErrorPayload: Decodable, Equatable, LocalizedError {
     let code: String
     let message: String
+
+    var errorDescription: String? {
+        message
+    }
 }
