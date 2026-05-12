@@ -7,6 +7,19 @@ actor SkillCLIClient {
         self.executableURL = executableURL ?? Self.resolveExecutableURL()
     }
 
+    static var resolvedExecutablePath: String {
+        resolveExecutableURL().path
+    }
+
+    static var executableOverridePath: String? {
+        let override = ProcessInfo.processInfo.environment["POPSKILL_CLI"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let override, !override.isEmpty else {
+            return nil
+        }
+        return override
+    }
+
     func list() async throws -> [Skill] {
         let data = try run(arguments: ["list", "--json"])
         let response = try Self.makeDecoder().decode(CLIResponse<[Skill]>.self, from: data)
