@@ -69,7 +69,7 @@ struct TranscriptUsageScanner {
             return
         }
 
-        let projectName = fileURL.deletingLastPathComponent().lastPathComponent
+        let projectName = projectName(for: fileURL)
 
         for line in content.split(separator: "\n", omittingEmptySubsequences: true) {
             guard let lineData = String(line).data(using: .utf8),
@@ -175,6 +175,20 @@ struct TranscriptUsageScanner {
             return date
         }
         return Self.iso8601.date(from: timestamp)
+    }
+
+    private func projectName(for fileURL: URL) -> String {
+        let folderName = fileURL.deletingLastPathComponent().lastPathComponent
+        let parts = folderName
+            .split(separator: "-")
+            .map(String.init)
+            .filter { !$0.isEmpty }
+
+        guard parts.count >= 2 else {
+            return folderName
+        }
+
+        return parts.suffix(2).joined(separator: "/")
     }
 
     private static let iso8601WithFractionalSeconds: ISO8601DateFormatter = {

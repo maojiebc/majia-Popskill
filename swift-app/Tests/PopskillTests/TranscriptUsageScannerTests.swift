@@ -38,4 +38,23 @@ struct TranscriptUsageScannerTests {
         #expect(summary.recentSessions.first?.usageEvents == 1)
         #expect(summary.recentSessions.last?.projectName == "project")
     }
+
+    @Test
+    func derivesReadableProjectNameFromEncodedClaudePath() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let project = root.appendingPathComponent("-Users-majia-projects-popskill", isDirectory: true)
+        try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: root)
+        }
+
+        let transcript = project.appendingPathComponent("session.jsonl")
+        let line = #"{"type":"user","sessionId":"s1","timestamp":"2026-05-12T01:00:00.000Z","message":{"role":"user","content":"private text"}}"#
+        try line.write(to: transcript, atomically: true, encoding: .utf8)
+
+        let summary = try TranscriptUsageScanner(projectsURL: root).scan()
+
+        #expect(summary.recentSessions.first?.projectName == "projects/popskill")
+    }
 }
