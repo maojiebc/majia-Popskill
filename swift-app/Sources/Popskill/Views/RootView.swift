@@ -52,6 +52,7 @@ struct RootView: View {
     @State private var selection: SidebarSelection? = .installed
     @State private var library = LibraryViewModel()
     @State private var updates = UpdatesViewModel()
+    @State private var insights = InsightsViewModel()
 
     var body: some View {
         NavigationSplitView {
@@ -86,6 +87,8 @@ struct RootView: View {
                 LibraryView(viewModel: library)
             case .updates:
                 UpdatesView(viewModel: updates)
+            case .usage:
+                InsightsView(viewModel: insights)
             default:
                 PlaceholderView(selection: selection ?? .installed)
             }
