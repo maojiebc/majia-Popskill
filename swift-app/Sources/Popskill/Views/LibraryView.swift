@@ -127,6 +127,7 @@ struct LibraryView: View {
 
 struct UnmanagedSkillsBanner: View {
     @Bindable var viewModel: LibraryViewModel
+    @State private var selectedImportApp: TargetApp = .codex
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -134,6 +135,14 @@ struct UnmanagedSkillsBanner: View {
                 Label("\(viewModel.unmanagedCount) unmanaged skill\(viewModel.unmanagedCount == 1 ? "" : "s") found", systemImage: "tray.and.arrow.down")
                     .font(.headline)
                 Spacer()
+                Picker("Import In", selection: $selectedImportApp) {
+                    ForEach([TargetApp.claude, .codex, .gemini], id: \.id) { app in
+                        Text(app.title).tag(app)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 220)
             }
 
             ForEach(viewModel.unmanagedSkills.prefix(3)) { skill in
@@ -150,7 +159,7 @@ struct UnmanagedSkillsBanner: View {
                     Spacer()
 
                     Button {
-                        Task { await viewModel.importUnmanaged(skill) }
+                        Task { await viewModel.importUnmanaged(skill, apps: [selectedImportApp]) }
                     } label: {
                         if viewModel.isImporting(directory: skill.directory) {
                             ProgressView()
@@ -161,7 +170,7 @@ struct UnmanagedSkillsBanner: View {
                     }
                     .buttonStyle(.bordered)
                     .disabled(viewModel.isImporting(directory: skill.directory))
-                    .help("Import into CC Switch")
+                    .help("Import into \(selectedImportApp.title)")
                 }
             }
         }
