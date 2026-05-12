@@ -9,7 +9,16 @@ actor SkillCLIClient {
 
     func list() async throws -> [Skill] {
         let data = try run(arguments: ["list", "--json"])
-        let response = try JSONDecoder().decode(CLIResponse<[Skill]>.self, from: data)
+        let response = try Self.makeDecoder().decode(CLIResponse<[Skill]>.self, from: data)
+        if let skills = response.data, response.ok {
+            return skills
+        }
+        throw response.error ?? CLIClientError.invalidResponse
+    }
+
+    func scanUnmanaged() async throws -> [UnmanagedSkill] {
+        let data = try run(arguments: ["scan-unmanaged", "--json"])
+        let response = try Self.makeDecoder().decode(CLIResponse<[UnmanagedSkill]>.self, from: data)
         if let skills = response.data, response.ok {
             return skills
         }
@@ -50,6 +59,12 @@ actor SkillCLIClient {
         }
 
         return output
+    }
+
+    private static func makeDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return decoder
     }
 
     private static func resolveExecutableURL() -> URL {

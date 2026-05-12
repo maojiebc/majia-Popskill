@@ -82,3 +82,22 @@ Response:
   }
 }
 ```
+
+### `skill-cli scan-unmanaged --json`
+
+Returns local skills found in app skill directories that are not currently managed by CC Switch. This command is read-only.
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "directory": "local-skill",
+      "name": "local-skill",
+      "description": "Local skill description",
+      "found_in": ["claude"],
+      "path": "/Users/example/.claude/skills/local-skill"
+    }
+  ]
+}
+```

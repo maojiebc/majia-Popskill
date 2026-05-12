@@ -26,6 +26,12 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Find local skills that exist on disk but are not managed by CC Switch.
+    ScanUnmanaged {
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// Enable or disable a skill for one target app.
     Toggle {
         skill_id: String,
@@ -61,6 +67,11 @@ async fn run() -> Result<()> {
         Commands::List { json: _ } => {
             let skills =
                 SkillService::get_all_installed(&db).context("failed to list installed skills")?;
+            print_json(&ApiResponse::ok(skills))
+        }
+        Commands::ScanUnmanaged { json: _ } => {
+            let skills =
+                SkillService::scan_unmanaged(&db).context("failed to scan unmanaged skills")?;
             print_json(&ApiResponse::ok(skills))
         }
         Commands::Toggle {

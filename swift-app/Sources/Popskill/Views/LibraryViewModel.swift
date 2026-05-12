@@ -5,6 +5,7 @@ import Observation
 @Observable
 final class LibraryViewModel {
     var skills: [Skill] = []
+    var unmanagedSkills: [UnmanagedSkill] = []
     var searchText = ""
     var selectedFilter: LibraryFilter = .all
     var isLoading = false
@@ -35,6 +36,10 @@ final class LibraryViewModel {
         skills.count - enabledCount
     }
 
+    var unmanagedCount: Int {
+        unmanagedSkills.count
+    }
+
     func isToggling(skillID: String, app: TargetApp) -> Bool {
         pendingToggles.contains(toggleKey(skillID: skillID, app: app))
     }
@@ -45,6 +50,8 @@ final class LibraryViewModel {
 
         do {
             skills = try await client.list()
+                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            unmanagedSkills = try await client.scanUnmanaged()
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         } catch {
             errorMessage = error.localizedDescription

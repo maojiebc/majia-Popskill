@@ -73,6 +73,16 @@ struct SkillApps: Codable, Equatable {
     }
 }
 
+struct UnmanagedSkill: Identifiable, Codable, Equatable {
+    var id: String { directory }
+
+    let directory: String
+    let name: String
+    let description: String
+    let foundIn: [String]
+    let path: String
+}
+
 struct CLIResponse<T: Decodable>: Decodable {
     let ok: Bool
     let data: T?

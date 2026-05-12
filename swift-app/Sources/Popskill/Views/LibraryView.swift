@@ -59,6 +59,11 @@ struct LibraryView: View {
                 HStack(spacing: 14) {
                     SummaryMetric(title: "Active", value: viewModel.enabledCount)
                     SummaryMetric(title: "Inactive", value: viewModel.inactiveCount)
+                    SummaryMetric(
+                        title: "Unmanaged",
+                        value: viewModel.unmanagedCount,
+                        color: viewModel.unmanagedCount > 0 ? .popStatusWarning : .popLabel
+                    )
                 }
 
                 Button {
@@ -177,17 +182,19 @@ struct AppToggle: View {
 struct SummaryMetric: View {
     let title: String
     let value: Int
+    var color: Color = .popLabel
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 2) {
             Text("\(value)")
                 .font(.system(size: 22, weight: .bold))
                 .monospacedDigit()
+                .foregroundStyle(color)
             Text(title)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        .frame(width: 72, alignment: .trailing)
+        .frame(width: 86, alignment: .trailing)
     }
 }
 
