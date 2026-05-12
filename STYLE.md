@@ -7,6 +7,11 @@
 > - 所有 design token（颜色/字号/圆角/间距）都能直接对应到 SwiftUI 代码
 > - 看到一个新页面需求，能判断"这个在我们的设计语言里应该长什么样"
 >
+> **关键策略已通过本地 Surge.app teardown 验证**：
+> - 字体：Surge bundle 自带的全是 Apple 系统字体（SF Compact / SF Mono），**零自定义字体** → 印证 §3
+> - 色板：Surge 的 `Assets.car` 拆出 22 个唯一 named color，**零自定义 RGB，全是系统色的语义包装** → §2.5 落地为 Popskill 自己的 token
+> - 框架：Surge 是 AppKit（一堆 `.nib`），我们走 SwiftUI——视觉规格通用但实现完全不同
+>
 > 最后更新：2026-05-12
 
 ---
@@ -90,7 +95,99 @@
 | 失败 / 禁用 | `.systemRed` `#FF3B30` | 安装失败 / 网络错误（克制使用） |
 | 中性 | `.secondary` | 已禁用 / 不适用 |
 
-### 2.5 渐变背景
+### 2.5 语义化 Design Token（从 Surge.app 拆解中学到的最重要一课）
+
+**Surge 的真正智慧**：整套色板 **零自定义 RGB**，全部引用 macOS 系统色，但用语义化的 named color 包装一层。从 `Assets.car` 拆出的 22 个唯一命名（不算重复 light/dark variant）：
+
+```
+Surface  : ActivityCardBackground, MainViewBackgroundColor,
+           TableHeader, Border, Separator
+Text     : MainViewLabelColor, MainViewSecondaryLabelColor,
+           MainViewTextColor
+Sidebar  : SidebarHeader, SidebarTitle
+Button   : ActivtyButtonBorder, SGMButtonHighlighted, SGMButtonHovered
+Accent   : Cyan, Sky, Download
+Brand    : MainIcon_Assets/Color-1 .. Color-5（仅用于主图标渐变）
+```
+
+**为什么这么干**：
+- 改主题只改一个文件
+- 跨 light/dark 自动适配（系统色天然支持）
+- 让开发者写代码时**语义先于色值**——`.cardBackground` 比 `Color(hex: "#F8F8FB")` 更难写错
+
+**Popskill 的等价 token**（在 `Design/PopskillColors.swift` 落盘一份）：
+
+```swift
+import SwiftUI
+
+extension Color {
+    // ─── Surface ─────────────────────────────────
+    /// 主窗口背景（用 material 优先，这是 fallback）
+    static let popMainBackground = Color(.windowBackgroundColor)
+
+    /// 卡片背景
+    static let popCardBackground = Color(.controlBackgroundColor)
+
+    /// 表格头/工具栏背景
+    static let popHeaderBackground = Color(.unemphasizedSelectedContentBackgroundColor)
+
+    /// 分隔线
+    static let popSeparator = Color(.separatorColor)
+
+    /// 卡片/输入框边框
+    static let popBorder = Color(.separatorColor).opacity(0.6)
+
+    // ─── Text ────────────────────────────────────
+    static let popLabel = Color(.labelColor)              // 主文本
+    static let popSecondaryLabel = Color(.secondaryLabelColor)  // 副文本
+    static let popTertiaryLabel = Color(.tertiaryLabelColor)    // 灰提示
+
+    // ─── Sidebar ─────────────────────────────────
+    /// 侧边栏 section heading (DISCOVER / MY LIBRARY)
+    static let popSidebarHeader = Color(.secondaryLabelColor)
+
+    /// 侧边栏 item label
+    static let popSidebarTitle = Color(.labelColor)
+
+    // ─── Button States ───────────────────────────
+    /// 鼠标 hover 时的 fill（按钮、列表行）
+    static let popHoverFill = Color(.controlAccentColor).opacity(0.08)
+
+    /// 按下/选中时的 fill
+    static let popHighlightFill = Color(.controlAccentColor).opacity(0.16)
+
+    // ─── Section Accents（循环色）────────────────
+    /// section heading 用的 4 色循环
+    static let popSectionAccents: [Color] = [
+        .orange, .purple, .blue, .green
+    ]
+
+    // ─── Status ──────────────────────────────────
+    static let popStatusOK = Color.green
+    static let popStatusWarning = Color.orange
+    static let popStatusError = Color.red
+    static let popStatusNeutral = Color(.secondaryLabelColor)
+}
+```
+
+**用法范式**：
+
+```swift
+// ❌ 别这么写
+RoundedRectangle(cornerRadius: 16)
+    .fill(Color(hex: "#FFFFFF"))
+
+// ✅ 这么写
+RoundedRectangle(cornerRadius: 16)
+    .fill(Color.popCardBackground)
+```
+
+这样：
+- 改主题只改 `PopskillColors.swift` 一个文件
+- Dark mode 自动适配（系统色天然支持）
+- 代码 review 时"违反设计语言"一眼可见——任何 `Color(hex: ...)` 都是 red flag
+
+### 2.6 渐变背景
 
 窗口主背景用浅紫到浅蓝的对角渐变：
 
