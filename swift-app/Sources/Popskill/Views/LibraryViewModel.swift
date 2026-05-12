@@ -6,19 +6,21 @@ import Observation
 final class LibraryViewModel {
     var skills: [Skill] = []
     var searchText = ""
+    var selectedFilter: LibraryFilter = .all
     var isLoading = false
     var errorMessage: String?
 
     private let client = SkillCLIClient()
+    private var pendingToggles: Set<String> = []
 
     var filteredSkills: [Skill] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !query.isEmpty else {
-            return skills
-        }
 
         return skills.filter { skill in
-            skill.name.lowercased().contains(query)
+            selectedFilter.includes(skill)
+        }.filter { skill in
+            query.isEmpty
+                || skill.name.lowercased().contains(query)
                 || skill.description.lowercased().contains(query)
                 || skill.sourceLabel.lowercased().contains(query)
                 || skill.directory.lowercased().contains(query)
@@ -27,6 +29,14 @@ final class LibraryViewModel {
 
     var enabledCount: Int {
         skills.filter { $0.enabledAppCount > 0 }.count
+    }
+
+    var inactiveCount: Int {
+        skills.count - enabledCount
+    }
+
+    func isToggling(skillID: String, app: TargetApp) -> Bool {
+        pendingToggles.contains(toggleKey(skillID: skillID, app: app))
     }
 
     func load() async {
@@ -48,7 +58,13 @@ final class LibraryViewModel {
             return
         }
 
+        let key = toggleKey(skillID: skill.id, app: app)
+        guard !pendingToggles.contains(key) else {
+            return
+        }
+
         let previous = skills[index]
+        pendingToggles.insert(key)
         skills[index].apps.setEnabled(enabled, for: app)
         errorMessage = nil
 
@@ -57,6 +73,36 @@ final class LibraryViewModel {
         } catch {
             skills[index] = previous
             errorMessage = error.localizedDescription
+        }
+
+        pendingToggles.remove(key)
+    }
+
+    private func toggleKey(skillID: String, app: TargetApp) -> String {
+        "\(skillID)#\(app.rawValue)"
+    }
+}
+
+enum LibraryFilter: String, CaseIterable, Identifiable {
+    case all
+    case active
+    case inactive
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all: "All"
+        case .active: "Active"
+        case .inactive: "Inactive"
+        }
+    }
+
+    func includes(_ skill: Skill) -> Bool {
+        switch self {
+        case .all: true
+        case .active: skill.enabledAppCount > 0
+        case .inactive: skill.enabledAppCount == 0
         }
     }
 }

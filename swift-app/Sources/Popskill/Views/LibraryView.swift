@@ -17,7 +17,12 @@ struct LibraryView: View {
             }
 
             List(viewModel.filteredSkills) { skill in
-                SkillRow(skill: skill) { app, enabled in
+                SkillRow(
+                    skill: skill,
+                    isToggling: { app in
+                        viewModel.isToggling(skillID: skill.id, app: app)
+                    }
+                ) { app, enabled in
                     Task {
                         await viewModel.setEnabled(enabled, for: skill, app: app)
                     }
@@ -40,33 +45,50 @@ struct LibraryView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Installed")
-                    .font(.system(.largeTitle, weight: .bold))
-                Text("\(viewModel.skills.count) skills · \(viewModel.enabledCount) enabled")
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Installed")
+                        .font(.system(.largeTitle, weight: .bold))
+                    Text("\(viewModel.skills.count) skills · \(viewModel.enabledCount) enabled")
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                HStack(spacing: 14) {
+                    SummaryMetric(title: "Active", value: viewModel.enabledCount)
+                    SummaryMetric(title: "Inactive", value: viewModel.inactiveCount)
+                }
+
+                Button {
+                    Task { await viewModel.load() }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .buttonStyle(.bordered)
+                .help("Refresh")
+                .disabled(viewModel.isLoading)
             }
 
-            Spacer()
-
-            Button {
-                Task { await viewModel.load() }
-            } label: {
-                Image(systemName: "arrow.clockwise")
+            Picker("Filter", selection: $viewModel.selectedFilter) {
+                ForEach(LibraryFilter.allCases) { filter in
+                    Text(filter.title).tag(filter)
+                }
             }
-            .buttonStyle(.bordered)
-            .help("Refresh")
-            .disabled(viewModel.isLoading)
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(width: 260)
         }
         .padding(.horizontal, 28)
-        .padding(.vertical, 20)
+        .padding(.vertical, 18)
         .background(Color.popMainBackground)
     }
 }
 
 struct SkillRow: View {
     let skill: Skill
+    let isToggling: (TargetApp) -> Bool
     let onToggle: (TargetApp, Bool) -> Void
 
     var body: some View {
@@ -102,7 +124,8 @@ struct SkillRow: View {
                 ForEach([TargetApp.claude, .codex, .gemini], id: \.id) { app in
                     AppToggle(
                         title: app.title,
-                        isOn: skill.apps.isEnabled(app)
+                        isOn: skill.apps.isEnabled(app),
+                        isPending: isToggling(app)
                     ) { enabled in
                         onToggle(app, enabled)
                     }
@@ -117,6 +140,7 @@ struct SkillRow: View {
 struct AppToggle: View {
     let title: String
     let isOn: Bool
+    let isPending: Bool
     let onChange: (Bool) -> Void
 
     var body: some View {
@@ -124,8 +148,14 @@ struct AppToggle: View {
             onChange(!isOn)
         } label: {
             HStack(spacing: 5) {
-                Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isOn ? Color.accentColor : Color.popStatusNeutral)
+                if isPending {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .frame(width: 14, height: 14)
+                } else {
+                    Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(isOn ? Color.accentColor : Color.popStatusNeutral)
+                }
                 Text(title)
                     .font(.caption)
                     .lineLimit(1)
@@ -133,6 +163,7 @@ struct AppToggle: View {
             .frame(width: 74, height: 28)
         }
         .buttonStyle(.plain)
+        .disabled(isPending)
         .background(isOn ? Color.popHighlightFill : Color.clear, in: RoundedRectangle(cornerRadius: 6))
         .overlay(
             RoundedRectangle(cornerRadius: 6)
@@ -140,6 +171,23 @@ struct AppToggle: View {
         )
         .contentShape(RoundedRectangle(cornerRadius: 6))
         .help(title)
+    }
+}
+
+struct SummaryMetric: View {
+    let title: String
+    let value: Int
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            Text("\(value)")
+                .font(.system(size: 22, weight: .bold))
+                .monospacedDigit()
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(width: 72, alignment: .trailing)
     }
 }
 
@@ -153,7 +201,7 @@ struct InitialAvatarView: View {
 
     private var color: Color {
         let palette: [Color] = [.orange, .purple, .blue, .green, .pink, .teal]
-        let index = abs(identifier.hashValue) % palette.count
+        let index = Int(identifier.hashValue.magnitude % UInt(palette.count))
         return palette[index]
     }
 

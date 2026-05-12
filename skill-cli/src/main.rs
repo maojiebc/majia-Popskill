@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use cc_switch_lib::{AppType, Database, SkillService};
 use clap::{Parser, Subcommand};
 use serde::Serialize;
@@ -68,8 +68,7 @@ async fn run() -> Result<()> {
             app,
             enabled,
         } => {
-            let app_type = AppType::from_str(&app)
-                .with_context(|| format!("unsupported target app '{app}'"))?;
+            let app_type = parse_target_app(&app)?;
             SkillService::toggle_app(&db, &skill_id, &app_type, enabled)
                 .with_context(|| format!("failed to toggle skill '{skill_id}' for {app}"))?;
             print_json(&ApiResponse::ok(json!({
@@ -84,6 +83,15 @@ async fn run() -> Result<()> {
 fn print_json<T: Serialize>(payload: &ApiResponse<T>) -> Result<()> {
     println!("{}", serde_json::to_string_pretty(payload)?);
     Ok(())
+}
+
+fn parse_target_app(app: &str) -> Result<AppType> {
+    let app_type =
+        AppType::from_str(app).with_context(|| format!("unsupported target app '{app}'"))?;
+    if app_type == AppType::OpenClaw {
+        bail!("OpenClaw does not support skills");
+    }
+    Ok(app_type)
 }
 
 fn format_error(error: &anyhow::Error) -> String {
