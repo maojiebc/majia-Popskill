@@ -45,7 +45,15 @@ struct LibraryView: View {
 
                 Divider()
 
-                SkillDetailPane(skill: selectedSkill)
+                SkillDetailPane(
+                    skill: selectedSkill,
+                    isUninstalling: selectedSkill.map { viewModel.isUninstalling(skillID: $0.id) } ?? false
+                ) { skill in
+                    Task {
+                        await viewModel.uninstall(skill)
+                        selectedSkillID = viewModel.filteredSkills.first?.id
+                    }
+                }
                     .frame(width: 320)
             }
             .onChange(of: viewModel.skills) { _, skills in
@@ -114,6 +122,9 @@ struct LibraryView: View {
 
 struct SkillDetailPane: View {
     let skill: Skill?
+    let isUninstalling: Bool
+    let onUninstall: (Skill) -> Void
+    @State private var isConfirmingUninstall = false
 
     var body: some View {
         Group {
@@ -164,6 +175,31 @@ struct SkillDetailPane: View {
                                 Label("Open Source", systemImage: "arrow.up.right.square")
                             }
                             .buttonStyle(.bordered)
+                        }
+
+                        Button(role: .destructive) {
+                            isConfirmingUninstall = true
+                        } label: {
+                            if isUninstalling {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Label("Uninstall", systemImage: "trash")
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(isUninstalling)
+                        .confirmationDialog(
+                            "Uninstall \(skill.name)?",
+                            isPresented: $isConfirmingUninstall,
+                            titleVisibility: .visible
+                        ) {
+                            Button("Uninstall", role: .destructive) {
+                                onUninstall(skill)
+                            }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("Popskill will ask CC Switch to remove this skill from all app skill folders and keep CC Switch's uninstall backup.")
                         }
                     }
                     .padding(22)

@@ -45,6 +45,31 @@ struct Skill: Identifiable, Codable, Equatable {
     }
 }
 
+struct CatalogSkill: Identifiable, Codable, Equatable {
+    var id: String { key }
+
+    let key: String
+    let name: String
+    let description: String
+    let directory: String
+    let readmeUrl: String?
+    let installed: Bool
+    let repoOwner: String?
+    let repoName: String?
+    let repoBranch: String?
+
+    var sourceLabel: String {
+        if let repoOwner, let repoName {
+            return "\(repoOwner)/\(repoName)"
+        }
+        return directory
+    }
+}
+
+struct SkillUninstallResult: Codable, Equatable {
+    let backupPath: String?
+}
+
 struct SkillApps: Codable, Equatable {
     var claude: Bool
     var codex: Bool

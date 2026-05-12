@@ -13,6 +13,7 @@ final class LibraryViewModel {
 
     private let client = SkillCLIClient()
     private var pendingToggles: Set<String> = []
+    private var uninstallingIDs: Set<String> = []
 
     var filteredSkills: [Skill] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -42,6 +43,10 @@ final class LibraryViewModel {
 
     func isToggling(skillID: String, app: TargetApp) -> Bool {
         pendingToggles.contains(toggleKey(skillID: skillID, app: app))
+    }
+
+    func isUninstalling(skillID: String) -> Bool {
+        uninstallingIDs.contains(skillID)
     }
 
     func load() async {
@@ -83,6 +88,24 @@ final class LibraryViewModel {
         }
 
         pendingToggles.remove(key)
+    }
+
+    func uninstall(_ skill: Skill) async {
+        guard !uninstallingIDs.contains(skill.id) else {
+            return
+        }
+
+        uninstallingIDs.insert(skill.id)
+        errorMessage = nil
+
+        do {
+            _ = try await client.uninstall(skillID: skill.id)
+            skills.removeAll { $0.id == skill.id }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        uninstallingIDs.remove(skill.id)
     }
 
     private func toggleKey(skillID: String, app: TargetApp) -> String {

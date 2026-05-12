@@ -50,6 +50,7 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
 
 struct RootView: View {
     @State private var selection: SidebarSelection? = .installed
+    @State private var discover = DiscoverViewModel()
     @State private var library = LibraryViewModel()
     @State private var updates = UpdatesViewModel()
     @State private var insights = InsightsViewModel()
@@ -83,6 +84,10 @@ struct RootView: View {
             .navigationSplitViewColumnWidth(min: 220, ideal: 240)
         } detail: {
             switch selection ?? .installed {
+            case .featured:
+                DiscoverView(viewModel: discover) {
+                    await library.load()
+                }
             case .installed:
                 LibraryView(viewModel: library)
             case .updates:

@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use cc_switch_lib::{AppType, Database, SkillService};
 use clap::{Parser, Subcommand};
 use serde::Serialize;
@@ -45,8 +45,34 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Discover installable skills from enabled CC Switch skill repositories.
+    Discover {
+        #[arg(long)]
+        query: Option<String>,
+        #[arg(long, default_value_t = 80)]
+        limit: usize,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Install one discoverable skill by key.
+    Install {
+        skill_key: String,
+        #[arg(long, default_value = "claude")]
+        app: String,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// Update one installed skill from its GitHub source.
     Update {
+        skill_id: String,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Uninstall one installed skill.
+    Uninstall {
         skill_id: String,
         /// Kept for the Swift client contract; output is JSON either way.
         #[arg(long)]
@@ -109,6 +135,78 @@ async fn run() -> Result<()> {
                 .context("failed to check skill updates")?;
             print_json(&ApiResponse::ok(updates))
         }
+        Commands::Discover {
+            query,
+            limit,
+            json: _,
+        } => {
+            let service = SkillService::new();
+            db.init_default_skill_repos()
+                .context("failed to initialize default skill repositories")?;
+            let repos = db
+                .get_skill_repos()
+                .context("failed to load skill repositories")?;
+            let skills = service
+                .list_skills(repos, &db)
+                .await
+                .context("failed to discover skills")?;
+            let normalized_query = query
+                .as_deref()
+                .map(str::trim)
+                .filter(|query| !query.is_empty())
+                .map(str::to_lowercase);
+            let filtered: Vec<_> = skills
+                .into_iter()
+                .filter(|skill| {
+                    let Some(query) = normalized_query.as_deref() else {
+                        return true;
+                    };
+                    skill.name.to_lowercase().contains(query)
+                        || skill.description.to_lowercase().contains(query)
+                        || skill.directory.to_lowercase().contains(query)
+                        || skill
+                            .repo_owner
+                            .as_deref()
+                            .unwrap_or_default()
+                            .to_lowercase()
+                            .contains(query)
+                        || skill
+                            .repo_name
+                            .as_deref()
+                            .unwrap_or_default()
+                            .to_lowercase()
+                            .contains(query)
+                })
+                .take(limit)
+                .collect();
+            print_json(&ApiResponse::ok(filtered))
+        }
+        Commands::Install {
+            skill_key,
+            app,
+            json: _,
+        } => {
+            let app_type = parse_target_app(&app)?;
+            let service = SkillService::new();
+            db.init_default_skill_repos()
+                .context("failed to initialize default skill repositories")?;
+            let repos = db
+                .get_skill_repos()
+                .context("failed to load skill repositories")?;
+            let skills = service
+                .discover_available(repos)
+                .await
+                .context("failed to discover skills before install")?;
+            let skill = skills
+                .into_iter()
+                .find(|skill| skill.key == skill_key)
+                .with_context(|| format!("discoverable skill not found: {skill_key}"))?;
+            let installed = service
+                .install(&db, &skill, &app_type)
+                .await
+                .with_context(|| format!("failed to install skill '{skill_key}'"))?;
+            print_json(&ApiResponse::ok(installed))
+        }
         Commands::Update { skill_id, json: _ } => {
             let service = SkillService::new();
             let skill = service
@@ -116,6 +214,11 @@ async fn run() -> Result<()> {
                 .await
                 .with_context(|| format!("failed to update skill '{skill_id}'"))?;
             print_json(&ApiResponse::ok(skill))
+        }
+        Commands::Uninstall { skill_id, json: _ } => {
+            let result = SkillService::uninstall(&db, &skill_id)
+                .with_context(|| format!("failed to uninstall skill '{skill_id}'"))?;
+            print_json(&ApiResponse::ok(result))
         }
         Commands::Toggle {
             skill_id,

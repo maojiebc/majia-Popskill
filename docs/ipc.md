@@ -102,6 +102,44 @@ Returns local skills found in app skill directories that are not currently manag
 }
 ```
 
+### `skill-cli discover [--query <text>] [--limit <n>] --json`
+
+Returns installable skills from enabled CC Switch skill repositories. The command also includes installed status, so Discover can disable install buttons for existing skills.
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "key": "owner/repo:directory",
+      "name": "skill-name",
+      "description": "Skill description",
+      "directory": "directory",
+      "readmeUrl": "https://github.com/owner/repo/blob/main/directory/SKILL.md",
+      "installed": false,
+      "repoOwner": "owner",
+      "repoName": "repo",
+      "repoBranch": "main"
+    }
+  ]
+}
+```
+
+### `skill-cli install <skill-key> --app <app> --json`
+
+Discovers the skill by key, installs it through CC Switch, and enables it for the requested app.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "owner/repo:directory",
+    "name": "skill-name",
+    "directory": "directory"
+  }
+}
+```
+
 ### `skill-cli detail <skill-id> --json`
 
 Returns one installed skill by id. The shape matches one item from `list`.
@@ -121,6 +159,19 @@ Returns one installed skill by id. The shape matches one item from `list`.
       "opencode": false,
       "hermes": false
     }
+  }
+}
+```
+
+### `skill-cli uninstall <skill-id> --json`
+
+Uninstalls one managed skill through CC Switch. CC Switch removes app-folder copies/symlinks, deletes the SSOT skill directory, removes the DB record, and creates an uninstall backup when possible.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "backupPath": "/Users/example/.cc-switch/skill-backups/..."
   }
 }
 ```

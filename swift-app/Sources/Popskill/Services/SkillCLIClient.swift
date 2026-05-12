@@ -43,11 +43,49 @@ actor SkillCLIClient {
         throw response.error ?? CLIClientError.invalidResponse
     }
 
+    func discover(query: String?, limit: Int = 80) async throws -> [CatalogSkill] {
+        var arguments = ["discover", "--json", "--limit", String(limit)]
+        if let query, !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            arguments.append(contentsOf: ["--query", query])
+        }
+
+        let data = try run(arguments: arguments)
+        let response = try Self.makeDecoder().decode(CLIResponse<[CatalogSkill]>.self, from: data)
+        if let skills = response.data, response.ok {
+            return skills
+        }
+        throw response.error ?? CLIClientError.invalidResponse
+    }
+
+    func install(skillKey: String, app: TargetApp) async throws -> Skill {
+        let data = try run(arguments: [
+            "install",
+            skillKey,
+            "--app",
+            app.rawValue,
+            "--json",
+        ])
+        let response = try Self.makeDecoder().decode(CLIResponse<Skill>.self, from: data)
+        if let skill = response.data, response.ok {
+            return skill
+        }
+        throw response.error ?? CLIClientError.invalidResponse
+    }
+
     func update(skillID: String) async throws -> Skill {
         let data = try run(arguments: ["update", skillID, "--json"])
         let response = try Self.makeDecoder().decode(CLIResponse<Skill>.self, from: data)
         if let skill = response.data, response.ok {
             return skill
+        }
+        throw response.error ?? CLIClientError.invalidResponse
+    }
+
+    func uninstall(skillID: String) async throws -> SkillUninstallResult {
+        let data = try run(arguments: ["uninstall", skillID, "--json"])
+        let response = try Self.makeDecoder().decode(CLIResponse<SkillUninstallResult>.self, from: data)
+        if let result = response.data, response.ok {
+            return result
         }
         throw response.error ?? CLIClientError.invalidResponse
     }
