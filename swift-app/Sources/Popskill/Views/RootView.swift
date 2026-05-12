@@ -2,13 +2,10 @@ import SwiftUI
 
 enum SidebarSelection: String, CaseIterable, Identifiable {
     case featured
-    case categories
-    case topCharts
     case installed
     case updates
     case backups
     case recentlyUsed
-    case stubs
     case usage
     case tokenSpend
     case idleCandidates
@@ -19,13 +16,10 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .featured: "Featured"
-        case .categories: "Categories"
-        case .topCharts: "Top Charts"
         case .installed: "Installed"
         case .updates: "Updates"
         case .backups: "Backups"
         case .recentlyUsed: "Recently Used"
-        case .stubs: "Stubs"
         case .usage: "Usage"
         case .tokenSpend: "Token Spend"
         case .idleCandidates: "Idle Candidates"
@@ -36,13 +30,10 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
     var symbolName: String {
         switch self {
         case .featured: "sparkles"
-        case .categories: "folder"
-        case .topCharts: "chart.bar"
         case .installed: "shippingbox"
         case .updates: "arrow.down.circle"
         case .backups: "clock.arrow.circlepath"
         case .recentlyUsed: "clock"
-        case .stubs: "icloud"
         case .usage: "chart.xyaxis.line"
         case .tokenSpend: "creditcard"
         case .idleCandidates: "archivebox"
@@ -64,8 +55,6 @@ struct RootView: View {
             List(selection: $selection) {
                 Section("Discover") {
                     sidebarLink(.featured)
-                    sidebarLink(.categories)
-                    sidebarLink(.topCharts)
                 }
 
                 Section("My Library") {
@@ -73,7 +62,6 @@ struct RootView: View {
                     sidebarLink(.updates, badge: updates.updates.isEmpty ? nil : updates.updates.count)
                     sidebarLink(.backups, badge: backups.backups.isEmpty ? nil : backups.backups.count)
                     sidebarLink(.recentlyUsed)
-                    sidebarLink(.stubs)
                 }
 
                 Section("Insights") {
@@ -111,8 +99,6 @@ struct RootView: View {
                 IdleCandidatesView(viewModel: library)
             case .settings:
                 SettingsView()
-            default:
-                PlaceholderView(selection: selection ?? .installed)
             }
         }
         .task {
