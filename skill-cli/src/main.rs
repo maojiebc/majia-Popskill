@@ -20,6 +20,12 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// Return sidecar and local CC Switch diagnostics.
+    Health {
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// List all skills managed by CC Switch.
     List {
         /// Kept for the Swift client contract; output is JSON either way.
@@ -142,6 +148,22 @@ async fn run() -> Result<()> {
     let db = Arc::new(Database::init().context("failed to open CC Switch database")?);
 
     match cli.command {
+        Commands::Health { json: _ } => {
+            let skills =
+                SkillService::get_all_installed(&db).context("failed to list installed skills")?;
+            let unmanaged =
+                SkillService::scan_unmanaged(&db).context("failed to scan unmanaged skills")?;
+            let backups = SkillService::list_backups().context("failed to list skill backups")?;
+            let home = std::env::var("HOME").unwrap_or_default();
+            print_json(&ApiResponse::ok(json!({
+                "sidecarVersion": env!("CARGO_PKG_VERSION"),
+                "installedCount": skills.len(),
+                "unmanagedCount": unmanaged.len(),
+                "backupCount": backups.len(),
+                "skillStorePath": format!("{home}/.cc-switch/skills"),
+                "skillBackupPath": format!("{home}/.cc-switch/skill-backups")
+            })))
+        }
         Commands::List { json: _ } => {
             let skills =
                 SkillService::get_all_installed(&db).context("failed to list installed skills")?;

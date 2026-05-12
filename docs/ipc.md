@@ -27,6 +27,24 @@ Every failed command writes JSON to stderr and exits non-zero:
 
 ## Commands
 
+### `skill-cli health --json`
+
+Returns local sidecar and CC Switch diagnostics used by Settings.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "sidecarVersion": "0.1.0",
+    "installedCount": 61,
+    "unmanagedCount": 0,
+    "backupCount": 10,
+    "skillStorePath": "/Users/example/.cc-switch/skills",
+    "skillBackupPath": "/Users/example/.cc-switch/skill-backups"
+  }
+}
+```
+
 ### `skill-cli list --json`
 
 Returns all skills currently managed by CC Switch.

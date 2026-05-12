@@ -1,6 +1,32 @@
+import Observation
 import SwiftUI
 
+@MainActor
+@Observable
+final class SettingsViewModel {
+    var health: SidecarHealth?
+    var isLoading = false
+    var errorMessage: String?
+
+    private let client = SkillCLIClient()
+
+    func load() async {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            health = try await client.health()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isLoading = false
+    }
+}
+
 struct SettingsView: View {
+    @Bindable var viewModel: SettingsViewModel
+
     private let cliPath = SkillCLIClient.resolvedExecutablePath
     private let overridePath = SkillCLIClient.executableOverridePath
     private let skillStorePath = NSHomeDirectory() + "/.cc-switch/skills"
@@ -17,22 +43,47 @@ struct SettingsView: View {
                 }
 
                 Spacer()
+
+                Button {
+                    Task { await viewModel.load() }
+                } label: {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .help("Refresh")
+                .disabled(viewModel.isLoading)
             }
             .padding(.horizontal, 28)
             .padding(.vertical, 20)
 
             Divider()
 
+            if let errorMessage = viewModel.errorMessage {
+                ErrorBanner(message: errorMessage) {
+                    Task { await viewModel.load() }
+                }
+                Divider()
+            }
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     DetailSection(title: "Sidecar") {
                         DetailField(title: "Executable", value: cliPath)
                         DetailField(title: "POPSKILL_CLI", value: overridePath ?? "Not set")
+                        DetailField(title: "Version", value: viewModel.health?.sidecarVersion ?? "Unknown")
                     }
 
                     DetailSection(title: "CC Switch") {
-                        DetailField(title: "Skill Store", value: skillStorePath)
-                        DetailField(title: "Skill Backups", value: backupPath)
+                        DetailField(title: "Installed", value: countText(viewModel.health?.installedCount))
+                        DetailField(title: "Unmanaged", value: countText(viewModel.health?.unmanagedCount))
+                        DetailField(title: "Backups", value: countText(viewModel.health?.backupCount))
+                        DetailField(title: "Skill Store", value: viewModel.health?.skillStorePath ?? skillStorePath)
+                        DetailField(title: "Skill Backups", value: viewModel.health?.skillBackupPath ?? backupPath)
                     }
 
                     DetailSection(title: "Secrets") {
@@ -52,6 +103,15 @@ struct SettingsView: View {
             }
         }
         .background(Color.popMainBackground)
+        .task {
+            if viewModel.health == nil {
+                await viewModel.load()
+            }
+        }
+    }
+
+    private func countText(_ value: Int?) -> String {
+        value.map(String.init) ?? "Unknown"
     }
 
     private var ipcDocsURL: URL? {

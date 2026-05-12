@@ -83,6 +83,15 @@ struct SkillBackupDeleteResult: Codable, Equatable {
     let backupId: String
 }
 
+struct SidecarHealth: Codable, Equatable {
+    let sidecarVersion: String
+    let installedCount: Int
+    let unmanagedCount: Int
+    let backupCount: Int
+    let skillStorePath: String
+    let skillBackupPath: String
+}
+
 struct SkillApps: Codable, Equatable {
     var claude: Bool
     var codex: Bool

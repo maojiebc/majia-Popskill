@@ -20,6 +20,11 @@ actor SkillCLIClient {
         return override
     }
 
+    func health() async throws -> SidecarHealth {
+        let data = try run(arguments: ["health", "--json"])
+        return try Self.decodeResponse(SidecarHealth.self, from: data)
+    }
+
     func list() async throws -> [Skill] {
         let data = try run(arguments: ["list", "--json"])
         return try Self.decodeResponse([Skill].self, from: data)

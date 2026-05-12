@@ -49,6 +49,7 @@ struct RootView: View {
     @State private var updates = UpdatesViewModel()
     @State private var backups = BackupsViewModel()
     @State private var insights = InsightsViewModel()
+    @State private var settings = SettingsViewModel()
 
     var body: some View {
         NavigationSplitView {
@@ -98,7 +99,7 @@ struct RootView: View {
             case .idleCandidates:
                 IdleCandidatesView(viewModel: library)
             case .settings:
-                SettingsView()
+                SettingsView(viewModel: settings)
             }
         }
         .task {
