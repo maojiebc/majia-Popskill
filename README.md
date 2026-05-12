@@ -129,6 +129,9 @@ cd ~/projects/popskill
 # 一键开发构建
 ./scripts/dev-build.sh
 
+# 原生 app 启动烟测
+./scripts/smoke-app.sh
+
 # 本地启动 SwiftUI app
 ./scripts/run-app.sh
 ```
