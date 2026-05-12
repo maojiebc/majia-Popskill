@@ -132,6 +132,9 @@ cd ~/projects/popskill
 # 原生 app 启动烟测
 ./scripts/smoke-app.sh
 
+# 生成本地开发 .app bundle（内含 skill-cli sidecar）
+./scripts/package-dev-app.sh
+
 # 本地启动 SwiftUI app
 ./scripts/run-app.sh
 ```

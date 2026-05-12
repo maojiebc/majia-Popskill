@@ -195,6 +195,11 @@ actor SkillCLIClient {
             return URL(fileURLWithPath: override)
         }
 
+        if let bundledSidecarURL = Bundle.main.resourceURL?.appendingPathComponent("skill-cli"),
+           FileManager.default.isExecutableFile(atPath: bundledSidecarURL.path) {
+            return bundledSidecarURL
+        }
+
         let sourceFile = URL(fileURLWithPath: #filePath)
         let repoRoot = sourceFile
             .deletingLastPathComponent() // Services
