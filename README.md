@@ -118,6 +118,9 @@ cd ~/projects/popskill
 
 # 一键开发构建
 ./scripts/dev-build.sh
+
+# 本地启动 SwiftUI app
+./scripts/run-app.sh
 ```
 
 详见 [PLAN.md 附录 A](./PLAN.md#附录-a新电脑接手-checklist)。
