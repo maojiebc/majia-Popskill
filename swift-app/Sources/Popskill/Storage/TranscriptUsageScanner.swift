@@ -80,10 +80,11 @@ struct TranscriptUsageScanner {
 
             let sessionID = object["sessionId"] as? String
             let timestamp = dateValue(object["timestamp"])
+            let cwdProjectName = projectNameFromCWD(object["cwd"] as? String)
             if let sessionID {
                 var session = sessionStats[sessionID] ?? SessionUsageStat(
                     sessionID: sessionID,
-                    projectName: projectName,
+                    projectName: cwdProjectName ?? projectName,
                     startedAt: nil,
                     lastActivityAt: nil,
                     usageEvents: 0,
@@ -92,6 +93,9 @@ struct TranscriptUsageScanner {
                     cacheCreationTokens: 0,
                     cacheReadTokens: 0
                 )
+                if let cwdProjectName {
+                    session.projectName = cwdProjectName
+                }
                 session.observe(timestamp: timestamp)
                 sessionStats[sessionID] = session
             }
@@ -116,7 +120,7 @@ struct TranscriptUsageScanner {
             if let sessionID {
                 var session = sessionStats[sessionID] ?? SessionUsageStat(
                     sessionID: sessionID,
-                    projectName: projectName,
+                    projectName: cwdProjectName ?? projectName,
                     startedAt: timestamp,
                     lastActivityAt: timestamp,
                     usageEvents: 0,
@@ -125,6 +129,9 @@ struct TranscriptUsageScanner {
                     cacheCreationTokens: 0,
                     cacheReadTokens: 0
                 )
+                if let cwdProjectName {
+                    session.projectName = cwdProjectName
+                }
                 session.observe(timestamp: timestamp)
                 session.addUsage(
                     inputTokens: inputTokens,
@@ -189,6 +196,20 @@ struct TranscriptUsageScanner {
         }
 
         return parts.suffix(2).joined(separator: "/")
+    }
+
+    private func projectNameFromCWD(_ cwd: String?) -> String? {
+        guard let cwd, !cwd.isEmpty else {
+            return nil
+        }
+
+        let url = URL(fileURLWithPath: cwd)
+        let project = url.lastPathComponent
+        let parent = url.deletingLastPathComponent().lastPathComponent
+        if parent.isEmpty {
+            return project
+        }
+        return "\(parent)/\(project)"
     }
 
     private static let iso8601WithFractionalSeconds: ISO8601DateFormatter = {

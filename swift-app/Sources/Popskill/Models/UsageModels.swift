@@ -35,7 +35,7 @@ struct SessionUsageStat: Identifiable, Equatable {
     var id: String { sessionID }
 
     let sessionID: String
-    let projectName: String
+    var projectName: String
     var startedAt: Date?
     var lastActivityAt: Date?
     var usageEvents: Int
