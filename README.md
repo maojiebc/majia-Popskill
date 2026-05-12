@@ -14,7 +14,7 @@
 Popskill aims to be the App Store experience that Claude Code skills deserve on Mac:
 
 - **Mac-native SwiftUI design** (inspired by Surge for Mac)
-- **Inline multi-app toggle** for Claude / Codex / Gemini (CC Switch's pain point: you have to enter a detail page just to flip Codex on/off)
+- **Multi-app toggles** for Claude / Codex / Gemini / OpenCode / Hermes (quick row toggles for the common three, full controls in detail)
 - **Usage Insights** — token spend, top skills, hibernate candidates (parses `~/.claude/projects/*.jsonl`). No other tool does this.
 - **Stub state** — like App Store's "purchased but not downloaded"; reclaim disk without losing the card
 - **WebDAV sync** across devices (reuses [CC Switch](https://github.com/farion1231/cc-switch)'s implementation — zero re-implementation)
@@ -46,7 +46,7 @@ Popskill 就是来填这个坑的。
 
 1. **Mac App Store 级别的视觉**——SwiftUI 原生，配 Surge for Mac 设计语言
 2. **使用统计 / Insights 页**（全网独家）——告诉你装的几十个 skill 里哪些值得保留
-3. **行内多 app toggle**——Library 列表行内直接切 Claude/Codex/Gemini
+3. **多 app toggle**——Library 列表行内切 Claude/Codex/Gemini，详情页支持 OpenCode/Hermes
 4. **Stub 状态**——60 天没用的 skill 本地清掉内容、留 metadata 卡片，要用一键再装
 5. **WebDAV 跨设备同步**——白嫖 CC Switch 已有能力，不重做
 
@@ -94,8 +94,8 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 
 SwiftUI 端已接入：
 
-- Library：本机 skill 列表、All/Active/Inactive 过滤、Claude/Codex/Gemini 行内 toggle、右侧详情 pane、unmanaged import banner
-- Discover：搜索 CC Switch 启用的 skill repositories，按 Claude/Codex/Gemini 安装
+- Library：本机 skill 列表、All/Active/Inactive 过滤、Claude/Codex/Gemini 行内 toggle、详情页 5 App toggle、unmanaged import banner
+- Discover：搜索 CC Switch 启用的 skill repositories，按 Claude/Codex/Gemini/OpenCode/Hermes 安装
 - Updates：按需检查更新、逐条更新
 - Backups：查看、恢复、删除 CC Switch uninstall backups
 - Insights：本地扫描 `~/.claude/projects/**/*.jsonl`，聚合 token/session/file/model 指标，含 Recently Used、Token Spend、Idle Candidates
