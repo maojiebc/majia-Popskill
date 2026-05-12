@@ -9,6 +9,7 @@ final class UpdatesViewModel {
     var errorMessage: String?
 
     private let client = SkillCLIClient()
+    private var updatingIDs: Set<String> = []
 
     func check() async {
         isChecking = true
@@ -22,6 +23,28 @@ final class UpdatesViewModel {
         }
 
         isChecking = false
+    }
+
+    func isUpdating(_ id: String) -> Bool {
+        updatingIDs.contains(id)
+    }
+
+    func update(_ update: SkillUpdateInfo) async {
+        guard !updatingIDs.contains(update.id) else {
+            return
+        }
+
+        updatingIDs.insert(update.id)
+        errorMessage = nil
+
+        do {
+            _ = try await client.update(skillID: update.id)
+            updates.removeAll { $0.id == update.id }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        updatingIDs.remove(update.id)
     }
 }
 
@@ -67,16 +90,34 @@ struct UpdatesView: View {
             }
 
             List(viewModel.updates) { update in
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(update.name)
-                        .font(.headline)
-                    Text(update.id)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    HStack(spacing: 8) {
-                        HashBadge(title: "Local", hash: update.currentHash)
-                        HashBadge(title: "Remote", hash: update.remoteHash)
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(update.name)
+                            .font(.headline)
+                        Text(update.id)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        HStack(spacing: 8) {
+                            HashBadge(title: "Local", hash: update.currentHash)
+                            HashBadge(title: "Remote", hash: update.remoteHash)
+                        }
                     }
+
+                    Spacer()
+
+                    Button {
+                        Task { await viewModel.update(update) }
+                    } label: {
+                        if viewModel.isUpdating(update.id) {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "arrow.down.circle")
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .help("Update")
+                    .disabled(viewModel.isUpdating(update.id))
                 }
                 .padding(.vertical, 8)
             }

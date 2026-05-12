@@ -142,3 +142,18 @@ Checks GitHub-backed installed skills for remote content changes. This can take 
   ]
 }
 ```
+
+### `skill-cli update <skill-id> --json`
+
+Updates one installed skill from its GitHub source. CC Switch handles the download, hash recompute, database write, and app-directory sync for enabled apps.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "owner/repo:directory",
+    "name": "skill-name",
+    "contentHash": "new-sha256"
+  }
+}
+```

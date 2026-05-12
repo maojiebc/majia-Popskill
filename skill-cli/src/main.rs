@@ -45,6 +45,13 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Update one installed skill from its GitHub source.
+    Update {
+        skill_id: String,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// Enable or disable a skill for one target app.
     Toggle {
         skill_id: String,
@@ -101,6 +108,14 @@ async fn run() -> Result<()> {
                 .await
                 .context("failed to check skill updates")?;
             print_json(&ApiResponse::ok(updates))
+        }
+        Commands::Update { skill_id, json: _ } => {
+            let service = SkillService::new();
+            let skill = service
+                .update_skill(&db, &skill_id)
+                .await
+                .with_context(|| format!("failed to update skill '{skill_id}'"))?;
+            print_json(&ApiResponse::ok(skill))
         }
         Commands::Toggle {
             skill_id,
