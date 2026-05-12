@@ -83,6 +83,14 @@ struct InsightsView: View {
                         DetailField(title: "Transcript Files", value: "\(viewModel.summary.filesScanned)")
                         DetailField(title: "Sessions", value: "\(viewModel.summary.sessions)")
                     }
+
+                    DetailSection(title: "Models") {
+                        VStack(spacing: 8) {
+                            ForEach(viewModel.summary.modelStats.prefix(8)) { stat in
+                                ModelUsageRow(stat: stat, maxTokens: maxModelTokens)
+                            }
+                        }
+                    }
                 }
                 .padding(28)
             }
@@ -99,6 +107,10 @@ struct InsightsView: View {
                 await viewModel.scan()
             }
         }
+    }
+
+    private var maxModelTokens: Int64 {
+        viewModel.summary.modelStats.map(\.totalTokens).max() ?? 0
     }
 }
 
@@ -127,5 +139,52 @@ struct UsageMetricCard: View {
 
     private var formattedValue: String {
         value.formatted(.number.notation(.compactName))
+    }
+}
+
+struct ModelUsageRow: View {
+    let stat: ModelUsageStat
+    let maxTokens: Int64
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(stat.model)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                Spacer()
+                Text(stat.totalTokens.formatted(.number.notation(.compactName)))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.popHeaderBackground)
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.accentColor.opacity(0.65))
+                        .frame(width: proxy.size.width * widthRatio)
+                }
+            }
+            .frame(height: 7)
+
+            Text("\(stat.usageEvents) events · input \(stat.inputTokens.formatted(.number.notation(.compactName))) · output \(stat.outputTokens.formatted(.number.notation(.compactName)))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(12)
+        .background(Color.popCardBackground, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.popBorder, lineWidth: 1)
+        )
+    }
+
+    private var widthRatio: Double {
+        guard maxTokens > 0 else {
+            return 0
+        }
+        return max(0.02, min(1, Double(stat.totalTokens) / Double(maxTokens)))
     }
 }

@@ -16,8 +16,8 @@ struct TranscriptUsageScannerTests {
         let transcript = project.appendingPathComponent("session.jsonl")
         let lines = [
             #"{"type":"user","sessionId":"s1","message":{"role":"user","content":"private text"}}"#,
-            #"{"type":"assistant","sessionId":"s1","message":{"role":"assistant","usage":{"input_tokens":10,"output_tokens":5,"cache_creation_input_tokens":3,"cache_read_input_tokens":7}}}"#,
-            #"{"type":"assistant","sessionId":"s2","message":{"role":"assistant","usage":{"input_tokens":4,"output_tokens":6}}}"#,
+            #"{"type":"assistant","sessionId":"s1","message":{"role":"assistant","model":"claude-opus","usage":{"input_tokens":10,"output_tokens":5,"cache_creation_input_tokens":3,"cache_read_input_tokens":7}}}"#,
+            #"{"type":"assistant","sessionId":"s2","message":{"role":"assistant","model":"claude-sonnet","usage":{"input_tokens":4,"output_tokens":6}}}"#,
         ]
         try lines.joined(separator: "\n").write(to: transcript, atomically: true, encoding: .utf8)
 
@@ -31,5 +31,7 @@ struct TranscriptUsageScannerTests {
         #expect(summary.cacheCreationTokens == 3)
         #expect(summary.cacheReadTokens == 7)
         #expect(summary.totalTokens == 35)
+        #expect(summary.modelStats.map(\.model) == ["claude-opus", "claude-sonnet"])
+        #expect(summary.modelStats.first?.totalTokens == 25)
     }
 }
