@@ -105,6 +105,8 @@ struct RootView: View {
                 RecentActivityView(viewModel: insights)
             case .usage:
                 InsightsView(viewModel: insights)
+            case .tokenSpend:
+                TokenSpendView(viewModel: insights)
             default:
                 PlaceholderView(selection: selection ?? .installed)
             }
