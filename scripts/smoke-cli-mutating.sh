@@ -7,6 +7,11 @@ TMP_DIR="$(mktemp -d)"
 OWNER="popskill-smoke-temp"
 NAME="repo-$(date +%s)"
 
+if ! command -v jq > /dev/null; then
+  echo "jq is required for mutating skill-cli smoke tests. Install it with: brew install jq" >&2
+  exit 127
+fi
+
 cleanup() {
   "$CLI" repo-remove --owner "$OWNER" --name "$NAME" --json > /dev/null 2>&1 || true
   rm -rf "$TMP_DIR"

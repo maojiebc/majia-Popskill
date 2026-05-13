@@ -5,6 +5,11 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLI="${1:-$ROOT_DIR/skill-cli/target/debug/skill-cli}"
 TMP_DIR="$(mktemp -d)"
 
+if ! command -v jq > /dev/null; then
+  echo "jq is required for skill-cli smoke tests. Install it with: brew install jq" >&2
+  exit 127
+fi
+
 cleanup() {
   rm -rf "$TMP_DIR"
 }
