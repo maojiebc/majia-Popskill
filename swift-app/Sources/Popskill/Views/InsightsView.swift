@@ -78,20 +78,20 @@ struct InsightsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 14)], spacing: 14) {
-                        UsageMetricCard(title: "Total Tokens", value: viewModel.summary.totalTokens)
-                        UsageMetricCard(title: "Input", value: viewModel.summary.inputTokens)
-                        UsageMetricCard(title: "Output", value: viewModel.summary.outputTokens)
-                        UsageMetricCard(title: "Cache Read", value: viewModel.summary.cacheReadTokens)
-                        UsageMetricCard(title: "Cache Create", value: viewModel.summary.cacheCreationTokens)
-                        UsageMetricCard(title: "Usage Events", value: Int64(viewModel.summary.usageEvents))
+                        UsageMetricCard(title: "Total Tokens", value: viewModel.summary.totalTokens, accent: PopskillSectionAccent.color(for: 0))
+                        UsageMetricCard(title: "Input", value: viewModel.summary.inputTokens, accent: PopskillSectionAccent.color(for: 1))
+                        UsageMetricCard(title: "Output", value: viewModel.summary.outputTokens, accent: PopskillSectionAccent.color(for: 2))
+                        UsageMetricCard(title: "Cache Read", value: viewModel.summary.cacheReadTokens, accent: PopskillSectionAccent.color(for: 3))
+                        UsageMetricCard(title: "Cache Create", value: viewModel.summary.cacheCreationTokens, accent: PopskillSectionAccent.color(for: 4))
+                        UsageMetricCard(title: "Usage Events", value: Int64(viewModel.summary.usageEvents), accent: PopskillSectionAccent.color(for: 5))
                     }
 
-                    DetailSection(title: "Source") {
+                    DetailSection(title: "Source", accent: PopskillSectionAccent.color(for: 1)) {
                         DetailField(title: "Transcript Files", value: "\(viewModel.summary.filesScanned)")
                         DetailField(title: "Sessions", value: "\(viewModel.summary.sessions)")
                     }
 
-                    DetailSection(title: "Models") {
+                    DetailSection(title: "Models", accent: PopskillSectionAccent.color(for: 2)) {
                         VStack(spacing: 8) {
                             ForEach(viewModel.summary.modelStats.prefix(8)) { stat in
                                 ModelUsageRow(stat: stat, maxTokens: maxModelTokens)
@@ -108,7 +108,7 @@ struct InsightsView: View {
                 }
             }
         }
-        .background(Color.popMainBackground)
+        .popPageBackground()
         .task {
             if !viewModel.hasScannedOnce {
                 await viewModel.scan()
@@ -124,24 +124,27 @@ struct InsightsView: View {
 struct UsageMetricCard: View {
     let title: String
     let value: Int64
+    var accent: Color = .popSectionBlue
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased())
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text(formattedValue)
-                .font(.system(size: 32, weight: .bold))
-                .monospacedDigit()
-                .minimumScaleFactor(0.7)
+        HStack(alignment: .top, spacing: 12) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(accent)
+                .frame(width: 4)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title.uppercased())
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(accent)
+                Text(formattedValue)
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.68)
+            }
         }
         .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
         .padding(14)
-        .background(Color.popCardBackground, in: RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.popBorder, lineWidth: 1)
-        )
+        .popCard(cornerRadius: PopskillRadius.card)
     }
 
     private var formattedValue: String {
@@ -181,11 +184,7 @@ struct ModelUsageRow: View {
                 .foregroundStyle(.secondary)
         }
         .padding(12)
-        .background(Color.popCardBackground, in: RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.popBorder, lineWidth: 1)
-        )
+        .popCard(cornerRadius: PopskillRadius.smallCard, shadowOpacity: 0.02)
     }
 
     private var widthRatio: Double {

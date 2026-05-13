@@ -69,7 +69,7 @@ struct IdleCandidatesView: View {
                 }
             }
         }
-        .background(Color.popMainBackground)
+        .popPageBackground()
         .task {
             if !viewModel.hasLoadedOnce {
                 await viewModel.load()

@@ -228,7 +228,7 @@ struct RepositoriesView: View {
                 }
             }
         }
-        .background(Color.popMainBackground)
+        .popPageBackground()
         .sheet(isPresented: $isShowingAddSheet) {
             AddRepositorySheet(
                 isAdding: viewModel.isAdding,

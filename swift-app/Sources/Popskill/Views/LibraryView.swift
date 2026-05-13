@@ -84,7 +84,7 @@ struct LibraryView: View {
                 selectedSkillID = skills.first?.id
             }
         }
-        .background(Color.popMainBackground)
+        .popPageBackground()
         .searchable(text: $viewModel.searchText, placement: .toolbar, prompt: "Search Library")
     }
 
@@ -162,7 +162,7 @@ struct LibraryView: View {
         }
         .padding(.horizontal, 28)
         .padding(.vertical, 18)
-        .background(Color.popMainBackground)
+        .popPageBackground()
     }
 }
 
@@ -259,7 +259,7 @@ struct SkillDetailPane: View {
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        DetailSection(title: "Enabled In") {
+                        DetailSection(title: "Enabled In", accent: PopskillSectionAccent.color(for: 0)) {
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 82), spacing: 8)], spacing: 8) {
                                 ForEach(TargetApp.allCases, id: \.id) { app in
                                     AppToggle(
@@ -273,7 +273,7 @@ struct SkillDetailPane: View {
                             }
                         }
 
-                        DetailSection(title: "Metadata") {
+                        DetailSection(title: "Metadata", accent: PopskillSectionAccent.color(for: 1)) {
                             DetailField(title: "Directory", value: skill.directory)
                             DetailField(title: "Identifier", value: skill.id)
                             if let contentHash = skill.contentHash, !contentHash.isEmpty {

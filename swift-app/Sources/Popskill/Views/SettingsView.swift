@@ -79,13 +79,13 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    DetailSection(title: "Sidecar") {
+                    DetailSection(title: "Sidecar", accent: PopskillSectionAccent.color(for: 0)) {
                         DetailField(title: "Executable", value: cliPath)
                         DetailField(title: "POPSKILL_CLI", value: overridePath ?? "Not set")
                         DetailField(title: "Version", value: viewModel.health?.sidecarVersion ?? "Unknown")
                     }
 
-                    DetailSection(title: "CC Switch") {
+                    DetailSection(title: "CC Switch", accent: PopskillSectionAccent.color(for: 1)) {
                         DetailField(title: "Installed", value: countText(viewModel.health?.installedCount))
                         DetailField(title: "Unmanaged", value: countText(viewModel.health?.unmanagedCount))
                         DetailField(title: "Backups", value: countText(viewModel.health?.backupCount))
@@ -94,7 +94,7 @@ struct SettingsView: View {
                         DetailField(title: "Skill Backups", value: viewModel.health?.skillBackupPath ?? backupPath)
                     }
 
-                    DetailSection(title: "Secrets") {
+                    DetailSection(title: "Secrets", accent: PopskillSectionAccent.color(for: 2)) {
                         DetailField(title: "Storage", value: "macOS Keychain")
                         DetailField(title: "Plaintext Policy", value: "Secrets are not stored in SQLite or app settings.")
                     }
@@ -110,7 +110,7 @@ struct SettingsView: View {
                 .padding(28)
             }
         }
-        .background(Color.popMainBackground)
+        .popPageBackground()
         .task {
             if !viewModel.hasLoadedOnce {
                 await viewModel.load()

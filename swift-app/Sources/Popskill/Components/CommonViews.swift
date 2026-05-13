@@ -20,19 +20,22 @@ struct AppToggle: View {
                         .foregroundStyle(isOn ? Color.accentColor : Color.popStatusNeutral)
                 }
                 Text(title)
-                    .font(.caption)
+                    .font(.caption.weight(isOn ? .semibold : .regular))
                     .lineLimit(1)
             }
-            .frame(width: 74, height: 28)
+            .frame(width: 78, height: 30)
         }
         .buttonStyle(.plain)
         .disabled(isPending)
-        .background(isOn ? Color.popHighlightFill : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+        .background(
+            isOn ? Color.popHighlightFill : Color.popCardBackground.opacity(0.35),
+            in: RoundedRectangle(cornerRadius: PopskillRadius.button)
+        )
         .overlay(
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: PopskillRadius.button)
                 .stroke(isOn ? Color.accentColor.opacity(0.25) : Color.popBorder, lineWidth: 1)
         )
-        .contentShape(RoundedRectangle(cornerRadius: 6))
+        .contentShape(RoundedRectangle(cornerRadius: PopskillRadius.button))
         .help(title)
     }
 }
@@ -45,14 +48,14 @@ struct SummaryMetric: View {
     var body: some View {
         VStack(alignment: .trailing, spacing: 2) {
             Text("\(value)")
-                .font(.system(size: 22, weight: .bold))
+                .font(.system(size: 26, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(color)
             Text(title)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        .frame(width: 86, alignment: .trailing)
+        .frame(width: 92, alignment: .trailing)
     }
 }
 
@@ -65,9 +68,8 @@ struct InitialAvatarView: View {
     }
 
     private var color: Color {
-        let palette: [Color] = [.orange, .purple, .blue, .green, .pink, .teal]
-        let index = Self.stablePaletteIndex(for: identifier, paletteCount: palette.count)
-        return palette[index]
+        let index = Self.stablePaletteIndex(for: identifier, paletteCount: Color.popAvatarPalette.count)
+        return Color.popAvatarPalette[index]
     }
 
     static func stablePaletteIndex(for identifier: String, paletteCount: Int) -> Int {
@@ -84,7 +86,7 @@ struct InitialAvatarView: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: PopskillRadius.smallCard)
                 .fill(color.gradient)
             Text(initial)
                 .font(.system(size: 20, weight: .bold))
@@ -121,6 +123,7 @@ struct ErrorBanner: View {
                 .lineLimit(2)
             Spacer()
             Button("Retry", action: onRetry)
+                .buttonStyle(.bordered)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
@@ -130,17 +133,19 @@ struct ErrorBanner: View {
 
 struct DetailSection<Content: View>: View {
     let title: String
+    var accent: Color = .popSectionOrange
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title.uppercased())
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.popSecondaryLabel)
+            SectionHeading(title: title, accent: accent)
             VStack(alignment: .leading, spacing: 8) {
                 content
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(PopskillSpacing.md)
+        .popCard(cornerRadius: PopskillRadius.smallCard, shadowOpacity: 0.02)
     }
 }
 
@@ -157,6 +162,22 @@ struct DetailField: View {
                 .font(.caption)
                 .textSelection(.enabled)
                 .lineLimit(3)
+        }
+    }
+}
+
+struct SectionHeading: View {
+    let title: String
+    var accent: Color = .popSectionOrange
+
+    var body: some View {
+        HStack(spacing: 7) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(accent)
+                .frame(width: 4, height: 13)
+            Text(title.uppercased())
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(accent)
         }
     }
 }

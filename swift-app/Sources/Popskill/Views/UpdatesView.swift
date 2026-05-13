@@ -147,7 +147,7 @@ struct UpdatesView: View {
                 }
             }
         }
-        .background(Color.popMainBackground)
+        .popPageBackground()
     }
 
     private var emptyStateTitle: String {

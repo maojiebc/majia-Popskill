@@ -19,14 +19,14 @@ struct TokenSpendView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 14)], spacing: 14) {
-                        UsageMetricCard(title: "Total", value: viewModel.summary.totalTokens)
-                        UsageMetricCard(title: "Input", value: viewModel.summary.inputTokens)
-                        UsageMetricCard(title: "Output", value: viewModel.summary.outputTokens)
-                        UsageMetricCard(title: "Cache Read", value: viewModel.summary.cacheReadTokens)
-                        UsageMetricCard(title: "Cache Create", value: viewModel.summary.cacheCreationTokens)
+                        UsageMetricCard(title: "Total", value: viewModel.summary.totalTokens, accent: PopskillSectionAccent.color(for: 0))
+                        UsageMetricCard(title: "Input", value: viewModel.summary.inputTokens, accent: PopskillSectionAccent.color(for: 1))
+                        UsageMetricCard(title: "Output", value: viewModel.summary.outputTokens, accent: PopskillSectionAccent.color(for: 2))
+                        UsageMetricCard(title: "Cache Read", value: viewModel.summary.cacheReadTokens, accent: PopskillSectionAccent.color(for: 3))
+                        UsageMetricCard(title: "Cache Create", value: viewModel.summary.cacheCreationTokens, accent: PopskillSectionAccent.color(for: 4))
                     }
 
-                    DetailSection(title: "By Model") {
+                    DetailSection(title: "By Model", accent: PopskillSectionAccent.color(for: 2)) {
                         VStack(spacing: 8) {
                             ForEach(viewModel.summary.modelStats) { stat in
                                 ModelUsageRow(stat: stat, maxTokens: maxModelTokens)
@@ -45,7 +45,7 @@ struct TokenSpendView: View {
                 }
             }
         }
-        .background(Color.popMainBackground)
+        .popPageBackground()
         .task {
             if !viewModel.hasScannedOnce {
                 await viewModel.scan()

@@ -115,7 +115,7 @@ struct DiscoverView: View {
                 }
             }
         }
-        .background(Color.popMainBackground)
+        .popPageBackground()
         .task {
             if !viewModel.hasLoadedOnce {
                 await viewModel.search()

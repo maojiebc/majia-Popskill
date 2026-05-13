@@ -23,4 +23,11 @@ struct CommonViewsTests {
 
         #expect(index == 0)
     }
+
+    @Test
+    func sectionAccentIndexWrapsForwardAndBackward() {
+        #expect(PopskillSectionAccent.index(for: 0) == 0)
+        #expect(PopskillSectionAccent.index(for: 4) == 0)
+        #expect(PopskillSectionAccent.index(for: -1) == 3)
+    }
 }

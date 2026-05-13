@@ -56,7 +56,7 @@ struct RecentActivityView: View {
                 }
             }
         }
-        .background(Color.popMainBackground)
+        .popPageBackground()
         .task {
             if !viewModel.hasScannedOnce {
                 await viewModel.scan()
