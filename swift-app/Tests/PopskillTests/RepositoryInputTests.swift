@@ -36,6 +36,28 @@ struct RepositoryInputTests {
     }
 
     @Test
+    func parsesSSHGitHubURLs() {
+        let parts = RepositoriesViewModel.normalizedRepositoryParts(
+            ownerInput: "git@github.com:maojiebc/majia-skills.git",
+            nameInput: ""
+        )
+
+        #expect(parts?.owner == "maojiebc")
+        #expect(parts?.name == "majia-skills")
+    }
+
+    @Test
+    func parsesGitHubTreeURLs() {
+        let parts = RepositoriesViewModel.normalizedRepositoryParts(
+            ownerInput: "https://github.com/maojiebc/majia-skills/tree/dev",
+            nameInput: ""
+        )
+
+        #expect(parts?.owner == "maojiebc")
+        #expect(parts?.name == "majia-skills")
+    }
+
+    @Test
     func stripsOnlyGitSuffix() {
         let parts = RepositoriesViewModel.normalizedRepositoryParts(
             ownerInput: "maojiebc/widget.git-tools.git",
