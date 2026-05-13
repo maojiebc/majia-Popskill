@@ -1,6 +1,6 @@
 # Popskill v0.1 Release Notes Draft
 
-Popskill v0.1 is a pre-alpha macOS app for managing Claude Code Agent Skills with a Mac App Store-style interface. This release is intended for early technical testers.
+Popskill v0.1 is a pre-alpha macOS app that starts as a Claude Code Agent Skills manager and points toward a broader Mac App Store for AI capabilities. This release is intended for early technical testers.
 
 ## Highlights
 
@@ -31,6 +31,7 @@ Popskill v0.1 is a pre-alpha macOS app for managing Claude Code Agent Skills wit
 - Public distribution requires Apple Developer ID signing and notarization.
 - AgencyAgents catalog preview uses the GitHub API. Set `GITHUB_TOKEN` or `GH_TOKEN` if unauthenticated rate limits are hit.
 - Package abstraction is a v0.2 roadmap item; v0.1 remains Skill-centered.
+- Popskill complements existing ecosystems such as MCP registries, Smithery, Dify Bundles, ECC, and agency-agents; it is not claiming those categories started here.
 
 ## Verification
 

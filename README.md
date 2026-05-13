@@ -1,7 +1,7 @@
 # Popskill
 
-> A Mac App Store-style client for managing Claude Code Agent Skills.
-> 一款看齐 Mac App Store 的 Claude Code Agent Skills 桌面客户端。
+> The Mac App Store for AI capabilities, starting with Claude Code Agent Skills.
+> Mac 上的 AI 能力 App Store，从 Claude Code Agent Skills 开始。
 
 <p align="center">
   <strong>Status: Pre-alpha — MVP feature verticals compile and pass local CI; v0.1 release hardening is in progress.</strong>
@@ -11,7 +11,7 @@
 
 ## English (TL;DR)
 
-Popskill aims to be the App Store experience that Claude Code skills deserve on Mac:
+Popskill aims to be the Mac App Store for AI capabilities, starting with the App Store experience that Claude Code skills deserve on Mac:
 
 - **Mac-native SwiftUI design** (inspired by Surge for Mac)
 - **Multi-app toggles** for Claude / Codex / Gemini / OpenCode / Hermes (quick row toggles for the common three, full controls in detail)
@@ -24,6 +24,18 @@ Popskill aims to be the App Store experience that Claude Code skills deserve on 
 **Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
 
 **Current stage**: MVP feature verticals are implemented locally. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install-plan/install/update/uninstall/import/repository/backup/WebDAV status/config/remote-info/sync-plan flows, plus read-only `agent-list`, `agent-targets`, `agent-catalog`, and `agent-install-plan` flows for local Claude Code agents, Agent-capable tools, and AgencyAgents content; SwiftUI Library + Agents + Discover + Repositories + Updates + Backups + Insights + Settings compile and pass tests; `scripts/ci-local.sh` verifies Rust/Swift builds, read-only sidecar/Agent smoke, native launch smoke, bundle smoke, screenshot asset smoke, and release artifact smoke. Remaining v0.1 work is release hardening: Developer ID signing/notarization, Sparkle public feed/key/signature verification, WebDAV manual sync, and final screenshot QA. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
+
+## Where Popskill Fits
+
+Popskill is part of a growing AI tools ecosystem. It complements these excellent projects instead of pretending the category starts here:
+
+- **Anthropic MCP Registry**: the upstream DNS for MCP servers. Popskill consumes registry metadata; it is not a registry.
+- **Smithery, Glama, MCPHub, MyMCP**: strong MCP-focused discovery and management projects. Popskill goes broader by adding Skills, Agents, CLI tools, and Config.
+- **Dify**: the Bundle concept pioneer in web LLM platforms. Popskill brings the capability-package idea to native Mac and local AI clients.
+- **everything-claude-code (ECC)** and **agency-agents**: rich content sources for Skills and Agents. Popskill is a GUI consumer and local manager for that content.
+- **iamzhihuix/skills-manage** and **yibie/skills-manager**: skill-focused managers. Popskill's long-term direction is cross-form capability packages with Mac-native UX.
+
+The planned v0.2 Package model is therefore not "first ever"; it is Popskill's attempt to make the full combination work on Mac: **Skill + Agent + CLI + MCP + Config**, across AI tools, with App Store-level UX, Usage Insights, Stub, and AgentShield.
 
 ## Screenshots
 

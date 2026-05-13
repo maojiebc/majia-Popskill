@@ -75,6 +75,18 @@
 | **ECC / everything-claude-code** | 18 万⭐ / npm + 配置包 + Tkinter Dashboard | 208 skills + 55 agents，带 AgentShield 安全扫描 | 不是同赛道 GUI，但可作为上游内容源和安全能力来源 |
 | **msitarzewski/agency-agents** | 9.6 万⭐ / Markdown agent library | 80+ agents、17 分类、MIT，中文圈传播强 | 不是 GUI 对手，但明确证明 Agent 角色库需求；Popskill 应先纳入本机 Agent 管理，再接来源发现 |
 
+### 邻近生态（不是直接对手，但必须诚实标注）
+
+这些项目证明"能力包 / MCP 管理 / 多组件 AI 能力"不是 Popskill 首创。Popskill 的差异化是把这些维度组合到 **Mac native + 跨形态 + 跨多 AI 工具 + App Store 视觉 + Insights/Stub/AgentShield** 这一完整桌面体验里。
+
+| 生态项目 | 已验证的方向 | Popskill 的边界 |
+|---|---|---|
+| **Dify Bundles** | Web LLM 平台内的多插件 bundle / 批量安装概念 | Popskill 把能力包带到本地 macOS 和多 AI 客户端，不替代 Dify 平台内插件 |
+| **Smithery CLI** | CLI 形态同时管理 MCP servers 与 Skills | Popskill 面向 GUI 用户，并把 Agent / CLI / Config 也纳入能力包 |
+| **Anthropic MCP Registry** | MCP metadata 的上游标准和 namespace / UUID 体系 | Popskill 不是 registry，而是官方 registry 与社区 registry 的 GUI 消费者 |
+| **Glama / mcpfinder / MCPHub / MyMCP / MCPJungle** | MCP server 发现、安装、跨客户端管理需求成立 | Popskill 不做 MCP-only 管理器；MCP 是 Package 组件之一 |
+| **ECC / agency-agents** | Skills + Agents 内容源和跨工具内容需求成立 | Popskill 优先消费这些内容源，提供本地管理、安装计划、安全和使用洞察 |
+
 ### 差异化复核
 
 把 Popskill 计划的差异点跟两个头部对手逐一对照，确认护城河是否成立：
@@ -1398,6 +1410,8 @@ v0.2.1 只内置少量高价值样板，避免范围爆炸：
 | P2 | 微信生态 | 公众号/视频号/私域/直播 Skills + Agents | 中文圈差异化 |
 | P2 | 观远 BI | `guancli` + Skills + Agent | 企业数据样板 |
 | P2 | 马甲个人 IP 包 | majia 系列 Skills + Agents | 自用与个人 IP 样板 |
+
+MCP 组件的数据来源应遵循 Anthropic 官方 MCP Registry 的 namespace / UUID 设计，同时允许 Smithery、Glama、mcpfinder 等社区 registry 作为发现源。Popskill 不做新的 MCP registry；它只负责把 registry metadata 变成 Mac 上可理解、可安装、可配置、可回滚的能力包体验。
 
 ### 15.6 迁移路径
 
