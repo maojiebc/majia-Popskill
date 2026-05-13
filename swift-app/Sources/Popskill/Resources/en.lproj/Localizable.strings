@@ -131,6 +131,8 @@
 "Open Markdown" = "Open Markdown";
 "Open Folder" = "Open Folder";
 "Open Source" = "Open Source";
+"Source Kind" = "Source Kind";
+"Repository" = "Repository";
 "Make Stub" = "Make Stub";
 "Uninstall" = "Uninstall";
 "Cancel" = "Cancel";
@@ -162,6 +164,7 @@
 "Targets" = "Targets";
 "Detected" = "Detected";
 "Missing" = "Missing";
+"Imported" = "Imported";
 "Category" = "Category";
 "All Categories" = "All Categories";
 "Agent" = "Agent";

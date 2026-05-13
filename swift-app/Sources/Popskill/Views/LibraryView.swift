@@ -473,7 +473,7 @@ struct LibraryView: View {
 
             if viewModel.selectedFilter == .stub {
                 Picker("Restore In", selection: $viewModel.selectedRehydrateApp) {
-                    ForEach(TargetApp.allCases, id: \.id) { app in
+                    ForEach(TargetApp.supported, id: \.id) { app in
                         Text(app.title).tag(app)
                     }
                 }
@@ -512,7 +512,7 @@ struct UnmanagedSkillsBanner: View {
                     .font(.headline)
                 Spacer()
                 Picker("Import In", selection: $selectedImportApp) {
-                    ForEach(TargetApp.allCases, id: \.id) { app in
+                    ForEach(TargetApp.supported, id: \.id) { app in
                         Text(app.title).tag(app)
                     }
                 }
@@ -593,12 +593,26 @@ struct PackageDetailPane: View {
                         }
 
                         DetailSection(title: "Update Status", accent: PopskillSectionAccent.color(for: 0)) {
+                            let lifecycle = package.lifecycle ?? .untracked
                             DetailField(title: "Health", value: package.health.title)
-                            DetailField(title: "Version", value: localization.string("Not Tracked"))
-                            DetailField(title: "Last Updated", value: localization.string("Not Tracked"))
+                            DetailField(
+                                title: "Version",
+                                value: package.source.repoBranch.map { "@\($0)" } ?? localization.string("Not Tracked")
+                            )
+                            DetailField(
+                                title: "Installed Date",
+                                value: formattedOptionalTimestamp(lifecycle.installedAt, fallback: localization.string("Not Tracked"))
+                            )
+                            DetailField(
+                                title: "Last Updated",
+                                value: formattedOptionalTimestamp(lifecycle.updatedAt, fallback: localization.string("Not Tracked"))
+                            )
                             DetailField(title: "Installed Components", value: "\(package.installedComponentCount) / \(package.componentCount)")
                             DetailField(title: "Missing Components", value: "\(package.missingComponentCount)")
                             DetailField(title: "Required Missing", value: "\(package.missingRequiredComponentCount)")
+                            if let hash = lifecycle.contentHash, !hash.isEmpty {
+                                DetailField(title: "Hash", value: String(hash.prefix(12)))
+                            }
                         }
 
                         DetailSection(title: "Components", accent: PopskillSectionAccent.color(for: 1)) {
@@ -630,16 +644,35 @@ struct PackageDetailPane: View {
 
                         DetailSection(title: "Source & Docs", accent: PopskillSectionAccent.color(for: 3)) {
                             DetailField(title: "Type", value: package.typeLabel)
+                            DetailField(title: "Source Kind", value: package.source.kind)
                             DetailField(title: "Location", value: package.source.location)
                             DetailField(title: "Update Strategy", value: package.source.updateStrategy)
+                            DetailField(
+                                title: "Repository",
+                                value: packageRepositoryLabel(package, fallback: localization.string("Not Tracked"))
+                            )
 
-                            if let url = package.sourceURL {
-                                Link(destination: url) {
-                                    LocalizedLabel(title: "Open Source", systemImage: "arrow.up.right.square")
+                            HStack(spacing: 8) {
+                                if let url = package.sourceURL {
+                                    Link(destination: url) {
+                                        LocalizedLabel(title: "Open Source", systemImage: "arrow.up.right.square")
+                                    }
+                                    .buttonStyle(.bordered)
                                 }
-                                .buttonStyle(.bordered)
-                            } else {
-                                DetailField(title: "Source", value: localization.string("Not Tracked"))
+
+                                if let readmeURL = packageReadmeURL(package) {
+                                    Link(destination: readmeURL) {
+                                        LocalizedLabel(title: "Open Markdown", systemImage: "doc.text")
+                                    }
+                                    .buttonStyle(.bordered)
+                                }
+
+                                if let folderURL = packagePrimaryFolderURL(package) {
+                                    Link(destination: folderURL) {
+                                        LocalizedLabel(title: "Open Folder", systemImage: "folder")
+                                    }
+                                    .buttonStyle(.bordered)
+                                }
                             }
                         }
                     }
@@ -655,13 +688,7 @@ struct PackageDetailPane: View {
 
 struct PackageRow: View {
     let package: CapabilityPackage
-    @State private var isExpanded: Bool
     @Environment(\.popskillLocalization) private var localization
-
-    init(package: CapabilityPackage) {
-        self.package = package
-        _isExpanded = State(initialValue: false)
-    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -705,23 +732,9 @@ struct PackageRow: View {
                         .foregroundStyle(Color.popTertiaryLabel)
                         .lineLimit(1)
                 }
-
-                if package.type == .composite {
-                    DisclosureGroup(isExpanded: $isExpanded) {
-                        PackageComponentTree(components: package.components)
-                            .padding(.top, 4)
-                    } label: {
-                        LocalizedText("Component Tree")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .disclosureGroupStyle(.automatic)
-                } else if let component = package.components.all.first {
-                    PackageComponentLine(component: component)
-                }
             }
         }
-        .frame(minHeight: package.type == .composite ? 128 : 82)
+        .frame(minHeight: 96)
     }
 }
 
@@ -859,7 +872,7 @@ struct SkillDetailPane: View {
 
                         DetailSection(title: "Enabled In", accent: PopskillSectionAccent.color(for: 2)) {
                             HStack(spacing: 7) {
-                                ForEach(TargetApp.allCases, id: \.id) { app in
+                                ForEach(TargetApp.supported, id: \.id) { app in
                                     AppToggle(
                                         app: app,
                                         isOn: skill.apps.isEnabled(app),
@@ -1088,7 +1101,7 @@ struct SkillRow: View {
                 }
 
                 LazyVGrid(columns: appToggleColumns, alignment: .leading, spacing: 8) {
-                    ForEach(TargetApp.allCases, id: \.id) { app in
+                    ForEach(TargetApp.supported, id: \.id) { app in
                         AppToggle(
                             app: app,
                             isOn: skill.apps.isEnabled(app),
@@ -1293,4 +1306,61 @@ private func componentStatusColor(_ component: PackageComponent) -> Color {
     default:
         return .popStatusNeutral
     }
+}
+
+private func packageRepositoryLabel(_ package: CapabilityPackage, fallback: String) -> String {
+    guard let owner = package.source.repoOwner,
+          let name = package.source.repoName,
+          !owner.isEmpty,
+          !name.isEmpty
+    else {
+        return fallback
+    }
+
+    if let branch = package.source.repoBranch, !branch.isEmpty, branch != "main" {
+        return "\(owner)/\(name)@\(branch)"
+    }
+    return "\(owner)/\(name)"
+}
+
+private func packageReadmeURL(_ package: CapabilityPackage) -> URL? {
+    guard let readmeUrl = package.source.readmeUrl,
+          let url = URL(string: readmeUrl),
+          let scheme = url.scheme?.lowercased(),
+          ["http", "https"].contains(scheme)
+    else {
+        return nil
+    }
+    return url
+}
+
+private func packagePrimaryFolderURL(_ package: CapabilityPackage) -> URL? {
+    let paths = package.components.all
+        .filter(\.installed)
+        .compactMap(\.location)
+
+    for path in paths {
+        if let fileURL = resolvedLocalPathURL(path),
+           FileManager.default.fileExists(atPath: fileURL.path) {
+            return fileURL
+        }
+    }
+    return nil
+}
+
+private func resolvedLocalPathURL(_ path: String) -> URL? {
+    let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else {
+        return nil
+    }
+
+    let expanded = (trimmed as NSString).expandingTildeInPath
+    if expanded.hasPrefix("/") {
+        return URL(fileURLWithPath: expanded)
+    }
+
+    return URL(fileURLWithPath: NSHomeDirectory())
+        .appendingPathComponent(".cc-switch")
+        .appendingPathComponent("skills")
+        .appendingPathComponent(expanded)
 }

@@ -128,7 +128,7 @@ struct SkillModelsTests {
 
     @Test
     func targetAppRegistryCoversCurrentSkillTargets() {
-        #expect(TargetAppRegistry.all.map(\.app) == TargetApp.allCases)
+        #expect(TargetAppRegistry.all.map(\.app) == TargetApp.supported)
         #expect(TargetApp.codex.title == "Codex")
         #expect(TargetApp.codex.symbolName == "chevron.left.forwardslash.chevron.right")
         #expect(TargetApp.codex.definition.skillDirectory == ".codex/skills")
@@ -384,6 +384,9 @@ struct SkillModelsTests {
         #expect(target.statusLabel == "Detected")
         #expect(target.pathSummary == "/Users/example/.config/kimi/agents")
         #expect(target.symbolName == "k.circle")
+        #expect(target.definition.displayName == "Kimi Code")
+        #expect(target.isRegistryTarget == true)
+        #expect(target.isImportedTarget == false)
         #expect(target.source == "agency-agents")
     }
 
@@ -403,6 +406,57 @@ struct SkillModelsTests {
         #expect(target.statusLabel == "Missing")
         #expect(target.pathSummary == "/Users/example/.qwen/agents\n/Users/example/project/.qwen/agents")
         #expect(target.symbolName == "q.circle")
+    }
+
+    @Test
+    func targetAgentRegistryCoversAgencyAgentsMatrix() {
+        #expect(TargetAgentRegistry.all.count == 11)
+        #expect(TargetAgentRegistry.all.map(\.targetID) == [
+            "claude-code",
+            "copilot",
+            "antigravity",
+            "gemini-cli",
+            "opencode",
+            "openclaw",
+            "cursor",
+            "aider",
+            "windsurf",
+            "qwen",
+            "kimi"
+        ])
+        #expect(TargetAgentRegistry.definition(for: "claude-code", fallbackName: "Claude").linkedApp == .claude)
+        #expect(TargetAgentRegistry.definition(for: "opencode", fallbackName: "OpenCode").linkedApp == .opencode)
+    }
+
+    @Test
+    func importedAgentTargetClassificationAndRegistrySorting() {
+        let imported = AgentTarget(
+            id: "custom-workbench",
+            name: "Custom Workbench",
+            scope: "project",
+            format: "markdown-agent",
+            paths: ["/Users/example/project/.custom/agents"],
+            detected: true,
+            source: "manual-import",
+            note: nil
+        )
+        let knownMissing = AgentTarget(
+            id: "claude-code",
+            name: "Claude Code",
+            scope: "user",
+            format: "markdown-agent",
+            paths: ["/Users/example/.claude/agents"],
+            detected: false,
+            source: "agency-agents",
+            note: nil
+        )
+
+        let sorted = TargetAgentRegistry.sort([imported, knownMissing])
+
+        #expect(imported.isImportedTarget == true)
+        #expect(imported.isRegistryTarget == false)
+        #expect(imported.linkedApp == nil)
+        #expect(sorted.map(\.id) == ["claude-code", "custom-workbench"])
     }
 
 
@@ -597,10 +651,19 @@ struct SkillModelsTests {
             name: "Demo",
             vendor: nil,
             summary: "Demo package",
-            source: PackageSource(kind: "builtin", location: "demo", updateStrategy: "manual"),
+            source: PackageSource(
+                kind: "builtin",
+                location: "demo",
+                updateStrategy: "manual",
+                repoOwner: nil,
+                repoName: nil,
+                repoBranch: nil,
+                readmeUrl: nil
+            ),
             components: PackageComponents(cli: [], skills: components, mcp: [], agents: []),
             configSchema: [],
-            installed: components.contains(where: \.installed)
+            installed: components.contains(where: \.installed),
+            lifecycle: nil
         )
     }
 

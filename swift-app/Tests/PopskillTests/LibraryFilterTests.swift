@@ -145,10 +145,19 @@ struct LibraryFilterTests {
             name: type.title,
             vendor: nil,
             summary: "Demo package",
-            source: PackageSource(kind: "builtin", location: "popskill/demo", updateStrategy: "manual"),
+            source: PackageSource(
+                kind: "builtin",
+                location: "popskill/demo",
+                updateStrategy: "manual",
+                repoOwner: nil,
+                repoName: nil,
+                repoBranch: nil,
+                readmeUrl: nil
+            ),
             components: PackageComponents(cli: [], skills: components, mcp: [], agents: []),
             configSchema: [],
-            installed: installedComponents > 0 || type == .standalone
+            installed: installedComponents > 0 || type == .standalone,
+            lifecycle: nil
         )
     }
 }

@@ -131,6 +131,8 @@
 "Open Markdown" = "打开 Markdown";
 "Open Folder" = "打开文件夹";
 "Open Source" = "打开来源";
+"Source Kind" = "来源类型";
+"Repository" = "仓库";
 "Make Stub" = "转为 Stub";
 "Uninstall" = "卸载";
 "Cancel" = "取消";
@@ -162,6 +164,7 @@
 "Targets" = "目标";
 "Detected" = "已检测";
 "Missing" = "未检测";
+"Imported" = "导入来源";
 "Category" = "分类";
 "All Categories" = "全部分类";
 "Agent" = "Agent";

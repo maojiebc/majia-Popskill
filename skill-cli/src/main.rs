@@ -1527,6 +1527,10 @@ fn standalone_skill_package(skill: &InstalledSkill) -> CapabilityPackage {
                 .as_ref()
                 .map(|_| "github".to_string())
                 .unwrap_or_else(|| "manual".to_string()),
+            repo_owner: skill.repo_owner.clone(),
+            repo_name: skill.repo_name.clone(),
+            repo_branch: skill.repo_branch.clone(),
+            readme_url: skill.readme_url.clone(),
         },
         components: PackageComponents {
             cli: Vec::new(),
@@ -1544,6 +1548,7 @@ fn standalone_skill_package(skill: &InstalledSkill) -> CapabilityPackage {
         },
         config_schema: Vec::new(),
         installed: true,
+        lifecycle: lifecycle_from_skill(Some(skill)),
     }
 }
 
@@ -1596,6 +1601,10 @@ fn lark_capability_package(skills: &[InstalledSkill], agents: &[LocalAgent]) -> 
             kind: "builtin".to_string(),
             location: "popskill/builtin/lark".to_string(),
             update_strategy: "manual".to_string(),
+            repo_owner: Some("larksuite".to_string()),
+            repo_name: Some("cli".to_string()),
+            repo_branch: Some("main".to_string()),
+            readme_url: Some("https://github.com/larksuite/cli".to_string()),
         },
         components: PackageComponents {
             cli: vec![package_component(
@@ -1636,6 +1645,11 @@ fn lark_capability_package(skills: &[InstalledSkill], agents: &[LocalAgent]) -> 
             config_field("lark.app_secret", "App Secret", true, true),
         ],
         installed: package_installed,
+        lifecycle: lifecycle_from_skills(skills.iter().filter(|skill| {
+            skill_ids
+                .iter()
+                .any(|id| skill_matches_component(skill, id))
+        })),
     }
 }
 
@@ -1655,6 +1669,10 @@ fn pdf_capability_package(skills: &[InstalledSkill]) -> CapabilityPackage {
             kind: "builtin".to_string(),
             location: "popskill/builtin/pdf".to_string(),
             update_strategy: "manual".to_string(),
+            repo_owner: None,
+            repo_name: None,
+            repo_branch: None,
+            readme_url: None,
         },
         components: PackageComponents {
             cli: Vec::new(),
@@ -1676,6 +1694,48 @@ fn pdf_capability_package(skills: &[InstalledSkill]) -> CapabilityPackage {
         },
         config_schema: Vec::new(),
         installed: installed.is_some(),
+        lifecycle: lifecycle_from_skill(installed),
+    }
+}
+
+fn lifecycle_from_skill(skill: Option<&InstalledSkill>) -> PackageLifecycle {
+    let Some(skill) = skill else {
+        return PackageLifecycle::default();
+    };
+
+    PackageLifecycle {
+        installed_at: (skill.installed_at > 0).then_some(skill.installed_at),
+        updated_at: (skill.updated_at > 0).then_some(skill.updated_at),
+        content_hash: skill
+            .content_hash
+            .clone()
+            .filter(|hash| !hash.trim().is_empty()),
+    }
+}
+
+fn lifecycle_from_skills<'a>(
+    skills: impl IntoIterator<Item = &'a InstalledSkill>,
+) -> PackageLifecycle {
+    let mut installed_at = None;
+    let mut updated_at = None;
+
+    for skill in skills {
+        if skill.installed_at > 0 {
+            installed_at = Some(installed_at.map_or(skill.installed_at, |current: i64| {
+                current.max(skill.installed_at)
+            }));
+        }
+        if skill.updated_at > 0 {
+            updated_at = Some(updated_at.map_or(skill.updated_at, |current: i64| {
+                current.max(skill.updated_at)
+            }));
+        }
+    }
+
+    PackageLifecycle {
+        installed_at,
+        updated_at,
+        content_hash: None,
     }
 }
 
@@ -2547,6 +2607,8 @@ struct CapabilityPackage {
     components: PackageComponents,
     config_schema: Vec<ConfigField>,
     installed: bool,
+    #[serde(default)]
+    lifecycle: PackageLifecycle,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -2555,6 +2617,25 @@ struct PackageSource {
     kind: String,
     location: String,
     update_strategy: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    repo_owner: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    repo_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    repo_branch: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    readme_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PackageLifecycle {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    installed_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    updated_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content_hash: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

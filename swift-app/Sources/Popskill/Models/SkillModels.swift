@@ -20,6 +20,10 @@ enum TargetApp: String, CaseIterable, Identifiable, Codable {
     var definition: TargetAppDefinition {
         TargetAppRegistry.definition(for: self)
     }
+
+    static var supported: [TargetApp] {
+        TargetAppRegistry.all.map(\.app)
+    }
 }
 
 struct TargetAppDefinition: Identifiable, Equatable {
@@ -128,7 +132,7 @@ struct Skill: Identifiable, Codable, Equatable {
     }
 
     var enabledAppCount: Int {
-        TargetApp.allCases.filter { apps.isEnabled($0) }.count
+        TargetApp.supported.filter { apps.isEnabled($0) }.count
     }
 
     var localStoreURL: URL {
@@ -243,20 +247,97 @@ struct AgentTarget: Identifiable, Codable, Equatable {
     }
 
     var symbolName: String {
-        switch id {
-        case "claude-code": "sparkles"
-        case "copilot": "network"
-        case "antigravity": "arrow.up.circle"
-        case "gemini-cli": "diamond"
-        case "opencode": "terminal"
-        case "openclaw": "hammer"
-        case "cursor": "cursorarrow"
-        case "aider": "text.book.closed"
-        case "windsurf": "wind"
-        case "qwen": "q.circle"
-        case "kimi": "k.circle"
-        default: "person.crop.circle"
+        definition.symbolName
+    }
+
+    var definition: TargetAgentDefinition {
+        TargetAgentRegistry.definition(for: id, fallbackName: name)
+    }
+
+    var linkedApp: TargetApp? {
+        definition.linkedApp
+    }
+
+    var isRegistryTarget: Bool {
+        TargetAgentRegistry.isKnown(id: id)
+    }
+
+    var isImportedTarget: Bool {
+        !isRegistryTarget || source != TargetAgentRegistry.defaultSource
+    }
+}
+
+struct TargetAgentDefinition: Identifiable, Equatable {
+    var id: String { targetID }
+
+    let targetID: String
+    let displayName: String
+    let symbolName: String
+    let linkedApp: TargetApp?
+}
+
+enum TargetAgentRegistry {
+    static let defaultSource = "agency-agents"
+
+    static let all: [TargetAgentDefinition] = [
+        TargetAgentDefinition(targetID: "claude-code", displayName: "Claude Code", symbolName: "sparkles", linkedApp: .claude),
+        TargetAgentDefinition(targetID: "copilot", displayName: "GitHub Copilot", symbolName: "network", linkedApp: nil),
+        TargetAgentDefinition(targetID: "antigravity", displayName: "Antigravity", symbolName: "arrow.up.circle", linkedApp: nil),
+        TargetAgentDefinition(targetID: "gemini-cli", displayName: "Gemini CLI", symbolName: "diamond", linkedApp: .gemini),
+        TargetAgentDefinition(targetID: "opencode", displayName: "OpenCode", symbolName: "terminal", linkedApp: .opencode),
+        TargetAgentDefinition(targetID: "openclaw", displayName: "OpenClaw", symbolName: "hammer", linkedApp: nil),
+        TargetAgentDefinition(targetID: "cursor", displayName: "Cursor", symbolName: "cursorarrow", linkedApp: nil),
+        TargetAgentDefinition(targetID: "aider", displayName: "Aider", symbolName: "text.book.closed", linkedApp: nil),
+        TargetAgentDefinition(targetID: "windsurf", displayName: "Windsurf", symbolName: "wind", linkedApp: nil),
+        TargetAgentDefinition(targetID: "qwen", displayName: "Qwen Code", symbolName: "q.circle", linkedApp: nil),
+        TargetAgentDefinition(targetID: "kimi", displayName: "Kimi Code", symbolName: "k.circle", linkedApp: nil)
+    ]
+
+    static func definition(for id: String, fallbackName: String) -> TargetAgentDefinition {
+        guard let definition = all.first(where: { $0.targetID == id }) else {
+            return TargetAgentDefinition(
+                targetID: id,
+                displayName: fallbackName,
+                symbolName: "person.crop.circle",
+                linkedApp: nil
+            )
         }
+        return definition
+    }
+
+    static func isKnown(id: String) -> Bool {
+        all.contains(where: { $0.targetID == id })
+    }
+
+    static func sort(_ targets: [AgentTarget]) -> [AgentTarget] {
+        targets.sorted(by: areInOrder)
+    }
+
+    private static func areInOrder(_ left: AgentTarget, _ right: AgentTarget) -> Bool {
+        let leftRank = rank(for: left)
+        let rightRank = rank(for: right)
+        if leftRank != rightRank {
+            return leftRank < rightRank
+        }
+
+        if left.detected != right.detected {
+            return left.detected && !right.detected
+        }
+
+        let sourceOrder = left.source.localizedCaseInsensitiveCompare(right.source)
+        if sourceOrder != .orderedSame {
+            return sourceOrder == .orderedAscending
+        }
+
+        let nameOrder = left.name.localizedCaseInsensitiveCompare(right.name)
+        if nameOrder != .orderedSame {
+            return nameOrder == .orderedAscending
+        }
+        return left.id < right.id
+    }
+
+    private static func rank(for target: AgentTarget) -> Int {
+        all.firstIndex(where: { $0.targetID == target.id }) ?? all.count + 20
     }
 }
 
@@ -339,6 +420,7 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
     let components: PackageComponents
     let configSchema: [PackageConfigField]
     let installed: Bool
+    let lifecycle: PackageLifecycle?
 
     var componentCount: Int {
         components.all.count
@@ -377,14 +459,11 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
     }
 
     var sourceURL: URL? {
-        if id == "pkg:lark" {
-            return URL(string: "https://github.com/larksuite/cli")
-        }
         return explicitOrRepositoryURL(
-            readmeUrl: source.location,
-            repoOwner: nil,
-            repoName: nil
-        ) ?? githubRepositoryURL(from: source.location)
+            readmeUrl: source.readmeUrl ?? source.location,
+            repoOwner: source.repoOwner,
+            repoName: source.repoName
+        )
     }
 
     var missingComponentCount: Int {
@@ -400,6 +479,22 @@ struct PackageSource: Codable, Equatable {
     let kind: String
     let location: String
     let updateStrategy: String
+    let repoOwner: String?
+    let repoName: String?
+    let repoBranch: String?
+    let readmeUrl: String?
+}
+
+struct PackageLifecycle: Codable, Equatable {
+    let installedAt: Int?
+    let updatedAt: Int?
+    let contentHash: String?
+
+    static let untracked = PackageLifecycle(
+        installedAt: nil,
+        updatedAt: nil,
+        contentHash: nil
+    )
 }
 
 struct PackageComponents: Codable, Equatable {
