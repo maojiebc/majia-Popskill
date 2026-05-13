@@ -10,6 +10,9 @@ KEYCHAIN_PROFILE="${POPSKILL_NOTARY_KEYCHAIN_PROFILE:-}"
 APPLE_ID="${POPSKILL_APPLE_ID:-}"
 TEAM_ID="${POPSKILL_TEAM_ID:-}"
 NOTARY_PASSWORD="${POPSKILL_NOTARY_PASSWORD:-}"
+EXPECTED_APP_VERSION="${POPSKILL_APP_VERSION:-}"
+EXPECTED_BUNDLE_IDENTIFIER="${POPSKILL_BUNDLE_IDENTIFIER:-}"
+PLIST_BUDDY="/usr/libexec/PlistBuddy"
 
 failures=0
 warnings=0
@@ -54,6 +57,7 @@ check_tool install_name_tool
 check_tool shasum
 check_tool jq
 check_tool otool
+[[ -x "$PLIST_BUDDY" ]] && ok "tool found: $PLIST_BUDDY" || fail "missing required tool: $PLIST_BUDDY"
 check_xcrun_tool notarytool
 check_xcrun_tool stapler
 
@@ -88,6 +92,34 @@ if [[ -d "$APP_PATH" ]]; then
     fi
   else
     fail "app executable missing or not executable: $app_bin"
+  fi
+
+  info_plist="$APP_PATH/Contents/Info.plist"
+  if [[ -f "$info_plist" && -x "$PLIST_BUDDY" ]]; then
+    app_version="$("$PLIST_BUDDY" -c 'Print :CFBundleShortVersionString' "$info_plist" 2>/dev/null || true)"
+    bundle_identifier="$("$PLIST_BUDDY" -c 'Print :CFBundleIdentifier' "$info_plist" 2>/dev/null || true)"
+
+    if [[ -n "$EXPECTED_APP_VERSION" ]]; then
+      if [[ "$app_version" == "$EXPECTED_APP_VERSION" ]]; then
+        ok "app version matches POPSKILL_APP_VERSION: $app_version"
+      else
+        fail "app version mismatch: expected $EXPECTED_APP_VERSION, found ${app_version:-unknown}"
+      fi
+    elif [[ "$app_version" == *"-dev"* ]]; then
+      warn "app version is a development version: $app_version"
+    fi
+
+    if [[ -n "$EXPECTED_BUNDLE_IDENTIFIER" ]]; then
+      if [[ "$bundle_identifier" == "$EXPECTED_BUNDLE_IDENTIFIER" ]]; then
+        ok "bundle identifier matches POPSKILL_BUNDLE_IDENTIFIER: $bundle_identifier"
+      else
+        fail "bundle identifier mismatch: expected $EXPECTED_BUNDLE_IDENTIFIER, found ${bundle_identifier:-unknown}"
+      fi
+    elif [[ "$bundle_identifier" == *".dev" ]]; then
+      warn "bundle identifier is a development identifier: $bundle_identifier"
+    fi
+  else
+    fail "Info.plist not found or PlistBuddy unavailable"
   fi
 else
   warn "app bundle not found: $APP_PATH (run scripts/package-dev-app.sh)"
