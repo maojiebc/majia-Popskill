@@ -1122,11 +1122,21 @@ async fn discover_agency_agents(query: Option<&str>, limit: usize) -> Result<Vec
         .user_agent("Popskill/0.1")
         .build()
         .context("failed to build GitHub client")?;
-    let response = client
-        .get(AGENCY_AGENTS_TREE_URL)
+    let mut request = client.get(AGENCY_AGENTS_TREE_URL);
+    if let Some(token) = github_token() {
+        request = request.bearer_auth(token);
+    }
+
+    let response = request
         .send()
         .await
-        .context("failed to fetch AgencyAgents tree")?
+        .context("failed to fetch AgencyAgents tree")?;
+    if response.status() == reqwest::StatusCode::FORBIDDEN {
+        bail!(
+            "AgencyAgents GitHub API rate limit exceeded. Set GITHUB_TOKEN or GH_TOKEN for authenticated requests."
+        );
+    }
+    let response = response
         .error_for_status()
         .context("AgencyAgents tree request failed")?
         .json::<GitHubTreeResponse>()
@@ -1225,6 +1235,14 @@ fn agency_agent_raw_url(path: &str) -> String {
     format!(
         "https://raw.githubusercontent.com/{AGENCY_AGENTS_REPO_OWNER}/{AGENCY_AGENTS_REPO_NAME}/{AGENCY_AGENTS_BRANCH}/{path}"
     )
+}
+
+fn github_token() -> Option<String> {
+    env::var("GITHUB_TOKEN")
+        .ok()
+        .or_else(|| env::var("GH_TOKEN").ok())
+        .map(|token| token.trim().to_string())
+        .filter(|token| !token.is_empty())
 }
 
 fn build_agent_install_plan(agent_key: &str, target_id: &str) -> Result<AgentInstallPlan> {
