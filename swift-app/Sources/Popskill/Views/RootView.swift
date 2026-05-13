@@ -2,6 +2,7 @@ import SwiftUI
 
 enum SidebarSelection: String, CaseIterable, Identifiable {
     case featured
+    case repositories
     case installed
     case updates
     case backups
@@ -16,6 +17,7 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .featured: "Featured"
+        case .repositories: "Repositories"
         case .installed: "Installed"
         case .updates: "Updates"
         case .backups: "Backups"
@@ -30,6 +32,7 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
     var symbolName: String {
         switch self {
         case .featured: "sparkles"
+        case .repositories: "folder.badge.gearshape"
         case .installed: "shippingbox"
         case .updates: "arrow.down.circle"
         case .backups: "clock.arrow.circlepath"
@@ -45,6 +48,7 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
 struct RootView: View {
     @State private var selection: SidebarSelection? = .installed
     @State private var discover = DiscoverViewModel()
+    @State private var repositories = RepositoriesViewModel()
     @State private var library = LibraryViewModel()
     @State private var updates = UpdatesViewModel()
     @State private var backups = BackupsViewModel()
@@ -56,6 +60,7 @@ struct RootView: View {
             List(selection: $selection) {
                 Section("Discover") {
                     sidebarLink(.featured)
+                    sidebarLink(.repositories, badge: repositories.repositories.isEmpty ? nil : repositories.enabledCount)
                 }
 
                 Section("My Library") {
@@ -81,6 +86,13 @@ struct RootView: View {
             case .featured:
                 DiscoverView(viewModel: discover) {
                     await library.load()
+                    await settings.load()
+                }
+            case .repositories:
+                RepositoriesView(viewModel: repositories) {
+                    if !discover.skills.isEmpty {
+                        await discover.search()
+                    }
                     await settings.load()
                 }
             case .installed:
@@ -114,6 +126,7 @@ struct RootView: View {
         }
         .task {
             await library.load()
+            await repositories.load()
         }
     }
 

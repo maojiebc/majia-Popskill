@@ -66,6 +66,30 @@ struct CatalogSkill: Identifiable, Codable, Equatable {
     }
 }
 
+struct SkillRepository: Identifiable, Codable, Equatable {
+    var id: String { "\(owner)/\(name)" }
+
+    let owner: String
+    let name: String
+    let branch: String
+    var enabled: Bool
+
+    var label: String {
+        "\(owner)/\(name)"
+    }
+}
+
+struct SkillRepositoryToggleResult: Codable, Equatable {
+    let owner: String
+    let name: String
+    let enabled: Bool
+}
+
+struct SkillRepositoryRemoveResult: Codable, Equatable {
+    let owner: String
+    let name: String
+}
+
 struct SkillUninstallResult: Codable, Equatable {
     let backupPath: String?
 }

@@ -61,6 +61,34 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// List configured CC Switch skill repositories.
+    RepoList {
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Enable or disable one configured skill repository.
+    RepoToggle {
+        #[arg(long)]
+        owner: String,
+        #[arg(long)]
+        name: String,
+        #[arg(long, action = clap::ArgAction::Set)]
+        enabled: bool,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Remove one configured skill repository.
+    RepoRemove {
+        #[arg(long)]
+        owner: String,
+        #[arg(long)]
+        name: String,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// Install one discoverable skill by key.
     Install {
         skill_key: String,
@@ -195,8 +223,6 @@ async fn run() -> Result<()> {
             json: _,
         } => {
             let service = SkillService::new();
-            db.init_default_skill_repos()
-                .context("failed to initialize default skill repositories")?;
             let repos = db
                 .get_skill_repos()
                 .context("failed to load skill repositories")?;
@@ -235,6 +261,48 @@ async fn run() -> Result<()> {
                 .collect();
             print_json(&ApiResponse::ok(filtered))
         }
+        Commands::RepoList { json: _ } => {
+            let repos = db
+                .get_skill_repos()
+                .context("failed to load skill repositories")?;
+            print_json(&ApiResponse::ok(repos))
+        }
+        Commands::RepoToggle {
+            owner,
+            name,
+            enabled,
+            json: _,
+        } => {
+            let mut repos = db
+                .get_skill_repos()
+                .context("failed to load skill repositories")?;
+            let repo = repos
+                .iter_mut()
+                .find(|repo| {
+                    repo.owner.eq_ignore_ascii_case(&owner) && repo.name.eq_ignore_ascii_case(&name)
+                })
+                .with_context(|| format!("skill repository not found: {owner}/{name}"))?;
+            repo.enabled = enabled;
+            db.save_skill_repo(repo)
+                .with_context(|| format!("failed to save skill repository '{owner}/{name}'"))?;
+            print_json(&ApiResponse::ok(json!({
+                "owner": owner,
+                "name": name,
+                "enabled": enabled
+            })))
+        }
+        Commands::RepoRemove {
+            owner,
+            name,
+            json: _,
+        } => {
+            db.delete_skill_repo(&owner, &name)
+                .with_context(|| format!("failed to remove skill repository '{owner}/{name}'"))?;
+            print_json(&ApiResponse::ok(json!({
+                "owner": owner,
+                "name": name
+            })))
+        }
         Commands::Install {
             skill_key,
             app,
@@ -242,8 +310,6 @@ async fn run() -> Result<()> {
         } => {
             let app_type = parse_target_app(&app)?;
             let service = SkillService::new();
-            db.init_default_skill_repos()
-                .context("failed to initialize default skill repositories")?;
             let repos = db
                 .get_skill_repos()
                 .context("failed to load skill repositories")?;

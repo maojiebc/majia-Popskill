@@ -143,6 +143,53 @@ Returns installable skills from enabled CC Switch skill repositories. The comman
 }
 ```
 
+### `skill-cli repo-list --json`
+
+Returns CC Switch skill repositories used by Discover.
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "owner": "anthropics",
+      "name": "skills",
+      "branch": "main",
+      "enabled": true
+    }
+  ]
+}
+```
+
+### `skill-cli repo-toggle --owner <owner> --name <name> --enabled <true|false> --json`
+
+Enables or disables one configured skill repository. Installed skills are not modified.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "owner": "anthropics",
+    "name": "skills",
+    "enabled": false
+  }
+}
+```
+
+### `skill-cli repo-remove --owner <owner> --name <name> --json`
+
+Removes one configured skill repository from CC Switch discovery sources. Installed skills are not uninstalled.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "owner": "anthropics",
+    "name": "skills"
+  }
+}
+```
+
 ### `skill-cli install <skill-key> --app <app> --json`
 
 Discovers the skill by key, installs it through CC Switch, and enables it for the requested app.

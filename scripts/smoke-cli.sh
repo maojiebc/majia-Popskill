@@ -42,6 +42,7 @@ fi
 
 require_ok scan-unmanaged scan-unmanaged --json
 require_ok backup-list backup-list --json
+require_ok repo-list repo-list --json
 
 health_output="$TMP_DIR/health.json"
 "$CLI" health --json > "$health_output"

@@ -55,6 +55,37 @@ actor SkillCLIClient {
         return try Self.decodeResponse([CatalogSkill].self, from: data)
     }
 
+    func listRepositories() async throws -> [SkillRepository] {
+        let data = try run(arguments: ["repo-list", "--json"])
+        return try Self.decodeResponse([SkillRepository].self, from: data)
+    }
+
+    func setRepositoryEnabled(_ enabled: Bool, owner: String, name: String) async throws -> SkillRepositoryToggleResult {
+        let data = try run(arguments: [
+            "repo-toggle",
+            "--owner",
+            owner,
+            "--name",
+            name,
+            "--enabled",
+            String(enabled),
+            "--json",
+        ])
+        return try Self.decodeResponse(SkillRepositoryToggleResult.self, from: data)
+    }
+
+    func removeRepository(owner: String, name: String) async throws -> SkillRepositoryRemoveResult {
+        let data = try run(arguments: [
+            "repo-remove",
+            "--owner",
+            owner,
+            "--name",
+            name,
+            "--json",
+        ])
+        return try Self.decodeResponse(SkillRepositoryRemoveResult.self, from: data)
+    }
+
     func install(skillKey: String, app: TargetApp) async throws -> Skill {
         let data = try run(arguments: [
             "install",
