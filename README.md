@@ -136,6 +136,9 @@ cd ~/projects/popskill
 # 原生 app 启动烟测
 ./scripts/smoke-app.sh
 
+# 显式写入型 sidecar smoke（会创建并删除一个临时 repo）
+./scripts/smoke-cli-mutating.sh
+
 # 生成本地开发 .app bundle（内含 skill-cli sidecar）
 ./scripts/package-dev-app.sh
 
