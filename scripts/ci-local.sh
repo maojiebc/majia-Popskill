@@ -19,6 +19,7 @@ Runs the local verification suite:
   - Swift tests
   - native launch smoke
   - .app bundle launch smoke
+  - screenshot asset smoke
   - release artifact smoke
 
 Pass --mutating to also run sidecar smoke tests that create and remove
@@ -47,6 +48,9 @@ echo "==> Local CI: native app launch smoke"
 
 echo "==> Local CI: bundled app launch smoke"
 "$ROOT_DIR/scripts/smoke-bundle.sh" 2
+
+echo "==> Local CI: screenshot asset smoke"
+"$ROOT_DIR/scripts/smoke-screenshots.sh"
 
 echo "==> Local CI: release artifact smoke"
 "$ROOT_DIR/scripts/smoke-release.sh"

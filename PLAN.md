@@ -1058,6 +1058,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 - [x] Transcript boundary：UI/文档说明本地聚合并忽略消息正文。
 - [x] Transcript attribution：已验证真实 `attributionSkill` 调用标记，补 skill 级归因统计与 Idle Candidates 最近使用过滤。
 - [x] README 截图：Discover、Library、Usage Insights、Idle Candidates 真实界面截图已补到 `docs/assets/screenshots/`。
+- [x] Screenshot asset smoke：`scripts/smoke-screenshots.sh` 校验 README 截图存在、PNG 格式、尺寸和文件大小，并接入本地 CI。
 - [ ] 最终视觉 QA：发布前再做一次全局一致性检查。
 
 ---

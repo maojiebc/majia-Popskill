@@ -145,12 +145,13 @@ SwiftUI 端已接入：
 
 ### v0.1 发布门槛
 
-- ✅ 本地 CI：`./scripts/ci-local.sh` 覆盖 Rust/Swift build、单测、只读 sidecar smoke、App 启动、bundle 启动、release artifact smoke。
+- ✅ 本地 CI：`./scripts/ci-local.sh` 覆盖 Rust/Swift build、单测、只读 sidecar smoke、App 启动、bundle 启动、screenshot asset smoke、release artifact smoke。
 - ✅ Release artifact smoke：可生成本地开发 DMG、release manifest、Sparkle appcast 骨架。
 - ✅ Release doctor：`scripts/release-doctor.sh` 可检查 Developer ID、notarytool/stapler、notary 凭据、DMG/appcast 前置条件。
 - ✅ Transcript attribution：Insights 本地聚合且忽略正文；真实 transcript 已验证 `attributionSkill` / `attributionPlugin` 字段，Usage / Token Spend 已展示 skill 级统计，Idle Candidates 已接入最近使用归因。
 - ✅ Discover/Library visual pass：Discover 行内 `Plan` / `Install` CTA 可读；带计数的 sidebar 导航可点；Library 行内 app toggle 不再挤压技能标题。
 - ✅ Settings/Updates visual pass：Settings 诊断字段更紧凑；Updates 空态不再显示不可点的主按钮。
+- ✅ Screenshot asset smoke：本地 CI 校验 README 截图存在、PNG 格式、尺寸和文件大小。
 - ⏳ Apple Developer Program：确认 Developer ID 证书；不加入则需要明确 unsigned/ad-hoc 分发说明。
 - ⏳ Notarization：拿到证书后跑 `scripts/notarize.sh`，验证 `stapler validate` 和 Gatekeeper 打开路径。
 - 🟡 Sparkle readiness：App 菜单已有 `Check for Updates...` 配置守卫；bundle 脚本可注入 `SUFeedURL` / `SUPublicEDKey` 并复制 `Sparkle.framework`。真实 SDK link 仍待稳定下载官方 SPM binary artifact 后开启。
