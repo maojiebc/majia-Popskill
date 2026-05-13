@@ -130,6 +130,11 @@ struct SettingsView: View {
     }
 
     private var ipcDocsURL: URL? {
+        if let bundledDocsURL = Bundle.main.resourceURL?.appendingPathComponent("ipc.md"),
+           FileManager.default.fileExists(atPath: bundledDocsURL.path) {
+            return bundledDocsURL
+        }
+
         let sourceFile = URL(fileURLWithPath: #filePath)
         let repoRoot = sourceFile
             .deletingLastPathComponent() // Views

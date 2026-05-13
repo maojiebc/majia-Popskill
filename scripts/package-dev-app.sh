@@ -19,6 +19,7 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
 cp "$ROOT_DIR/swift-app/.build/debug/Popskill" "$MACOS_DIR/Popskill"
 cp "$ROOT_DIR/skill-cli/target/debug/skill-cli" "$RESOURCES_DIR/skill-cli"
+cp "$ROOT_DIR/docs/ipc.md" "$RESOURCES_DIR/ipc.md"
 chmod +x "$MACOS_DIR/Popskill" "$RESOURCES_DIR/skill-cli"
 
 cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
