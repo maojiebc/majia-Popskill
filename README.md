@@ -4,7 +4,7 @@
 > 一款看齐 Mac App Store 的 Claude Code Agent Skills 桌面客户端。
 
 <p align="center">
-  <strong>Status: Pre-alpha — sidecar + native Library / Discover / Updates / Backups / Insights MVP compile locally.</strong>
+  <strong>Status: Pre-alpha — MVP feature verticals compile and pass local CI; v0.1 release hardening is in progress.</strong>
 </p>
 
 ---
@@ -22,7 +22,7 @@ Popskill aims to be the App Store experience that Claude Code skills deserve on 
 
 **Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
 
-**Current stage**: design + planning complete; MVP scaffolding is underway. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install/update/uninstall/import/repository/backup flows, SwiftUI Library + Discover + Updates + Backups + Insights compile locally, `scripts/dev-build.sh` verifies Rust build/tests + read-only sidecar smoke + Swift tests, and `scripts/package-dmg.sh` + `scripts/notarize.sh` sketch the v0.1 release path. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
+**Current stage**: MVP feature verticals are implemented locally. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install-plan/install/update/uninstall/import/repository/backup/WebDAV status flows; SwiftUI Library + Discover + Repositories + Updates + Backups + Insights + Settings compile and pass tests; `scripts/ci-local.sh` verifies Rust/Swift builds, read-only sidecar smoke, native launch smoke, bundle smoke, and release artifact smoke. Remaining v0.1 work is release hardening: Developer ID signing/notarization, Sparkle SDK integration, WebDAV config/manual sync, transcript attribution explanation, README screenshots, and visual polish. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
 
 ---
 
@@ -74,9 +74,10 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 | A. Sidecar 剥离可行性 | ✅ 静态分析通过（lib.rs:52-56 已 pub use SkillService） |
 | C. 产品形态 V1 | ✅ 5 个页面 wireframe + 状态机 + 16 条决策 |
 | D-prep. 视觉设计语言 | ✅ Surge.app 拆解 + 22 个 design token |
-| **D. 脚手架 init + Day 1** | 🚧 **已启动：sidecar + SwiftUI Library/Discover/Updates/Backups/Insights MVP 可编译** |
+| **D. MVP 主链路** | ✅ sidecar + SwiftUI Library/Discover/Repositories/Updates/Backups/Insights/Settings 已可编译并通过本地 CI |
+| **E. v0.1 发布收口** | 🚧 签名/公证、Sparkle SDK、WebDAV 配置/同步、视觉 polish、README 截图 |
 
-**这个仓库目前是 pre-alpha**：已有 Rust sidecar、SwiftUI Library/Discover/Updates/Backups/Insights 页面、transcript scanner 单测和本地开发脚本。Stub/WebDAV/AgentShield 已有纵切骨架；正式签名、公证、Sparkle 更新和 App Store 分发还没完成；本地 DMG 与 notarize 脚本骨架已先落位。
+**这个仓库目前是 pre-alpha**：已有 Rust sidecar、SwiftUI Library/Discover/Repositories/Updates/Backups/Insights/Settings 页面、transcript scanner 单测和本地 CI。Stub 与 AgentShield 已有可用纵切；WebDAV 目前完成状态/远端 snapshot 只读边界，配置写入和手动 Sync Now 还没做。正式签名、公证、Sparkle SDK 更新和 App Store 分发还没完成；本地 DMG、release manifest、appcast 生成与 notarize 脚本骨架已先落位。
 
 ### 已落地的 MVP 能力
 
@@ -119,13 +120,24 @@ SwiftUI 端已接入：
 - Insights：本地扫描 `~/.claude/projects/**/*.jsonl`，聚合 token/session/file/model 指标，含 Recently Used、Token Spend、60 天 inactive Idle Candidates，Idle Candidates 可单个或批量转 Stub
 - Settings：sidecar 路径、`POPSKILL_CLI` override、CC Switch skill store、WebDAV 状态/远端 snapshot 与 Keychain 策略诊断
 
+### v0.1 发布门槛
+
+- ✅ 本地 CI：`./scripts/ci-local.sh` 覆盖 Rust/Swift build、单测、只读 sidecar smoke、App 启动、bundle 启动、release artifact smoke。
+- ✅ Release artifact smoke：可生成本地开发 DMG、release manifest、Sparkle appcast 骨架。
+- ⏳ Apple Developer Program：确认 Developer ID 证书；不加入则需要明确 unsigned/ad-hoc 分发说明。
+- ⏳ Notarization：拿到证书后跑 `scripts/notarize.sh`，验证 `stapler validate` 和 Gatekeeper 打开路径。
+- ⏳ Sparkle SDK：当前只能生成 appcast；App 内更新检查尚未集成。
+- ⏳ WebDAV v0.1：当前只读 status/remote info；配置表单、Keychain 保存、手动 Sync Now、失败态仍待实现。
+- ⏳ README 截图与视觉验收：发布前补真实界面截图，按 `STYLE.md` 做一次 Discover/Library/Settings/Updates polish。
+
 ### 文档导航
 
-- **[PLAN.md](./PLAN.md)**（~1265 行）—— 产品 + 工程规划，自包含。新机器接手只需读这一份。
+- **[PLAN.md](./PLAN.md)** —— 产品 + 工程规划，自包含。新机器接手只需读这一份。
   - §0-2：怎么用 + 16 条核心决策
   - §3：产品形态（5 页 wireframe + 状态机）
   - §4-8：技术架构 + 数据模型 + Sidecar 接口
-  - §9：第一周 Day 1-5 milestone
+  - §9：第一周 Day 1-5 milestone（已完成）
+  - §10：Week 2-8 进度校准 + v0.1 收口清单
   - §11：已知坑 / 风险预案
   - 附录 A：新电脑接手 6 步 checklist
 
