@@ -289,7 +289,7 @@ struct SkillDetailPane: View {
                                 .buttonStyle(.bordered)
                             }
 
-                            if let readmeUrl = skill.readmeUrl, let url = URL(string: readmeUrl) {
+                            if let url = skill.sourceURL {
                                 Link(destination: url) {
                                     Label("Open Source", systemImage: "arrow.up.right.square")
                                 }

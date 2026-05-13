@@ -215,7 +215,7 @@ struct CatalogSkillRow: View {
 
             Spacer(minLength: 20)
 
-            if let readmeUrl = skill.readmeUrl, let url = URL(string: readmeUrl) {
+            if let url = skill.sourceURL {
                 Link(destination: url) {
                     Image(systemName: "arrow.up.right.square")
                 }

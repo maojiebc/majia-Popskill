@@ -18,6 +18,30 @@ struct SkillModelsTests {
     }
 
     @Test
+    func sourceURLFallsBackToGitHubRepository() {
+        let skill = catalogSkill(repoBranch: nil)
+
+        #expect(skill.sourceURL?.absoluteString == "https://github.com/maojiebc/majia-skills")
+    }
+
+    @Test
+    func sourceURLPrefersReadmeURL() {
+        let skill = CatalogSkill(
+            key: "maojiebc/majia-skills/demo",
+            name: "Demo",
+            description: "Demo skill",
+            directory: "demo",
+            readmeUrl: "https://example.com/readme",
+            installed: false,
+            repoOwner: "maojiebc",
+            repoName: "majia-skills",
+            repoBranch: nil
+        )
+
+        #expect(skill.sourceURL?.absoluteString == "https://example.com/readme")
+    }
+
+    @Test
     func installedSkillLocalStoreURLUsesCCSwitchStore() {
         let skill = installedSkill(directory: "demo-skill")
 

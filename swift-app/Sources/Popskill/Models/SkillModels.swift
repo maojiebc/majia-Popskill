@@ -40,6 +40,10 @@ struct Skill: Identifiable, Codable, Equatable {
         return directory
     }
 
+    var sourceURL: URL? {
+        explicitOrRepositoryURL(readmeUrl: readmeUrl, repoOwner: repoOwner, repoName: repoName)
+    }
+
     var enabledAppCount: Int {
         TargetApp.allCases.filter { apps.isEnabled($0) }.count
     }
@@ -75,6 +79,26 @@ struct CatalogSkill: Identifiable, Codable, Equatable {
         }
         return directory
     }
+
+    var sourceURL: URL? {
+        explicitOrRepositoryURL(readmeUrl: readmeUrl, repoOwner: repoOwner, repoName: repoName)
+    }
+}
+
+private func explicitOrRepositoryURL(readmeUrl: String?, repoOwner: String?, repoName: String?) -> URL? {
+    if let readmeUrl, let url = URL(string: readmeUrl) {
+        return url
+    }
+
+    guard let repoOwner, let repoName else {
+        return nil
+    }
+
+    var components = URLComponents()
+    components.scheme = "https"
+    components.host = "github.com"
+    components.path = "/\(repoOwner)/\(repoName)"
+    return components.url
 }
 
 struct SkillRepository: Identifiable, Codable, Equatable {
