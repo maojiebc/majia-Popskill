@@ -145,7 +145,7 @@ SwiftUI 端已接入：
 
 ### v0.1 发布门槛
 
-- ✅ 本地 CI：`./scripts/ci-local.sh` 覆盖 Rust/Swift build、单测、只读 sidecar smoke、App 启动、bundle 启动、screenshot asset smoke、release artifact smoke。
+- ✅ 本地 CI：`./scripts/ci-local.sh` 覆盖 Rust/Swift build、单测、只读 sidecar/Agent smoke、App 启动、bundle 启动、screenshot asset smoke、release artifact smoke。
 - ✅ Release artifact smoke：可生成本地开发 DMG、release manifest、Sparkle appcast 骨架。
 - ✅ Release doctor：`scripts/release-doctor.sh` 可检查 Developer ID、notarytool/stapler、notary 凭据、DMG/appcast 前置条件。
 - ✅ Transcript attribution：Insights 本地聚合且忽略正文；真实 transcript 已验证 `attributionSkill` / `attributionPlugin` 字段，Usage / Token Spend 已展示 skill 级统计，Idle Candidates 已接入最近使用归因。

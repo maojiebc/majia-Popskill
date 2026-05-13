@@ -1046,6 +1046,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 - [x] AgentShield gate：unmanaged import 和 discover install 均能阻断高风险 skill。
 - [x] Stub MVP：stub/rehydrate、Idle Candidates、bulk stub dry-run/执行。
 - [x] WebDAV sidecar 边界：配置写入 / 只读 status / remote info / local backup summary。
+- [x] Agent sidecar smoke：`agent-list` / `agent-targets` / `agent-install-plan` 已纳入只读 smoke；`agent-catalog` 因 GitHub rate limit 不进默认 CI。
 - [x] release smoke：DMG、release manifest、Sparkle appcast 生成脚本。
 - [x] release doctor：检查 Developer ID、notarytool/stapler、notary 凭据、app/dmg/appcast 前置条件。
 - [x] 视觉 polish 第一轮：Discover 行内 `Plan` / `Install` 可读，带 badge 的 sidebar 项可导航，Library 行内 app toggle 不挤压标题。

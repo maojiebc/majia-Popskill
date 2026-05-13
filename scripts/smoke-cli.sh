@@ -52,6 +52,47 @@ require_ok repo-list repo-list --json
 require_ok webdav-status webdav-status --json
 require_ok security-scan-list security-scan-list --json
 
+agent_root="$TMP_DIR/agents"
+mkdir -p "$agent_root/engineering"
+printf '%s\n' \
+  '---' \
+  'name: smoke-agent' \
+  'description: Exercises Popskill agent-list smoke coverage.' \
+  'tools: Read, Write' \
+  'model: sonnet' \
+  '---' \
+  '# Smoke Agent' > "$agent_root/engineering/smoke-agent.md"
+agent_list_output="$TMP_DIR/agent-list.json"
+"$CLI" agent-list --root "$agent_root" --json > "$agent_list_output"
+jq -e '
+  .ok == true
+  and (.data | length) == 1
+  and .data[0].id == "engineering/smoke-agent"
+  and .data[0].tools == ["Read", "Write"]
+' "$agent_list_output" > /dev/null
+echo "agent-list ok"
+
+agent_targets_output="$TMP_DIR/agent-targets.json"
+"$CLI" agent-targets --json > "$agent_targets_output"
+jq -e '.ok == true and (.data | length) >= 10 and any(.data[]; .id == "claude-code")' \
+  "$agent_targets_output" > /dev/null
+echo "agent-targets ok"
+
+agent_plan_home="$TMP_DIR/agent-plan-home"
+mkdir -p "$agent_plan_home/.claude"
+agent_plan_output="$TMP_DIR/agent-install-plan.json"
+HOME="$agent_plan_home" "$CLI" agent-install-plan \
+  msitarzewski/agency-agents:marketing/marketing-xiaohongshu-specialist \
+  --target claude-code \
+  --json > "$agent_plan_output"
+jq -e '
+  .ok == true
+  and .data.targetId == "claude-code"
+  and .data.requiresConversion == false
+  and (.data.writes[0] | endswith("/.claude/agents/marketing-xiaohongshu-specialist.md"))
+' "$agent_plan_output" > /dev/null
+echo "agent-install-plan ok"
+
 scan_dir="$TMP_DIR/security-scan-skill"
 mkdir -p "$scan_dir"
 printf '# Smoke Skill\n' > "$scan_dir/SKILL.md"
