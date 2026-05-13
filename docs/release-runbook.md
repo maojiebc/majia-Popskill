@@ -2,6 +2,8 @@
 
 This runbook covers the path from the current development build to a notarized macOS v0.1 artifact. It intentionally keeps secrets out of the repo, argv, logs, and generated JSON.
 
+For launch channels and post-release operations, see [v0.1-launch-playbook.md](./v0.1-launch-playbook.md).
+
 ## Current Expected State
 
 Before Apple Developer Program credentials are available, this is expected:

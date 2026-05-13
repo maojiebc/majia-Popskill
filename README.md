@@ -204,6 +204,7 @@ SwiftUI 端已接入：
 - **[docs/v0.1-release-readiness.md](./docs/v0.1-release-readiness.md)** —— 当前 v0.1 dry-run 结果、通过项和剩余外部门槛。
 - **[docs/release-notes-v0.1.md](./docs/release-notes-v0.1.md)** —— v0.1 pre-alpha 发布说明草稿。
 - **[docs/v0.1-qa-checklist.md](./docs/v0.1-qa-checklist.md)** —— v0.1 发布前自动/视觉/隐私/发布产物 QA 清单。
+- **[docs/v0.1-launch-playbook.md](./docs/v0.1-launch-playbook.md)** —— v0.1 发布节奏、渠道选择和社区边界。
 
 ### 在新机器上接手
 
