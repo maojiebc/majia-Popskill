@@ -169,6 +169,9 @@ cd ~/projects/popskill
 # 生成本地开发 DMG（含 Applications 拖拽入口），并输出 sha256
 ./scripts/package-dmg.sh
 
+# 生成 release metadata（version / build / dmg sha256 / size）
+./scripts/release-manifest.sh
+
 # v0.1 发布前的签名/公证骨架（需要 Apple Developer ID 凭据）
 POPSKILL_DEVELOPER_ID_APPLICATION="Developer ID Application: Name (TEAMID)" \
 POPSKILL_APPLE_ID="you@example.com" \
