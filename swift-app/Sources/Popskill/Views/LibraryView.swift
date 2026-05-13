@@ -198,7 +198,9 @@ struct LibraryView: View {
 
     private var selectedSkill: Skill? {
         guard let skillID = skillID(from: selectedItemID) else {
-            return selectedPackage == nil ? viewModel.filteredSkills.first : nil
+            return selectedItemID == nil && viewModel.filteredPackages.isEmpty
+                ? viewModel.filteredSkills.first
+                : nil
         }
         return viewModel.filteredSkills.first { $0.id == skillID } ?? viewModel.filteredSkills.first
     }
@@ -215,8 +217,12 @@ struct LibraryView: View {
             return nil
         }
 
-        guard let packageID = packageID(from: selectedItemID) else {
+        guard selectedItemID != nil else {
             return viewModel.filteredPackages.first
+        }
+
+        guard let packageID = packageID(from: selectedItemID) else {
+            return nil
         }
         return viewModel.filteredPackages.first { $0.id == packageID } ?? viewModel.filteredPackages.first
     }
