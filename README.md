@@ -133,6 +133,12 @@ cd ~/projects/popskill
 # 一键开发构建
 ./scripts/dev-build.sh
 
+# 本地 CI（构建、测试、只读 smoke、App 启动 smoke、bundle smoke）
+./scripts/ci-local.sh
+
+# 需要额外覆盖写入型 repo 命令时
+./scripts/ci-local.sh --mutating
+
 # 原生 app 启动烟测
 ./scripts/smoke-app.sh
 
