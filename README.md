@@ -21,7 +21,7 @@ Popskill aims to be the App Store experience that Claude Code skills deserve on 
 
 **Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
 
-**Current stage**: design + planning complete; MVP scaffolding is underway. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install/update/uninstall/import/backup flows, SwiftUI Library + Discover + Updates + Backups + Insights compile locally, and `scripts/dev-build.sh` verifies Rust + read-only sidecar smoke + Swift tests. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
+**Current stage**: design + planning complete; MVP scaffolding is underway. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install/update/uninstall/import/backup flows, SwiftUI Library + Discover + Updates + Backups + Insights compile locally, and `scripts/dev-build.sh` verifies Rust build/tests + read-only sidecar smoke + Swift tests. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
 
 ---
 
