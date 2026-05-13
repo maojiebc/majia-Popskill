@@ -477,7 +477,11 @@ fn normalize_required(label: &str, value: &str) -> Result<String> {
 
 fn normalize_repository_name(value: &str) -> Result<String> {
     let name = normalize_required("repository name", value)?;
-    Ok(strip_git_suffix(&name))
+    let name = strip_git_suffix(&name);
+    if name.is_empty() {
+        bail!("repository name is required");
+    }
+    Ok(name)
 }
 
 fn strip_git_suffix(value: &str) -> String {
@@ -594,6 +598,12 @@ mod tests {
             normalize_repository_name(" widget.git-tools.git ").unwrap(),
             "widget.git-tools"
         );
+    }
+
+    #[test]
+    fn normalize_repository_name_rejects_empty_name_after_stripping() {
+        let message = normalize_repository_name(".git").unwrap_err().to_string();
+        assert!(message.contains("repository name is required"));
     }
 
     #[test]

@@ -78,4 +78,15 @@ struct RepositoryInputTests {
         #expect(parts?.owner == nil)
         #expect(parts?.name == nil)
     }
+
+    @Test
+    func rejectsEmptyNameAfterGitSuffixStripping() {
+        let parts = RepositoriesViewModel.normalizedRepositoryParts(
+            ownerInput: "maojiebc",
+            nameInput: ".git"
+        )
+
+        #expect(parts?.owner == nil)
+        #expect(parts?.name == nil)
+    }
 }

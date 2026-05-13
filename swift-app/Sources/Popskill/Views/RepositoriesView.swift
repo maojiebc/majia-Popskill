@@ -85,7 +85,8 @@ final class RepositoriesViewModel {
         let nameInput = nameInput.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if !nameInput.isEmpty {
-            return ownerInput.isEmpty ? nil : (ownerInput, Self.strippingGitSuffix(from: nameInput))
+            let name = Self.strippingGitSuffix(from: nameInput)
+            return ownerInput.isEmpty || name.isEmpty ? nil : (ownerInput, name)
         }
 
         let normalized = ownerInput
@@ -99,7 +100,12 @@ final class RepositoriesViewModel {
             return nil
         }
 
-        return (String(parts[0]), Self.strippingGitSuffix(from: String(parts[1])))
+        let name = Self.strippingGitSuffix(from: String(parts[1]))
+        guard !name.isEmpty else {
+            return nil
+        }
+
+        return (String(parts[0]), name)
     }
 
     nonisolated private static func strippingGitSuffix(from value: String) -> String {
