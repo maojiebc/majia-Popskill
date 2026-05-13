@@ -1235,6 +1235,14 @@ struct CLIResponse<T: Decodable>: Decodable {
 
 **验收**：安装第三方 skill 后立即得到扫描状态；构造含危险命令的测试 skill 会被标记为 `Blocked`，并被自动回滚。`install-plan/apply` 落地后，把扫描时机前移到写入目标目录之前。
 
+### 11.9 WebDAV 写同步 sidecar 边界
+
+**当前状态**：`webdav-status` 与 `webdav-remote-info` 可以直接复用 CC Switch re-export 的无状态 command，Settings 已能显示配置和远端 snapshot。
+
+**阻塞点**：`webdav_sync_upload` / `webdav_sync_download` 需要 Tauri `State<AppState>`；底层 `services::webdav_sync` 与 `settings::WebDavSyncSettings` 仍在 CC Switch 私有 module 里，Popskill sidecar 不能在不改 submodule 的前提下干净调用。
+
+**原则**：不修改 `cc-switch/` submodule，不复制 WebDAV 协议实现。下一步应该等 CC Switch 暴露无 Tauri State 的公共 service API，或在 Popskill 自己侧做一个明确版本锁定的 adapter，并把风险写进测试。
+
 ---
 
 ## 12. 引用资料
@@ -1402,7 +1410,7 @@ open swift-app/Popskill.xcodeproj
 - ✅ 行内 Claude/Codex/Gemini toggle、Stub / Rehydrate 与详情页多 app toggle 已接 sidecar
 - ✅ 自定义 skill repository 管理、sidecar health、backup 管理已倒灌进计划
 - ✅ AgentShield sidecar、Library 手动/持久化扫描、安装后 blocked 回滚、unmanaged import 前阻断已落地；下一步补 install-plan/apply，把 Discover 扫描前移
-- ✅ WebDAV 状态与远端 snapshot 只读入口已落地，下一步接配置保存和手动 upload/download
+- ✅ WebDAV 状态与远端 snapshot 只读入口已落地；upload/download 当前受 CC Switch Tauri State/private module 边界阻塞，先不绕实现
 - ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle/release smoke、development DMG 打包、release manifest/appcast 已落地
 - 🟡 Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 已按 60 天 inactive 生命周期筛选并支持单个/批量 stub；尚未完成 transcript 级真实使用归因
 - 🔴 WebDAV 配置/手动 sync、正式 notarize、Sparkle SDK 接入尚未落地
