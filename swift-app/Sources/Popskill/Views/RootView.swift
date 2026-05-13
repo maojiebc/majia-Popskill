@@ -46,7 +46,7 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
 }
 
 struct RootView: View {
-    @State private var selection: SidebarSelection? = .installed
+    @State private var selection: SidebarSelection? = .featured
     @State private var discover = DiscoverViewModel()
     @State private var repositories = RepositoriesViewModel()
     @State private var library = LibraryViewModel()
