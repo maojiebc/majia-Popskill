@@ -1494,6 +1494,7 @@ v0.2 可以把当前 Usage Insights 升级为更主动的本地推荐：
 - v0.2 只做 4 个 P0 能力包，证明模型成立后再扩展。
 - Popskill 不自己生产 Agent/Skill 内容，优先接 agency-agents、ECC、majia 私有技能仓等上游。
 - Package 是用户心智抽象，不是把所有工具都塞进一个巨大安装器；组件库仍然保留直接管理能力。
+- Cherry Studio 是 LLM 聊天入口，和 Popskill 当前不是同赛道；但它的 MCP Marketplace 进展需要每月 watch。若 Cherry Studio MCP Marketplace 先发布，Popskill v0.2 要强调"跨形态 Package 管理"而不是 MCP-only marketplace。
 
 ---
 

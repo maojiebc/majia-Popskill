@@ -29,6 +29,7 @@ Popskill aims to be the Mac App Store for AI capabilities, starting with the App
 
 Popskill is part of a growing AI tools ecosystem. It complements these excellent projects instead of pretending the category starts here:
 
+- **Cherry Studio**: a large Electron LLM chat client with 1000+ built-in assistants. Cherry Studio is great for talking to AI; Popskill manages the local Skill and Agent library those AI tools use.
 - **Anthropic MCP Registry**: the upstream DNS for MCP servers. Popskill consumes registry metadata; it is not a registry.
 - **Smithery, Glama, MCPHub, MyMCP**: strong MCP-focused discovery and management projects. Popskill goes broader by adding Skills, Agents, CLI tools, and Config.
 - **Dify**: the Bundle concept pioneer in web LLM platforms. Popskill brings the capability-package idea to native Mac and local AI clients.
@@ -36,6 +37,12 @@ Popskill is part of a growing AI tools ecosystem. It complements these excellent
 - **iamzhihuix/skills-manage** and **yibie/skills-manager**: skill-focused managers. Popskill's long-term direction is cross-form capability packages with Mac-native UX.
 
 The planned v0.2 Package model is therefore not "first ever"; it is Popskill's attempt to make the full combination work on Mac: **Skill + Agent + CLI + MCP + Config**, across AI tools, with App Store-level UX, Usage Insights, Stub, and AgentShield.
+
+## Why Mac Native?
+
+Popskill is a local asset manager, so it should feel like a Mac utility instead of a web app in a desktop shell. We chose Swift + SwiftUI for instant launch, lower memory overhead, native sidebar/window behavior, and a design language that can follow macOS conventions closely.
+
+If you need a cross-platform LLM chat client, [Cherry Studio](https://github.com/CherryHQ/cherry-studio) is excellent. Popskill is for Mac users who want native polish around the AI capabilities installed on their machine.
 
 ## Screenshots
 
