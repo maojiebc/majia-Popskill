@@ -20,7 +20,7 @@ echo "==> Smoke testing release artifacts"
 "$ROOT_DIR/scripts/release-manifest.sh" > "$TMP_DIR/release-manifest.out"
 
 MANIFEST="$ROOT_DIR/build/release-manifest.json"
-APPCAST="$ROOT_DIR/build/appcast.xml"
+APPCAST="$TMP_DIR/appcast.xml"
 
 jq -e '
   .name == "Popskill"
@@ -31,6 +31,7 @@ jq -e '
   and (.bytes > 0)
 ' "$MANIFEST" > /dev/null
 
+POPSKILL_APPCAST_PATH="$APPCAST" \
 POPSKILL_APPCAST_DOWNLOAD_URL="https://example.com/Popskill.dmg" \
   "$ROOT_DIR/scripts/generate-appcast.sh" > "$TMP_DIR/generate-appcast.out"
 
