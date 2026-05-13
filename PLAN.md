@@ -1055,7 +1055,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 - [x] 视觉 polish 收尾：Settings 诊断字段紧凑化，Updates 空态隐藏不可用批量操作。
 - [ ] Apple Developer Program：确认是否加入；不加入则只能走 ad-hoc/unsigned 分发说明。
 - [ ] 真实签名/公证：接入 Developer ID 后跑 `notarytool`，补 CI/本地验证文档。
-- [x] Sparkle SDK link：App 已正式链接 Sparkle 2.9.1，当前已完成菜单入口、`SUFeedURL` / `SUPublicEDKey` 配置守卫、bundle framework copy hooks 与 release doctor 检查。
+- [x] Sparkle SDK link：App 已正式链接 Sparkle 2.9.1，当前已完成菜单入口、`SUFeedURL` / `SUPublicEDKey` 配置守卫、bundle framework copy hooks、release doctor 检查与 Sparkle key/sign_update wrapper。
 - [ ] Sparkle public update smoke：配置真实 feed、public EdDSA key、signed notarized payload 后，在 App 内完成一次公开更新检查。
 - [x] WebDAV 配置表单：Settings 可写入 CC Switch WebDAV settings；新密码通过 sidecar 环境变量传递，状态输出脱敏。
 - [ ] WebDAV Sync Now：upload/download、冲突/失败态。

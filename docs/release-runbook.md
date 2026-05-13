@@ -57,6 +57,16 @@ export POPSKILL_SPARKLE_ED_SIGNATURE="<sparkle-dmg-eddsa-signature>"
 
 Do not commit these values. Do not paste passwords into command-line arguments except the one-time `notarytool store-credentials` flow.
 
+Use Sparkle's bundled tools through the repo wrappers:
+
+```bash
+./scripts/sparkle-generate-keys.sh
+./scripts/sparkle-generate-keys.sh -p
+./scripts/sparkle-sign-update.sh build/Popskill.dmg
+```
+
+`sparkle-sign-update.sh` prints an `export POPSKILL_SPARKLE_ED_SIGNATURE=...` line when it can parse the generated signature. For automation, provide `POPSKILL_SPARKLE_ED_PRIVATE_KEY_FILE` or `POPSKILL_SPARKLE_ED_PRIVATE_KEY`; otherwise Sparkle reads the private key from Keychain.
+
 ## Build And Verify
 
 Run the full local gate:

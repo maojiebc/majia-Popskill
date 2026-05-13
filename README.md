@@ -230,6 +230,10 @@ cd ~/projects/popskill
 POPSKILL_APPCAST_DOWNLOAD_URL="https://example.com/Popskill.dmg" \
 ./scripts/generate-appcast.sh
 
+# 查询/生成 Sparkle EdDSA public key，签名 DMG 并输出 POPSKILL_SPARKLE_ED_SIGNATURE
+./scripts/sparkle-generate-keys.sh
+./scripts/sparkle-sign-update.sh build/Popskill.dmg
+
 # v0.1 发布前的签名/公证骨架（需要 Apple Developer ID 凭据）
 POPSKILL_DEVELOPER_ID_APPLICATION="Developer ID Application: Name (TEAMID)" \
 POPSKILL_APPLE_ID="you@example.com" \
