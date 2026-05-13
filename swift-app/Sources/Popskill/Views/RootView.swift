@@ -84,7 +84,13 @@ struct RootView: View {
         } detail: {
             switch selection ?? .installed {
             case .featured:
-                DiscoverView(viewModel: discover) {
+                DiscoverView(
+                    viewModel: discover,
+                    repositorySummary: repositorySummary,
+                    onManageRepositories: {
+                        selection = .repositories
+                    }
+                ) {
                     await library.load()
                     await settings.load()
                 }
@@ -128,6 +134,22 @@ struct RootView: View {
             await library.load()
             await repositories.load()
         }
+    }
+
+    private var repositorySummary: String {
+        let totalCount = repositories.repositories.count
+        let enabledCount = repositories.enabledCount
+
+        guard totalCount > 0 else {
+            return "Discover skills from enabled CC Switch repositories"
+        }
+
+        if enabledCount == totalCount {
+            let noun = enabledCount == 1 ? "repository" : "repositories"
+            return "Discover skills from \(enabledCount) enabled \(noun)"
+        }
+
+        return "Discover skills from \(enabledCount) enabled of \(totalCount) repositories"
     }
 
     @ViewBuilder

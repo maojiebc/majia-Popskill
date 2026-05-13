@@ -67,6 +67,8 @@ final class DiscoverViewModel {
 
 struct DiscoverView: View {
     @Bindable var viewModel: DiscoverViewModel
+    let repositorySummary: String
+    let onManageRepositories: () -> Void
     let onInstalled: () async -> Void
 
     var body: some View {
@@ -118,11 +120,19 @@ struct DiscoverView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Featured")
                         .font(.system(.largeTitle, weight: .bold))
-                    Text("Discover skills from enabled CC Switch repositories")
+                    Text(repositorySummary)
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer()
+
+                Button {
+                    onManageRepositories()
+                } label: {
+                    Image(systemName: "folder.badge.gearshape")
+                }
+                .buttonStyle(.bordered)
+                .help("Manage Repositories")
 
                 Picker("Install In", selection: $viewModel.selectedInstallApp) {
                     ForEach(TargetApp.allCases, id: \.id) { app in
