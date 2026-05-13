@@ -56,6 +56,10 @@ final class LibraryViewModel {
     }
 
     func load() async {
+        guard !isLoading else {
+            return
+        }
+
         isLoading = true
         errorMessage = nil
         defer {

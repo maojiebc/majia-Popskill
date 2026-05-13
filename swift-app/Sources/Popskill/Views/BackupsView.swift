@@ -15,6 +15,10 @@ final class BackupsViewModel {
     private var deletingIDs: Set<String> = []
 
     func load() async {
+        guard !isLoading else {
+            return
+        }
+
         isLoading = true
         errorMessage = nil
         defer {

@@ -12,6 +12,10 @@ final class SettingsViewModel {
     private let client = SkillCLIClient()
 
     func load() async {
+        guard !isLoading else {
+            return
+        }
+
         isLoading = true
         errorMessage = nil
         defer {

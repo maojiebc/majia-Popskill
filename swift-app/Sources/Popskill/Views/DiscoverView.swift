@@ -15,6 +15,10 @@ final class DiscoverViewModel {
     private var installingKeys: Set<String> = []
 
     func search() async {
+        guard !isLoading else {
+            return
+        }
+
         isLoading = true
         errorMessage = nil
 

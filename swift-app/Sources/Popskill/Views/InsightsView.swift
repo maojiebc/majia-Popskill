@@ -12,6 +12,10 @@ final class InsightsViewModel {
     private let scanner = TranscriptUsageScanner()
 
     func scan() async {
+        guard !isScanning else {
+            return
+        }
+
         isScanning = true
         errorMessage = nil
         defer {

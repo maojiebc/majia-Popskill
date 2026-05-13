@@ -13,6 +13,10 @@ final class UpdatesViewModel {
     private var updatingIDs: Set<String> = []
 
     func check() async {
+        guard !isChecking else {
+            return
+        }
+
         isChecking = true
         errorMessage = nil
         defer {
