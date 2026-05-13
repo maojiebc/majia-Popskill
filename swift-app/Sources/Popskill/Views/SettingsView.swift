@@ -7,7 +7,10 @@ import SwiftUI
 final class SettingsViewModel {
     var health: SidecarHealth?
     var webdavStatus: WebDAVStatus?
+    var webdavRemoteInfo: WebDAVRemoteInfo?
+    var webdavRemoteError: String?
     var isLoading = false
+    var isCheckingWebDAVRemote = false
     var hasLoadedOnce = false
     var errorMessage: String?
 
@@ -31,6 +34,24 @@ final class SettingsViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func checkWebDAVRemote() async {
+        guard !isCheckingWebDAVRemote else {
+            return
+        }
+
+        isCheckingWebDAVRemote = true
+        webdavRemoteError = nil
+
+        do {
+            webdavRemoteInfo = try await client.webdavRemoteInfo()
+        } catch {
+            webdavRemoteInfo = nil
+            webdavRemoteError = error.localizedDescription
+        }
+
+        isCheckingWebDAVRemote = false
     }
 }
 
@@ -111,6 +132,39 @@ struct SettingsView: View {
                         DetailField(title: "Profile", value: viewModel.webdavStatus?.profile ?? "default")
                         DetailField(title: "Last Sync", value: timestampText(viewModel.webdavStatus?.status?.lastSyncAt))
                         DetailField(title: "Last Error", value: viewModel.webdavStatus?.status?.lastError ?? "None")
+                        Divider()
+                        HStack {
+                            Button {
+                                Task { await viewModel.checkWebDAVRemote() }
+                            } label: {
+                                if viewModel.isCheckingWebDAVRemote {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Label("Fetch Remote Info", systemImage: "cloud")
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(!canFetchWebDAVRemote || viewModel.isCheckingWebDAVRemote)
+                            .help("Fetch WebDAV Remote Info")
+
+                            if let webdavRemoteError = viewModel.webdavRemoteError {
+                                Text(webdavRemoteError)
+                                    .font(.caption)
+                                    .foregroundStyle(Color.popStatusError)
+                                    .lineLimit(2)
+                            }
+                        }
+
+                        if let remoteInfo = viewModel.webdavRemoteInfo {
+                            DetailField(title: "Remote Snapshot", value: remoteSnapshotText(remoteInfo))
+                            DetailField(title: "Remote Device", value: remoteInfo.deviceName ?? "Unknown")
+                            DetailField(title: "Remote Created", value: timestampText(remoteInfo.createdAt))
+                            DetailField(title: "Remote Path", value: remoteInfo.remotePath ?? "Unknown")
+                            DetailField(title: "Layout", value: remoteInfo.layout ?? "Unknown")
+                            DetailField(title: "Compatible", value: boolText(remoteInfo.compatible))
+                            DetailField(title: "Artifacts", value: remoteInfo.artifacts?.joined(separator: ", ") ?? "None")
+                        }
                     }
 
                     if let docsURL = ipcDocsURL {
@@ -146,6 +200,22 @@ struct SettingsView: View {
         }
         return Date(timeIntervalSince1970: TimeInterval(value))
             .formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private var canFetchWebDAVRemote: Bool {
+        viewModel.webdavStatus?.configured == true && viewModel.webdavStatus?.enabled == true
+    }
+
+    private func remoteSnapshotText(_ remoteInfo: WebDAVRemoteInfo) -> String {
+        if remoteInfo.empty == true {
+            return "Empty"
+        }
+
+        if let snapshotId = remoteInfo.snapshotId, !snapshotId.isEmpty {
+            return snapshotId
+        }
+
+        return "Unknown"
     }
 
     private var repositoryCountText: String {

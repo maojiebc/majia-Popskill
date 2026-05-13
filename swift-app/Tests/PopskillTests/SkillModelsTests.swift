@@ -187,6 +187,32 @@ struct SkillModelsTests {
         #expect(result.enabled == nil)
     }
 
+    @Test
+    func webDAVRemoteInfoDecodesSnapshotPayload() throws {
+        let data = """
+        {
+          "deviceName": "Mac Studio",
+          "createdAt": 1778603190,
+          "snapshotId": "snapshot-123",
+          "version": 1,
+          "protocolVersion": 1,
+          "dbCompatVersion": 3,
+          "compatible": true,
+          "artifacts": ["database", "skills"],
+          "layout": "profile",
+          "remotePath": "cc-switch-sync/default"
+        }
+        """.data(using: .utf8)!
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let info = try decoder.decode(WebDAVRemoteInfo.self, from: data)
+
+        #expect(info.snapshotId == "snapshot-123")
+        #expect(info.compatible == true)
+        #expect(info.artifacts == ["database", "skills"])
+    }
+
     private func catalogSkill(repoBranch: String?) -> CatalogSkill {
         CatalogSkill(
             key: "maojiebc/majia-skills/demo",

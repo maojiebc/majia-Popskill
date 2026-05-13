@@ -185,6 +185,20 @@ struct WebDAVSyncStatus: Codable, Equatable {
     let lastRemoteManifestHash: String?
 }
 
+struct WebDAVRemoteInfo: Codable, Equatable {
+    let empty: Bool?
+    let deviceName: String?
+    let createdAt: Int?
+    let snapshotId: String?
+    let version: Int?
+    let protocolVersion: Int?
+    let dbCompatVersion: Int?
+    let compatible: Bool?
+    let artifacts: [String]?
+    let layout: String?
+    let remotePath: String?
+}
+
 enum SecurityScanStatus: String, Codable, Equatable {
     case verified
     case warning

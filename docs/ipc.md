@@ -85,6 +85,35 @@ When WebDAV has not been configured:
 
 Fetches remote manifest information for the saved enabled WebDAV config. This command fails if WebDAV is unconfigured or disabled.
 
+```json
+{
+  "ok": true,
+  "data": {
+    "deviceName": "Mac Studio",
+    "createdAt": 1778603190,
+    "snapshotId": "snapshot-123",
+    "version": 1,
+    "protocolVersion": 1,
+    "dbCompatVersion": 3,
+    "compatible": true,
+    "artifacts": ["database", "skills"],
+    "layout": "profile",
+    "remotePath": "cc-switch-sync/default"
+  }
+}
+```
+
+When no compatible remote snapshot exists, CC Switch returns:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "empty": true
+  }
+}
+```
+
 ### `skill-cli list --json`
 
 Returns all skills currently managed by CC Switch.
