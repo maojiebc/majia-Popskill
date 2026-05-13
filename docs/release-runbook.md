@@ -47,6 +47,9 @@ Set these in your shell for a public notarized build:
 ```bash
 export POPSKILL_DEVELOPER_ID_APPLICATION="Developer ID Application: Your Name (TEAMID)"
 export POPSKILL_NOTARY_KEYCHAIN_PROFILE="popskill-notary"
+export POPSKILL_APP_VERSION="0.1.0"
+export POPSKILL_APP_BUILD="1"
+export POPSKILL_BUNDLE_IDENTIFIER="com.maojiebc.popskill"
 ```
 
 For Sparkle-enabled builds, also set:

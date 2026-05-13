@@ -249,6 +249,9 @@ POPSKILL_APPCAST_DOWNLOAD_URL="https://example.com/Popskill.dmg" \
 ./scripts/sparkle-sign-update.sh build/Popskill.dmg
 
 # v0.1 发布前的签名/公证骨架（需要 Apple Developer ID 凭据）
+POPSKILL_APP_VERSION="0.1.0" \
+POPSKILL_APP_BUILD="1" \
+POPSKILL_BUNDLE_IDENTIFIER="com.maojiebc.popskill" \
 POPSKILL_DEVELOPER_ID_APPLICATION="Developer ID Application: Name (TEAMID)" \
 POPSKILL_APPLE_ID="you@example.com" \
 POPSKILL_TEAM_ID="TEAMID" \
