@@ -77,6 +77,12 @@ struct LibraryView: View {
                     selectedSkillID = skills.first?.id
                 }
             }
+            .onChange(of: viewModel.filteredSkills) { _, skills in
+                if let selectedSkillID, skills.contains(where: { $0.id == selectedSkillID }) {
+                    return
+                }
+                selectedSkillID = skills.first?.id
+            }
         }
         .background(Color.popMainBackground)
         .searchable(text: $viewModel.searchText, placement: .toolbar, prompt: "Search Library")
@@ -86,7 +92,7 @@ struct LibraryView: View {
         guard let selectedSkillID else {
             return viewModel.filteredSkills.first
         }
-        return viewModel.skills.first { $0.id == selectedSkillID }
+        return viewModel.filteredSkills.first { $0.id == selectedSkillID } ?? viewModel.filteredSkills.first
     }
 
     private var emptyStateTitle: String {
