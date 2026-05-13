@@ -131,8 +131,8 @@ struct RootView: View {
             }
         }
         .task {
-            await library.load()
             await repositories.load()
+            await library.load()
         }
     }
 
