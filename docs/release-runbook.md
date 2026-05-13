@@ -16,6 +16,8 @@ Before Apple Developer Program credentials are available, this is expected:
 - Release doctor should fail on missing Developer ID identity and missing notary credentials.
 - Sparkle is linked in the app. Sparkle warnings are expected until a public feed URL, public EdDSA key, download URL, and update signature are available.
 
+The latest local dry-run snapshot is tracked in [v0.1-release-readiness.md](./v0.1-release-readiness.md).
+
 ## One-Time Apple Setup
 
 1. Join Apple Developer Program.

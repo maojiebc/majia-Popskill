@@ -150,6 +150,18 @@
 - ❌ Skill 创作工具（编辑器/上传器）—— v1 只做"消费者端"
 - ❌ 用户评分系统 —— v2 再考虑
 
+### Popskill 不是什么（边界声明）
+
+- ❌ 不是 agent 运行平台。MetaGPT / mgx.dev 这类多 agent 执行框架是另一个赛道。
+- ❌ 不是 Claude Code 的替代品。Popskill 是本地 AI 能力资产管理器。
+- ❌ 不是 skill 创作工具。v1 只做消费者端安装、管理、安全和使用洞察。
+- ❌ 不是云端服务。v0.1 默认本地运行，release/更新也走标准 macOS 分发链路。
+
+### 工程治理规则
+
+- v0.1 范围内允许"最小可逆探索"：新二级视图、只读 preview、文档 sketch、不会改变主路径的数据模型草案。
+- 改一级抽象、主 sidebar、PLAN.md 核心定位、release path、git history、stash 或 `cc-switch/` submodule 前，必须先由 majia 拍板。
+
 ---
 
 ## 2. 核心决策一览

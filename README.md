@@ -194,6 +194,7 @@ SwiftUI 端已接入：
 - **[docs/transcript-parsing.md](./docs/transcript-parsing.md)** —— Claude transcript 字段观察和 Insights MVP 策略。
 - **[docs/security.md](./docs/security.md)** —— Keychain、skill 内容和 transcript insights 的安全边界。
 - **[docs/release-runbook.md](./docs/release-runbook.md)** —— v0.1 签名、公证、DMG 和 Sparkle appcast 发布步骤。
+- **[docs/v0.1-release-readiness.md](./docs/v0.1-release-readiness.md)** —— 当前 v0.1 dry-run 结果、通过项和剩余外部门槛。
 - **[docs/release-notes-v0.1.md](./docs/release-notes-v0.1.md)** —— v0.1 pre-alpha 发布说明草稿。
 - **[docs/v0.1-qa-checklist.md](./docs/v0.1-qa-checklist.md)** —— v0.1 发布前自动/视觉/隐私/发布产物 QA 清单。
 
@@ -273,6 +274,12 @@ POPSKILL_NOTARY_PASSWORD="app-specific-password" \
 这是 pre-alpha，主仓库还在私有阶段的话不建议提 PR。等 v0.1 发布后会写 CONTRIBUTING.md。
 
 如果你对设计/架构有想法，欢迎在 Issues 讨论。
+
+### Maintainer Governance
+
+- Do not push, rewrite git history, drop stashes, or change the `cc-switch/` submodule without maintainer approval.
+- Small reversible exploration is allowed during v0.1 only when it stays behind an existing secondary view, documentation, or read-only preview.
+- Changing the primary product abstraction, sidebar structure, release path, or PLAN.md core positioning requires maintainer approval first.
 
 ### License
 
