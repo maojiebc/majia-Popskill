@@ -66,6 +66,7 @@ final class LibraryViewModel {
 
         return packages.filter { package in
             selectedPackageFilter.includes(package)
+                && selectedFilter.includes(package, installedSkills: skills)
         }.filter { package in
             query.isEmpty
                 || package.name.lowercased().contains(query)
@@ -487,6 +488,38 @@ enum LibraryFilter: String, CaseIterable, Identifiable {
         case .active: skill.enabledAppCount > 0
         case .inactive: skill.enabledAppCount == 0
         case .stub: false
+        }
+    }
+
+    func includes(_ package: CapabilityPackage, installedSkills: [Skill]) -> Bool {
+        switch self {
+        case .all:
+            return true
+        case .active:
+            if package.type == .composite {
+                return package.installedComponentCount > 0
+            }
+            return matchingSkill(for: package, in: installedSkills).map(includes) ?? package.installed
+        case .inactive:
+            if package.type == .composite {
+                return package.installedComponentCount == 0
+            }
+            return matchingSkill(for: package, in: installedSkills).map(includes) ?? !package.installed
+        case .stub:
+            return false
+        }
+    }
+
+    private func matchingSkill(for package: CapabilityPackage, in installedSkills: [Skill]) -> Skill? {
+        guard package.type == .standalone,
+              let component = package.components.skills.first ?? package.components.all.first(where: { $0.kind == "skill" }) else {
+            return nil
+        }
+
+        return installedSkills.first { skill in
+            skill.id == component.id
+                || skill.directory == component.location
+                || skill.name == component.name
         }
     }
 }

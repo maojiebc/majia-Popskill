@@ -40,6 +40,28 @@ struct LibraryFilterTests {
     }
 
     @Test
+    func standalonePackageFilterUsesMatchedSkillActivity() {
+        let activeSkill = skill(id: "demo-skill", enabledInClaude: true)
+        let inactiveSkill = skill(id: "quiet-skill", enabledInClaude: false)
+
+        #expect(LibraryFilter.active.includes(package(skillID: "demo-skill"), installedSkills: [activeSkill]))
+        #expect(!LibraryFilter.inactive.includes(package(skillID: "demo-skill"), installedSkills: [activeSkill]))
+        #expect(!LibraryFilter.active.includes(package(skillID: "quiet-skill"), installedSkills: [inactiveSkill]))
+        #expect(LibraryFilter.inactive.includes(package(skillID: "quiet-skill"), installedSkills: [inactiveSkill]))
+    }
+
+    @Test
+    func compositePackageFilterUsesInstalledComponentState() {
+        let installedComposite = package(type: .composite, installedComponents: 1)
+        let missingComposite = package(type: .composite, installedComponents: 0)
+
+        #expect(LibraryFilter.active.includes(installedComposite, installedSkills: []))
+        #expect(!LibraryFilter.inactive.includes(installedComposite, installedSkills: []))
+        #expect(!LibraryFilter.active.includes(missingComposite, installedSkills: []))
+        #expect(LibraryFilter.inactive.includes(missingComposite, installedSkills: []))
+    }
+
+    @Test
     func librarySortOptionsUseExpectedOrdering() {
         let alpha = skill(id: "alpha", name: "Alpha", installedAt: 10, updatedAt: 20, lastUsedAt: 30, sizeBytes: 40)
         let beta = skill(id: "beta", name: "Beta", installedAt: 30, updatedAt: 10, lastUsedAt: 20, sizeBytes: 80)
@@ -83,17 +105,50 @@ struct LibraryFilterTests {
         )
     }
 
-    private func package(type: CapabilityPackageType) -> CapabilityPackage {
-        CapabilityPackage(
+    private func package(
+        type: CapabilityPackageType = .standalone,
+        skillID: String = "demo-skill",
+        installedComponents: Int = 0
+    ) -> CapabilityPackage {
+        let components: [PackageComponent]
+        if installedComponents > 0 {
+            components = (0..<installedComponents).map { index in
+                PackageComponent(
+                    id: index == 0 ? skillID : "component-\(index)",
+                    name: index == 0 ? "Demo" : "Component \(index)",
+                    kind: "skill",
+                    required: true,
+                    installed: true,
+                    status: "installed",
+                    location: index == 0 ? skillID : "component-\(index)"
+                )
+            }
+        } else if type == .standalone {
+            components = [
+                PackageComponent(
+                    id: skillID,
+                    name: "Demo",
+                    kind: "skill",
+                    required: true,
+                    installed: true,
+                    status: "installed",
+                    location: skillID
+                )
+            ]
+        } else {
+            components = []
+        }
+
+        return CapabilityPackage(
             id: "pkg:\(type.rawValue)",
             type: type,
             name: type.title,
             vendor: nil,
             summary: "Demo package",
             source: PackageSource(kind: "builtin", location: "popskill/demo", updateStrategy: "manual"),
-            components: PackageComponents(cli: [], skills: [], mcp: [], agents: []),
+            components: PackageComponents(cli: [], skills: components, mcp: [], agents: []),
             configSchema: [],
-            installed: false
+            installed: installedComponents > 0 || type == .standalone
         )
     }
 }

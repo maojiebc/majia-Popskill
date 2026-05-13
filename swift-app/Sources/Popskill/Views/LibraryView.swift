@@ -103,48 +103,13 @@ struct LibraryView: View {
                         )
                     )
 
-                    ForEach(viewModel.filteredPackages) { package in
-                        let selectionID = selectionID(forPackage: package.id)
-                        PopskillSelectableCard(isSelected: selectedItemID == selectionID) {
-                            selectedItemID = selectionID
-                        } content: {
-                            PackageRow(package: package)
-                        }
-                    }
-                }
-
-                if viewModel.selectedPackageFilter == .all {
-                    PopskillSectionTitle(
-                        title: "Installed Skills",
-                        subtitle: "\(viewModel.filteredSkills.count) skills"
-                    )
-                    .padding(.top, viewModel.filteredPackages.isEmpty ? 0 : 6)
-
-                    LazyVGrid(columns: skillGridColumns, alignment: .leading, spacing: 16) {
-                        ForEach(viewModel.filteredSkills) { skill in
-                            let selectionID = selectionID(forSkill: skill.id)
+                    LazyVGrid(columns: packageGridColumns, alignment: .leading, spacing: 16) {
+                        ForEach(viewModel.filteredPackages) { package in
+                            let selectionID = selectionID(forPackage: package.id)
                             PopskillSelectableCard(isSelected: selectedItemID == selectionID) {
                                 selectedItemID = selectionID
                             } content: {
-                                SkillRow(
-                                    skill: skill,
-                                    updateInfo: viewModel.updateInfo(skillID: skill.id),
-                                    isUpdating: viewModel.isUpdating(skillID: skill.id),
-                                    securityScanResult: viewModel.securityScanResult(skillID: skill.id),
-                                    isToggling: { app in
-                                        viewModel.isToggling(skillID: skill.id, app: app)
-                                    }
-                                ) { app, enabled in
-                                    Task {
-                                        await viewModel.setEnabled(enabled, for: skill, app: app)
-                                    }
-                                } onUpdate: { update in
-                                    Task {
-                                        if await viewModel.update(update) {
-                                            await onLibraryMutation()
-                                        }
-                                    }
-                                }
+                                PackageRow(package: package)
                             }
                         }
                     }
@@ -159,7 +124,7 @@ struct LibraryView: View {
             if viewModel.isLoading && viewModel.packages.isEmpty && viewModel.skills.isEmpty {
                 ProgressView()
                     .controlSize(.large)
-            } else if viewModel.filteredPackages.isEmpty && visibleSkillRowsAreEmpty {
+            } else if viewModel.filteredPackages.isEmpty {
                 ContentUnavailableView(emptyStateTitle, systemImage: "shippingbox")
             }
         }
@@ -293,10 +258,6 @@ struct LibraryView: View {
         }
     }
 
-    private var visibleSkillRowsAreEmpty: Bool {
-        viewModel.selectedPackageFilter != .all || viewModel.filteredSkills.isEmpty
-    }
-
     private var emptyStateTitle: String {
         if viewModel.selectedFilter == .stub {
             return viewModel.stubs.isEmpty ? "No Stubs" : "No Matching Stubs"
@@ -326,8 +287,8 @@ struct LibraryView: View {
         }
     }
 
-    private var skillGridColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: 330), spacing: 16, alignment: .top)]
+    private var packageGridColumns: [GridItem] {
+        [GridItem(.adaptive(minimum: 340), spacing: 16, alignment: .top)]
     }
 
     private func selectionID(forPackage packageID: String) -> String {
