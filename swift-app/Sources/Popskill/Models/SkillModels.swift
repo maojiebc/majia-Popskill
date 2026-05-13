@@ -93,7 +93,7 @@ private func explicitOrRepositoryURL(readmeUrl: String?, repoOwner: String?, rep
         return url
     }
 
-    guard let repoOwner, let repoName else {
+    guard let repoOwner, let repoName, !repoOwner.isEmpty, !repoName.isEmpty else {
         return nil
     }
 
