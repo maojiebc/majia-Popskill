@@ -115,27 +115,31 @@ final class RepositoriesViewModel {
         return String(value.dropLast(4))
     }
 
-    func setEnabled(_ enabled: Bool, for repository: SkillRepository) async {
+    @discardableResult
+    func setEnabled(_ enabled: Bool, for repository: SkillRepository) async -> Bool {
         guard let index = repositories.firstIndex(where: { $0.id == repository.id }) else {
-            return
+            return false
         }
         guard !pendingIDs.contains(repository.id) else {
-            return
+            return false
         }
 
         let previous = repositories[index]
         repositories[index].enabled = enabled
         pendingIDs.insert(repository.id)
         errorMessage = nil
+        var didSave = false
 
         do {
             _ = try await client.setRepositoryEnabled(enabled, owner: repository.owner, name: repository.name)
+            didSave = true
         } catch {
             repositories[index] = previous
             errorMessage = error.localizedDescription
         }
 
         pendingIDs.remove(repository.id)
+        return didSave
     }
 
     @discardableResult
@@ -186,8 +190,9 @@ struct RepositoriesView: View {
                     isRemoving: viewModel.isRemoving(repository)
                 ) { enabled in
                     Task {
-                        await viewModel.setEnabled(enabled, for: repository)
-                        await onRepositoriesChanged()
+                        if await viewModel.setEnabled(enabled, for: repository) {
+                            await onRepositoriesChanged()
+                        }
                     }
                 } onRemove: {
                     Task {
