@@ -28,6 +28,11 @@ actor SkillCLIClient {
         return try Self.decodeResponse(SidecarHealth.self, from: data)
     }
 
+    func webdavStatus() async throws -> WebDAVStatus {
+        let data = try run(arguments: ["webdav-status", "--json"])
+        return try Self.decodeResponse(WebDAVStatus.self, from: data)
+    }
+
     func list() async throws -> [Skill] {
         let data = try run(arguments: ["list", "--json"])
         return try Self.decodeResponse([Skill].self, from: data)

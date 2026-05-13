@@ -32,6 +32,18 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Return saved CC Switch WebDAV sync settings with secrets removed.
+    WebdavStatus {
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Fetch remote WebDAV manifest info for the saved enabled WebDAV config.
+    WebdavRemoteInfo {
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// List all skills managed by CC Switch.
     List {
         /// Kept for the Swift client contract; output is JSON either way.
@@ -249,6 +261,20 @@ async fn run() -> Result<()> {
                 "skillStorePath": format!("{home}/.cc-switch/skills"),
                 "skillBackupPath": format!("{home}/.cc-switch/skill-backups")
             })))
+        }
+        Commands::WebdavStatus { json: _ } => {
+            let settings = cc_switch_lib::get_settings()
+                .await
+                .map_err(anyhow::Error::msg)?;
+            let value = serde_json::to_value(settings).context("failed to serialize settings")?;
+            print_json(&ApiResponse::ok(webdav_status_from_settings_value(value)))
+        }
+        Commands::WebdavRemoteInfo { json: _ } => {
+            let info = cc_switch_lib::webdav_sync_fetch_remote_info()
+                .await
+                .map_err(anyhow::Error::msg)
+                .context("failed to fetch WebDAV remote info")?;
+            print_json(&ApiResponse::ok(info))
         }
         Commands::List { json: _ } => {
             let skills =
@@ -840,6 +866,20 @@ fn first_non_empty_line(value: &str) -> Option<String> {
         .map(ToString::to_string)
 }
 
+fn webdav_status_from_settings_value(settings: serde_json::Value) -> serde_json::Value {
+    let Some(mut sync) = settings.get("webdavSync").cloned() else {
+        return json!({ "configured": false });
+    };
+
+    let Some(object) = sync.as_object_mut() else {
+        return json!({ "configured": false });
+    };
+
+    object.insert("configured".to_string(), json!(true));
+    object.remove("password");
+    sync
+}
+
 fn format_error(error: &anyhow::Error) -> String {
     error
         .chain()
@@ -1092,6 +1132,29 @@ mod tests {
         );
 
         assert_eq!(summary, "first finding");
+    }
+
+    #[test]
+    fn webdav_status_reports_unconfigured_when_missing() {
+        let status = webdav_status_from_settings_value(json!({}));
+
+        assert_eq!(status, json!({ "configured": false }));
+    }
+
+    #[test]
+    fn webdav_status_removes_password_and_marks_configured() {
+        let status = webdav_status_from_settings_value(json!({
+            "webdavSync": {
+                "enabled": true,
+                "baseUrl": "https://dav.example.com",
+                "username": "demo",
+                "password": "secret"
+            }
+        }));
+
+        assert_eq!(status["configured"], true);
+        assert_eq!(status["enabled"], true);
+        assert!(status.get("password").is_none());
     }
 
     fn stub_fixture(id: &str, stubbed_at: i64) -> StubbedSkill {

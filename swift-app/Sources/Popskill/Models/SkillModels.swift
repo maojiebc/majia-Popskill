@@ -165,6 +165,26 @@ struct SidecarHealth: Codable, Equatable {
     let skillBackupPath: String
 }
 
+struct WebDAVStatus: Codable, Equatable {
+    let configured: Bool
+    let enabled: Bool?
+    let autoSync: Bool?
+    let baseUrl: String?
+    let username: String?
+    let remoteRoot: String?
+    let profile: String?
+    let status: WebDAVSyncStatus?
+}
+
+struct WebDAVSyncStatus: Codable, Equatable {
+    let lastSyncAt: Int?
+    let lastError: String?
+    let lastErrorSource: String?
+    let lastRemoteEtag: String?
+    let lastLocalManifestHash: String?
+    let lastRemoteManifestHash: String?
+}
+
 enum SecurityScanStatus: String, Codable, Equatable {
     case verified
     case warning

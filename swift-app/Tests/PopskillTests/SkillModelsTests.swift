@@ -147,6 +147,20 @@ struct SkillModelsTests {
         #expect(result.exitCode == 1)
     }
 
+    @Test
+    func webDAVStatusDecodesUnconfiguredPayload() throws {
+        let data = """
+        {
+          "configured": false
+        }
+        """.data(using: .utf8)!
+
+        let result = try JSONDecoder().decode(WebDAVStatus.self, from: data)
+
+        #expect(result.configured == false)
+        #expect(result.enabled == nil)
+    }
+
     private func catalogSkill(repoBranch: String?) -> CatalogSkill {
         CatalogSkill(
             key: "maojiebc/majia-skills/demo",

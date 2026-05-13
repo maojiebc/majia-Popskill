@@ -1,10 +1,12 @@
 import Observation
+import Foundation
 import SwiftUI
 
 @MainActor
 @Observable
 final class SettingsViewModel {
     var health: SidecarHealth?
+    var webdavStatus: WebDAVStatus?
     var isLoading = false
     var hasLoadedOnce = false
     var errorMessage: String?
@@ -25,6 +27,7 @@ final class SettingsViewModel {
 
         do {
             health = try await client.health()
+            webdavStatus = try await client.webdavStatus()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -99,6 +102,17 @@ struct SettingsView: View {
                         DetailField(title: "Plaintext Policy", value: "Secrets are not stored in SQLite or app settings.")
                     }
 
+                    DetailSection(title: "WebDAV", accent: PopskillSectionAccent.color(for: 3)) {
+                        DetailField(title: "Configured", value: boolText(viewModel.webdavStatus?.configured))
+                        DetailField(title: "Enabled", value: boolText(viewModel.webdavStatus?.enabled))
+                        DetailField(title: "Auto Sync", value: boolText(viewModel.webdavStatus?.autoSync))
+                        DetailField(title: "Base URL", value: viewModel.webdavStatus?.baseUrl ?? "Not set")
+                        DetailField(title: "Remote Root", value: viewModel.webdavStatus?.remoteRoot ?? "cc-switch-sync")
+                        DetailField(title: "Profile", value: viewModel.webdavStatus?.profile ?? "default")
+                        DetailField(title: "Last Sync", value: timestampText(viewModel.webdavStatus?.status?.lastSyncAt))
+                        DetailField(title: "Last Error", value: viewModel.webdavStatus?.status?.lastError ?? "None")
+                    }
+
                     if let docsURL = ipcDocsURL {
                         Link(destination: docsURL) {
                             Label("Open IPC Docs", systemImage: "doc.text")
@@ -120,6 +134,18 @@ struct SettingsView: View {
 
     private func countText(_ value: Int?) -> String {
         value.map(String.init) ?? "Unknown"
+    }
+
+    private func boolText(_ value: Bool?) -> String {
+        value.map { $0 ? "Yes" : "No" } ?? "Unknown"
+    }
+
+    private func timestampText(_ value: Int?) -> String {
+        guard let value else {
+            return "Never"
+        }
+        return Date(timeIntervalSince1970: TimeInterval(value))
+            .formatted(date: .abbreviated, time: .shortened)
     }
 
     private var repositoryCountText: String {

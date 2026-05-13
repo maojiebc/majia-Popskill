@@ -49,6 +49,7 @@ require_ok scan-unmanaged scan-unmanaged --json
 require_ok backup-list backup-list --json
 require_ok stub-list stub-list --json
 require_ok repo-list repo-list --json
+require_ok webdav-status webdav-status --json
 
 scan_dir="$TMP_DIR/security-scan-skill"
 mkdir -p "$scan_dir"

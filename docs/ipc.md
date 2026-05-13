@@ -47,6 +47,44 @@ Returns local sidecar and CC Switch diagnostics used by Settings.
 }
 ```
 
+### `skill-cli webdav-status --json`
+
+Returns saved CC Switch WebDAV sync settings with secrets removed.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "configured": true,
+    "enabled": true,
+    "autoSync": false,
+    "baseUrl": "https://dav.example.com/remote.php/dav/files/me",
+    "username": "me",
+    "remoteRoot": "cc-switch-sync",
+    "profile": "default",
+    "status": {
+      "lastSyncAt": 1778603190,
+      "lastError": null
+    }
+  }
+}
+```
+
+When WebDAV has not been configured:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "configured": false
+  }
+}
+```
+
+### `skill-cli webdav-remote-info --json`
+
+Fetches remote manifest information for the saved enabled WebDAV config. This command fails if WebDAV is unconfigured or disabled.
+
 ### `skill-cli list --json`
 
 Returns all skills currently managed by CC Switch.
