@@ -34,7 +34,7 @@ struct Skill: Identifiable, Codable, Equatable {
     let contentHash: String?
 
     var sourceLabel: String {
-        if let repoOwner, let repoName {
+        if let repoOwner, let repoName, !repoOwner.isEmpty, !repoName.isEmpty {
             return "\(repoOwner)/\(repoName)"
         }
         return directory
@@ -70,7 +70,7 @@ struct CatalogSkill: Identifiable, Codable, Equatable {
     let repoBranch: String?
 
     var sourceLabel: String {
-        if let repoOwner, let repoName {
+        if let repoOwner, let repoName, !repoOwner.isEmpty, !repoName.isEmpty {
             let label = "\(repoOwner)/\(repoName)"
             if let repoBranch, !repoBranch.isEmpty, repoBranch != "main" {
                 return "\(label)@\(repoBranch)"

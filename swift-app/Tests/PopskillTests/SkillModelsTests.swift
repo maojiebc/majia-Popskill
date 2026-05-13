@@ -93,6 +93,23 @@ struct SkillModelsTests {
     }
 
     @Test
+    func sourceLabelFallsBackToDirectoryForEmptyRepositoryParts() {
+        let skill = CatalogSkill(
+            key: "demo",
+            name: "Demo",
+            description: "Demo skill",
+            directory: "demo",
+            readmeUrl: nil,
+            installed: false,
+            repoOwner: "",
+            repoName: "majia-skills",
+            repoBranch: nil
+        )
+
+        #expect(skill.sourceLabel == "demo")
+    }
+
+    @Test
     func installedSkillLocalStoreURLUsesCCSwitchStore() {
         let skill = installedSkill(directory: "demo-skill")
 
