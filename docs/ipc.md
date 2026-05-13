@@ -496,7 +496,7 @@ Deletes one uninstall backup directory through CC Switch.
 
 ### `skill-cli import-unmanaged <directory> [--app <app>]... --json`
 
-Imports one unmanaged local skill directory into CC Switch. If no `--app` is provided, it enables Claude by default.
+Imports one unmanaged local skill directory into CC Switch. If no `--app` is provided, it enables Claude by default. Popskill runs AgentShield against the unmanaged source path before import; `blocked` results stop the import. Pass `--skip-security-scan` only for local development bypasses.
 
 ```json
 {

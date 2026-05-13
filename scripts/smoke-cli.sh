@@ -60,6 +60,35 @@ POPSKILL_AGENTSHIELD_BIN=/bin/echo "$CLI" security-scan "$scan_dir" --json > "$s
 jq -e '.ok == true and .data.scanner == "ecc-agentshield" and .data.status == "verified"' "$security_output" > /dev/null
 echo "security-scan ok"
 
+isolated_home="$TMP_DIR/isolated-home"
+unmanaged_name="popskill-smoke-unmanaged"
+mkdir -p "$isolated_home/.claude/skills/$unmanaged_name"
+printf '# Smoke Unmanaged Skill\n' > "$isolated_home/.claude/skills/$unmanaged_name/SKILL.md"
+import_output="$TMP_DIR/import-unmanaged.json"
+HOME="$isolated_home" POPSKILL_AGENTSHIELD_BIN=/bin/echo \
+  "$CLI" import-unmanaged "$unmanaged_name" --app claude --json > "$import_output"
+jq -e '.ok == true and .data[0].id == "local:popskill-smoke-unmanaged"' "$import_output" > /dev/null
+HOME="$isolated_home" "$CLI" security-scan-list --json > "$TMP_DIR/import-scans.json"
+jq -e '.ok == true and .data[0].skillId == "local:popskill-smoke-unmanaged" and .data[0].result.status == "verified"' \
+  "$TMP_DIR/import-scans.json" > /dev/null
+echo "import-unmanaged security gate ok"
+
+blocked_scanner="$TMP_DIR/blocked-scanner.sh"
+printf '#!/usr/bin/env bash\necho "High severity finding"\n' > "$blocked_scanner"
+chmod +x "$blocked_scanner"
+blocked_home="$TMP_DIR/blocked-home"
+mkdir -p "$blocked_home/.claude/skills/$unmanaged_name"
+printf '# Blocked Unmanaged Skill\n' > "$blocked_home/.claude/skills/$unmanaged_name/SKILL.md"
+blocked_stderr="$TMP_DIR/import-blocked.err"
+if HOME="$blocked_home" POPSKILL_AGENTSHIELD_BIN="$blocked_scanner" \
+  "$CLI" import-unmanaged "$unmanaged_name" --app claude --json > /dev/null 2> "$blocked_stderr"; then
+  echo "expected blocked unmanaged import to fail" >&2
+  exit 1
+fi
+jq -e '.ok == false and (.error.message | contains("AgentShield blocked unmanaged skill"))' \
+  "$blocked_stderr" > /dev/null
+echo "import-unmanaged blocked gate ok"
+
 health_output="$TMP_DIR/health.json"
 "$CLI" health --json > "$health_output"
 jq -e '.ok == true and (.data.installedCount | type) == "number"' "$health_output" > /dev/null

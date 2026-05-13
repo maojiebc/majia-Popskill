@@ -213,6 +213,9 @@ enum Commands {
         /// Target apps to enable after import. Can be passed multiple times.
         #[arg(long = "app")]
         apps: Vec<String>,
+        /// Skip the AgentShield import gate. Intended for local development only.
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        skip_security_scan: bool,
         /// Kept for the Swift client contract; output is JSON either way.
         #[arg(long)]
         json: bool,
@@ -537,12 +540,21 @@ async fn run() -> Result<()> {
         Commands::ImportUnmanaged {
             directory,
             apps,
+            skip_security_scan,
             json: _,
         } => {
             let apps = parse_skill_apps(&apps)?;
+            let import_scan = if skip_security_scan {
+                None
+            } else {
+                Some(scan_unmanaged_before_import(&db, &directory)?)
+            };
             let imported =
                 SkillService::import_from_apps(&db, vec![ImportSkillSelection { directory, apps }])
                     .context("failed to import unmanaged skill")?;
+            if let Some(scan) = import_scan {
+                persist_import_security_scans(&imported, scan)?;
+            }
             print_json(&ApiResponse::ok(imported))
         }
         Commands::Toggle {
@@ -720,9 +732,7 @@ fn list_security_scans(db: &Arc<Database>) -> Result<Vec<SecurityScanRecord>> {
 }
 
 fn scan_installed_skill(skill: &InstalledSkill) -> Result<SecurityScanRecord> {
-    let skill_dir = SkillService::get_ssot_dir()
-        .context("failed to resolve skill storage directory")?
-        .join(&skill.directory);
+    let skill_dir = installed_skill_dir(skill)?;
     let result = run_security_scan(&skill_dir)?;
     let record = SecurityScanRecord {
         skill_id: skill.id.clone(),
@@ -733,10 +743,48 @@ fn scan_installed_skill(skill: &InstalledSkill) -> Result<SecurityScanRecord> {
     Ok(record)
 }
 
+fn scan_unmanaged_before_import(db: &Arc<Database>, directory: &str) -> Result<SecurityScanResult> {
+    let unmanaged = SkillService::scan_unmanaged(db)
+        .context("failed to scan unmanaged skills before import")?
+        .into_iter()
+        .find(|skill| skill.directory == directory)
+        .with_context(|| format!("unmanaged skill not found: {directory}"))?;
+    let result = run_security_scan(Path::new(&unmanaged.path))
+        .with_context(|| format!("failed to run AgentShield for unmanaged skill '{directory}'"))?;
+    if result.status == SecurityScanStatus::Blocked {
+        bail!(
+            "AgentShield blocked unmanaged skill '{directory}': {}",
+            result.summary
+        );
+    }
+    Ok(result)
+}
+
+fn persist_import_security_scans(
+    imported: &[InstalledSkill],
+    result: SecurityScanResult,
+) -> Result<()> {
+    for skill in imported {
+        let skill_dir = installed_skill_dir(skill)?;
+        persist_security_scan(SecurityScanRecord {
+            skill_id: skill.id.clone(),
+            skill_directory: skill_dir.to_string_lossy().to_string(),
+            result: result.clone(),
+        })?;
+    }
+    Ok(())
+}
+
 fn persist_security_scan(record: SecurityScanRecord) -> Result<()> {
     let mut store = load_security_scan_store()?;
     upsert_security_scan(&mut store, record);
     save_security_scan_store(&store)
+}
+
+fn installed_skill_dir(skill: &InstalledSkill) -> Result<PathBuf> {
+    Ok(SkillService::get_ssot_dir()
+        .context("failed to resolve skill storage directory")?
+        .join(&skill.directory))
 }
 
 fn backup_id_from_path(path: &Path) -> Result<String> {
