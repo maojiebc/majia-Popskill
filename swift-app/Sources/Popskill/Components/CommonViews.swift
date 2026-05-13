@@ -51,7 +51,7 @@ struct SummaryMetric: View {
                 .font(.system(size: 26, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(color)
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -101,7 +101,7 @@ struct StatusPill: View {
     let color: Color
 
     var body: some View {
-        Text(title)
+        Text(LocalizedStringKey(title))
             .font(.caption2.weight(.semibold))
             .foregroundStyle(color)
             .padding(.horizontal, 6)
@@ -155,7 +155,7 @@ struct DetailField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text(value)
@@ -175,8 +175,9 @@ struct SectionHeading: View {
             RoundedRectangle(cornerRadius: 2)
                 .fill(accent)
                 .frame(width: 4, height: 13)
-            Text(title.uppercased())
+            Text(LocalizedStringKey(title))
                 .font(.caption.weight(.semibold))
+                .textCase(.uppercase)
                 .foregroundStyle(accent)
         }
     }

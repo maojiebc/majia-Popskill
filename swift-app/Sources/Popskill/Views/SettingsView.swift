@@ -119,6 +119,7 @@ final class SettingsViewModel {
 
 struct SettingsView: View {
     @Bindable var viewModel: SettingsViewModel
+    @AppStorage("preferredLanguage") private var preferredLanguage = AppLanguage.system.rawValue
 
     private let cliPath = SkillCLIClient.resolvedExecutablePath
     private let overridePath = SkillCLIClient.executableOverridePath
@@ -165,6 +166,20 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
+                    DetailSection(title: "Language", accent: PopskillSectionAccent.color(for: 0)) {
+                        Picker("Language", selection: $preferredLanguage) {
+                            ForEach(AppLanguage.allCases) { language in
+                                Text(LocalizedStringKey(language.titleKey)).tag(language.rawValue)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 360)
+
+                        Text("Language changes apply immediately to core navigation and primary controls.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
                     DetailSection(title: "Sidecar", accent: PopskillSectionAccent.color(for: 0)) {
                         DetailField(title: "Executable", value: cliPath)
                         SettingsFieldGrid {

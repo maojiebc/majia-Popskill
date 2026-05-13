@@ -4,6 +4,7 @@ import PackageDescription
 
 let package = Package(
     name: "Popskill",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v14)
     ],
@@ -19,7 +20,10 @@ let package = Package(
             dependencies: [
                 .product(name: "Sparkle", package: "Sparkle")
             ],
-            path: "Sources/Popskill"
+            path: "Sources/Popskill",
+            resources: [
+                .process("Resources")
+            ]
         ),
         .testTarget(
             name: "PopskillTests",

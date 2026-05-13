@@ -15,19 +15,19 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var title: String {
+    var titleKey: String {
         switch self {
-        case .featured: "Featured"
-        case .repositories: "Repositories"
-        case .installed: "Installed"
-        case .agents: "Agents"
-        case .updates: "Updates"
-        case .backups: "Backups"
-        case .recentlyUsed: "Recently Used"
-        case .usage: "Usage"
-        case .tokenSpend: "Token Spend"
-        case .idleCandidates: "Idle Candidates"
-        case .settings: "Settings"
+        case .featured: "sidebar.featured"
+        case .repositories: "sidebar.repositories"
+        case .installed: "sidebar.installed"
+        case .agents: "sidebar.agents"
+        case .updates: "sidebar.updates"
+        case .backups: "sidebar.backups"
+        case .recentlyUsed: "sidebar.recentlyUsed"
+        case .usage: "sidebar.usage"
+        case .tokenSpend: "sidebar.tokenSpend"
+        case .idleCandidates: "sidebar.idleCandidates"
+        case .settings: "sidebar.settings"
         }
     }
 
@@ -50,6 +50,7 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
 
 struct RootView: View {
     @State private var selection: SidebarSelection? = .featured
+    @AppStorage("preferredLanguage") private var preferredLanguage = AppLanguage.system.rawValue
     @State private var discover = DiscoverViewModel()
     @State private var repositories = RepositoriesViewModel()
     @State private var library = LibraryViewModel()
@@ -60,25 +61,36 @@ struct RootView: View {
     @State private var settings = SettingsViewModel()
 
     var body: some View {
+        content
+            .environment(\.locale, AppLanguage.fromStoredValue(preferredLanguage).locale)
+    }
+
+    private var content: some View {
         NavigationSplitView {
-            List(selection: $selection) {
-                Section("Discover") {
+            List {
+                Section {
                     sidebarLink(.featured)
                     sidebarLink(.repositories, badge: repositories.repositories.isEmpty ? nil : repositories.enabledCount)
+                } header: {
+                    Text("section.discover")
                 }
 
-                Section("My Library") {
+                Section {
                     sidebarLink(.installed, badge: library.skills.count)
                     sidebarLink(.agents, badge: agents.agents.isEmpty ? nil : agents.agents.count)
                     sidebarLink(.updates, badge: updates.updates.isEmpty ? nil : updates.updates.count)
                     sidebarLink(.backups, badge: backups.backups.isEmpty ? nil : backups.backups.count)
                     sidebarLink(.recentlyUsed)
+                } header: {
+                    Text("section.myLibrary")
                 }
 
-                Section("Insights") {
+                Section {
                     sidebarLink(.usage)
                     sidebarLink(.tokenSpend)
                     sidebarLink(.idleCandidates)
+                } header: {
+                    Text("section.insights")
                 }
 
                 Section {
@@ -162,13 +174,48 @@ struct RootView: View {
 
     @ViewBuilder
     private func sidebarLink(_ item: SidebarSelection, badge: Int? = nil) -> some View {
-        if let badge {
-            Label(item.title, systemImage: item.symbolName)
-                .badge(badge)
-                .tag(item)
-        } else {
-            Label(item.title, systemImage: item.symbolName)
-                .tag(item)
+        let isSelected = selection == item
+
+        Button {
+            selection = item
+        } label: {
+            HStack(spacing: 9) {
+                Image(systemName: item.symbolName)
+                    .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                    .frame(width: 18)
+
+                Text(LocalizedStringKey(item.titleKey))
+                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                    .lineLimit(1)
+
+                Spacer(minLength: 8)
+
+                if let badge {
+                    Text("\(badge)")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule().fill(
+                                isSelected ? Color.accentColor.opacity(0.14) : Color.secondary.opacity(0.12)
+                            )
+                        )
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .contentShape(RoundedRectangle(cornerRadius: 6))
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+            )
         }
+        .buttonStyle(.plain)
+        .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 2, trailing: 10))
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
     }
 }
