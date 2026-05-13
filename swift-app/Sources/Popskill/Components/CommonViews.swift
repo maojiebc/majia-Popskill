@@ -66,8 +66,20 @@ struct InitialAvatarView: View {
 
     private var color: Color {
         let palette: [Color] = [.orange, .purple, .blue, .green, .pink, .teal]
-        let index = Int(identifier.hashValue.magnitude % UInt(palette.count))
+        let index = Self.stablePaletteIndex(for: identifier, paletteCount: palette.count)
         return palette[index]
+    }
+
+    static func stablePaletteIndex(for identifier: String, paletteCount: Int) -> Int {
+        guard paletteCount > 0 else {
+            return 0
+        }
+
+        var hash: UInt64 = 5381
+        for byte in identifier.utf8 {
+            hash = ((hash << 5) &+ hash) &+ UInt64(byte)
+        }
+        return Int(hash % UInt64(paletteCount))
     }
 
     var body: some View {
