@@ -49,8 +49,10 @@ check_tool codesign
 check_tool security
 check_tool ditto
 check_tool hdiutil
+check_tool install_name_tool
 check_tool shasum
 check_tool jq
+check_tool otool
 check_xcrun_tool notarytool
 check_xcrun_tool stapler
 
@@ -58,6 +60,34 @@ echo
 echo "==> Artifacts"
 if [[ -d "$APP_PATH" ]]; then
   ok "app bundle exists: $APP_PATH"
+  app_bin="$APP_PATH/Contents/MacOS/Popskill"
+  sparkle_bin="$APP_PATH/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle"
+
+  if [[ -x "$app_bin" ]]; then
+    ok "app executable exists: $app_bin"
+
+    if command -v otool >/dev/null 2>&1; then
+      if otool -L "$app_bin" | grep -q "Sparkle.framework"; then
+        ok "app executable links Sparkle.framework"
+
+        if [[ -f "$sparkle_bin" ]]; then
+          ok "bundled Sparkle framework exists"
+        else
+          fail "app links Sparkle but bundled framework is missing: $sparkle_bin"
+        fi
+
+        if otool -l "$app_bin" | grep -q "@executable_path/../Frameworks"; then
+          ok "app executable has Frameworks rpath"
+        else
+          fail "app links Sparkle but is missing @executable_path/../Frameworks rpath"
+        fi
+      else
+        fail "app executable does not link Sparkle.framework; rebuild with scripts/package-dev-app.sh"
+      fi
+    fi
+  else
+    fail "app executable missing or not executable: $app_bin"
+  fi
 else
   warn "app bundle not found: $APP_PATH (run scripts/package-dev-app.sh)"
 fi

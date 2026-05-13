@@ -10,8 +10,9 @@ Before Apple Developer Program credentials are available, this is expected:
 ./scripts/release-doctor.sh
 ```
 
-- Tools should be present: `codesign`, `security`, `ditto`, `hdiutil`, `shasum`, `jq`, `notarytool`, `stapler`.
+- Tools should be present: `codesign`, `security`, `ditto`, `hdiutil`, `install_name_tool`, `otool`, `shasum`, `jq`, `notarytool`, `stapler`.
 - Artifacts should exist after local CI: `build/Popskill.app`, `build/Popskill.dmg`.
+- The app bundle should contain `Sparkle.framework`, and the app executable should have an `@executable_path/../Frameworks` rpath.
 - Release doctor should fail on missing Developer ID identity and missing notary credentials.
 - Sparkle is linked in the app. Sparkle warnings are expected until a public feed URL, public EdDSA key, download URL, and update signature are available.
 

@@ -1037,7 +1037,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 | Week 5 | Updates 页 + 自动检查 | ✅ Updates 页面完成，含 Update All 和 last checked 状态 | Popskill 自身更新已有 Sparkle SDK link、菜单入口、配置守卫和 package hooks；公开更新检查仍待 feed/key/signature 实测 |
 | Week 6 | Stub 状态机 | ✅ 已完成 | 60 天建议已落在 Idle Candidates，并避开最近 60 天内有 transcript attribution 使用的 skill |
 | Week 7 | WebDAV 同步 UI | 🟡 配置/只读边界已完成 | Settings 已有配置写入、status + remote info；Sync Now 留给 v0.1 收口 |
-| Week 8 | 打磨 + 打包 | 🟡 pipeline 已打通，release doctor 可检查 Developer ID/notary 前置条件，README 截图已补 | 需要 Apple Developer Program 通过、真实签名/公证、Sparkle 公开更新实测和人工验收 |
+| Week 8 | 打磨 + 打包 | 🟡 pipeline 已打通，release doctor 可检查 Developer ID/notary/Sparkle bundle 前置条件，README 截图已补 | 需要 Apple Developer Program 通过、真实签名/公证、Sparkle 公开更新实测和人工验收 |
 
 ### v0.1 收口清单
 
@@ -1048,7 +1048,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 - [x] WebDAV sidecar 边界：配置写入 / 只读 status / remote info / local backup summary。
 - [x] Agent sidecar smoke：`agent-list` / `agent-targets` / `agent-install-plan` 已纳入只读 smoke；`agent-catalog` 因 GitHub rate limit 不进默认 CI。
 - [x] release smoke：DMG、release manifest、Sparkle appcast 生成脚本。
-- [x] release doctor：检查 Developer ID、notarytool/stapler、notary 凭据、app/dmg/appcast 前置条件。
+- [x] release doctor：检查 Developer ID、notarytool/stapler、notary 凭据、app/dmg/appcast 和 Sparkle framework/rpath 前置条件。
 - [x] release runbook：`docs/release-runbook.md` 写明 Developer ID、notary keychain profile、Sparkle env、notarize、DMG、appcast 和 Gatekeeper 验证步骤。
 - [x] release notes draft：`docs/release-notes-v0.1.md` 写明 highlights、隐私边界、已知限制和验证入口。
 - [x] 视觉 polish 第一轮：Discover 行内 `Plan` / `Install` 可读，带 badge 的 sidebar 项可导航，Library 行内 app toggle 不挤压标题。
