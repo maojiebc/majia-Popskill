@@ -122,6 +122,15 @@ enum Commands {
         json: bool,
     },
     /// Install one discoverable skill by key.
+    InstallPlan {
+        skill_key: String,
+        #[arg(long, default_value = "claude")]
+        app: String,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Install one discoverable skill by key.
     Install {
         skill_key: String,
         #[arg(long, default_value = "claude")]
@@ -429,6 +438,17 @@ async fn run() -> Result<()> {
                 "name": name
             })))
         }
+        Commands::InstallPlan {
+            skill_key,
+            app,
+            json: _,
+        } => {
+            let app_type = parse_target_app(&app)?;
+            let plan = build_install_plan(&db, &skill_key, &app_type)
+                .await
+                .with_context(|| format!("failed to plan install for '{skill_key}'"))?;
+            print_json(&ApiResponse::ok(plan))
+        }
         Commands::Install {
             skill_key,
             app,
@@ -646,6 +666,73 @@ fn normalize_branch(branch: &str) -> String {
     } else {
         trimmed.to_string()
     }
+}
+
+async fn build_install_plan(
+    db: &Arc<Database>,
+    skill_key: &str,
+    app_type: &AppType,
+) -> Result<InstallPlan> {
+    let service = SkillService::new();
+    let repos = db
+        .get_skill_repos()
+        .context("failed to load skill repositories")?;
+    let skills = service
+        .discover_available(repos)
+        .await
+        .context("failed to discover skills before install plan")?;
+    let skill = skills
+        .into_iter()
+        .find(|skill| skill.key == skill_key)
+        .with_context(|| format!("discoverable skill not found: {skill_key}"))?;
+
+    let install_directory = planned_install_directory(&skill.directory);
+    let existing = db
+        .get_all_installed_skills()
+        .context("failed to load installed skills before install plan")?
+        .into_values()
+        .find(|installed| installed.directory.eq_ignore_ascii_case(&install_directory));
+    let ssot_path = SkillService::get_ssot_dir()
+        .context("failed to resolve skill storage directory")?
+        .join(&install_directory);
+    let app_skill_path = SkillService::get_app_skills_dir(app_type)
+        .ok()
+        .map(|path| path.join(&install_directory).to_string_lossy().to_string());
+
+    Ok(InstallPlan {
+        skill_key: skill.key,
+        name: skill.name,
+        description: skill.description,
+        target_app: app_type.as_str().to_string(),
+        install_directory,
+        source: InstallPlanSource {
+            repo_owner: skill.repo_owner,
+            repo_name: skill.repo_name,
+            repo_branch: skill.repo_branch,
+            readme_url: skill.readme_url,
+        },
+        existing_skill_id: existing.map(|skill| skill.id),
+        writes: InstallPlanWrites {
+            ssot_path: ssot_path.to_string_lossy().to_string(),
+            app_skill_path,
+        },
+        security_gate: "agentShieldPostInstallRollback".to_string(),
+        steps: vec![
+            "downloadFromRepository".to_string(),
+            "copyToSkillStore".to_string(),
+            "enableTargetApp".to_string(),
+            "runAgentShield".to_string(),
+            "rollbackIfBlocked".to_string(),
+        ],
+    })
+}
+
+fn planned_install_directory(directory: &str) -> String {
+    Path::new(directory)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(str::to_string)
+        .unwrap_or_else(|| directory.trim_matches('/').to_string())
 }
 
 fn list_stubbed_skills(db: &Arc<Database>) -> Result<Vec<StubbedSkill>> {
@@ -1138,6 +1225,40 @@ struct StubStore {
     stubs: Vec<StubbedSkill>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct InstallPlan {
+    skill_key: String,
+    name: String,
+    description: String,
+    target_app: String,
+    install_directory: String,
+    source: InstallPlanSource,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    existing_skill_id: Option<String>,
+    writes: InstallPlanWrites,
+    security_gate: String,
+    steps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct InstallPlanSource {
+    repo_owner: String,
+    repo_name: String,
+    repo_branch: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    readme_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct InstallPlanWrites {
+    ssot_path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    app_skill_path: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SecurityScanRecord {
@@ -1268,6 +1389,15 @@ mod tests {
     fn normalize_branch_defaults_blank_values_to_main() {
         assert_eq!(normalize_branch(" \n\t "), "main");
         assert_eq!(normalize_branch(" dev "), "dev");
+    }
+
+    #[test]
+    fn planned_install_directory_uses_last_path_segment() {
+        assert_eq!(
+            planned_install_directory("skills/nested-demo"),
+            "nested-demo"
+        );
+        assert_eq!(planned_install_directory("root-demo"), "root-demo");
     }
 
     #[test]

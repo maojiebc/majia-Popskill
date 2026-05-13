@@ -124,6 +124,17 @@ actor SkillCLIClient {
         return try Self.decodeResponse(SkillRepositoryRemoveResult.self, from: data)
     }
 
+    func installPlan(skillKey: String, app: TargetApp) async throws -> InstallPlan {
+        let data = try run(arguments: [
+            "install-plan",
+            skillKey,
+            "--app",
+            app.rawValue,
+            "--json",
+        ])
+        return try Self.decodeResponse(InstallPlan.self, from: data)
+    }
+
     func install(skillKey: String, app: TargetApp) async throws -> Skill {
         let data = try run(arguments: [
             "install",

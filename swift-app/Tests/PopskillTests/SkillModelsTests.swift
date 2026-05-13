@@ -158,6 +158,41 @@ struct SkillModelsTests {
     }
 
     @Test
+    func installPlanDecodesPreviewPayload() throws {
+        let data = """
+        {
+          "skillKey": "owner/repo:demo",
+          "name": "Demo",
+          "description": "Demo skill",
+          "targetApp": "codex",
+          "installDirectory": "demo",
+          "source": {
+            "repoOwner": "owner",
+            "repoName": "repo",
+            "repoBranch": "main",
+            "readmeUrl": "https://example.com/readme"
+          },
+          "existingSkillId": null,
+          "writes": {
+            "ssotPath": "/Users/demo/.cc-switch/skills/demo",
+            "appSkillPath": "/Users/demo/.codex/skills/demo"
+          },
+          "securityGate": "agentShieldPostInstallRollback",
+          "steps": ["downloadFromRepository", "runAgentShield"]
+        }
+        """.data(using: .utf8)!
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let plan = try decoder.decode(InstallPlan.self, from: data)
+
+        #expect(plan.skillKey == "owner/repo:demo")
+        #expect(plan.source.repoOwner == "owner")
+        #expect(plan.writes.appSkillPath?.hasSuffix("/.codex/skills/demo") == true)
+        #expect(plan.securityGate == "agentShieldPostInstallRollback")
+    }
+
+    @Test
     func securityScanStatusDecodesBlockedValue() throws {
         let data = """
         {

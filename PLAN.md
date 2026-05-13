@@ -113,7 +113,7 @@
 
 代码已经明显超过最初 Day 1-5 计划，下面这些能力已经落地，后续不要再当成"未来计划"：
 
-- **已完成**：`skill-cli list/detail/toggle/discover/install/update/uninstall/import-unmanaged`
+- **已完成**：`skill-cli list/detail/toggle/discover/install-plan/install/update/uninstall/import-unmanaged`
 - **已完成**：AgentShield sidecar + Library 手动/持久化扫描 + install/import gate（blocked 自动回滚或阻断；`security-scan` / `security-scan-list`，支持 `POPSKILL_AGENTSHIELD_BIN`）
 - **已完成**：WebDAV 状态/远端 snapshot 只读纵切（`webdav-status` / `webdav-remote-info`，Settings 显示配置与远端 manifest 状态）
 - **已完成**：自定义 skill repository 管理（`repo-list/add/toggle/remove`），含 URL/owner/name 校验、`.git` 后缀规范化、非法 scheme 拒绝
@@ -777,6 +777,9 @@ skill-cli toggle <skill-id> --app=<claude|codex|gemini> --enabled=<true|false>
 skill-cli install <skill-key> --app=<claude>
   → 安装（从已知 registry）
 
+skill-cli install-plan <skill-key> --app=<claude>
+  → 只读预览安装目标 app、来源仓库、写入路径、安全 gate
+
 skill-cli uninstall <skill-id> [--keep-backup]
   → 卸载
 
@@ -1394,7 +1397,7 @@ open swift-app/Popskill.xcodeproj
 - ✅ 静态验证剥离可行性（A 阶段）
 - ✅ 产品形态设计 V1（C 阶段）与 `STYLE.md`
 - ✅ `cc-switch` 作为 git submodule 固定到 v3.14.1
-- ✅ `skill-cli` sidecar 已覆盖 list/detail/toggle/discover/install/update/uninstall/import/repo/backup/health
+- ✅ `skill-cli` sidecar 已覆盖 list/detail/toggle/discover/install-plan/install/update/uninstall/import/repo/backup/health
 - ✅ SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译
 - ✅ 行内 Claude/Codex/Gemini toggle、Stub / Rehydrate 与详情页多 app toggle 已接 sidecar
 - ✅ 自定义 skill repository 管理、sidecar health、backup 管理已倒灌进计划

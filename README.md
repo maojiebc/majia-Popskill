@@ -93,6 +93,7 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 ./skill-cli/target/debug/skill-cli repo-add --owner <owner> --name <repo> --branch main --enabled true --json
 ./skill-cli/target/debug/skill-cli repo-toggle --owner <owner> --name <repo> --enabled false --json
 ./skill-cli/target/debug/skill-cli repo-remove --owner <owner> --name <repo> --json
+./skill-cli/target/debug/skill-cli install-plan <skill-key> --app codex --json
 ./skill-cli/target/debug/skill-cli install <skill-key> --app codex --json
 ./skill-cli/target/debug/skill-cli check-updates --json
 ./skill-cli/target/debug/skill-cli update <skill-id> --json

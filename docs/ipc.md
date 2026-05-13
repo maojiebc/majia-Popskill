@@ -281,7 +281,42 @@ Removes one configured skill repository from CC Switch discovery sources. Instal
 }
 ```
 
+### `skill-cli install-plan <skill-key> --app <app> --json`
+
+Returns a read-only preview for one discoverable skill install. The plan includes the target app, source repository, planned SSOT/app paths, existing skill conflict if present, and the current AgentShield gate behavior.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "skillKey": "owner/repo:directory",
+    "name": "skill-name",
+    "targetApp": "codex",
+    "installDirectory": "directory",
+    "source": {
+      "repoOwner": "owner",
+      "repoName": "repo",
+      "repoBranch": "main"
+    },
+    "writes": {
+      "ssotPath": "/Users/example/.cc-switch/skills/directory",
+      "appSkillPath": "/Users/example/.codex/skills/directory"
+    },
+    "securityGate": "agentShieldPostInstallRollback",
+    "steps": [
+      "downloadFromRepository",
+      "copyToSkillStore",
+      "enableTargetApp",
+      "runAgentShield",
+      "rollbackIfBlocked"
+    ]
+  }
+}
+```
+
 ### `skill-cli install <skill-key> --app <app> --json`
+
+Applies one discoverable skill install.
 
 Discovers the skill by key, installs it through CC Switch, enables it for the requested app, then runs AgentShield against the installed SSOT directory. `blocked` results are persisted, the install is rolled back with CC Switch uninstall, and the command exits with an error. `warning` and `unavailable` results are persisted but allowed.
 

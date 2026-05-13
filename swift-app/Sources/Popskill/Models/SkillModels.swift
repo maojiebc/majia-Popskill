@@ -153,6 +153,31 @@ struct SkillRepositoryRemoveResult: Codable, Equatable {
     let name: String
 }
 
+struct InstallPlan: Codable, Equatable {
+    let skillKey: String
+    let name: String
+    let description: String
+    let targetApp: String
+    let installDirectory: String
+    let source: InstallPlanSource
+    let existingSkillId: String?
+    let writes: InstallPlanWrites
+    let securityGate: String
+    let steps: [String]
+}
+
+struct InstallPlanSource: Codable, Equatable {
+    let repoOwner: String
+    let repoName: String
+    let repoBranch: String
+    let readmeUrl: String?
+}
+
+struct InstallPlanWrites: Codable, Equatable {
+    let ssotPath: String
+    let appSkillPath: String?
+}
+
 struct SkillUninstallResult: Codable, Equatable {
     let backupPath: String?
 }
