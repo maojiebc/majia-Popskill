@@ -139,7 +139,12 @@ struct LibraryView: View {
                 Button {
                     Task { await viewModel.load() }
                 } label: {
-                    Image(systemName: "arrow.clockwise")
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
                 }
                 .buttonStyle(.bordered)
                 .help("Refresh")
