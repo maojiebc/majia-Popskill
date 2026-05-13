@@ -6,6 +6,7 @@ import SwiftUI
 final class UpdatesViewModel {
     var updates: [SkillUpdateInfo] = []
     var isChecking = false
+    var hasCheckedOnce = false
     var errorMessage: String?
 
     private let client = SkillCLIClient()
@@ -14,6 +15,10 @@ final class UpdatesViewModel {
     func check() async {
         isChecking = true
         errorMessage = nil
+        defer {
+            isChecking = false
+            hasCheckedOnce = true
+        }
 
         do {
             updates = try await client.checkUpdates()
@@ -21,8 +26,6 @@ final class UpdatesViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
-
-        isChecking = false
     }
 
     func isUpdating(_ id: String) -> Bool {
@@ -136,11 +139,15 @@ struct UpdatesView: View {
                     ProgressView()
                         .controlSize(.large)
                 } else if viewModel.updates.isEmpty {
-                    ContentUnavailableView("No Updates", systemImage: "checkmark.seal")
+                    ContentUnavailableView(emptyStateTitle, systemImage: "checkmark.seal")
                 }
             }
         }
         .background(Color.popMainBackground)
+    }
+
+    private var emptyStateTitle: String {
+        viewModel.hasCheckedOnce ? "No Updates" : "Check for Updates"
     }
 }
 
