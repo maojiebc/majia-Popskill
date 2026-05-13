@@ -4,6 +4,7 @@ set -uo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_PATH="${1:-${POPSKILL_APP_PATH:-$ROOT_DIR/build/Popskill.app}}"
 DMG_PATH="${POPSKILL_DMG_PATH:-$ROOT_DIR/build/Popskill.dmg}"
+APPCAST_PATH="${POPSKILL_APPCAST_PATH:-$ROOT_DIR/build/appcast.xml}"
 SIGN_IDENTITY="${POPSKILL_DEVELOPER_ID_APPLICATION:-${POPSKILL_DEVELOPER_ID:-}}"
 KEYCHAIN_PROFILE="${POPSKILL_NOTARY_KEYCHAIN_PROFILE:-}"
 APPLE_ID="${POPSKILL_APPLE_ID:-}"
@@ -137,6 +138,15 @@ fi
 
 echo
 echo "==> Sparkle appcast"
+if [[ -f "$APPCAST_PATH" ]]; then
+  ok "appcast exists: $APPCAST_PATH"
+  if grep -q 'example.com' "$APPCAST_PATH"; then
+    fail "appcast contains placeholder example.com URL: $APPCAST_PATH"
+  fi
+else
+  warn "appcast not found: $APPCAST_PATH (run scripts/generate-appcast.sh for public releases)"
+fi
+
 if [[ -n "${POPSKILL_SPARKLE_FEED_URL:-}" ]]; then
   ok "Sparkle feed URL is set for the app bundle"
 else

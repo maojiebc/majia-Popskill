@@ -14,6 +14,7 @@ Before Apple Developer Program credentials are available, this is expected:
 - Artifacts should exist after local CI: `build/Popskill.app`, `build/Popskill.dmg`.
 - The app bundle should contain `Sparkle.framework`, and the app executable should have an `@executable_path/../Frameworks` rpath.
 - Release doctor should fail on missing Developer ID identity and missing notary credentials.
+- Release doctor fails if an existing appcast still contains a placeholder `example.com` URL.
 - Sparkle is linked in the app. Sparkle warnings are expected until a public feed URL, public EdDSA key, download URL, and update signature are available.
 
 The latest local dry-run snapshot is tracked in [v0.1-release-readiness.md](./v0.1-release-readiness.md).
