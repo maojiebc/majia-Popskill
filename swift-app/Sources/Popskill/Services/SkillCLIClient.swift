@@ -12,12 +12,15 @@ actor SkillCLIClient {
     }
 
     static var executableOverridePath: String? {
-        let override = ProcessInfo.processInfo.environment["POPSKILL_CLI"]?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        normalizedExecutableOverridePath(ProcessInfo.processInfo.environment["POPSKILL_CLI"])
+    }
+
+    static func normalizedExecutableOverridePath(_ value: String?) -> String? {
+        let override = value?.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let override, !override.isEmpty else {
             return nil
         }
-        return override
+        return (override as NSString).expandingTildeInPath
     }
 
     func health() async throws -> SidecarHealth {

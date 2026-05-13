@@ -52,4 +52,12 @@ struct SkillCLIClientTests {
 
         #expect(error.localizedDescription == "unsupported target app")
     }
+
+    @Test
+    func executableOverridePathTrimsAndExpandsTilde() {
+        let path = SkillCLIClient.normalizedExecutableOverridePath(" ~/bin/skill-cli ")
+
+        #expect(path == NSHomeDirectory() + "/bin/skill-cli")
+        #expect(SkillCLIClient.normalizedExecutableOverridePath(" \n\t ") == nil)
+    }
 }
