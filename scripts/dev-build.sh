@@ -3,7 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-source "$HOME/.cargo/env"
+if [[ -f "$HOME/.cargo/env" ]]; then
+  source "$HOME/.cargo/env"
+fi
 
 echo "==> Building skill-cli"
 cargo build --manifest-path "$ROOT_DIR/skill-cli/Cargo.toml"

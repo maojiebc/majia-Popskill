@@ -7,7 +7,9 @@ CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 
-source "$HOME/.cargo/env"
+if [[ -f "$HOME/.cargo/env" ]]; then
+  source "$HOME/.cargo/env"
+fi
 
 cargo build --manifest-path "$ROOT_DIR/skill-cli/Cargo.toml"
 swift build --package-path "$ROOT_DIR/swift-app"

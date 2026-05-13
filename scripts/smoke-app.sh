@@ -15,7 +15,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-source "$HOME/.cargo/env"
+if [[ -f "$HOME/.cargo/env" ]]; then
+  source "$HOME/.cargo/env"
+fi
 
 cargo build --manifest-path "$ROOT_DIR/skill-cli/Cargo.toml"
 swift build --package-path "$ROOT_DIR/swift-app"
