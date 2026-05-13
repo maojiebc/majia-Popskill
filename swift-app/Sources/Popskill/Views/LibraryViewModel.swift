@@ -7,6 +7,7 @@ final class LibraryViewModel {
     var skills: [Skill] = []
     var packages: [CapabilityPackage] = []
     var stubs: [StubbedSkill] = []
+    var backupSnapshotByID: [String: SkillBackup] = [:]
     var unmanagedSkills: [UnmanagedSkill] = []
     var updates: [SkillUpdateInfo] = []
     var securityScanResults: [Skill.ID: SecurityScanResult] = [:]
@@ -142,6 +143,10 @@ final class LibraryViewModel {
         securityScanResults[skillID]
     }
 
+    func backupSnapshot(for stub: StubbedSkill) -> SkillBackup? {
+        backupSnapshotByID[stub.backupId]
+    }
+
     func load() async {
         guard !isLoading else {
             return
@@ -161,6 +166,7 @@ final class LibraryViewModel {
                 .sorted(by: packageSort)
             stubs = try await client.listStubs()
                 .sorted { $0.stubbedAt > $1.stubbedAt }
+            await refreshBackupSnapshots()
             unmanagedSkills = try await client.scanUnmanaged()
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             securityScanResults = Dictionary(
@@ -331,6 +337,7 @@ final class LibraryViewModel {
             updates.removeAll { $0.id == skill.id }
             securityScanResults[skill.id] = nil
             upsertStub(stub)
+            await refreshBackupSnapshots()
             didStub = true
         } catch {
             errorMessage = error.localizedDescription
@@ -354,6 +361,7 @@ final class LibraryViewModel {
             let skill = try await client.rehydrate(skillID: stub.id, app: selectedRehydrateApp)
             stubs.removeAll { $0.id == stub.id }
             upsertSkill(skill)
+            await refreshBackupSnapshots()
             didRehydrate = true
         } catch {
             errorMessage = error.localizedDescription
@@ -445,6 +453,20 @@ final class LibraryViewModel {
         stubs.removeAll { $0.id == stub.id }
         stubs.append(stub)
         stubs.sort { $0.stubbedAt > $1.stubbedAt }
+    }
+
+    private func refreshBackupSnapshots() async {
+        do {
+            let backups = try await client.listBackups()
+            backupSnapshotByID = Dictionary(
+                backups.map { ($0.backupId, $0) },
+                uniquingKeysWith: { current, replacement in
+                    replacement.createdAt > current.createdAt ? replacement : current
+                }
+            )
+        } catch {
+            // Keep previous snapshots when backup listing is temporarily unavailable.
+        }
     }
 
     private func packageSort(_ left: CapabilityPackage, _ right: CapabilityPackage) -> Bool {

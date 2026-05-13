@@ -35,6 +35,7 @@ struct LibraryView: View {
                 if viewModel.selectedFilter == .stub, let selectedStub {
                     StubDetailPane(
                         stub: selectedStub,
+                        backup: viewModel.backupSnapshot(for: selectedStub),
                         restoreApp: viewModel.selectedRehydrateApp,
                         isRehydrating: viewModel.isRehydrating(skillID: selectedStub.id)
                     ) { stub in
@@ -985,9 +986,11 @@ struct SkillDetailPane: View {
 
 struct StubDetailPane: View {
     let stub: StubbedSkill?
+    let backup: SkillBackup?
     let restoreApp: TargetApp
     let isRehydrating: Bool
     let onRehydrate: (StubbedSkill) -> Void
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         Group {
@@ -1019,7 +1022,12 @@ struct StubDetailPane: View {
 
                         DetailSection(title: "Restore", accent: PopskillSectionAccent.color(for: 0)) {
                             DetailField(title: "Target App", value: restoreApp.title)
+                            DetailField(title: "Restore Target", value: rehydrateTargetPath(for: stub.skill, app: restoreApp))
                             DetailField(title: "Stubbed", value: formattedTimestamp(stub.stubbedAt))
+                            DetailField(
+                                title: "Backup Created",
+                                value: backup.map { formattedTimestamp($0.createdAt) } ?? localization.string("Not Tracked")
+                            )
 
                             Button {
                                 onRehydrate(stub)
@@ -1033,6 +1041,15 @@ struct StubDetailPane: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .disabled(isRehydrating)
+                        }
+
+                        DetailSection(title: "Source", accent: PopskillSectionAccent.color(for: 2)) {
+                            DetailField(title: "Original Source", value: stub.skill.sourceLabel)
+                            DetailField(title: "Original Directory", value: stub.skill.directory)
+                            DetailField(
+                                title: "Current State",
+                                value: "Removed locally, recoverable from backup."
+                            )
                         }
 
                         DetailSection(title: "Backup", accent: PopskillSectionAccent.color(for: 1)) {
@@ -1346,6 +1363,17 @@ private func packagePrimaryFolderURL(_ package: CapabilityPackage) -> URL? {
         }
     }
     return nil
+}
+
+private func rehydrateTargetPath(for skill: Skill, app: TargetApp) -> String {
+    let relativeRoot = app.definition.skillDirectory.trimmingCharacters(in: .whitespacesAndNewlines)
+    let baseURL: URL
+    if relativeRoot.hasPrefix("/") {
+        baseURL = URL(fileURLWithPath: relativeRoot)
+    } else {
+        baseURL = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(relativeRoot)
+    }
+    return baseURL.appendingPathComponent(skill.directory).path
 }
 
 private func resolvedLocalPathURL(_ path: String) -> URL? {
