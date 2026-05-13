@@ -6,7 +6,13 @@ import SwiftUI
 final class DiscoverViewModel {
     var skills: [CatalogSkill] = []
     var query = ""
-    var selectedInstallApp: TargetApp = .claude
+    var selectedInstallApp: TargetApp = .claude {
+        didSet {
+            if selectedInstallApp != oldValue {
+                installPlans.removeAll()
+            }
+        }
+    }
     var isLoading = false
     var hasLoadedOnce = false
     var errorMessage: String?
@@ -97,7 +103,12 @@ final class DiscoverViewModel {
     }
 
     func installPlan(for key: String) -> InstallPlan? {
-        installPlans[key]
+        guard let plan = installPlans[key],
+              plan.targetApp.lowercased() == selectedInstallApp.rawValue
+        else {
+            return nil
+        }
+        return plan
     }
 }
 
@@ -260,15 +271,7 @@ struct CatalogSkillRow: View {
                     .lineLimit(1)
 
                 if let installPlan {
-                    HStack(spacing: 6) {
-                        StatusPill(title: installPlan.targetApp.capitalized, color: .popSectionBlue)
-                        Text(installPlan.writes.ssotPath)
-                            .font(.caption)
-                            .foregroundStyle(Color.popTertiaryLabel)
-                            .lineLimit(1)
-                        StatusPill(title: "AgentShield", color: .popStatusNeutral)
-                            .help(installPlan.securityGate)
-                    }
+                    InstallPlanPreview(plan: installPlan)
                 }
             }
 
@@ -311,5 +314,76 @@ struct CatalogSkillRow: View {
             .help(skill.installed ? "Installed" : "Install")
         }
         .frame(minHeight: 68)
+    }
+}
+
+struct InstallPlanPreview: View {
+    let plan: InstallPlan
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                StatusPill(title: targetAppTitle, color: .popSectionBlue)
+                StatusPill(title: securityGateLabel, color: securityGateColor)
+                    .help(plan.securityGate)
+            }
+
+            Text("Writes to \(plan.writes.ssotPath)")
+                .font(.caption)
+                .foregroundStyle(Color.popTertiaryLabel)
+                .lineLimit(1)
+                .truncationMode(.middle)
+
+            if let appSkillPath = plan.writes.appSkillPath, !appSkillPath.isEmpty {
+                Text("Links \(targetAppTitle) to \(appSkillPath)")
+                    .font(.caption)
+                    .foregroundStyle(Color.popTertiaryLabel)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+
+            if !plan.steps.isEmpty {
+                Label(stepSummary, systemImage: "checklist")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.popHeaderBackground.opacity(0.45), in: RoundedRectangle(cornerRadius: PopskillRadius.smallCard))
+    }
+
+    private var targetAppTitle: String {
+        TargetApp(rawValue: plan.targetApp.lowercased())?.title ?? plan.targetApp.capitalized
+    }
+
+    private var securityGateLabel: String {
+        if plan.securityGate.lowercased().contains("rollback") {
+            return "AgentShield rollback"
+        }
+        if plan.securityGate.lowercased().contains("block") {
+            return "AgentShield blocks"
+        }
+        return "AgentShield"
+    }
+
+    private var securityGateColor: Color {
+        plan.securityGate.lowercased().contains("rollback") ? .popStatusWarning : .popStatusNeutral
+    }
+
+    private var stepSummary: String {
+        plan.steps.map(humanReadableStep).joined(separator: " -> ")
+    }
+
+    private func humanReadableStep(_ step: String) -> String {
+        switch step {
+        case "downloadFromRepository":
+            return "download"
+        case "runAgentShield":
+            return "scan"
+        default:
+            return step
+        }
     }
 }
