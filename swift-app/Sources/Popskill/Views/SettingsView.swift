@@ -105,15 +105,19 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     DetailSection(title: "Sidecar", accent: PopskillSectionAccent.color(for: 0)) {
                         DetailField(title: "Executable", value: cliPath)
-                        DetailField(title: "POPSKILL_CLI", value: overridePath ?? "Not set")
-                        DetailField(title: "Version", value: viewModel.health?.sidecarVersion ?? "Unknown")
+                        SettingsFieldGrid {
+                            DetailField(title: "POPSKILL_CLI", value: overridePath ?? "Not set")
+                            DetailField(title: "Version", value: viewModel.health?.sidecarVersion ?? "Unknown")
+                        }
                     }
 
                     DetailSection(title: "CC Switch", accent: PopskillSectionAccent.color(for: 1)) {
-                        DetailField(title: "Installed", value: countText(viewModel.health?.installedCount))
-                        DetailField(title: "Unmanaged", value: countText(viewModel.health?.unmanagedCount))
-                        DetailField(title: "Backups", value: countText(viewModel.health?.backupCount))
-                        DetailField(title: "Repositories", value: repositoryCountText)
+                        SettingsFieldGrid {
+                            DetailField(title: "Installed", value: countText(viewModel.health?.installedCount))
+                            DetailField(title: "Unmanaged", value: countText(viewModel.health?.unmanagedCount))
+                            DetailField(title: "Backups", value: countText(viewModel.health?.backupCount))
+                            DetailField(title: "Repositories", value: repositoryCountText)
+                        }
                         DetailField(title: "Skill Store", value: viewModel.health?.skillStorePath ?? skillStorePath)
                         DetailField(title: "Skill Backups", value: viewModel.health?.skillBackupPath ?? backupPath)
                     }
@@ -125,14 +129,16 @@ struct SettingsView: View {
 
                     DetailSection(title: "WebDAV", accent: PopskillSectionAccent.color(for: 3)) {
                         WebDAVReadinessNote(status: viewModel.webdavStatus)
-                        DetailField(title: "Configured", value: boolText(viewModel.webdavStatus?.configured))
-                        DetailField(title: "Enabled", value: boolText(viewModel.webdavStatus?.enabled))
-                        DetailField(title: "Auto Sync", value: boolText(viewModel.webdavStatus?.autoSync))
+                        SettingsFieldGrid {
+                            DetailField(title: "Configured", value: boolText(viewModel.webdavStatus?.configured))
+                            DetailField(title: "Enabled", value: boolText(viewModel.webdavStatus?.enabled))
+                            DetailField(title: "Auto Sync", value: boolText(viewModel.webdavStatus?.autoSync))
+                            DetailField(title: "Profile", value: viewModel.webdavStatus?.profile ?? "default")
+                            DetailField(title: "Last Sync", value: timestampText(viewModel.webdavStatus?.status?.lastSyncAt))
+                            DetailField(title: "Last Error", value: viewModel.webdavStatus?.status?.lastError ?? "None")
+                        }
                         DetailField(title: "Base URL", value: viewModel.webdavStatus?.baseUrl ?? "Not set")
                         DetailField(title: "Remote Root", value: viewModel.webdavStatus?.remoteRoot ?? "cc-switch-sync")
-                        DetailField(title: "Profile", value: viewModel.webdavStatus?.profile ?? "default")
-                        DetailField(title: "Last Sync", value: timestampText(viewModel.webdavStatus?.status?.lastSyncAt))
-                        DetailField(title: "Last Error", value: viewModel.webdavStatus?.status?.lastError ?? "None")
                         Divider()
                         HStack {
                             Button {
@@ -158,13 +164,15 @@ struct SettingsView: View {
                         }
 
                         if let remoteInfo = viewModel.webdavRemoteInfo {
-                            DetailField(title: "Remote Snapshot", value: remoteSnapshotText(remoteInfo))
-                            DetailField(title: "Remote Device", value: remoteInfo.deviceName ?? "Unknown")
-                            DetailField(title: "Remote Created", value: timestampText(remoteInfo.createdAt))
+                            SettingsFieldGrid {
+                                DetailField(title: "Remote Snapshot", value: remoteSnapshotText(remoteInfo))
+                                DetailField(title: "Remote Device", value: remoteInfo.deviceName ?? "Unknown")
+                                DetailField(title: "Remote Created", value: timestampText(remoteInfo.createdAt))
+                                DetailField(title: "Layout", value: remoteInfo.layout ?? "Unknown")
+                                DetailField(title: "Compatible", value: boolText(remoteInfo.compatible))
+                                DetailField(title: "Artifacts", value: remoteInfo.artifacts?.joined(separator: ", ") ?? "None")
+                            }
                             DetailField(title: "Remote Path", value: remoteInfo.remotePath ?? "Unknown")
-                            DetailField(title: "Layout", value: remoteInfo.layout ?? "Unknown")
-                            DetailField(title: "Compatible", value: boolText(remoteInfo.compatible))
-                            DetailField(title: "Artifacts", value: remoteInfo.artifacts?.joined(separator: ", ") ?? "None")
                         }
                     }
 
@@ -259,6 +267,20 @@ struct SettingsView: View {
             .appendingPathComponent("docs")
             .appendingPathComponent("ipc.md")
         return FileManager.default.fileExists(atPath: docsURL.path) ? docsURL : nil
+    }
+}
+
+private struct SettingsFieldGrid<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    private let columns = [
+        GridItem(.adaptive(minimum: 132), alignment: .topLeading)
+    ]
+
+    var body: some View {
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
+            content
+        }
     }
 }
 

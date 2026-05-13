@@ -22,7 +22,7 @@ Popskill aims to be the App Store experience that Claude Code skills deserve on 
 
 **Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
 
-**Current stage**: MVP feature verticals are implemented locally. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install-plan/install/update/uninstall/import/repository/backup/WebDAV status flows; SwiftUI Library + Discover + Repositories + Updates + Backups + Insights + Settings compile and pass tests; `scripts/ci-local.sh` verifies Rust/Swift builds, read-only sidecar smoke, native launch smoke, bundle smoke, and release artifact smoke. Remaining v0.1 work is release hardening: Developer ID signing/notarization, Sparkle SDK integration, WebDAV config/manual sync, skill-level transcript attribution, README screenshots, and final Settings/Updates visual polish. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
+**Current stage**: MVP feature verticals are implemented locally. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install-plan/install/update/uninstall/import/repository/backup/WebDAV status flows; SwiftUI Library + Discover + Repositories + Updates + Backups + Insights + Settings compile and pass tests; `scripts/ci-local.sh` verifies Rust/Swift builds, read-only sidecar smoke, native launch smoke, bundle smoke, and release artifact smoke. Remaining v0.1 work is release hardening: Developer ID signing/notarization, Sparkle SDK integration, WebDAV config/manual sync, skill-level transcript attribution, README screenshots, and final screenshot QA. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
 
 ---
 
@@ -75,7 +75,7 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 | C. 产品形态 V1 | ✅ 5 个页面 wireframe + 状态机 + 16 条决策 |
 | D-prep. 视觉设计语言 | ✅ Surge.app 拆解 + 22 个 design token |
 | **D. MVP 主链路** | ✅ sidecar + SwiftUI Library/Discover/Repositories/Updates/Backups/Insights/Settings 已可编译并通过本地 CI |
-| **E. v0.1 发布收口** | 🚧 签名/公证、Sparkle SDK、WebDAV 配置/同步、README 截图；Discover/Library 首轮截图级 polish 已完成 |
+| **E. v0.1 发布收口** | 🚧 签名/公证、Sparkle SDK、WebDAV 配置/同步、README 截图；主要页面截图级 polish 已完成 |
 
 **这个仓库目前是 pre-alpha**：已有 Rust sidecar、SwiftUI Library/Discover/Repositories/Updates/Backups/Insights/Settings 页面、transcript scanner 单测和本地 CI。Stub 与 AgentShield 已有可用纵切；WebDAV 目前完成状态/远端 snapshot 只读边界，配置写入和手动 Sync Now 还没做。正式签名、公证、Sparkle SDK 更新和 App Store 分发还没完成；本地 DMG、release manifest、appcast 生成与 notarize 脚本骨架已先落位。
 
@@ -127,11 +127,12 @@ SwiftUI 端已接入：
 - ✅ Release doctor：`scripts/release-doctor.sh` 可检查 Developer ID、notarytool/stapler、notary 凭据、DMG/appcast 前置条件。
 - ✅ Transcript boundary：Insights UI 和文档说明本地聚合、忽略消息内容、尚非 skill 级精确归因。
 - ✅ Discover/Library visual pass：Discover 行内 `Plan` / `Install` CTA 可读；带计数的 sidebar 导航可点；Library 行内 app toggle 不再挤压技能标题。
+- ✅ Settings/Updates visual pass：Settings 诊断字段更紧凑；Updates 空态不再显示不可点的主按钮。
 - ⏳ Apple Developer Program：确认 Developer ID 证书；不加入则需要明确 unsigned/ad-hoc 分发说明。
 - ⏳ Notarization：拿到证书后跑 `scripts/notarize.sh`，验证 `stapler validate` 和 Gatekeeper 打开路径。
 - ⏳ Sparkle SDK：当前只能生成 appcast；App 内更新检查尚未集成。
 - ⏳ WebDAV v0.1：当前只读 status/remote info；配置表单、Keychain 保存、手动 Sync Now、失败态仍待实现。
-- ⏳ README 截图与最终视觉验收：发布前补真实界面截图，按 `STYLE.md` 再做 Settings/Updates 和全局一致性检查。
+- ⏳ README 截图与最终视觉验收：发布前补真实界面截图，并做一次全局截图 QA。
 
 ### 文档导航
 

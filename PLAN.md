@@ -9,7 +9,7 @@
 > - ✅ A 阶段：Sidecar 剥离可行性静态验证（lib.rs 已 pub use SkillService）
 > - ✅ C 阶段：产品形态 V1（5 页 wireframe + 状态机 + 决策表）
 > - ✅ D-prep 阶段：视觉设计语言（STYLE.md）+ Surge.app teardown 验证
-> - 🚧 MVP 校准：Rust sidecar + SwiftUI Library / Discover / Updates / Backups / Insights 主流程已通，Discover/Library 首轮截图级 polish 已完成，正在补发布关键路径
+> - 🚧 MVP 校准：Rust sidecar + SwiftUI Library / Discover / Updates / Backups / Insights 主流程已通，Discover/Library/Settings/Updates 截图级 polish 已完成，正在补发布关键路径
 
 ---
 
@@ -121,7 +121,7 @@
 - **已完成**：行内 Claude/Codex/Gemini toggle、详情页更多 app toggle、Stub / Rehydrate、Idle Candidates 60 天 inactive 筛选 + 批量 Stub、unmanaged import 前扫描
 - **已完成**：Backups 查看 / 恢复 / 删除，Settings sidecar health 诊断
 - **已完成**：本地 CI、read-only smoke、mutating repo smoke、`.app` development bundle、bundle launch smoke、release artifact smoke、development DMG 打包、release manifest/appcast 生成
-- **已完成**：Discover/Library 首轮截图级 polish（Discover 行 CTA 文案、sidebar badge 导航、Library 行布局）
+- **已完成**：Discover/Library/Settings/Updates 截图级 polish（Discover 行 CTA 文案、sidebar badge 导航、Library 行布局、Settings 诊断密度、Updates 空态按钮层级）
 - **未完成**：Stub 真实 transcript 使用归因自动建议、WebDAV 配置与手动 upload/download sync、正式 codesign/notarize、Sparkle SDK 接入
 
 ### 不做的事（避免范围爆炸）
@@ -1031,13 +1031,14 @@ struct CLIResponse<T: Decodable>: Decodable {
 - [x] release smoke：DMG、release manifest、Sparkle appcast 生成脚本。
 - [x] release doctor：检查 Developer ID、notarytool/stapler、notary 凭据、app/dmg/appcast 前置条件。
 - [x] 视觉 polish 第一轮：Discover 行内 `Plan` / `Install` 可读，带 badge 的 sidebar 项可导航，Library 行内 app toggle 不挤压标题。
+- [x] 视觉 polish 收尾：Settings 诊断字段紧凑化，Updates 空态隐藏不可用批量操作。
 - [ ] Apple Developer Program：确认是否加入；不加入则只能走 ad-hoc/unsigned 分发说明。
 - [ ] 真实签名/公证：接入 Developer ID 后跑 `notarytool`，补 CI/本地验证文档。
 - [ ] Sparkle SDK：把 appcast 从“可生成”推进到 App 内真实更新检查。
 - [ ] WebDAV v0.1：配置表单、Keychain 保存、手动 Sync Now、冲突/失败态。
 - [x] Transcript boundary：UI/文档说明本地聚合、忽略消息内容、尚非 skill 级精确归因。
 - [ ] Transcript attribution：验证真实 skill 调用标记，补 skill 级归因样例。
-- [ ] 视觉 polish 收尾：按 `STYLE.md` 对 Settings/Updates 做最终密度、空态、按钮层级和截图验收，并补 README 截图。
+- [ ] README 截图与最终视觉 QA：补真实界面截图，并做一次全局一致性检查。
 
 ---
 
@@ -1316,6 +1317,6 @@ open swift-app/Package.swift
 - ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle/release smoke、development DMG 打包、release manifest/appcast 已落地
 - 🟡 Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 已按 60 天 inactive 生命周期筛选并支持单个/批量 stub；尚未完成 transcript 级真实使用归因
 - 🔴 WebDAV 配置/手动 sync、正式 notarize、Sparkle SDK 接入尚未落地
-- 🟡 视觉 tokens 与主要页面容器已按 `STYLE.md` 落地；Discover/Library 首轮截图级 polish 已完成，仍需 Settings/Updates 收尾和 README 截图
+- 🟡 视觉 tokens 与主要页面容器已按 `STYLE.md` 落地；Discover/Library/Settings/Updates 截图级 polish 已完成，仍需 README 截图和最终全局一致性检查
 
-下一个动作：暂停扩新业务面，继续补 Settings/Updates 视觉收尾、Stub 60 天自动建议、WebDAV 配置/同步、公证 release 流程和 Sparkle SDK。
+下一个动作：暂停扩新业务面，继续补 README 截图、Stub 60 天真实归因、WebDAV 配置/同步、公证 release 流程和 Sparkle SDK。

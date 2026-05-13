@@ -109,21 +109,23 @@ struct UpdatesView: View {
 
                 Spacer()
 
-                Button {
-                    Task {
-                        _ = await viewModel.updateAll(onUpdated: onUpdated)
+                if !viewModel.updates.isEmpty || viewModel.isUpdatingAll {
+                    Button {
+                        Task {
+                            _ = await viewModel.updateAll(onUpdated: onUpdated)
+                        }
+                    } label: {
+                        if viewModel.isUpdatingAll {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Label("Update All", systemImage: "arrow.down.circle")
+                        }
                     }
-                } label: {
-                    if viewModel.isUpdatingAll {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Label("Update All", systemImage: "arrow.down.circle")
-                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(viewModel.isChecking || viewModel.isUpdatingAny)
+                    .help("Update All")
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(viewModel.updates.isEmpty || viewModel.isChecking || viewModel.isUpdatingAny)
-                .help("Update All")
 
                 Button {
                     Task { await viewModel.check() }
