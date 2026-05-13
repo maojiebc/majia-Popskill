@@ -24,6 +24,16 @@ struct SkillModelsTests {
         #expect(skill.localStoreURL.path.hasSuffix("/.cc-switch/skills/demo-skill"))
     }
 
+    @Test
+    func enabledAppCountCountsAllTargetApps() {
+        var skill = installedSkill(directory: "demo-skill")
+
+        skill.apps.codex = true
+        skill.apps.hermes = true
+
+        #expect(skill.enabledAppCount == 3)
+    }
+
     private func catalogSkill(repoBranch: String?) -> CatalogSkill {
         CatalogSkill(
             key: "maojiebc/majia-skills/demo",
