@@ -32,15 +32,15 @@ struct LibraryView: View {
                     packageAndSkillList
                 }
 
-                if viewModel.selectedFilter == .stub {
+                if viewModel.selectedFilter == .stub, let selectedStub {
                     StubDetailPane(
                         stub: selectedStub,
                         restoreApp: viewModel.selectedRehydrateApp,
-                        isRehydrating: selectedStub.map { viewModel.isRehydrating(skillID: $0.id) } ?? false
+                        isRehydrating: viewModel.isRehydrating(skillID: selectedStub.id)
                     ) { stub in
                         Task {
                             if await viewModel.rehydrate(stub) {
-                                selectedItemID = defaultSelectionID()
+                                selectedItemID = nil
                                 viewModel.selectedFilter = .all
                                 await onLibraryMutation()
                             }
@@ -49,50 +49,15 @@ struct LibraryView: View {
                     .frame(width: 340)
                     .popMaterialCard()
                 } else if let selectedPackage {
-                    PackageDetailPane(package: selectedPackage)
-                        .frame(width: 380)
-                        .popMaterialCard()
-                } else {
-                    SkillDetailPane(
-                        skill: selectedSkill,
-                        isUninstalling: selectedSkill.map { viewModel.isUninstalling(skillID: $0.id) } ?? false,
-                        isStubbing: selectedSkill.map { viewModel.isStubbing(skillID: $0.id) } ?? false,
-                        isScanningSecurity: selectedSkill.map { viewModel.isScanningSecurity(skillID: $0.id) } ?? false,
-                        securityScanResult: selectedSkill.flatMap { viewModel.securityScanResult(skillID: $0.id) },
-                        isToggling: { skill, app in
-                            viewModel.isToggling(skillID: skill.id, app: app)
-                        },
-                        onToggle: { skill, app, enabled in
-                            Task {
-                                await viewModel.setEnabled(enabled, for: skill, app: app)
-                            }
-                        },
-                        onSecurityScan: { skill in
-                            Task {
-                                await viewModel.scanSecurity(skill)
-                            }
-                        },
-                        onStub: { skill in
-                            Task {
-                                if await viewModel.stub(skill) {
-                                    selectedItemID = defaultSelectionID()
-                                    if viewModel.filteredSkills.isEmpty {
-                                        viewModel.selectedFilter = .stub
-                                    }
-                                    await onLibraryMutation()
-                                }
-                            }
-                        }
-                    ) { skill in
-                        Task {
-                            if await viewModel.uninstall(skill) {
-                                selectedItemID = defaultSelectionID()
-                                await onLibraryMutation()
-                            }
-                        }
+                    if let packageSkill = skill(forStandalonePackage: selectedPackage) {
+                        skillDetailPane(packageSkill)
+                    } else {
+                        PackageDetailPane(package: selectedPackage)
+                            .frame(width: 360)
+                            .popMaterialCard()
                     }
-                    .frame(width: 340)
-                    .popMaterialCard()
+                } else if let selectedSkill {
+                    skillDetailPane(selectedSkill)
                 }
             }
             .padding(.horizontal, 28)
@@ -113,11 +78,11 @@ struct LibraryView: View {
             .onChange(of: viewModel.filteredPackages) { _, _ in
                 ensureSelectionIsValid()
             }
-            .onChange(of: viewModel.selectedFilter) { _, filter in
-                selectedItemID = defaultSelectionID()
+            .onChange(of: viewModel.selectedFilter) { _, _ in
+                selectedItemID = nil
             }
             .onChange(of: viewModel.selectedPackageFilter) { _, _ in
-                selectedItemID = defaultSelectionID()
+                selectedItemID = nil
             }
         }
         .popPageBackground()
@@ -219,7 +184,7 @@ struct LibraryView: View {
                         ) {
                             Task {
                                 if await viewModel.rehydrate(stub) {
-                                    selectedItemID = defaultSelectionID()
+                                    selectedItemID = nil
                                     await onLibraryMutation()
                                 }
                             }
@@ -244,18 +209,16 @@ struct LibraryView: View {
 
     private var selectedSkill: Skill? {
         guard let skillID = skillID(from: selectedItemID) else {
-            return selectedItemID == nil && viewModel.filteredPackages.isEmpty
-                ? viewModel.filteredSkills.first
-                : nil
+            return nil
         }
-        return viewModel.filteredSkills.first { $0.id == skillID } ?? viewModel.filteredSkills.first
+        return viewModel.filteredSkills.first { $0.id == skillID }
     }
 
     private var selectedStub: StubbedSkill? {
         guard let stubID = stubID(from: selectedItemID) else {
-            return viewModel.filteredStubs.first
+            return nil
         }
-        return viewModel.filteredStubs.first { $0.id == stubID } ?? viewModel.filteredStubs.first
+        return viewModel.filteredStubs.first { $0.id == stubID }
     }
 
     private var selectedPackage: CapabilityPackage? {
@@ -264,13 +227,70 @@ struct LibraryView: View {
         }
 
         guard selectedItemID != nil else {
-            return viewModel.filteredPackages.first
+            return nil
         }
 
         guard let packageID = packageID(from: selectedItemID) else {
             return nil
         }
-        return viewModel.filteredPackages.first { $0.id == packageID } ?? viewModel.filteredPackages.first
+        return viewModel.filteredPackages.first { $0.id == packageID }
+    }
+
+    @ViewBuilder
+    private func skillDetailPane(_ skill: Skill) -> some View {
+        SkillDetailPane(
+            skill: skill,
+            isUninstalling: viewModel.isUninstalling(skillID: skill.id),
+            isStubbing: viewModel.isStubbing(skillID: skill.id),
+            isScanningSecurity: viewModel.isScanningSecurity(skillID: skill.id),
+            securityScanResult: viewModel.securityScanResult(skillID: skill.id),
+            isToggling: { skill, app in
+                viewModel.isToggling(skillID: skill.id, app: app)
+            },
+            onToggle: { skill, app, enabled in
+                Task {
+                    await viewModel.setEnabled(enabled, for: skill, app: app)
+                }
+            },
+            onSecurityScan: { skill in
+                Task {
+                    await viewModel.scanSecurity(skill)
+                }
+            },
+            onStub: { skill in
+                Task {
+                    if await viewModel.stub(skill) {
+                        selectedItemID = nil
+                        if viewModel.filteredSkills.isEmpty {
+                            viewModel.selectedFilter = .stub
+                        }
+                        await onLibraryMutation()
+                    }
+                }
+            }
+        ) { skill in
+            Task {
+                if await viewModel.uninstall(skill) {
+                    selectedItemID = nil
+                    await onLibraryMutation()
+                }
+            }
+        }
+        .frame(width: 340)
+        .popMaterialCard()
+    }
+
+    private func skill(forStandalonePackage package: CapabilityPackage) -> Skill? {
+        guard package.type == .standalone,
+              let component = package.components.skills.first ?? package.components.all.first(where: { $0.kind == "skill" }) else {
+            return nil
+        }
+
+        return viewModel.skills.first { skill in
+            skill.id == component.id
+                || skill.directory == component.location
+                || skill.name == component.name
+        }
     }
 
     private var visibleSkillRowsAreEmpty: Bool {
@@ -341,25 +361,8 @@ struct LibraryView: View {
         return String(selectionID.dropFirst(prefix.count))
     }
 
-    private func defaultSelectionID() -> String? {
-        if viewModel.selectedFilter == .stub {
-            return viewModel.filteredStubs.first.map { selectionID(forStub: $0.id) }
-        }
-
-        if let package = viewModel.filteredPackages.first {
-            return selectionID(forPackage: package.id)
-        }
-
-        if viewModel.selectedPackageFilter == .all {
-            return viewModel.filteredSkills.first.map { selectionID(forSkill: $0.id) }
-        }
-
-        return nil
-    }
-
     private func ensureSelectionIsValid() {
         guard let selectedItemID else {
-            self.selectedItemID = defaultSelectionID()
             return
         }
 
@@ -368,7 +371,7 @@ struct LibraryView: View {
                viewModel.filteredStubs.contains(where: { $0.id == stubID }) {
                 return
             }
-            self.selectedItemID = defaultSelectionID()
+            self.selectedItemID = nil
             return
         }
 
@@ -383,7 +386,7 @@ struct LibraryView: View {
             return
         }
 
-        self.selectedItemID = defaultSelectionID()
+        self.selectedItemID = nil
     }
 
     private var header: some View {
@@ -594,10 +597,10 @@ struct PackageDetailPane: View {
                             }
                         }
 
-                        Text(package.summary)
+                        Text(briefSummary(package.summary))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(3)
 
                         HStack(spacing: 8) {
                             StatusPill(title: package.typeLabel, color: packageColor(package.type))
@@ -607,11 +610,18 @@ struct PackageDetailPane: View {
                             )
                         }
 
-                        DetailSection(title: "Components", accent: PopskillSectionAccent.color(for: 0)) {
+                        DetailSection(title: "Update Status", accent: PopskillSectionAccent.color(for: 0)) {
+                            DetailField(title: "Version", value: localization.string("Not Tracked"))
+                            DetailField(title: "Last Updated", value: localization.string("Not Tracked"))
+                            DetailField(title: "Missing Components", value: "\(package.missingComponentCount)")
+                            DetailField(title: "Required Missing", value: "\(package.missingRequiredComponentCount)")
+                        }
+
+                        DetailSection(title: "Components", accent: PopskillSectionAccent.color(for: 1)) {
                             PackageComponentTree(components: package.components)
                         }
 
-                        DetailSection(title: "Config", accent: PopskillSectionAccent.color(for: 1)) {
+                        DetailSection(title: "Config", accent: PopskillSectionAccent.color(for: 2)) {
                             if package.configSchema.isEmpty {
                                 LocalizedText("No config required")
                                     .font(.caption)
@@ -634,10 +644,19 @@ struct PackageDetailPane: View {
                             }
                         }
 
-                        DetailSection(title: "Source", accent: PopskillSectionAccent.color(for: 2)) {
+                        DetailSection(title: "Source & Docs", accent: PopskillSectionAccent.color(for: 3)) {
                             DetailField(title: "Type", value: package.typeLabel)
                             DetailField(title: "Location", value: package.source.location)
                             DetailField(title: "Update Strategy", value: package.source.updateStrategy)
+
+                            if let url = package.sourceURL {
+                                Link(destination: url) {
+                                    LocalizedLabel(title: "Open Source", systemImage: "arrow.up.right.square")
+                                }
+                                .buttonStyle(.bordered)
+                            } else {
+                                DetailField(title: "Source", value: localization.string("Not Tracked"))
+                            }
                         }
                     }
                     .padding(22)
@@ -657,7 +676,7 @@ struct PackageRow: View {
 
     init(package: CapabilityPackage) {
         self.package = package
-        _isExpanded = State(initialValue: package.type == .composite)
+        _isExpanded = State(initialValue: false)
     }
 
     var body: some View {
@@ -678,6 +697,16 @@ struct PackageRow: View {
                             title: package.installed ? "Installed" : "Available",
                             color: package.installed ? .popStatusOK : .popStatusWarning
                         )
+
+                        if package.missingComponentCount > 0 {
+                            Label("\(package.missingComponentCount)", systemImage: "icloud.and.arrow.down")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(Color.popStatusWarning)
+                                .labelStyle(.titleAndIcon)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.popStatusWarning.opacity(0.10), in: Capsule())
+                        }
                     }
 
                     Text(package.summary)
@@ -751,6 +780,13 @@ struct PackageComponentLine: View {
 
             Spacer(minLength: 8)
 
+            if !component.installed {
+                Image(systemName: "icloud.and.arrow.down")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.popStatusWarning)
+                    .help("Rehydrate")
+            }
+
             StatusPill(title: component.status.capitalized, color: componentStatusColor(component))
         }
     }
@@ -769,6 +805,7 @@ struct SkillDetailPane: View {
     let onUninstall: (Skill) -> Void
     @State private var isConfirmingStub = false
     @State private var isConfirmingUninstall = false
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         Group {
@@ -789,12 +826,57 @@ struct SkillDetailPane: View {
                             }
                         }
 
-                        Text(skill.description)
+                        Text(briefSummary(skill.description))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(3)
 
-                        DetailSection(title: "Enabled In", accent: PopskillSectionAccent.color(for: 0)) {
+                        DetailSection(title: "Source & Docs", accent: PopskillSectionAccent.color(for: 0)) {
+                            HStack(spacing: 8) {
+                                if let markdownURL = skill.markdownURL {
+                                    Link(destination: markdownURL) {
+                                        LocalizedLabel(title: "Open Markdown", systemImage: "doc.text")
+                                    }
+                                    .buttonStyle(.bordered)
+                                }
+
+                                if FileManager.default.fileExists(atPath: skill.localStoreURL.path) {
+                                    Link(destination: skill.localStoreURL) {
+                                        LocalizedLabel(title: "Open Folder", systemImage: "folder")
+                                    }
+                                    .buttonStyle(.bordered)
+                                }
+
+                                if let url = skill.sourceURL {
+                                    Link(destination: url) {
+                                        LocalizedLabel(title: "Open Source", systemImage: "arrow.up.right.square")
+                                    }
+                                    .buttonStyle(.bordered)
+                                }
+                            }
+
+                            DetailField(title: "Directory", value: skill.directory)
+                            DetailField(title: "Identifier", value: skill.id)
+                        }
+
+                        DetailSection(title: "Lifecycle", accent: PopskillSectionAccent.color(for: 1)) {
+                            DetailField(title: "Version", value: localization.string("Not Tracked"))
+                            DetailField(
+                                title: "Installed Date",
+                                value: formattedOptionalTimestamp(skill.installedAt, fallback: localization.string("Not Tracked"))
+                            )
+                            DetailField(
+                                title: "Last Updated",
+                                value: formattedOptionalTimestamp(skill.updatedAt, fallback: localization.string("Not Tracked"))
+                            )
+                            DetailField(title: "Size", value: skill.sizeBytes.map(byteCountText) ?? localization.string("Not Tracked"))
+                            DetailField(title: "Downloads", value: localization.string("Not Tracked"))
+                            if let contentHash = skill.contentHash, !contentHash.isEmpty {
+                                DetailField(title: "Hash", value: String(contentHash.prefix(12)))
+                            }
+                        }
+
+                        DetailSection(title: "Enabled In", accent: PopskillSectionAccent.color(for: 2)) {
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 82), spacing: 8)], spacing: 8) {
                                 ForEach(TargetApp.allCases, id: \.id) { app in
                                     AppToggle(
@@ -808,15 +890,7 @@ struct SkillDetailPane: View {
                             }
                         }
 
-                        DetailSection(title: "Metadata", accent: PopskillSectionAccent.color(for: 1)) {
-                            DetailField(title: "Directory", value: skill.directory)
-                            DetailField(title: "Identifier", value: skill.id)
-                            if let contentHash = skill.contentHash, !contentHash.isEmpty {
-                                DetailField(title: "Hash", value: String(contentHash.prefix(12)))
-                            }
-                        }
-
-                        DetailSection(title: "Security", accent: PopskillSectionAccent.color(for: 2)) {
+                        DetailSection(title: "Security", accent: PopskillSectionAccent.color(for: 3)) {
                             HStack(spacing: 8) {
                                 StatusPill(
                                     title: securityScanTitle(securityScanResult),
@@ -843,22 +917,6 @@ struct SkillDetailPane: View {
                             }
                             .buttonStyle(.bordered)
                             .disabled(isScanningSecurity || !FileManager.default.fileExists(atPath: skill.localStoreURL.path))
-                        }
-
-                        HStack(spacing: 10) {
-                            if FileManager.default.fileExists(atPath: skill.localStoreURL.path) {
-                                Link(destination: skill.localStoreURL) {
-                                    LocalizedLabel(title: "Open Folder", systemImage: "folder")
-                                }
-                                .buttonStyle(.bordered)
-                            }
-
-                            if let url = skill.sourceURL {
-                                Link(destination: url) {
-                                    LocalizedLabel(title: "Open Source", systemImage: "arrow.up.right.square")
-                                }
-                                .buttonStyle(.bordered)
-                            }
                         }
 
                         HStack(spacing: 10) {
@@ -1143,6 +1201,33 @@ struct StubRow: View {
 private func formattedTimestamp(_ timestamp: Int) -> String {
     Date(timeIntervalSince1970: TimeInterval(timestamp))
         .formatted(date: .abbreviated, time: .shortened)
+}
+
+private func formattedOptionalTimestamp(_ timestamp: Int?, fallback: String) -> String {
+    guard let timestamp, timestamp > 0 else {
+        return fallback
+    }
+    return formattedTimestamp(timestamp)
+}
+
+private func byteCountText(_ bytes: UInt64) -> String {
+    ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+}
+
+private func briefSummary(_ text: String, maxLength: Int = 180) -> String {
+    let normalized = text
+        .replacingOccurrences(of: "\n", with: " ")
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    if let firstSentenceEnd = normalized.rangeOfCharacter(from: CharacterSet(charactersIn: ".。!?！？")) {
+        return String(normalized[...firstSentenceEnd.lowerBound])
+    }
+
+    guard normalized.count > maxLength else {
+        return normalized
+    }
+
+    return String(normalized.prefix(maxLength)).trimmingCharacters(in: .whitespacesAndNewlines) + "..."
 }
 
 private func securityScanTitle(_ result: SecurityScanResult?) -> String {

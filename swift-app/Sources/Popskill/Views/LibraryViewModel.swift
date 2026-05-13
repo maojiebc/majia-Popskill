@@ -25,6 +25,8 @@ final class LibraryViewModel {
     var errorMessage: String?
 
     private let client = SkillCLIClient()
+    private var automaticUpdateTask: Task<Void, Never>?
+    private var isCheckingUpdatesInBackground = false
     private var pendingToggles: Set<String> = []
     private var updatingIDs: Set<String> = []
     private var uninstallingIDs: Set<String> = []
@@ -170,15 +172,37 @@ final class LibraryViewModel {
         }
     }
 
-    func checkUpdates() async {
-        guard !isCheckingUpdates else {
+    func startAutomaticUpdateMonitoring() {
+        guard automaticUpdateTask == nil else {
             return
         }
 
-        isCheckingUpdates = true
+        automaticUpdateTask = Task { [weak self] in
+            await self?.checkUpdates(silent: true)
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 30 * 60 * 1_000_000_000)
+                await self?.checkUpdates(silent: true)
+            }
+        }
+    }
+
+    func checkUpdates(silent: Bool = false) async {
+        guard !isCheckingUpdates, !isCheckingUpdatesInBackground else {
+            return
+        }
+
+        if silent {
+            isCheckingUpdatesInBackground = true
+        } else {
+            isCheckingUpdates = true
+        }
         errorMessage = nil
         defer {
-            isCheckingUpdates = false
+            if silent {
+                isCheckingUpdatesInBackground = false
+            } else {
+                isCheckingUpdates = false
+            }
             hasCheckedUpdatesOnce = true
         }
 

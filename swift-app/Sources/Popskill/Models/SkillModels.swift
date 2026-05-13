@@ -46,6 +46,11 @@ struct Skill: Identifiable, Codable, Equatable {
         explicitOrRepositoryURL(readmeUrl: readmeUrl, repoOwner: repoOwner, repoName: repoName)
     }
 
+    var markdownURL: URL? {
+        let url = localStoreURL.appendingPathComponent("SKILL.md")
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
     var enabledAppCount: Int {
         TargetApp.allCases.filter { apps.isEnabled($0) }.count
     }
@@ -238,6 +243,25 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
         }
         return source.location
     }
+
+    var sourceURL: URL? {
+        if id == "pkg:lark" {
+            return URL(string: "https://github.com/larksuite/cli")
+        }
+        return explicitOrRepositoryURL(
+            readmeUrl: source.location,
+            repoOwner: nil,
+            repoName: nil
+        ) ?? githubRepositoryURL(from: source.location)
+    }
+
+    var missingComponentCount: Int {
+        components.all.filter { !$0.installed }.count
+    }
+
+    var missingRequiredComponentCount: Int {
+        components.all.filter { $0.required && !$0.installed }.count
+    }
 }
 
 struct PackageSource: Codable, Equatable {
@@ -339,6 +363,19 @@ private func explicitOrRepositoryURL(readmeUrl: String?, repoOwner: String?, rep
     components.scheme = "https"
     components.host = "github.com"
     components.path = "/\(repoOwner)/\(repoName)"
+    return components.url
+}
+
+private func githubRepositoryURL(from ownerRepo: String) -> URL? {
+    let parts = ownerRepo.split(separator: "/", omittingEmptySubsequences: true)
+    guard parts.count == 2 else {
+        return nil
+    }
+
+    var components = URLComponents()
+    components.scheme = "https"
+    components.host = "github.com"
+    components.path = "/\(parts[0])/\(parts[1])"
     return components.url
 }
 

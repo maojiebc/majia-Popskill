@@ -90,6 +90,9 @@
 "Import In" = "导入到";
 "Enabled In" = "启用于";
 "Metadata" = "元数据";
+"Lifecycle" = "生命周期";
+"Source & Docs" = "来源与文档";
+"Update Status" = "更新状态";
 "Components" = "组件";
 "Config" = "配置";
 "No config required" = "无需配置";
@@ -102,6 +105,13 @@
 "Update All" = "全部更新";
 "Check Updates" = "检查更新";
 "Available" = "可用";
+"Not Tracked" = "未追踪";
+"Installed Date" = "安装时间";
+"Last Updated" = "最近更新";
+"Size" = "大小";
+"Downloads" = "下载量";
+"Missing Components" = "缺失组件";
+"Required Missing" = "缺失必需项";
 "Component Tree" = "组件树";
 "package.componentSummary" = "%d 个组件 · %d 个已安装 · %d 个必需";
 "Directory" = "目录";
@@ -109,6 +119,7 @@
 "Hash" = "哈希";
 "Security" = "安全";
 "Scan with AgentShield" = "用 AgentShield 扫描";
+"Open Markdown" = "打开 Markdown";
 "Open Folder" = "打开文件夹";
 "Open Source" = "打开来源";
 "Make Stub" = "转为 Stub";

@@ -11,7 +11,7 @@ struct PopskillApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
-                .frame(minWidth: 980, minHeight: 640)
+                .frame(minWidth: 1180, minHeight: 720)
         }
         .windowResizability(.contentMinSize)
         .commands {

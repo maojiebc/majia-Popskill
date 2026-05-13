@@ -86,7 +86,7 @@ struct RootView: View {
                     sidebarLink(.settings)
                 }
             }
-            .navigationSplitViewColumnWidth(min: 220, ideal: 240)
+            .navigationSplitViewColumnWidth(min: 260, ideal: 280)
         } detail: {
             switch selection ?? .installed {
             case .repositories:
@@ -118,6 +118,7 @@ struct RootView: View {
         .task {
             await repositories.load()
             await library.load()
+            library.startAutomaticUpdateMonitoring()
             await agents.load()
         }
     }

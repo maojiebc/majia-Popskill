@@ -90,6 +90,9 @@
 "Import In" = "Import In";
 "Enabled In" = "Enabled In";
 "Metadata" = "Metadata";
+"Lifecycle" = "Lifecycle";
+"Source & Docs" = "Source & Docs";
+"Update Status" = "Update Status";
 "Components" = "Components";
 "Config" = "Config";
 "No config required" = "No config required";
@@ -102,6 +105,13 @@
 "Update All" = "Update All";
 "Check Updates" = "Check Updates";
 "Available" = "Available";
+"Not Tracked" = "Not Tracked";
+"Installed Date" = "Installed Date";
+"Last Updated" = "Last Updated";
+"Size" = "Size";
+"Downloads" = "Downloads";
+"Missing Components" = "Missing Components";
+"Required Missing" = "Required Missing";
 "Component Tree" = "Component Tree";
 "package.componentSummary" = "%d components · %d installed · %d required";
 "Directory" = "Directory";
@@ -109,6 +119,7 @@
 "Hash" = "Hash";
 "Security" = "Security";
 "Scan with AgentShield" = "Scan with AgentShield";
+"Open Markdown" = "Open Markdown";
 "Open Folder" = "Open Folder";
 "Open Source" = "Open Source";
 "Make Stub" = "Make Stub";
