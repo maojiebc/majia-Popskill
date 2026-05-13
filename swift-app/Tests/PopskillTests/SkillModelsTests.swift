@@ -42,6 +42,23 @@ struct SkillModelsTests {
     }
 
     @Test
+    func sourceURLIgnoresRelativeReadmeURL() {
+        let skill = CatalogSkill(
+            key: "maojiebc/majia-skills/demo",
+            name: "Demo",
+            description: "Demo skill",
+            directory: "demo",
+            readmeUrl: "README.md",
+            installed: false,
+            repoOwner: "maojiebc",
+            repoName: "majia-skills",
+            repoBranch: nil
+        )
+
+        #expect(skill.sourceURL?.absoluteString == "https://github.com/maojiebc/majia-skills")
+    }
+
+    @Test
     func installedSkillLocalStoreURLUsesCCSwitchStore() {
         let skill = installedSkill(directory: "demo-skill")
 

@@ -86,7 +86,7 @@ struct CatalogSkill: Identifiable, Codable, Equatable {
 }
 
 private func explicitOrRepositoryURL(readmeUrl: String?, repoOwner: String?, repoName: String?) -> URL? {
-    if let readmeUrl, let url = URL(string: readmeUrl) {
+    if let readmeUrl, let url = URL(string: readmeUrl), url.scheme != nil {
         return url
     }
 
