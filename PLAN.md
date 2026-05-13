@@ -127,7 +127,7 @@
 - **已完成**：Backups 查看 / 恢复 / 删除，Settings sidecar health 诊断
 - **已完成**：本地 CI、read-only smoke、mutating repo smoke、`.app` development bundle、bundle launch smoke、release artifact smoke、development DMG 打包、release manifest/appcast 生成
 - **已完成**：Discover/Library/Settings/Updates 截图级 polish（Discover 行 CTA 文案、sidebar badge 导航、Library 行布局、Settings 诊断密度、Updates 空态按钮层级）
-- **未完成**：WebDAV 手动 upload/download sync、正式 codesign/notarize、Sparkle SDK 正式 link（菜单/配置/package hooks 已先落地）
+- **未完成**：WebDAV 手动 upload/download sync、正式 codesign/notarize、Sparkle 公开 feed/key/signature 实测（SDK link、菜单/配置/package hooks 已先落地）
 
 ### 不做的事（避免范围爆炸）
 
@@ -1034,10 +1034,10 @@ struct CLIResponse<T: Decodable>: Decodable {
 | Week 2 | Discover 页 V1 | ✅ 已完成 | 做视觉 polish，补截图/空态文案；Categories/Top Charts 不做独立路由 |
 | Week 3 | Detail 页 + 安装/卸载流程 | ✅ 已完成 | install-plan 目标 App 缓存和风险解释已打磨；更细的失败态仍可继续补 |
 | Week 4 | Insights + transcript 解析 | ✅ 已完成 | 已验证真实 `attributionSkill` / `attributionPlugin` 字段；Usage / Token Spend 可展示 skill 级统计，仍忽略正文 |
-| Week 5 | Updates 页 + 自动检查 | ✅ Updates 页面完成，含 Update All 和 last checked 状态 | Popskill 自身更新已有 Sparkle 菜单/配置/package hooks；SDK 正式 link 仍待 SPM artifact 下载稳定 |
+| Week 5 | Updates 页 + 自动检查 | ✅ Updates 页面完成，含 Update All 和 last checked 状态 | Popskill 自身更新已有 Sparkle SDK link、菜单入口、配置守卫和 package hooks；公开更新检查仍待 feed/key/signature 实测 |
 | Week 6 | Stub 状态机 | ✅ 已完成 | 60 天建议已落在 Idle Candidates，并避开最近 60 天内有 transcript attribution 使用的 skill |
 | Week 7 | WebDAV 同步 UI | 🟡 配置/只读边界已完成 | Settings 已有配置写入、status + remote info；Sync Now 留给 v0.1 收口 |
-| Week 8 | 打磨 + 打包 | 🟡 pipeline 已打通，release doctor 可检查 Developer ID/notary 前置条件，README 截图已补 | 需要 Apple Developer Program 通过、真实签名/公证、Sparkle SDK 和人工验收 |
+| Week 8 | 打磨 + 打包 | 🟡 pipeline 已打通，release doctor 可检查 Developer ID/notary 前置条件，README 截图已补 | 需要 Apple Developer Program 通过、真实签名/公证、Sparkle 公开更新实测和人工验收 |
 
 ### v0.1 收口清单
 
@@ -1055,7 +1055,8 @@ struct CLIResponse<T: Decodable>: Decodable {
 - [x] 视觉 polish 收尾：Settings 诊断字段紧凑化，Updates 空态隐藏不可用批量操作。
 - [ ] Apple Developer Program：确认是否加入；不加入则只能走 ad-hoc/unsigned 分发说明。
 - [ ] 真实签名/公证：接入 Developer ID 后跑 `notarytool`，补 CI/本地验证文档。
-- [ ] Sparkle SDK：把 appcast 从“可生成”推进到 App 内真实更新检查；当前已完成菜单入口、`SUFeedURL` / `SUPublicEDKey` 配置守卫、bundle framework copy hooks 与 release doctor 检查。
+- [x] Sparkle SDK link：App 已正式链接 Sparkle 2.9.1，当前已完成菜单入口、`SUFeedURL` / `SUPublicEDKey` 配置守卫、bundle framework copy hooks 与 release doctor 检查。
+- [ ] Sparkle public update smoke：配置真实 feed、public EdDSA key、signed notarized payload 后，在 App 内完成一次公开更新检查。
 - [x] WebDAV 配置表单：Settings 可写入 CC Switch WebDAV settings；新密码通过 sidecar 环境变量传递，状态输出脱敏。
 - [ ] WebDAV Sync Now：upload/download、冲突/失败态。
 - [x] Transcript boundary：UI/文档说明本地聚合并忽略消息正文。
@@ -1488,8 +1489,8 @@ open swift-app/Package.swift
 - ✅ WebDAV 状态与远端 snapshot 只读入口已落地；upload/download 当前受 CC Switch Tauri State/private module 边界阻塞，先不绕实现
 - ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle/release smoke、development DMG 打包、release manifest/appcast 已落地
 - ✅ Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 已按 60 天 inactive 生命周期 + transcript attribution 最近使用筛选，并支持单个/批量 stub
-- 🔴 WebDAV 手动 sync、正式 notarize、Sparkle SDK 正式 link 尚未落地
-- 🟡 Sparkle 菜单入口、feed/key 配置守卫、framework copy hook、release doctor 检查已先落地；官方 SPM binary artifact 下载在本机多次卡住，暂不提交直接依赖
+- 🔴 WebDAV 手动 sync、正式 notarize、Sparkle 公开更新实测尚未落地
+- ✅ Sparkle SDK 正式 link 已落地：依赖固定为 Sparkle 2.9.1，App 二进制链接 `Sparkle.framework`，菜单入口、feed/key 配置守卫、framework copy hook、release doctor 检查已落地；SwiftPM 下载 Keychain 卡顿通过 `scripts/swiftpm.sh` 临时 HOME 构建 wrapper 固化规避
 - 🟡 视觉 tokens 与主要页面容器已按 `STYLE.md` 落地；Discover/Library/Settings/Updates 截图级 polish 与 README 截图已完成，仍需最终全局一致性检查
 
-下一个动作：v0.1 继续保持 Skill 中心化范围，优先做最终截图 QA、真实签名/公证与 Sparkle SDK 正式 link；Package 能力包重构等 v0.1 发布后进入 v0.2。
+下一个动作：v0.1 继续保持 Skill 中心化范围，优先做最终截图 QA、真实签名/公证与 Sparkle 公开 feed/key/signature 实测；Package 能力包重构等 v0.1 发布后进入 v0.2。

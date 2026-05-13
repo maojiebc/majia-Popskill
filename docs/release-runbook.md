@@ -13,7 +13,7 @@ Before Apple Developer Program credentials are available, this is expected:
 - Tools should be present: `codesign`, `security`, `ditto`, `hdiutil`, `shasum`, `jq`, `notarytool`, `stapler`.
 - Artifacts should exist after local CI: `build/Popskill.app`, `build/Popskill.dmg`.
 - Release doctor should fail on missing Developer ID identity and missing notary credentials.
-- Sparkle warnings are expected until a public feed URL, public EdDSA key, download URL, and update signature are available.
+- Sparkle is linked in the app. Sparkle warnings are expected until a public feed URL, public EdDSA key, download URL, and update signature are available.
 
 ## One-Time Apple Setup
 
@@ -63,6 +63,8 @@ Run the full local gate:
 ```bash
 ./scripts/ci-local.sh
 ```
+
+The local scripts route SwiftPM through `scripts/swiftpm.sh`, which uses a temporary HOME and disables global Git configuration for each Swift invocation. This avoids macOS Keychain credential lookups hanging while downloading public binary artifacts such as Sparkle.
 
 Then check release readiness:
 

@@ -12,8 +12,19 @@ if [[ -f "$HOME/.cargo/env" ]]; then
   source "$HOME/.cargo/env"
 fi
 
+run_quietly() {
+  local log_file
+  log_file="$(mktemp)"
+  if ! "$@" > "$log_file" 2>&1; then
+    cat "$log_file" >&2
+    rm -f "$log_file"
+    return 1
+  fi
+  rm -f "$log_file"
+}
+
 cargo build --manifest-path "$ROOT_DIR/skill-cli/Cargo.toml"
-swift build --package-path "$ROOT_DIR/swift-app"
+"$ROOT_DIR/scripts/swiftpm.sh" build --package-path "$ROOT_DIR/swift-app"
 
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR" "$FRAMEWORKS_DIR"
@@ -26,6 +37,9 @@ chmod +x "$MACOS_DIR/Popskill" "$RESOURCES_DIR/skill-cli"
 SPARKLE_FRAMEWORK="$(find "$ROOT_DIR/swift-app/.build/artifacts" -path "*/Sparkle.framework" -type d 2>/dev/null | sort | head -n 1 || true)"
 if [[ -n "$SPARKLE_FRAMEWORK" ]]; then
   ditto "$SPARKLE_FRAMEWORK" "$FRAMEWORKS_DIR/Sparkle.framework"
+  if ! otool -l "$MACOS_DIR/Popskill" | grep -q "@executable_path/../Frameworks"; then
+    run_quietly install_name_tool -add_rpath "@executable_path/../Frameworks" "$MACOS_DIR/Popskill"
+  fi
 fi
 
 cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
@@ -59,6 +73,15 @@ fi
 
 if [[ -n "${POPSKILL_SPARKLE_PUBLIC_ED_KEY:-}" ]]; then
   /usr/libexec/PlistBuddy -c "Add :SUPublicEDKey string ${POPSKILL_SPARKLE_PUBLIC_ED_KEY}" "$CONTENTS_DIR/Info.plist"
+fi
+
+if command -v codesign > /dev/null 2>&1; then
+  if [[ -d "$FRAMEWORKS_DIR/Sparkle.framework" ]]; then
+    run_quietly codesign --force --sign - "$FRAMEWORKS_DIR/Sparkle.framework"
+  fi
+  run_quietly codesign --force --sign - "$RESOURCES_DIR/skill-cli"
+  run_quietly codesign --force --sign - "$MACOS_DIR/Popskill"
+  run_quietly codesign --force --sign - "$APP_DIR"
 fi
 
 echo "$APP_DIR"

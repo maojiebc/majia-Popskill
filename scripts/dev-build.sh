@@ -16,9 +16,9 @@ cargo test --manifest-path "$ROOT_DIR/skill-cli/Cargo.toml"
 "$ROOT_DIR/scripts/smoke-cli.sh" "$ROOT_DIR/skill-cli/target/debug/skill-cli"
 
 echo "==> Building SwiftUI app"
-swift build --package-path "$ROOT_DIR/swift-app"
+"$ROOT_DIR/scripts/swiftpm.sh" build --package-path "$ROOT_DIR/swift-app"
 
 echo "==> Running Swift tests"
-swift test --package-path "$ROOT_DIR/swift-app"
+"$ROOT_DIR/scripts/swiftpm.sh" test --package-path "$ROOT_DIR/swift-app"
 
 echo "==> Done"

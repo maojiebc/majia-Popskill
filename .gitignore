@@ -27,6 +27,7 @@ xcuserdata/
 .swiftpm/
 .build/
 Package.resolved
+!swift-app/Package.resolved
 
 # Rust
 target/

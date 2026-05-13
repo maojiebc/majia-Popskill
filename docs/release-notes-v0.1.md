@@ -27,7 +27,7 @@ Popskill v0.1 is a pre-alpha macOS app for managing Claude Code Agent Skills wit
 
 - This is pre-alpha software. Expect rough edges.
 - WebDAV manual Sync Now is not implemented yet because CC Switch upload/download logic currently crosses private Tauri state/module boundaries.
-- Sparkle menu hooks and appcast generation are present, but public in-app update checks require a configured feed URL, public EdDSA key, and signed update payload.
+- Sparkle 2.9.1 is linked and appcast generation is present, but public in-app update checks require a configured feed URL, public EdDSA key, and signed update payload.
 - Public distribution requires Apple Developer ID signing and notarization.
 - AgencyAgents catalog preview uses the GitHub API. Set `GITHUB_TOKEN` or `GH_TOKEN` if unauthenticated rate limits are hit.
 - Package abstraction is a v0.2 roadmap item; v0.1 remains Skill-centered.
