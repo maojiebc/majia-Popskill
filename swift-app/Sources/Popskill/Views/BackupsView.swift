@@ -24,6 +24,7 @@ final class BackupsViewModel {
 
         do {
             backups = try await client.listBackups()
+                .sorted { $0.createdAt > $1.createdAt }
         } catch {
             errorMessage = error.localizedDescription
         }
