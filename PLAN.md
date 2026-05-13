@@ -569,6 +569,7 @@ cd skill-cli && cargo build   # 重新编译，看有没有 API 变化
     ├── smoke-bundle.sh
     ├── package-dev-app.sh
     ├── package-dmg.sh
+    ├── release-doctor.sh
     ├── release-manifest.sh
     ├── generate-appcast.sh
     ├── smoke-release.sh
@@ -1017,7 +1018,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 | Week 5 | Updates 页 + 自动检查 | ✅ Updates 页面完成，含 Update All 和 last checked 状态 | Sparkle SDK 尚未集成；Popskill 自身更新仍是 appcast 生成 smoke |
 | Week 6 | Stub 状态机 | ✅ 已完成 | 60 天建议已落在 Idle Candidates；后续可补 transcript 归因权重 |
 | Week 7 | WebDAV 同步 UI | 🟡 只读边界已完成 | Settings 已有 status + remote info；配置写入、Keychain、Sync Now 留给 v0.1 收口 |
-| Week 8 | 打磨 + 打包 | 🟡 pipeline 已打通 | 需要 Apple Developer Program 决策、真实签名/公证、Sparkle SDK、README/截图和人工验收 |
+| Week 8 | 打磨 + 打包 | 🟡 pipeline 已打通，release doctor 可检查 Developer ID/notary 前置条件 | 需要 Apple Developer Program 通过、真实签名/公证、Sparkle SDK、README/截图和人工验收 |
 
 ### v0.1 收口清单
 
@@ -1027,6 +1028,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 - [x] Stub MVP：stub/rehydrate、Idle Candidates、bulk stub dry-run/执行。
 - [x] WebDAV sidecar 边界：只读 status / remote info / local backup summary。
 - [x] release smoke：DMG、release manifest、Sparkle appcast 生成脚本。
+- [x] release doctor：检查 Developer ID、notarytool/stapler、notary 凭据、app/dmg/appcast 前置条件。
 - [ ] Apple Developer Program：确认是否加入；不加入则只能走 ad-hoc/unsigned 分发说明。
 - [ ] 真实签名/公证：接入 Developer ID 后跑 `notarytool`，补 CI/本地验证文档。
 - [ ] Sparkle SDK：把 appcast 从“可生成”推进到 App 内真实更新检查。
@@ -1117,7 +1119,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 - **身份选择**：先用 **Individual**；Organization 需要 D-U-N-S 编号，周期更长
 - **证书**：使用 **Developer ID Application**，不是 Mac App Distribution
 - **流程**：`package-dev-app.sh` 产出 `.app` → `codesign --options runtime --timestamp` → `ditto` 压 zip → `xcrun notarytool submit --wait` → `xcrun stapler staple` → `stapler validate` → `package-dmg.sh` 产出带 Applications 拖拽入口的 `.dmg` → `release-manifest.sh` 记录 version / build / sha256 / size → `generate-appcast.sh` 生成 Sparkle appcast 骨架
-- **脚本化**：封装成 `scripts/notarize.sh`、`scripts/package-dmg.sh`、`scripts/release-manifest.sh` 与 `scripts/generate-appcast.sh`。每个 Sparkle 更新包都要重新走 codesign + notarize + staple
+- **脚本化**：封装成 `scripts/release-doctor.sh`、`scripts/notarize.sh`、`scripts/package-dmg.sh`、`scripts/release-manifest.sh` 与 `scripts/generate-appcast.sh`。每个 Sparkle 更新包都要重新走 codesign + notarize + staple
 - **密钥策略**：Apple app-specific password 走环境变量或 Keychain profile；WebDAV password / PAT / LLM API key 也进 Keychain，**不进 SQLite**
 
 **验收**：拿一台干净的、没装过 Popskill 的 Mac，从 Releases 下 `.dmg` → 拖进 Applications → 双击打开，**全程零警告弹窗**。

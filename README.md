@@ -124,6 +124,7 @@ SwiftUI 端已接入：
 
 - ✅ 本地 CI：`./scripts/ci-local.sh` 覆盖 Rust/Swift build、单测、只读 sidecar smoke、App 启动、bundle 启动、release artifact smoke。
 - ✅ Release artifact smoke：可生成本地开发 DMG、release manifest、Sparkle appcast 骨架。
+- ✅ Release doctor：`scripts/release-doctor.sh` 可检查 Developer ID、notarytool/stapler、notary 凭据、DMG/appcast 前置条件。
 - ✅ Transcript boundary：Insights UI 和文档说明本地聚合、忽略消息内容、尚非 skill 级精确归因。
 - ⏳ Apple Developer Program：确认 Developer ID 证书；不加入则需要明确 unsigned/ad-hoc 分发说明。
 - ⏳ Notarization：拿到证书后跑 `scripts/notarize.sh`，验证 `stapler validate` 和 Gatekeeper 打开路径。
@@ -182,6 +183,9 @@ cd ~/projects/popskill
 
 # 生成本地开发 DMG（含 Applications 拖拽入口），并输出 sha256
 ./scripts/package-dmg.sh
+
+# 检查 Developer ID / notarization / appcast 发布前置条件（不签名、不上传）
+./scripts/release-doctor.sh
 
 # 生成 release metadata（version / build / dmg sha256 / size）
 ./scripts/release-manifest.sh
