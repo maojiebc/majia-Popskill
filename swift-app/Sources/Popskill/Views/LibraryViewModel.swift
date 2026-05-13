@@ -9,6 +9,7 @@ final class LibraryViewModel {
     var searchText = ""
     var selectedFilter: LibraryFilter = .all
     var isLoading = false
+    var hasLoadedOnce = false
     var errorMessage: String?
 
     private let client = SkillCLIClient()
@@ -57,6 +58,10 @@ final class LibraryViewModel {
     func load() async {
         isLoading = true
         errorMessage = nil
+        defer {
+            isLoading = false
+            hasLoadedOnce = true
+        }
 
         do {
             skills = try await client.list()
@@ -66,8 +71,6 @@ final class LibraryViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
-
-        isLoading = false
     }
 
     func setEnabled(_ enabled: Bool, for skill: Skill, app: TargetApp) async {

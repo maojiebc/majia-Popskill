@@ -71,7 +71,7 @@ struct IdleCandidatesView: View {
         }
         .background(Color.popMainBackground)
         .task {
-            if viewModel.skills.isEmpty {
+            if !viewModel.hasLoadedOnce {
                 await viewModel.load()
             }
         }
