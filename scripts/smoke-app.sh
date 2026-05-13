@@ -34,7 +34,7 @@ if ! kill -0 "$APP_PID" 2> /dev/null; then
   exit 1
 fi
 
-if [[ -s "$LOG_FILE" ]] && rg -i "fatal error|uncaught|crash" "$LOG_FILE" > /dev/null; then
+if [[ -s "$LOG_FILE" ]] && grep -Eiq "fatal error|uncaught|crash" "$LOG_FILE"; then
   cat "$LOG_FILE" >&2
   echo "Popskill launch log contains a crash signature" >&2
   exit 1

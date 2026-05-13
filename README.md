@@ -125,6 +125,7 @@ SwiftUI 端已接入：
 # 装工具链
 xcode-select --install
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+brew install jq
 
 # 拉项目
 gh repo clone maojiebc/majia-Popskill ~/projects/popskill -- --recurse-submodules
