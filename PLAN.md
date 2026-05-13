@@ -1064,7 +1064,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 | Week 5 | Updates 页 + 自动检查 | ✅ Updates 页面完成，含 Update All 和 last checked 状态 | Popskill 自身更新已有 Sparkle SDK link、菜单入口、配置守卫和 package hooks；公开更新检查仍待 feed/key/signature 实测 |
 | Week 6 | Stub 状态机 | ✅ 已完成 | 60 天建议已落在 Idle Candidates，并避开最近 60 天内有 transcript attribution 使用的 skill |
 | Week 7 | WebDAV 同步 UI | 🟡 配置/只读边界已完成 | Settings 已有配置写入、status + remote info；Sync Now 留给 v0.1 收口 |
-| Week 8 | 打磨 + 打包 | 🟡 pipeline 已打通，release doctor 可检查 Developer ID/notary/Sparkle bundle 前置条件，README 截图已补 | 需要 Apple Developer Program 通过、真实签名/公证、Sparkle 公开更新实测和人工验收 |
+| Week 8 | 打磨 + 打包 | 🟡 pipeline 已打通，release doctor 可检查 Developer ID/notary、bundle/DMG/manifest 一致性、Sparkle bundle metadata 与 strict Sparkle gate，README 截图已补 | 需要 Apple Developer Program 通过、真实签名/公证、Sparkle 公开更新实测和人工验收 |
 
 ### v0.1 收口清单
 
@@ -1075,7 +1075,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 - [x] WebDAV sidecar 边界：配置写入 / 只读 status / remote info / manual sync plan / local backup summary。
 - [x] Agent sidecar smoke：`agent-list` / `agent-targets` / `agent-install-plan` 已纳入只读 smoke；`agent-catalog` 因 GitHub rate limit 不进默认 CI。
 - [x] release smoke：DMG、release manifest、Sparkle appcast 生成脚本。
-- [x] release doctor：检查 Developer ID、notarytool/stapler、notary 凭据、app/dmg/appcast 和 Sparkle framework/rpath 前置条件。
+- [x] release doctor：检查 Developer ID、notarytool/stapler、notary 凭据、app/DMG/release manifest 一致性、placeholder URL、Sparkle framework/rpath/metadata，并支持 `POPSKILL_REQUIRE_SPARKLE=true` 把公开更新缺失项提升为 failure。
 - [x] release runbook：`docs/release-runbook.md` 写明 Developer ID、notary keychain profile、Sparkle env、notarize、DMG、appcast 和 Gatekeeper 验证步骤。
 - [x] release notes draft：`docs/release-notes-v0.1.md` 写明 highlights、隐私边界、已知限制和验证入口。
 - [x] 视觉 polish 第一轮：Discover 行内 `Plan` / `Install` 可读，带 badge 的 sidebar 项可导航，Library 行内 app toggle 不挤压标题。
@@ -1174,8 +1174,8 @@ struct CLIResponse<T: Decodable>: Decodable {
 - **成本**：Apple Developer Program **$99 / 年**。一个会员覆盖 macOS / iOS / 全平台，notarization 本身免费
 - **身份选择**：先用 **Individual**；Organization 需要 D-U-N-S 编号，周期更长
 - **证书**：使用 **Developer ID Application**，不是 Mac App Distribution
-- **流程**：`package-dev-app.sh` 产出 `.app`（可注入 Sparkle feed/key 并复制 `Sparkle.framework`）→ `codesign --options runtime --timestamp` → `ditto` 压 zip → `xcrun notarytool submit --wait` → `xcrun stapler staple` → `stapler validate` → `package-dmg.sh` 产出带 Applications 拖拽入口的 `.dmg` → `release-manifest.sh` 记录 version / build / sha256 / size → `generate-appcast.sh` 生成 Sparkle appcast 骨架
-- **脚本化**：封装成 `scripts/release-doctor.sh`、`scripts/notarize.sh`、`scripts/package-dmg.sh`、`scripts/release-manifest.sh` 与 `scripts/generate-appcast.sh`。每个 Sparkle 更新包都要重新走 codesign + notarize + staple
+- **流程**：`package-dev-app.sh` 产出 `.app`（可注入 Sparkle feed/key 并复制 `Sparkle.framework`）→ `codesign --options runtime --timestamp` → `ditto` 压 zip → `xcrun notarytool submit --wait` → `xcrun stapler staple` → `stapler validate` → `package-dmg.sh` 产出带 Applications 拖拽入口的 `.dmg` → `release-manifest.sh` 记录 version / build / sha256 / size → `generate-appcast.sh` 生成 Sparkle appcast → `release-doctor.sh` 复核 bundle/DMG/manifest/appcast 一致性
+- **脚本化**：封装成 `scripts/release-doctor.sh`、`scripts/notarize.sh`、`scripts/package-dmg.sh`、`scripts/release-manifest.sh` 与 `scripts/generate-appcast.sh`。每个 Sparkle 更新包都要重新走 codesign + notarize + staple；公开 Sparkle 发布用 `POPSKILL_REQUIRE_SPARKLE=true` 把 feed/key/download/signature/appcast 缺失从 warning 提升为 failure
 - **密钥策略**：Apple app-specific password 走环境变量或 Keychain profile；Popskill 自有 PAT / LLM API key 进 Keychain，**不进 SQLite**。WebDAV password 当前由 CC Switch settings 持有，Popskill 仅通过环境变量传给 sidecar，不另存副本。
 
 **验收**：拿一台干净的、没装过 Popskill 的 Mac，从 Releases 下 `.dmg` → 拖进 Applications → 双击打开，**全程零警告弹窗**。
@@ -1542,10 +1542,10 @@ open swift-app/Package.swift
 - ✅ AgentShield sidecar、Library 手动/持久化扫描、install-plan 安全预览、安装后 blocked 回滚、unmanaged import 前阻断已落地
 - ✅ Agent 只读管理已启动：默认扫描 `~/.claude/agents/**/*.md`，解析 name/description/tools/model；AgencyAgents catalog 可只读发现；agent-install-plan 可预览写入路径/冲突/转换需求；SwiftUI Agents 页支持搜索、分类、详情和 Agent target 诊断
 - ✅ WebDAV 状态、远端 snapshot 与 manual sync plan 只读入口已落地；upload/download 当前受 CC Switch Tauri State/private module 边界阻塞，先不绕实现
-- ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle/release smoke、development DMG 打包、release manifest/appcast 已落地
+- ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle/release smoke、development DMG 打包、release manifest/appcast 与严格 release doctor gate 已落地
 - ✅ Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 已按 60 天 inactive 生命周期 + transcript attribution 最近使用筛选，并支持单个/批量 stub
 - 🔴 WebDAV 手动 sync、正式 notarize、Sparkle 公开更新实测尚未落地
-- ✅ Sparkle SDK 正式 link 已落地：依赖固定为 Sparkle 2.9.1，App 二进制链接 `Sparkle.framework`，菜单入口、feed/key 配置守卫、framework copy hook、release doctor 检查已落地；SwiftPM 下载 Keychain 卡顿通过 `scripts/swiftpm.sh` 临时 HOME 构建 wrapper 固化规避
+- ✅ Sparkle SDK 正式 link 已落地：依赖固定为 Sparkle 2.9.1，App 二进制链接 `Sparkle.framework`，菜单入口、feed/key 配置守卫、framework copy hook、release doctor metadata/strict gate 检查已落地；SwiftPM 下载 Keychain 卡顿通过 `scripts/swiftpm.sh` 临时 HOME 构建 wrapper 固化规避
 - 🟡 视觉 tokens 与主要页面容器已按 `STYLE.md` 落地；Discover/Library/Settings/Updates 截图级 polish 与 README 截图已完成，screenshot smoke 已校验尺寸/字节/基础像素方差，仍需最终全局一致性检查
 
 下一个动作：v0.1 继续保持 Skill 中心化范围，优先做最终截图 QA、真实签名/公证与 Sparkle 公开 feed/key/signature 实测；Package 能力包重构等 v0.1 发布后进入 v0.2。
