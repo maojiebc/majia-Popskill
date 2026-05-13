@@ -157,7 +157,15 @@ struct DiscoverView: View {
                     ProgressView()
                         .controlSize(.large)
                 } else if viewModel.skills.isEmpty {
-                    ContentUnavailableView(emptyStateTitle, systemImage: "sparkles")
+                    DiscoverEmptyState(
+                        title: emptyStateTitle,
+                        hasLoadedOnce: viewModel.hasLoadedOnce,
+                        query: viewModel.query,
+                        onSearch: {
+                            Task { await viewModel.search() }
+                        },
+                        onManageRepositories: onManageRepositories
+                    )
                 }
             }
         }
@@ -234,6 +242,52 @@ struct DiscoverView: View {
         }
 
         return "No Matching Skills"
+    }
+}
+
+struct DiscoverEmptyState: View {
+    let title: String
+    let hasLoadedOnce: Bool
+    let query: String
+    let onSearch: () -> Void
+    let onManageRepositories: () -> Void
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(title, systemImage: "sparkles")
+        } description: {
+            Text(description)
+        } actions: {
+            HStack(spacing: 10) {
+                Button(actionTitle, action: onSearch)
+                    .buttonStyle(.borderedProminent)
+
+                Button {
+                    onManageRepositories()
+                } label: {
+                    Label("Repositories", systemImage: "folder.badge.gearshape")
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+    }
+
+    private var description: String {
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if !hasLoadedOnce {
+            return "Search enabled skill repositories for installable skills."
+        }
+
+        if !trimmedQuery.isEmpty {
+            return "No enabled repository returned a skill matching \"\(trimmedQuery)\"."
+        }
+
+        return "No installable skills were returned from the enabled repositories."
+    }
+
+    private var actionTitle: String {
+        hasLoadedOnce ? "Search Again" : "Search"
     }
 }
 

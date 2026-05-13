@@ -193,7 +193,12 @@ struct UpdatesView: View {
                     ProgressView()
                         .controlSize(.large)
                 } else if viewModel.updates.isEmpty {
-                    ContentUnavailableView(emptyStateTitle, systemImage: "checkmark.seal")
+                    UpdatesEmptyState(
+                        title: emptyStateTitle,
+                        hasCheckedOnce: viewModel.hasCheckedOnce
+                    ) {
+                        Task { await viewModel.check() }
+                    }
                 }
             }
         }
@@ -211,6 +216,33 @@ struct UpdatesView: View {
         }
 
         return "\(availability) · checked \(lastCheckedAt.formatted(date: .omitted, time: .shortened))"
+    }
+}
+
+struct UpdatesEmptyState: View {
+    let title: String
+    let hasCheckedOnce: Bool
+    let onCheck: () -> Void
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(title, systemImage: "checkmark.seal")
+        } description: {
+            Text(description)
+        } actions: {
+            Button {
+                onCheck()
+            } label: {
+                Label("Check Updates", systemImage: "arrow.clockwise")
+            }
+            .buttonStyle(.borderedProminent)
+        }
+    }
+
+    private var description: String {
+        hasCheckedOnce
+            ? "Installed GitHub-backed skills are current."
+            : "Compare installed GitHub-backed skills against their remote content hashes."
     }
 }
 
