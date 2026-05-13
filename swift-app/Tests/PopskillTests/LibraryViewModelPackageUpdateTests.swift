@@ -92,6 +92,45 @@ struct LibraryViewModelPackageUpdateTests {
         #expect(viewModel.updates(for: package).isEmpty)
     }
 
+    @Test
+    func recoverableStubForComponentMatchesSkillStubByDirectory() {
+        let viewModel = LibraryViewModel()
+        let stubbedSkill = Skill(
+            id: "owner/repo:lark-doc",
+            name: "Lark Doc",
+            description: "Doc skill",
+            directory: "lark-doc",
+            repoOwner: "owner",
+            repoName: "repo",
+            readmeUrl: nil,
+            apps: SkillApps(claude: false, codex: false, gemini: false, opencode: false, hermes: false),
+            installedAt: nil,
+            updatedAt: nil,
+            contentHash: nil
+        )
+
+        viewModel.stubs = [
+            StubbedSkill(
+                skill: stubbedSkill,
+                backupId: "backup-1",
+                backupPath: "/tmp/backup-1",
+                stubbedAt: 100
+            )
+        ]
+
+        let component = PackageComponent(
+            id: "lark-doc",
+            name: "Lark Doc",
+            kind: "skill",
+            required: true,
+            installed: false,
+            status: "stub",
+            location: "lark-doc"
+        )
+
+        #expect(viewModel.recoverableStub(for: component)?.id == "owner/repo:lark-doc")
+    }
+
     private func packageWithSkillComponent(id: String, name: String, location: String?) -> CapabilityPackage {
         CapabilityPackage(
             id: "pkg:\(id)",

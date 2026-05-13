@@ -162,6 +162,26 @@ final class LibraryViewModel {
         backupSnapshotByID[stub.backupId]
     }
 
+    func recoverableStub(for component: PackageComponent) -> StubbedSkill? {
+        guard !component.installed,
+              component.kind.caseInsensitiveCompare("skill") == .orderedSame
+        else {
+            return nil
+        }
+
+        return stubs.first { stub in
+            packageSkillComponent(component, matches: stub.skill)
+        }
+    }
+
+    @discardableResult
+    func rehydrateComponent(_ component: PackageComponent) async -> Bool {
+        guard let stub = recoverableStub(for: component) else {
+            return false
+        }
+        return await rehydrate(stub)
+    }
+
     func load() async {
         guard !isLoading else {
             return

@@ -56,8 +56,21 @@ struct LibraryView: View {
                         PackageDetailPane(
                             package: selectedPackage,
                             pendingUpdates: viewModel.updates(for: selectedPackage),
-                            lastCheckedUpdatesAt: viewModel.lastCheckedUpdatesAt
-                        )
+                            lastCheckedUpdatesAt: viewModel.lastCheckedUpdatesAt,
+                            selectedRehydrateApp: $viewModel.selectedRehydrateApp,
+                            recoverableStubForComponent: { component in
+                                viewModel.recoverableStub(for: component)
+                            },
+                            isRehydratingSkillID: { skillID in
+                                viewModel.isRehydrating(skillID: skillID)
+                            }
+                        ) { component in
+                            Task {
+                                if await viewModel.rehydrateComponent(component) {
+                                    await onLibraryMutation()
+                                }
+                            }
+                        }
                             .frame(width: 360)
                             .popMaterialCard()
                     }
@@ -571,6 +584,10 @@ struct PackageDetailPane: View {
     let package: CapabilityPackage?
     let pendingUpdates: [SkillUpdateInfo]
     let lastCheckedUpdatesAt: Date?
+    @Binding var selectedRehydrateApp: TargetApp
+    let recoverableStubForComponent: (PackageComponent) -> StubbedSkill?
+    let isRehydratingSkillID: (String) -> Bool
+    let onRehydrateComponent: (PackageComponent) -> Void
     @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
@@ -657,7 +674,36 @@ struct PackageDetailPane: View {
                         }
 
                         DetailSection(title: "Components", accent: PopskillSectionAccent.color(for: 1)) {
-                            PackageComponentTree(components: package.components)
+                            let rehydratableComponents = package.components.all.filter { component in
+                                recoverableStubForComponent(component) != nil
+                            }
+
+                            if !rehydratableComponents.isEmpty {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "icloud.and.arrow.down")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(Color.popStatusWarning)
+                                    Text("Recoverable skills can be rehydrated directly into the selected app target.")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Picker("Restore In", selection: $selectedRehydrateApp) {
+                                    ForEach(TargetApp.supported, id: \.id) { app in
+                                        Text(app.title).tag(app)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .frame(width: 160)
+                            }
+
+                            PackageComponentTree(
+                                components: package.components,
+                                restoreApp: selectedRehydrateApp,
+                                recoverableStubForComponent: recoverableStubForComponent,
+                                isRehydratingSkillID: isRehydratingSkillID,
+                                onRehydrateComponent: onRehydrateComponent
+                            )
                         }
 
                         DetailSection(title: "Config", accent: PopskillSectionAccent.color(for: 2)) {
@@ -786,11 +832,24 @@ struct PackageRow: View {
 
 struct PackageComponentTree: View {
     let components: PackageComponents
+    let restoreApp: TargetApp
+    let recoverableStubForComponent: (PackageComponent) -> StubbedSkill?
+    let isRehydratingSkillID: (String) -> Bool
+    let onRehydrateComponent: (PackageComponent) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(components.all, id: \.displayKey) { component in
-                PackageComponentLine(component: component)
+                let stub = recoverableStubForComponent(component)
+                PackageComponentLine(
+                    component: component,
+                    recoverableStub: stub,
+                    restoreApp: restoreApp,
+                    isRehydrating: stub.map { isRehydratingSkillID($0.id) } ?? false,
+                    onRehydrate: {
+                        onRehydrateComponent(component)
+                    }
+                )
             }
         }
     }
@@ -798,6 +857,10 @@ struct PackageComponentTree: View {
 
 struct PackageComponentLine: View {
     let component: PackageComponent
+    let recoverableStub: StubbedSkill?
+    let restoreApp: TargetApp
+    let isRehydrating: Bool
+    let onRehydrate: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
@@ -821,10 +884,27 @@ struct PackageComponentLine: View {
             Spacer(minLength: 8)
 
             if !component.installed {
-                Image(systemName: "icloud.and.arrow.down")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.popStatusWarning)
-                    .help("Rehydrate")
+                if recoverableStub != nil {
+                    Button(action: onRehydrate) {
+                        if isRehydrating {
+                            ProgressView()
+                                .controlSize(.mini)
+                                .frame(width: 14, height: 14)
+                        } else {
+                            Image(systemName: "icloud.and.arrow.down")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.popStatusWarning)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isRehydrating)
+                    .help("Rehydrate into \(restoreApp.title)")
+                } else {
+                    Image(systemName: "icloud.slash")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.popStatusNeutral)
+                        .help(componentRecoveryHint(component))
+                }
             }
 
             StatusPill(title: component.status.capitalized, color: componentStatusColor(component))
@@ -1369,6 +1449,22 @@ private func componentStatusColor(_ component: PackageComponent) -> Color {
     }
 
     return .popStatusNeutral
+}
+
+private func componentRecoveryHint(_ component: PackageComponent) -> String {
+    guard !component.installed else {
+        return "Installed"
+    }
+
+    if component.kind.caseInsensitiveCompare("skill") != .orderedSame {
+        return "Rehydrate is available only for skill components."
+    }
+
+    if component.isRecoverable {
+        return "Recoverable component without a local stub backup."
+    }
+
+    return "Missing component that requires reinstall."
 }
 
 private func packageRepositoryLabel(_ package: CapabilityPackage, fallback: String) -> String {
