@@ -6,6 +6,7 @@ import SwiftUI
 final class SettingsViewModel {
     var health: SidecarHealth?
     var isLoading = false
+    var hasLoadedOnce = false
     var errorMessage: String?
 
     private let client = SkillCLIClient()
@@ -13,14 +14,16 @@ final class SettingsViewModel {
     func load() async {
         isLoading = true
         errorMessage = nil
+        defer {
+            isLoading = false
+            hasLoadedOnce = true
+        }
 
         do {
             health = try await client.health()
         } catch {
             errorMessage = error.localizedDescription
         }
-
-        isLoading = false
     }
 }
 
@@ -105,7 +108,7 @@ struct SettingsView: View {
         }
         .background(Color.popMainBackground)
         .task {
-            if viewModel.health == nil {
+            if !viewModel.hasLoadedOnce {
                 await viewModel.load()
             }
         }
