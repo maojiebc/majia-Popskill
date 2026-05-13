@@ -473,6 +473,17 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
     var missingRequiredComponentCount: Int {
         components.all.filter { $0.required && !$0.installed }.count
     }
+
+    var recoverableMissingComponentCount: Int {
+        components.all.filter { !$0.installed && $0.isRecoverable }.count
+    }
+
+    var primaryComponentKindsLabel: String {
+        let kinds = components.all.map { $0.kind.lowercased() }
+        let orderedKinds = ["skill", "cli", "mcp", "agent"]
+        let labels = orderedKinds.filter { kinds.contains($0) }.map(\.capitalized)
+        return labels.isEmpty ? "Unknown" : labels.joined(separator: " + ")
+    }
 }
 
 struct PackageSource: Codable, Equatable {
@@ -519,6 +530,15 @@ struct PackageComponent: Codable, Equatable {
 
     var displayKey: String {
         "\(kind):\(id)"
+    }
+
+    var isRecoverable: Bool {
+        switch status.lowercased() {
+        case "available", "declared", "stub", "registry-reference":
+            return true
+        default:
+            return false
+        }
     }
 }
 

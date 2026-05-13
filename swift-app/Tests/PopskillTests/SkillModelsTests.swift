@@ -603,6 +603,58 @@ struct SkillModelsTests {
         ]).health == .blocked)
     }
 
+    @Test
+    func capabilityPackageRecoverableMissingAndPrimaryKinds() {
+        let package = CapabilityPackage(
+            id: "pkg:mix",
+            type: .composite,
+            name: "Mix",
+            vendor: nil,
+            summary: "Mixed package",
+            source: PackageSource(
+                kind: "builtin",
+                location: "mix",
+                updateStrategy: "manual",
+                repoOwner: nil,
+                repoName: nil,
+                repoBranch: nil,
+                readmeUrl: nil
+            ),
+            components: PackageComponents(
+                cli: [
+                    PackageComponent(
+                        id: "tool",
+                        name: "tool",
+                        kind: "cli",
+                        required: true,
+                        installed: false,
+                        status: "declared",
+                        location: nil
+                    )
+                ],
+                skills: [
+                    PackageComponent(
+                        id: "skill-a",
+                        name: "Skill A",
+                        kind: "skill",
+                        required: true,
+                        installed: true,
+                        status: "installed",
+                        location: "skill-a"
+                    )
+                ],
+                mcp: [],
+                agents: []
+            ),
+            configSchema: [],
+            installed: true,
+            lifecycle: nil
+        )
+
+        #expect(package.recoverableMissingComponentCount == 1)
+        #expect(package.primaryComponentKindsLabel == "Skill + Cli")
+    }
+
     private func catalogSkill(repoBranch: String?) -> CatalogSkill {
         CatalogSkill(
             key: "maojiebc/majia-skills/demo",

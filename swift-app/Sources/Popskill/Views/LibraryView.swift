@@ -600,11 +600,17 @@ struct PackageDetailPane: View {
                         HStack(spacing: 8) {
                             StatusPill(title: package.typeLabel, color: packageColor(package.type))
                             StatusPill(title: package.health.title, color: packageHealthColor(package.health))
+                            if !pendingUpdates.isEmpty {
+                                StatusPill(title: "Update Available", color: .popStatusWarning)
+                            }
                         }
 
                         DetailSection(title: "Update Status", accent: PopskillSectionAccent.color(for: 0)) {
                             let lifecycle = package.lifecycle ?? .untracked
-                            DetailField(title: "Health", value: package.health.title)
+                            DetailField(
+                                title: "Lifecycle State",
+                                value: packageLifecycleStateLabel(package, pendingUpdates: pendingUpdates.count)
+                            )
                             DetailField(title: "Pending Updates", value: "\(pendingUpdates.count)")
                             DetailField(
                                 title: "Last Checked",
@@ -612,8 +618,8 @@ struct PackageDetailPane: View {
                                     ?? localization.string("Not Tracked")
                             )
                             DetailField(
-                                title: "Version",
-                                value: package.source.repoBranch.map { "@\($0)" } ?? localization.string("Not Tracked")
+                                title: "Update Channel",
+                                value: packageUpdateChannelLabel(package)
                             )
                             DetailField(
                                 title: "Installed Date",
@@ -626,6 +632,7 @@ struct PackageDetailPane: View {
                             DetailField(title: "Installed Components", value: "\(package.installedComponentCount) / \(package.componentCount)")
                             DetailField(title: "Missing Components", value: "\(package.missingComponentCount)")
                             DetailField(title: "Required Missing", value: "\(package.missingRequiredComponentCount)")
+                            DetailField(title: "Recoverable Missing", value: "\(package.recoverableMissingComponentCount)")
                             if let hash = lifecycle.contentHash, !hash.isEmpty {
                                 DetailField(title: "Hash", value: String(hash.prefix(12)))
                             }
@@ -678,9 +685,10 @@ struct PackageDetailPane: View {
 
                         DetailSection(title: "Source & Docs", accent: PopskillSectionAccent.color(for: 3)) {
                             DetailField(title: "Type", value: package.typeLabel)
-                            DetailField(title: "Source Kind", value: package.source.kind)
+                            DetailField(title: "Package Kinds", value: package.primaryComponentKindsLabel)
+                            DetailField(title: "Source Kind", value: packageSourceKindLabel(package.source.kind))
                             DetailField(title: "Location", value: package.source.location)
-                            DetailField(title: "Update Strategy", value: package.source.updateStrategy)
+                            DetailField(title: "Update Strategy", value: packageUpdateStrategyLabel(package.source.updateStrategy))
                             DetailField(
                                 title: "Repository",
                                 value: packageRepositoryLabel(package, fallback: localization.string("Not Tracked"))
@@ -1356,12 +1364,11 @@ private func componentStatusColor(_ component: PackageComponent) -> Color {
         return .popStatusOK
     }
 
-    switch component.status.lowercased() {
-    case "available", "declared", "stub", "registry-reference":
+    if component.isRecoverable {
         return component.required ? .popStatusWarning : .popStatusNeutral
-    default:
-        return .popStatusNeutral
     }
+
+    return .popStatusNeutral
 }
 
 private func packageRepositoryLabel(_ package: CapabilityPackage, fallback: String) -> String {
@@ -1388,6 +1395,67 @@ private func packageReadmeURL(_ package: CapabilityPackage) -> URL? {
         return nil
     }
     return url
+}
+
+private func packageLifecycleStateLabel(_ package: CapabilityPackage, pendingUpdates: Int) -> String {
+    if package.missingRequiredComponentCount > 0 {
+        return "Blocked (missing required components)"
+    }
+    if package.missingComponentCount > 0 {
+        if package.recoverableMissingComponentCount > 0 {
+            return "Partial (rehydrate available)"
+        }
+        return "Partial (missing components)"
+    }
+    if pendingUpdates > 0 {
+        return "Update available"
+    }
+    if package.installedComponentCount > 0 {
+        return "Up to date"
+    }
+    return "Not installed"
+}
+
+private func packageUpdateChannelLabel(_ package: CapabilityPackage) -> String {
+    guard let owner = package.source.repoOwner,
+          let name = package.source.repoName,
+          !owner.isEmpty,
+          !name.isEmpty
+    else {
+        return package.source.repoBranch.map { "branch \($0)" } ?? "manual"
+    }
+
+    if let branch = package.source.repoBranch, !branch.isEmpty {
+        return "\(owner)/\(name)@\(branch)"
+    }
+
+    return "\(owner)/\(name)"
+}
+
+private func packageSourceKindLabel(_ kind: String) -> String {
+    switch kind.lowercased() {
+    case "builtin":
+        return "Built-in"
+    case "github":
+        return "GitHub"
+    case "local":
+        return "Local"
+    default:
+        return kind.capitalized
+    }
+}
+
+private func packageUpdateStrategyLabel(_ strategy: String) -> String {
+    switch strategy.lowercased() {
+    case "manual":
+        return "Manual"
+    case "git":
+        return "Git"
+    case "registry":
+        return "Registry"
+    default:
+        return strategy.capitalized
+    }
 }
 
 private func packagePrimaryFolderURL(_ package: CapabilityPackage) -> URL? {
