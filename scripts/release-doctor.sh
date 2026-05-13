@@ -134,7 +134,9 @@ fi
 echo
 if [[ "$failures" -gt 0 ]]; then
   echo "release-doctor: not ready ($failures failure(s), $warnings warning(s))"
+  echo "release-doctor: see docs/release-runbook.md for credential and notarization setup"
   exit 1
 fi
 
 echo "release-doctor: ready ($warnings warning(s))"
+echo "release-doctor: see docs/release-runbook.md for the notarization and appcast release flow"
