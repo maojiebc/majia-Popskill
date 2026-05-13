@@ -586,55 +586,56 @@ struct SkillRow: View {
     let onToggle: (TargetApp, Bool) -> Void
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(alignment: .top, spacing: 14) {
             InitialAvatarView(name: skill.name, identifier: skill.id)
 
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 8) {
-                    Text(skill.name)
-                        .font(.system(.headline, weight: .semibold))
-                        .foregroundStyle(Color.popLabel)
+            VStack(alignment: .leading, spacing: 9) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 8) {
+                        Text(skill.name)
+                            .font(.system(.headline, weight: .semibold))
+                            .foregroundStyle(Color.popLabel)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+
+                        if skill.enabledAppCount == 0 {
+                            StatusPill(title: "Inactive", color: .popStatusNeutral)
+                        }
+
+                        if let securityScanResult {
+                            StatusPill(
+                                title: securityScanTitle(securityScanResult),
+                                color: securityScanColor(securityScanResult)
+                            )
+                        }
+                    }
+
+                    Text(skill.description)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+
+                    Text(skill.sourceLabel)
+                        .font(.caption)
+                        .foregroundStyle(Color.popTertiaryLabel)
                         .lineLimit(1)
-
-                    if skill.enabledAppCount == 0 {
-                        StatusPill(title: "Inactive", color: .popStatusNeutral)
-                    }
-
-                    if let securityScanResult {
-                        StatusPill(
-                            title: securityScanTitle(securityScanResult),
-                            color: securityScanColor(securityScanResult)
-                        )
-                    }
                 }
 
-                Text(skill.description)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-
-                Text(skill.sourceLabel)
-                    .font(.caption)
-                    .foregroundStyle(Color.popTertiaryLabel)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 20)
-
-            HStack(spacing: 8) {
-                ForEach([TargetApp.claude, .codex, .gemini], id: \.id) { app in
-                    AppToggle(
-                        title: app.title,
-                        isOn: skill.apps.isEnabled(app),
-                        isPending: isToggling(app)
-                    ) { enabled in
-                        onToggle(app, enabled)
+                HStack(spacing: 8) {
+                    ForEach([TargetApp.claude, .codex, .gemini], id: \.id) { app in
+                        AppToggle(
+                            title: app.title,
+                            isOn: skill.apps.isEnabled(app),
+                            isPending: isToggling(app)
+                        ) { enabled in
+                            onToggle(app, enabled)
+                        }
                     }
                 }
+                .fixedSize(horizontal: true, vertical: false)
             }
-            .frame(width: 250, alignment: .trailing)
         }
-        .frame(minHeight: 68)
+        .frame(minHeight: 94)
     }
 }
 

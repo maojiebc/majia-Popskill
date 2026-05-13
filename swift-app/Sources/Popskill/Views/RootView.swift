@@ -154,13 +154,13 @@ struct RootView: View {
 
     @ViewBuilder
     private func sidebarLink(_ item: SidebarSelection, badge: Int? = nil) -> some View {
-        let label = Label(item.title, systemImage: item.symbolName)
-            .tag(item)
-
         if let badge {
-            label.badge(badge)
+            Label(item.title, systemImage: item.symbolName)
+                .badge(badge)
+                .tag(item)
         } else {
-            label
+            Label(item.title, systemImage: item.symbolName)
+                .tag(item)
         }
     }
 }
