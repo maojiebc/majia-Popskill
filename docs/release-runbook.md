@@ -15,6 +15,7 @@ Before Apple Developer Program credentials are available, this is expected:
 - The app bundle should contain `Sparkle.framework`, and the app executable should have an `@executable_path/../Frameworks` rpath.
 - For public releases, the app bundle version and bundle identifier should match `POPSKILL_APP_VERSION` and `POPSKILL_BUNDLE_IDENTIFIER`.
 - If `build/release-manifest.json` exists, release doctor should confirm its version/build, artifact path/name, SHA-256, and byte size match the current app bundle and DMG.
+- Set `POPSKILL_REQUIRE_RELEASE_METADATA=true` for public releases so missing `POPSKILL_APP_VERSION`, `POPSKILL_APP_BUILD`, or `POPSKILL_BUNDLE_IDENTIFIER` are failures, not warnings.
 - Release doctor should fail on missing Developer ID identity and missing notary credentials.
 - Release doctor should fail if the Sparkle feed, download URL, app bundle metadata, or existing appcast still contains a placeholder `example.com` URL.
 - When Sparkle env vars are set, release doctor should confirm the `.app` bundle's `SUFeedURL` and `SUPublicEDKey` match those env vars. If they mismatch, rebuild with `scripts/package-dev-app.sh`.
@@ -54,6 +55,7 @@ export POPSKILL_NOTARY_KEYCHAIN_PROFILE="popskill-notary"
 export POPSKILL_APP_VERSION="0.1.0"
 export POPSKILL_APP_BUILD="1"
 export POPSKILL_BUNDLE_IDENTIFIER="com.maojiebc.popskill"
+export POPSKILL_REQUIRE_RELEASE_METADATA=true
 ```
 
 For Sparkle-enabled builds, also set:
@@ -94,7 +96,7 @@ Then check release readiness:
 ./scripts/release-doctor.sh
 ```
 
-With Developer ID, notary credentials, and public Sparkle metadata present, release doctor should have zero failures. Sparkle warnings are allowed only for unsigned/manual distribution builds; use `POPSKILL_REQUIRE_SPARKLE=true` for public Sparkle-enabled releases.
+With Developer ID, notary credentials, public release metadata, and public Sparkle metadata present, release doctor should have zero failures. Sparkle warnings are allowed only for unsigned/manual distribution builds; use `POPSKILL_REQUIRE_SPARKLE=true` for public Sparkle-enabled releases.
 
 If you change `POPSKILL_SPARKLE_FEED_URL`, `POPSKILL_SPARKLE_PUBLIC_ED_KEY`, `POPSKILL_APP_VERSION`, `POPSKILL_APP_BUILD`, or `POPSKILL_BUNDLE_IDENTIFIER`, rebuild the app bundle and regenerate release artifacts before trusting release doctor:
 
@@ -127,7 +129,7 @@ After notarization succeeds:
 ./scripts/package-dmg.sh
 ./scripts/release-manifest.sh
 ./scripts/generate-appcast.sh
-POPSKILL_REQUIRE_SPARKLE=true ./scripts/release-doctor.sh
+POPSKILL_REQUIRE_RELEASE_METADATA=true POPSKILL_REQUIRE_SPARKLE=true ./scripts/release-doctor.sh
 ```
 
 Verify the appcast smoke path without writing a public appcast:
@@ -160,7 +162,7 @@ gh release create v0.1.0 \
   --notes-file docs/release-notes-v0.1.md
 ```
 
-After upload, download the DMG from the draft release URL on a clean macOS user account and repeat the Gatekeeper check below. If the appcast URL changes after upload, regenerate `release-manifest.json` and `appcast.xml`, then rerun `POPSKILL_REQUIRE_SPARKLE=true ./scripts/release-doctor.sh` before replacing the draft assets.
+After upload, download the DMG from the draft release URL on a clean macOS user account and repeat the Gatekeeper check below. If the appcast URL changes after upload, regenerate `release-manifest.json` and `appcast.xml`, then rerun `POPSKILL_REQUIRE_RELEASE_METADATA=true POPSKILL_REQUIRE_SPARKLE=true ./scripts/release-doctor.sh` before replacing the draft assets.
 
 ## Manual Gatekeeper Check
 

@@ -20,6 +20,7 @@ APPCAST_DOWNLOAD_URL="${POPSKILL_APPCAST_DOWNLOAD_URL:-}"
 RELEASE_BASE_URL="${POPSKILL_RELEASE_BASE_URL:-}"
 ALLOW_PLACEHOLDER="${POPSKILL_ALLOW_PLACEHOLDER_APPCAST:-false}"
 REQUIRE_SPARKLE="${POPSKILL_REQUIRE_SPARKLE:-false}"
+REQUIRE_RELEASE_METADATA="${POPSKILL_REQUIRE_RELEASE_METADATA:-false}"
 PLIST_BUDDY="/usr/libexec/PlistBuddy"
 
 failures=0
@@ -41,6 +42,14 @@ fail() {
 
 warn_or_fail_sparkle() {
   if [[ "$REQUIRE_SPARKLE" == true ]]; then
+    fail "$*"
+  else
+    warn "$*"
+  fi
+}
+
+warn_or_fail_release_metadata() {
+  if [[ "$REQUIRE_RELEASE_METADATA" == true ]]; then
     fail "$*"
   else
     warn "$*"
@@ -134,8 +143,10 @@ if [[ -d "$APP_PATH" ]]; then
       else
         fail "app version mismatch: expected $EXPECTED_APP_VERSION, found ${app_version:-unknown}"
       fi
+    elif [[ "$REQUIRE_RELEASE_METADATA" == true ]]; then
+      fail "set POPSKILL_APP_VERSION for public release metadata verification"
     elif [[ "$app_version" == *"-dev"* ]]; then
-      warn "app version is a development version: $app_version"
+      warn_or_fail_release_metadata "app version is a development version: $app_version"
     fi
 
     if [[ -n "$EXPECTED_APP_BUILD" ]]; then
@@ -144,6 +155,8 @@ if [[ -d "$APP_PATH" ]]; then
       else
         fail "app build mismatch: expected $EXPECTED_APP_BUILD, found ${app_build:-unknown}"
       fi
+    elif [[ "$REQUIRE_RELEASE_METADATA" == true ]]; then
+      fail "set POPSKILL_APP_BUILD for public release metadata verification"
     fi
 
     if [[ -n "$EXPECTED_BUNDLE_IDENTIFIER" ]]; then
@@ -152,8 +165,10 @@ if [[ -d "$APP_PATH" ]]; then
       else
         fail "bundle identifier mismatch: expected $EXPECTED_BUNDLE_IDENTIFIER, found ${bundle_identifier:-unknown}"
       fi
+    elif [[ "$REQUIRE_RELEASE_METADATA" == true ]]; then
+      fail "set POPSKILL_BUNDLE_IDENTIFIER for public release metadata verification"
     elif [[ "$bundle_identifier" == *".dev" ]]; then
-      warn "bundle identifier is a development identifier: $bundle_identifier"
+      warn_or_fail_release_metadata "bundle identifier is a development identifier: $bundle_identifier"
     fi
 
     check_placeholder_url "app bundle Sparkle feed URL" "$bundle_feed_url"

@@ -237,8 +237,8 @@ cd ~/projects/popskill
 # 检查 Developer ID / notarization / appcast 发布前置条件（不签名、不上传）
 ./scripts/release-doctor.sh
 
-# 公开 Sparkle 发布时，把缺失的 feed/key/download/signature/appcast 从 warning 提升为 failure
-POPSKILL_REQUIRE_SPARKLE=true ./scripts/release-doctor.sh
+# 公开发布时，把 dev metadata 与缺失的 feed/key/download/signature/appcast 从 warning 提升为 failure
+POPSKILL_REQUIRE_RELEASE_METADATA=true POPSKILL_REQUIRE_SPARKLE=true ./scripts/release-doctor.sh
 
 # 生成 release metadata（version / build / dmg sha256 / size）
 ./scripts/release-manifest.sh
