@@ -1019,7 +1019,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 | Week 5 | Updates 页 + 自动检查 | ✅ Updates 页面完成，含 Update All 和 last checked 状态 | Sparkle SDK 尚未集成；Popskill 自身更新仍是 appcast 生成 smoke |
 | Week 6 | Stub 状态机 | ✅ 已完成 | 60 天建议已落在 Idle Candidates，并避开最近 60 天内有 transcript attribution 使用的 skill |
 | Week 7 | WebDAV 同步 UI | 🟡 只读边界已完成 | Settings 已有 status + remote info；配置写入、Keychain、Sync Now 留给 v0.1 收口 |
-| Week 8 | 打磨 + 打包 | 🟡 pipeline 已打通，release doctor 可检查 Developer ID/notary 前置条件 | 需要 Apple Developer Program 通过、真实签名/公证、Sparkle SDK、README/截图和人工验收 |
+| Week 8 | 打磨 + 打包 | 🟡 pipeline 已打通，release doctor 可检查 Developer ID/notary 前置条件，README 截图已补 | 需要 Apple Developer Program 通过、真实签名/公证、Sparkle SDK 和人工验收 |
 
 ### v0.1 收口清单
 
@@ -1038,7 +1038,8 @@ struct CLIResponse<T: Decodable>: Decodable {
 - [ ] WebDAV v0.1：配置表单、Keychain 保存、手动 Sync Now、冲突/失败态。
 - [x] Transcript boundary：UI/文档说明本地聚合并忽略消息正文。
 - [x] Transcript attribution：已验证真实 `attributionSkill` 调用标记，补 skill 级归因统计与 Idle Candidates 最近使用过滤。
-- [ ] README 截图与最终视觉 QA：补真实界面截图，并做一次全局一致性检查。
+- [x] README 截图：Discover、Library、Usage Insights、Idle Candidates 真实界面截图已补到 `docs/assets/screenshots/`。
+- [ ] 最终视觉 QA：发布前再做一次全局一致性检查。
 
 ---
 
@@ -1318,6 +1319,6 @@ open swift-app/Package.swift
 - ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle/release smoke、development DMG 打包、release manifest/appcast 已落地
 - ✅ Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 已按 60 天 inactive 生命周期 + transcript attribution 最近使用筛选，并支持单个/批量 stub
 - 🔴 WebDAV 配置/手动 sync、正式 notarize、Sparkle SDK 接入尚未落地
-- 🟡 视觉 tokens 与主要页面容器已按 `STYLE.md` 落地；Discover/Library/Settings/Updates 截图级 polish 已完成，仍需 README 截图和最终全局一致性检查
+- 🟡 视觉 tokens 与主要页面容器已按 `STYLE.md` 落地；Discover/Library/Settings/Updates 截图级 polish 与 README 截图已完成，仍需最终全局一致性检查
 
-下一个动作：暂停扩新业务面，继续补 README 截图、WebDAV 配置/同步、公证 release 流程和 Sparkle SDK。
+下一个动作：暂停扩新业务面，继续补 WebDAV 配置/同步、公证 release 流程和 Sparkle SDK。

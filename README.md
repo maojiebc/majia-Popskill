@@ -22,7 +22,18 @@ Popskill aims to be the App Store experience that Claude Code skills deserve on 
 
 **Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
 
-**Current stage**: MVP feature verticals are implemented locally. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install-plan/install/update/uninstall/import/repository/backup/WebDAV status flows; SwiftUI Library + Discover + Repositories + Updates + Backups + Insights + Settings compile and pass tests; `scripts/ci-local.sh` verifies Rust/Swift builds, read-only sidecar smoke, native launch smoke, bundle smoke, and release artifact smoke. Remaining v0.1 work is release hardening: Developer ID signing/notarization, Sparkle SDK integration, WebDAV config/manual sync, README screenshots, and final screenshot QA. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
+**Current stage**: MVP feature verticals are implemented locally. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install-plan/install/update/uninstall/import/repository/backup/WebDAV status flows; SwiftUI Library + Discover + Repositories + Updates + Backups + Insights + Settings compile and pass tests; `scripts/ci-local.sh` verifies Rust/Swift builds, read-only sidecar smoke, native launch smoke, bundle smoke, and release artifact smoke. Remaining v0.1 work is release hardening: Developer ID signing/notarization, Sparkle SDK integration, WebDAV config/manual sync, and final screenshot QA. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
+
+## Screenshots
+
+![Popskill Discover](./docs/assets/screenshots/popskill-discover.png)
+
+<p align="center">
+  <img src="./docs/assets/screenshots/popskill-library.png" alt="Popskill Library" width="48%">
+  <img src="./docs/assets/screenshots/popskill-usage.png" alt="Popskill Usage Insights" width="48%">
+</p>
+
+![Popskill Idle Candidates](./docs/assets/screenshots/popskill-idle-candidates.png)
 
 ---
 
@@ -75,7 +86,7 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 | C. 产品形态 V1 | ✅ 5 个页面 wireframe + 状态机 + 16 条决策 |
 | D-prep. 视觉设计语言 | ✅ Surge.app 拆解 + 22 个 design token |
 | **D. MVP 主链路** | ✅ sidecar + SwiftUI Library/Discover/Repositories/Updates/Backups/Insights/Settings 已可编译并通过本地 CI |
-| **E. v0.1 发布收口** | 🚧 签名/公证、Sparkle SDK、WebDAV 配置/同步、README 截图；主要页面截图级 polish 与 transcript skill attribution 已完成 |
+| **E. v0.1 发布收口** | 🚧 签名/公证、Sparkle SDK、WebDAV 配置/同步；README 截图、主要页面截图级 polish 与 transcript skill attribution 已完成 |
 
 **这个仓库目前是 pre-alpha**：已有 Rust sidecar、SwiftUI Library/Discover/Repositories/Updates/Backups/Insights/Settings 页面、transcript scanner 单测和本地 CI。Stub 与 AgentShield 已有可用纵切；WebDAV 目前完成状态/远端 snapshot 只读边界，配置写入和手动 Sync Now 还没做。正式签名、公证、Sparkle SDK 更新和 App Store 分发还没完成；本地 DMG、release manifest、appcast 生成与 notarize 脚本骨架已先落位。
 
@@ -132,7 +143,8 @@ SwiftUI 端已接入：
 - ⏳ Notarization：拿到证书后跑 `scripts/notarize.sh`，验证 `stapler validate` 和 Gatekeeper 打开路径。
 - ⏳ Sparkle SDK：当前只能生成 appcast；App 内更新检查尚未集成。
 - ⏳ WebDAV v0.1：当前只读 status/remote info；配置表单、Keychain 保存、手动 Sync Now、失败态仍待实现。
-- ⏳ README 截图与最终视觉验收：发布前补真实界面截图，并做一次全局截图 QA。
+- ✅ README 截图：Discover、Library、Usage Insights、Idle Candidates 真实界面截图已补到 `docs/assets/screenshots/`。
+- ⏳ 最终视觉验收：发布前再做一次全局截图 QA。
 
 ### 文档导航
 
