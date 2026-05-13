@@ -167,6 +167,8 @@ Returns CC Switch skill repositories used by Discover.
 
 Adds or replaces one CC Switch skill repository used by Discover.
 
+`owner` and `name` are trimmed, `name` strips a trailing `.git`, and both segments must be non-empty without slashes or whitespace.
+
 ```json
 {
   "ok": true,
@@ -183,6 +185,8 @@ Adds or replaces one CC Switch skill repository used by Discover.
 
 Enables or disables one configured skill repository. Installed skills are not modified.
 
+`owner` and `name` follow the same normalization rules as `repo-add`.
+
 ```json
 {
   "ok": true,
@@ -197,6 +201,8 @@ Enables or disables one configured skill repository. Installed skills are not mo
 ### `skill-cli repo-remove --owner <owner> --name <name> --json`
 
 Removes one configured skill repository from CC Switch discovery sources. Installed skills are not uninstalled.
+
+`owner` and `name` follow the same normalization rules as `repo-add`.
 
 ```json
 {
