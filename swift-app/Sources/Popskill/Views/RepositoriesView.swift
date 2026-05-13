@@ -86,7 +86,10 @@ final class RepositoriesViewModel {
 
         if !nameInput.isEmpty {
             let name = Self.strippingGitSuffix(from: nameInput)
-            return ownerInput.isEmpty || name.isEmpty ? nil : (ownerInput, name)
+            guard Self.isValidRepositorySegment(ownerInput), Self.isValidRepositorySegment(name) else {
+                return nil
+            }
+            return (ownerInput, name)
         }
 
         let normalized = ownerInput
@@ -100,12 +103,13 @@ final class RepositoriesViewModel {
             return nil
         }
 
+        let owner = String(parts[0])
         let name = Self.strippingGitSuffix(from: String(parts[1]))
-        guard !name.isEmpty else {
+        guard Self.isValidRepositorySegment(owner), Self.isValidRepositorySegment(name) else {
             return nil
         }
 
-        return (String(parts[0]), name)
+        return (owner, name)
     }
 
     nonisolated private static func strippingGitSuffix(from value: String) -> String {
@@ -113,6 +117,12 @@ final class RepositoriesViewModel {
             return value
         }
         return String(value.dropLast(4))
+    }
+
+    nonisolated private static func isValidRepositorySegment(_ value: String) -> Bool {
+        !value.isEmpty
+            && !value.contains("/")
+            && !value.contains(where: \.isWhitespace)
     }
 
     @discardableResult

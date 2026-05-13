@@ -297,7 +297,7 @@ async fn run() -> Result<()> {
             enabled,
             json: _,
         } => {
-            let owner = normalize_required("repository owner", &owner)?;
+            let owner = normalize_repository_owner(&owner)?;
             let name = normalize_repository_name(&name)?;
             let branch = normalize_branch(&branch);
 
@@ -319,7 +319,7 @@ async fn run() -> Result<()> {
             enabled,
             json: _,
         } => {
-            let owner = normalize_required("repository owner", &owner)?;
+            let owner = normalize_repository_owner(&owner)?;
             let name = normalize_repository_name(&name)?;
             let mut repos = db
                 .get_skill_repos()
@@ -344,7 +344,7 @@ async fn run() -> Result<()> {
             name,
             json: _,
         } => {
-            let owner = normalize_required("repository owner", &owner)?;
+            let owner = normalize_repository_owner(&owner)?;
             let name = normalize_repository_name(&name)?;
             db.delete_skill_repo(&owner, &name)
                 .with_context(|| format!("failed to remove skill repository '{owner}/{name}'"))?;
@@ -475,13 +475,27 @@ fn normalize_required(label: &str, value: &str) -> Result<String> {
     Ok(trimmed.to_string())
 }
 
+fn normalize_repository_owner(value: &str) -> Result<String> {
+    let owner = normalize_required("repository owner", value)?;
+    ensure_valid_repository_segment("repository owner", &owner)?;
+    Ok(owner)
+}
+
 fn normalize_repository_name(value: &str) -> Result<String> {
     let name = normalize_required("repository name", value)?;
     let name = strip_git_suffix(&name);
     if name.is_empty() {
         bail!("repository name is required");
     }
+    ensure_valid_repository_segment("repository name", &name)?;
     Ok(name)
+}
+
+fn ensure_valid_repository_segment(label: &str, value: &str) -> Result<()> {
+    if value.contains('/') || value.chars().any(char::is_whitespace) {
+        bail!("{label} must not contain slashes or whitespace");
+    }
+    Ok(())
 }
 
 fn strip_git_suffix(value: &str) -> String {
@@ -593,6 +607,14 @@ mod tests {
     }
 
     #[test]
+    fn normalize_repository_owner_rejects_invalid_segments() {
+        let message = normalize_repository_owner("owner/repo")
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("repository owner must not contain slashes or whitespace"));
+    }
+
+    #[test]
     fn normalize_repository_name_strips_only_git_suffix() {
         assert_eq!(
             normalize_repository_name(" widget.git-tools.git ").unwrap(),
@@ -604,6 +626,14 @@ mod tests {
     fn normalize_repository_name_rejects_empty_name_after_stripping() {
         let message = normalize_repository_name(".git").unwrap_err().to_string();
         assert!(message.contains("repository name is required"));
+    }
+
+    #[test]
+    fn normalize_repository_name_rejects_invalid_segments() {
+        let message = normalize_repository_name("bad repo")
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("repository name must not contain slashes or whitespace"));
     }
 
     #[test]

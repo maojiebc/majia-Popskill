@@ -89,4 +89,21 @@ struct RepositoryInputTests {
         #expect(parts?.owner == nil)
         #expect(parts?.name == nil)
     }
+
+    @Test
+    func rejectsInvalidSeparateRepositorySegments() {
+        let ownerWithSlash = RepositoriesViewModel.normalizedRepositoryParts(
+            ownerInput: "maojiebc/majia-skills",
+            nameInput: "skills"
+        )
+        let nameWithWhitespace = RepositoriesViewModel.normalizedRepositoryParts(
+            ownerInput: "maojiebc",
+            nameInput: "bad repo"
+        )
+
+        #expect(ownerWithSlash?.owner == nil)
+        #expect(ownerWithSlash?.name == nil)
+        #expect(nameWithWhitespace?.owner == nil)
+        #expect(nameWithWhitespace?.name == nil)
+    }
 }
