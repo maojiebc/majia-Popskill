@@ -298,7 +298,7 @@ async fn run() -> Result<()> {
             json: _,
         } => {
             let owner = normalize_required("repository owner", &owner)?;
-            let name = normalize_required("repository name", &name)?;
+            let name = normalize_repository_name(&name)?;
             let branch = normalize_branch(&branch);
 
             // Infer CC Switch's SkillRepo type from save_skill_repo to avoid patching the submodule.
@@ -320,7 +320,7 @@ async fn run() -> Result<()> {
             json: _,
         } => {
             let owner = normalize_required("repository owner", &owner)?;
-            let name = normalize_required("repository name", &name)?;
+            let name = normalize_repository_name(&name)?;
             let mut repos = db
                 .get_skill_repos()
                 .context("failed to load skill repositories")?;
@@ -345,7 +345,7 @@ async fn run() -> Result<()> {
             json: _,
         } => {
             let owner = normalize_required("repository owner", &owner)?;
-            let name = normalize_required("repository name", &name)?;
+            let name = normalize_repository_name(&name)?;
             db.delete_skill_repo(&owner, &name)
                 .with_context(|| format!("failed to remove skill repository '{owner}/{name}'"))?;
             print_json(&ApiResponse::ok(json!({
@@ -475,6 +475,15 @@ fn normalize_required(label: &str, value: &str) -> Result<String> {
     Ok(trimmed.to_string())
 }
 
+fn normalize_repository_name(value: &str) -> Result<String> {
+    let name = normalize_required("repository name", value)?;
+    Ok(strip_git_suffix(&name))
+}
+
+fn strip_git_suffix(value: &str) -> String {
+    value.strip_suffix(".git").unwrap_or(value).to_string()
+}
+
 fn normalize_branch(branch: &str) -> String {
     let trimmed = branch.trim();
     if trimmed.is_empty() {
@@ -577,6 +586,14 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(message.contains("repository name is required"));
+    }
+
+    #[test]
+    fn normalize_repository_name_strips_only_git_suffix() {
+        assert_eq!(
+            normalize_repository_name(" widget.git-tools.git ").unwrap(),
+            "widget.git-tools"
+        );
     }
 
     #[test]
