@@ -15,7 +15,8 @@ Before Apple Developer Program credentials are available, this is expected:
 - The app bundle should contain `Sparkle.framework`, and the app executable should have an `@executable_path/../Frameworks` rpath.
 - For public releases, the app bundle version and bundle identifier should match `POPSKILL_APP_VERSION` and `POPSKILL_BUNDLE_IDENTIFIER`.
 - Release doctor should fail on missing Developer ID identity and missing notary credentials.
-- Release doctor fails if an existing appcast still contains a placeholder `example.com` URL.
+- Release doctor should fail if the Sparkle feed, download URL, app bundle metadata, or existing appcast still contains a placeholder `example.com` URL.
+- When Sparkle env vars are set, release doctor should confirm the `.app` bundle's `SUFeedURL` and `SUPublicEDKey` match those env vars. If they mismatch, rebuild with `scripts/package-dev-app.sh`.
 - Sparkle is linked in the app. Sparkle warnings are expected until a public feed URL, public EdDSA key, download URL, and update signature are available.
 
 The latest local dry-run snapshot is tracked in [v0.1-release-readiness.md](./v0.1-release-readiness.md).
@@ -56,9 +57,9 @@ export POPSKILL_BUNDLE_IDENTIFIER="com.maojiebc.popskill"
 For Sparkle-enabled builds, also set:
 
 ```bash
-export POPSKILL_SPARKLE_FEED_URL="https://example.com/appcast.xml"
+export POPSKILL_SPARKLE_FEED_URL="<public-appcast-url>"
 export POPSKILL_SPARKLE_PUBLIC_ED_KEY="<sparkle-public-eddsa-key>"
-export POPSKILL_APPCAST_DOWNLOAD_URL="https://example.com/Popskill.dmg"
+export POPSKILL_APPCAST_DOWNLOAD_URL="<public-dmg-download-url>"
 export POPSKILL_SPARKLE_ED_SIGNATURE="<sparkle-dmg-eddsa-signature>"
 ```
 
@@ -91,6 +92,12 @@ Then check release readiness:
 ```
 
 With Developer ID and notary credentials present, release doctor should have zero failures. Sparkle warnings are allowed only for unsigned/manual distribution builds.
+
+If you change `POPSKILL_SPARKLE_FEED_URL`, `POPSKILL_SPARKLE_PUBLIC_ED_KEY`, `POPSKILL_APP_VERSION`, or `POPSKILL_BUNDLE_IDENTIFIER`, rebuild the app bundle before trusting release doctor:
+
+```bash
+./scripts/package-dev-app.sh
+```
 
 ## Notarize
 

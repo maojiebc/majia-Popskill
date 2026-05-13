@@ -12,6 +12,11 @@ TEAM_ID="${POPSKILL_TEAM_ID:-}"
 NOTARY_PASSWORD="${POPSKILL_NOTARY_PASSWORD:-}"
 EXPECTED_APP_VERSION="${POPSKILL_APP_VERSION:-}"
 EXPECTED_BUNDLE_IDENTIFIER="${POPSKILL_BUNDLE_IDENTIFIER:-}"
+SPARKLE_FEED_URL="${POPSKILL_SPARKLE_FEED_URL:-}"
+SPARKLE_PUBLIC_ED_KEY="${POPSKILL_SPARKLE_PUBLIC_ED_KEY:-}"
+APPCAST_DOWNLOAD_URL="${POPSKILL_APPCAST_DOWNLOAD_URL:-}"
+RELEASE_BASE_URL="${POPSKILL_RELEASE_BASE_URL:-}"
+ALLOW_PLACEHOLDER="${POPSKILL_ALLOW_PLACEHOLDER_APPCAST:-false}"
 PLIST_BUDDY="/usr/libexec/PlistBuddy"
 
 failures=0
@@ -44,6 +49,15 @@ check_xcrun_tool() {
     ok "Xcode tool found: $1"
   else
     fail "missing Xcode tool: $1"
+  fi
+}
+
+check_placeholder_url() {
+  local label="$1"
+  local value="$2"
+
+  if [[ -n "$value" && "$value" == *"example.com"* && "$ALLOW_PLACEHOLDER" != true ]]; then
+    fail "$label contains placeholder example.com URL"
   fi
 }
 
@@ -98,6 +112,8 @@ if [[ -d "$APP_PATH" ]]; then
   if [[ -f "$info_plist" && -x "$PLIST_BUDDY" ]]; then
     app_version="$("$PLIST_BUDDY" -c 'Print :CFBundleShortVersionString' "$info_plist" 2>/dev/null || true)"
     bundle_identifier="$("$PLIST_BUDDY" -c 'Print :CFBundleIdentifier' "$info_plist" 2>/dev/null || true)"
+    bundle_feed_url="$("$PLIST_BUDDY" -c 'Print :SUFeedURL' "$info_plist" 2>/dev/null || true)"
+    bundle_public_ed_key="$("$PLIST_BUDDY" -c 'Print :SUPublicEDKey' "$info_plist" 2>/dev/null || true)"
 
     if [[ -n "$EXPECTED_APP_VERSION" ]]; then
       if [[ "$app_version" == "$EXPECTED_APP_VERSION" ]]; then
@@ -117,6 +133,28 @@ if [[ -d "$APP_PATH" ]]; then
       fi
     elif [[ "$bundle_identifier" == *".dev" ]]; then
       warn "bundle identifier is a development identifier: $bundle_identifier"
+    fi
+
+    check_placeholder_url "app bundle Sparkle feed URL" "$bundle_feed_url"
+
+    if [[ -n "$SPARKLE_FEED_URL" ]]; then
+      if [[ "$bundle_feed_url" == "$SPARKLE_FEED_URL" ]]; then
+        ok "app bundle Sparkle feed URL matches POPSKILL_SPARKLE_FEED_URL"
+      else
+        fail "app bundle Sparkle feed URL mismatch; rebuild with scripts/package-dev-app.sh"
+      fi
+    elif [[ -n "$bundle_feed_url" ]]; then
+      warn "app bundle has SUFeedURL but POPSKILL_SPARKLE_FEED_URL is unset, so release-doctor cannot verify it"
+    fi
+
+    if [[ -n "$SPARKLE_PUBLIC_ED_KEY" ]]; then
+      if [[ "$bundle_public_ed_key" == "$SPARKLE_PUBLIC_ED_KEY" ]]; then
+        ok "app bundle Sparkle public EdDSA key matches POPSKILL_SPARKLE_PUBLIC_ED_KEY"
+      else
+        fail "app bundle Sparkle public EdDSA key mismatch; rebuild with scripts/package-dev-app.sh"
+      fi
+    elif [[ -n "$bundle_public_ed_key" ]]; then
+      warn "app bundle has SUPublicEDKey but POPSKILL_SPARKLE_PUBLIC_ED_KEY is unset, so release-doctor cannot verify it"
     fi
   else
     fail "Info.plist not found or PlistBuddy unavailable"
@@ -179,19 +217,23 @@ else
   warn "appcast not found: $APPCAST_PATH (run scripts/generate-appcast.sh for public releases)"
 fi
 
-if [[ -n "${POPSKILL_SPARKLE_FEED_URL:-}" ]]; then
+if [[ -n "$SPARKLE_FEED_URL" ]]; then
+  check_placeholder_url "POPSKILL_SPARKLE_FEED_URL" "$SPARKLE_FEED_URL"
   ok "Sparkle feed URL is set for the app bundle"
 else
   warn "set POPSKILL_SPARKLE_FEED_URL before packaging a public Sparkle-enabled app"
 fi
 
-if [[ -n "${POPSKILL_SPARKLE_PUBLIC_ED_KEY:-}" ]]; then
+if [[ -n "$SPARKLE_PUBLIC_ED_KEY" ]]; then
   ok "Sparkle public EdDSA key is set for the app bundle"
 else
   warn "set POPSKILL_SPARKLE_PUBLIC_ED_KEY before packaging a public Sparkle-enabled app"
 fi
 
-if [[ -n "${POPSKILL_APPCAST_DOWNLOAD_URL:-}" || -n "${POPSKILL_RELEASE_BASE_URL:-}" ]]; then
+check_placeholder_url "POPSKILL_APPCAST_DOWNLOAD_URL" "$APPCAST_DOWNLOAD_URL"
+check_placeholder_url "POPSKILL_RELEASE_BASE_URL" "$RELEASE_BASE_URL"
+
+if [[ -n "$APPCAST_DOWNLOAD_URL" || -n "$RELEASE_BASE_URL" ]]; then
   ok "appcast download URL source is set"
 else
   warn "set POPSKILL_APPCAST_DOWNLOAD_URL or POPSKILL_RELEASE_BASE_URL before generating a public appcast"
