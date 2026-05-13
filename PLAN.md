@@ -30,6 +30,7 @@
 12. [引用资料](#12-引用资料)
 13. [验证清单](#13-验证清单)
 14. [词汇表](#14-词汇表)
+15. [v0.2 战略储备：Package 能力包重构](#15-v02-战略储备package-能力包重构)
 
 ---
 
@@ -1277,6 +1278,7 @@ find ~/.claude/projects -name '*.jsonl' -print0 \
 | **SSOT** | Single Source of Truth，CC Switch 用这个词指 `~/.cc-switch/skills/` 这个唯一权威目录 |
 | **Skill** | Claude Code / Codex / Gemini 用的 Agent Skill，本质是一个 Markdown 文件（SKILL.md）+ 资源 |
 | **Agent** | Claude Code 的 role/persona/subagent 定义，通常是 `~/.claude/agents/*.md` 或分类子目录下的 Markdown 文件，和 Skill 的工具包/能力模块不是同一类对象 |
+| **Package / 能力包** | v0.2 规划中的一级商品抽象。一个 Package 表示用户想获得的完整 AI 能力，可包含 Skill、Agent、CLI、MCP、配置 schema、权限和依赖图 |
 | **App 矩阵** | 一个 skill 可以在 Claude/Codex/Gemini/OpenCode/OpenClaw/Hermes 这 6 个 app 里独立启用/禁用 |
 | **contentHash** | CC Switch 用这个比对 skill 内容是否变化（不靠 semver） |
 | **Stub** | Popskill 引入的状态。本地内容已删，但 metadata 留着，UI 显示为云角标卡片 |
@@ -1290,6 +1292,147 @@ find ~/.claude/projects -name '*.jsonl' -print0 \
 | **WebDAV** | 跨设备同步用的协议。CC Switch 已经实现，复用即可 |
 | **Transcript** | Claude Code 把对话记录在 `~/.claude/projects/<proj>/transcript.jsonl`，是 Insights 数据源 |
 | **窗口归因** | Token 归因策略：某 skill 被调用后，下次切换前的 token 都算它 |
+
+---
+
+## 15. v0.2 战略储备：Package 能力包重构
+
+> 重要边界：v0.1 **不做 Package 代码重构**。本节只作为 v0.2 战略储备，等 v0.1 发布后再启动实现。
+
+### 15.1 原点校准
+
+Popskill v0.1 的真实形态是 Claude Code Skill 管理器，这对首发是正确的；但 v0.2 的产品主轴应该从"管理技术组件"升级为"交付用户能力"。
+
+用户不会说"我要装一个 CLI / MCP / Skill / Agent"，用户会说"我要让 AI 会用飞书"、"我要让 AI 会处理 PDF"、"我要让 AI 会运营小红书"。因此 v0.2 的一级目录不应该是 Skill / Agent / CLI / MCP，而应该是 **Package（能力包）**。
+
+### 15.2 核心定义
+
+一个 Package 是一个完整能力的商品单元。它可以包含多种组件：
+
+- `cli`：命令行工具或本地 binary，例如 `lark-cli`、`gh`
+- `mcp`：MCP server，例如 GitHub MCP、Notion MCP
+- `skills`：Claude/Codex/Gemini 等按 trigger 加载的能力模块
+- `agents`：角色化 subagent/persona，例如飞书办公助手、小红书运营专家
+- `config_schema`：API key、token、workspace、权限等配置项
+- `permissions`：Keychain、网络、文件系统、第三方平台授权边界
+- `target_apps`：Claude、Codex、Cursor、OpenClaw、Kimi 等目标工具
+
+当前独立 Skill 在 v0.2 中自动降级为"单组件 Package"，保证向后兼容。
+
+### 15.3 Package Manifest 草案
+
+```yaml
+package:
+  id: lark
+  name: 飞书
+  name_en: Feishu / Lark
+  category: 办公协作
+  vendor: ByteDance
+  description: 让 AI 操作飞书文档、表格、日历、消息、任务、审批等办公协作能力。
+  use_cases:
+    - AI 自动整理会议纪要到飞书文档
+    - AI 从飞书多维表格生成数据报表
+    - AI 维护飞书知识库
+
+components:
+  cli:
+    - id: lark-cli
+      required: true
+  mcp:
+    - id: lark-openapi-mcp
+      required: false
+  skills:
+    - id: lark-doc
+      depends_on: [lark-cli]
+    - id: lark-base
+      depends_on: [lark-cli]
+  agents:
+    - id: lark-office-assistant
+      uses: [lark-doc, lark-base]
+  config_schema:
+    - key: lark.app_id
+      type: secret
+      storage: keychain
+      required: true
+
+target_apps:
+  - claude
+  - codex
+  - cursor
+  - openclaw
+  - kimi
+```
+
+### 15.4 UI 主轴
+
+v0.2 的 sidebar 三段式：
+
+- **能力包**：默认入口，面向普通用户，按能力分类浏览
+- **我的能力包**：已安装、可更新、Hibernate/Stub 状态
+- **组件库（高级）**：Skills、Agents、CLI Tools、MCP Servers，保留开发者直接管理组件的能力
+
+能力包详情页应替代当前 Skill 详情页成为主商品页，展示用途场景、包含组件、必需配置、支持工具、权限边界和安装计划。组件视图仍然存在，但下沉为高级入口。
+
+### 15.5 第一批内置能力包候选
+
+v0.2.1 只内置少量高价值样板，避免范围爆炸：
+
+| 优先级 | 能力包 | 组件构成 | 证明点 |
+|---|---|---|---|
+| P0 | 飞书 Lark | CLI + MCP + 24 Skills + Agents + Config | 高复杂度办公协作样板 |
+| P0 | PDF | 3-5 Skills | 无 CLI 的低复杂度能力包 |
+| P0 | GitHub | `gh` + MCP + Skills + Agents | 开发者最大公约数 |
+| P0 | 会员运营 | 8 Skills + 2 Agents | majia 独家工作流 |
+| P1 | Notion | MCP + Skills + Agent | 知识管理样板 |
+| P1 | Spreadsheet | Sheets/Excel Skills + Agent | 办公自动化样板 |
+| P1 | 图像生成全家桶 | baoyu image/comic/cover/xhs/infographic 系列 | 内容创作样板 |
+| P2 | 微信生态 | 公众号/视频号/私域/直播 Skills + Agents | 中文圈差异化 |
+| P2 | 观远 BI | `guancli` + Skills + Agent | 企业数据样板 |
+| P2 | 马甲个人 IP 包 | majia 系列 Skills + Agents | 自用与个人 IP 样板 |
+
+### 15.6 迁移路径
+
+v0.2.0 先引入 Package 抽象层，但不立即推翻 v0.1 UI：
+
+1. 所有 v0.1 Skill 自动包装为一对一 Package。
+2. 根据命名规则和内置 manifest 做轻量归类，例如 `lark-*` 合并进飞书包。
+3. 保留"组件库（高级）"入口，避免老用户升级后找不到原来的 Skill 管理路径。
+4. Package 级 Insights 与 Hibernate 后续逐步替换 Skill 级推荐。
+5. v0.2.2 再把默认入口从组件视图切到能力包视图。
+
+### 15.7 Sidecar 协议演进
+
+v0.1 命令全部保留：
+
+```bash
+skill-cli list
+skill-cli install-plan <skill-key>
+skill-cli install <skill-key>
+```
+
+v0.2 新增 Package 级命令：
+
+```bash
+skill-cli package-list
+skill-cli package-detail <package-id>
+skill-cli package-install-plan <package-id>
+skill-cli package-install <package-id>
+skill-cli package-config <package-id> --key <key> --value-env <env>
+```
+
+实现原则：
+
+- 先做 `package-install-plan`，延续 v0.1 已验证的 read-only preview 模式。
+- 所有 secret 只通过 env / Keychain，不能进入 argv、SQLite 明文字段或日志。
+- Package 安装器必须能解释依赖图、缺失组件、冲突路径和回滚策略。
+- AgentShield 从 Skill 级 gate 升级为 Package 级 component gate。
+
+### 15.8 风险边界
+
+- v0.1 不改主叙事、不改导航、不改数据模型，避免发布延期。
+- v0.2 只做 4 个 P0 能力包，证明模型成立后再扩展。
+- Popskill 不自己生产 Agent/Skill 内容，优先接 agency-agents、ECC、majia 私有技能仓等上游。
+- Package 是用户心智抽象，不是把所有工具都塞进一个巨大安装器；组件库仍然保留直接管理能力。
 
 ---
 
@@ -1344,4 +1487,4 @@ open swift-app/Package.swift
 - 🟡 Sparkle 菜单入口、feed/key 配置守卫、framework copy hook、release doctor 检查已先落地；官方 SPM binary artifact 下载在本机多次卡住，暂不提交直接依赖
 - 🟡 视觉 tokens 与主要页面容器已按 `STYLE.md` 落地；Discover/Library/Settings/Updates 截图级 polish 与 README 截图已完成，仍需最终全局一致性检查
 
-下一个动作：Agent 管理先保持只读边界，继续补来源发现/安装策略设计；并在 Apple Developer Program 到位后收口公证 release 流程和 Sparkle SDK 正式 link。
+下一个动作：v0.1 继续保持 Skill 中心化范围，优先做最终截图 QA、真实签名/公证与 Sparkle SDK 正式 link；Package 能力包重构等 v0.1 发布后进入 v0.2。

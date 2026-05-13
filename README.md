@@ -94,7 +94,7 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 | **D. MVP 主链路** | ✅ sidecar + SwiftUI Library/Agents/Discover/Repositories/Updates/Backups/Insights/Settings 已可编译并通过本地 CI |
 | **E. v0.1 发布收口** | 🚧 签名/公证、Sparkle SDK 正式 link、WebDAV 手动同步；README 截图、主要页面截图级 polish、WebDAV 配置写入、Sparkle readiness hooks 与 transcript skill attribution 已完成 |
 
-**这个仓库目前是 pre-alpha**：已有 Rust sidecar、SwiftUI Library/Agents/Discover/Repositories/Updates/Backups/Insights/Settings 页面、transcript scanner 单测和本地 CI。Stub 与 AgentShield 已有可用纵切；Agent 管理目前完成本机 `~/.claude/agents` 只读列表/搜索/分类详情；WebDAV 目前完成状态/远端 snapshot 读取与配置写入，手动 Sync Now 仍受 CC Switch Tauri State/private module 边界阻塞。正式签名、公证、Sparkle SDK 正式 link 和 App Store 分发还没完成；本地 DMG、release manifest、appcast 生成、Sparkle 配置守卫与 notarize 脚本骨架已先落位。
+**这个仓库目前是 pre-alpha**：已有 Rust sidecar、SwiftUI Library/Agents/Discover/Repositories/Updates/Backups/Insights/Settings 页面、transcript scanner 单测和本地 CI。Stub 与 AgentShield 已有可用纵切；Agent 管理目前完成本机 `~/.claude/agents` 只读列表/搜索/分类详情、Agent-capable target 诊断、AgencyAgents catalog 预览和安装计划预览；WebDAV 目前完成状态/远端 snapshot 读取与配置写入，手动 Sync Now 仍受 CC Switch Tauri State/private module 边界阻塞。正式签名、公证、Sparkle SDK 正式 link 和 App Store 分发还没完成；本地 DMG、release manifest、appcast 生成、Sparkle 配置守卫与 notarize 脚本骨架已先落位。
 
 ### 已落地的 MVP 能力
 
@@ -159,6 +159,10 @@ SwiftUI 端已接入：
 - ✅ README 截图：Discover、Library、Usage Insights、Idle Candidates 真实界面截图已补到 `docs/assets/screenshots/`。
 - ⏳ 最终视觉验收：发布前再做一次全局截图 QA。
 
+### Roadmap
+
+**v0.2 will introduce the Package abstraction**：一个 Package 代表完整 AI 能力（例如飞书、GitHub、PDF），可打包 CLI、MCP、Skills、Agents 和 Config。Popskill 会从 "Claude Code skill manager" 进化为 "AI Capability App Store"，但 v0.1 仍先保持当前 Skill 中心化范围发布。
+
 ### 文档导航
 
 - **[PLAN.md](./PLAN.md)** —— 产品 + 工程规划，自包含。新机器接手只需读这一份。
@@ -168,6 +172,7 @@ SwiftUI 端已接入：
   - §9：第一周 Day 1-5 milestone（已完成）
   - §10：Week 2-8 进度校准 + v0.1 收口清单
   - §11：已知坑 / 风险预案
+  - §15：v0.2 Package 能力包重构
   - 附录 A：新电脑接手 6 步 checklist
 
 - **[STYLE.md](./STYLE.md)**（~840 行）—— 视觉设计语言，含立即可用的 SwiftUI design token 代码。
