@@ -4,6 +4,7 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
     case featured
     case repositories
     case installed
+    case agents
     case updates
     case backups
     case recentlyUsed
@@ -19,6 +20,7 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
         case .featured: "Featured"
         case .repositories: "Repositories"
         case .installed: "Installed"
+        case .agents: "Agents"
         case .updates: "Updates"
         case .backups: "Backups"
         case .recentlyUsed: "Recently Used"
@@ -34,6 +36,7 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
         case .featured: "sparkles"
         case .repositories: "folder.badge.gearshape"
         case .installed: "shippingbox"
+        case .agents: "person.crop.circle"
         case .updates: "arrow.down.circle"
         case .backups: "clock.arrow.circlepath"
         case .recentlyUsed: "clock"
@@ -50,6 +53,7 @@ struct RootView: View {
     @State private var discover = DiscoverViewModel()
     @State private var repositories = RepositoriesViewModel()
     @State private var library = LibraryViewModel()
+    @State private var agents = AgentsViewModel()
     @State private var updates = UpdatesViewModel()
     @State private var backups = BackupsViewModel()
     @State private var insights = InsightsViewModel()
@@ -65,6 +69,7 @@ struct RootView: View {
 
                 Section("My Library") {
                     sidebarLink(.installed, badge: library.skills.count)
+                    sidebarLink(.agents, badge: agents.agents.isEmpty ? nil : agents.agents.count)
                     sidebarLink(.updates, badge: updates.updates.isEmpty ? nil : updates.updates.count)
                     sidebarLink(.backups, badge: backups.backups.isEmpty ? nil : backups.backups.count)
                     sidebarLink(.recentlyUsed)
@@ -106,6 +111,8 @@ struct RootView: View {
                     await backups.load()
                     await settings.load()
                 }
+            case .agents:
+                AgentsView(viewModel: agents)
             case .updates:
                 UpdatesView(viewModel: updates) {
                     await library.load()
@@ -133,6 +140,7 @@ struct RootView: View {
         .task {
             await repositories.load()
             await library.load()
+            await agents.load()
         }
     }
 

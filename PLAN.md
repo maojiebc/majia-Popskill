@@ -9,7 +9,7 @@
 > - ✅ A 阶段：Sidecar 剥离可行性静态验证（lib.rs 已 pub use SkillService）
 > - ✅ C 阶段：产品形态 V1（5 页 wireframe + 状态机 + 决策表）
 > - ✅ D-prep 阶段：视觉设计语言（STYLE.md）+ Surge.app teardown 验证
-> - 🚧 MVP 校准：Rust sidecar + SwiftUI Library / Discover / Updates / Backups / Insights 主流程已通，Discover/Library/Settings/Updates 截图级 polish 已完成，正在补发布关键路径
+> - 🚧 MVP 校准：Rust sidecar + SwiftUI Library / Agents / Discover / Updates / Backups / Insights 主流程已通，Discover/Library/Settings/Updates 截图级 polish 已完成，正在补发布关键路径
 
 ---
 
@@ -72,6 +72,7 @@
 | **agent-skills-guard** (bruc3van) | 354⭐ / Tauri | 安全扫描 | 只做安全扫描，能力可被 ECC AgentShield 覆盖 |
 | **vercel-labs/skills** (npx skills) | 1.8 万⭐ / CLI | 官方背书，命令行分发顺手 | CLI 工具，无 GUI |
 | **ECC / everything-claude-code** | 18 万⭐ / npm + 配置包 + Tkinter Dashboard | 208 skills + 55 agents，带 AgentShield 安全扫描 | 不是同赛道 GUI，但可作为上游内容源和安全能力来源 |
+| **msitarzewski/agency-agents** | 9.6 万⭐ / Markdown agent library | 80+ agents、17 分类、MIT，中文圈传播强 | 不是 GUI 对手，但明确证明 Agent 角色库需求；Popskill 应先纳入本机 Agent 管理，再接来源发现 |
 
 ### 差异化复核
 
@@ -84,6 +85,7 @@
 | Stub 状态（保留卡片清内容） | ❌ | ❌ | ✅ **真独家** |
 | 行内多 app toggle | 进详情才能切 | multi-install picker（弹窗） | 🟡 形式独家 |
 | WebDAV 跨设备同步 | 仅本地 | 仅本地 | ✅ 独家 |
+| Agent 本地管理 | ❌ | AgentRegistry，但偏内置目录 | 🟡 新增纵切，先做本机 `~/.claude/agents` |
 | 第三方 skill 安全审计（AgentShield） | ❌ | ❌ | ✅ **新独家** |
 
 **结论**：差异化定位成立。真正护城河是 **Usage Insights + Stub + AgentShield + Mac 原生视觉**；视觉、Stub、AgentShield 不能只停留在文档里。
@@ -95,7 +97,8 @@
 3. **行内多 app toggle** —— Library 列表每条 skill 直接行内切 Claude/Codex/Gemini，不进详情
 4. **Stub 状态**（看齐 App Store"已购未下载"）—— 60 天没用的 skill 本地清掉内容，留 metadata 卡片，要用一键再装
 5. **WebDAV 跨设备同步** —— 复用 CC Switch 已有能力（对 iamzhihuix 的回答）
-6. **第三方 skill 安全审计** —— 集成 ECC AgentShield，两个头部对手都没做（详见 §11.8）
+6. **Agent 本地管理** —— AgencyAgents / ECC 证明 Agent persona 库正在成型，Popskill 要把 `~/.claude/agents` 纳入 Library
+7. **第三方 skill 安全审计** —— 集成 ECC AgentShield，两个头部对手都没做（详见 §11.8）
 
 ### 从对手身上要抄什么 / 要绕什么
 
@@ -114,6 +117,7 @@
 代码已经明显超过最初 Day 1-5 计划，下面这些能力已经落地，后续不要再当成"未来计划"：
 
 - **已完成**：`skill-cli list/detail/toggle/discover/install-plan/install/update/uninstall/import-unmanaged`
+- **已完成**：本机 Claude Code Agent 只读管理纵切（`skill-cli agent-list` + SwiftUI Agents 页，扫描 `~/.claude/agents/**/*.md`）
 - **已完成**：AgentShield sidecar + Library 手动/持久化扫描 + install/import gate（blocked 自动回滚或阻断；`security-scan` / `security-scan-list`，支持 `POPSKILL_AGENTSHIELD_BIN`）
 - **已完成**：WebDAV 状态/远端 snapshot 与配置写入纵切（`webdav-status` / `webdav-configure` / `webdav-remote-info`，Settings 显示配置与远端 manifest 状态）
 - **已完成**：自定义 skill repository 管理（`repo-list/add/toggle/remove`），含 URL/owner/name 校验、`.git` 后缀规范化、非法 scheme 拒绝
@@ -746,6 +750,9 @@ skill-cli webdav-remote-info [--json]
 skill-cli list [--json]
   → 输出所有已装 skill（对应 SkillService::get_all_installed）
 
+skill-cli agent-list [--root=<agents-dir>] [--json]
+  → 只读列出本机 Claude Code agents（默认 ~/.claude/agents，解析 frontmatter 的 name/description/tools/model）
+
 skill-cli detail <skill-id> [--json]
   → 单个 skill 详情
 
@@ -1188,6 +1195,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 - https://github.com/VoltAgent/awesome-agent-skills (2.1万⭐, 1000+ skills)
 - https://github.com/sickn33/antigravity-awesome-skills (3.7万⭐, 1400+ skills)
 - https://github.com/affaan-m/everything-claude-code (ECC, 18万⭐, 208 skills + 55 agents + AgentShield)
+- https://github.com/msitarzewski/agency-agents (9.6万⭐, 80+ agents, 17 分类, MIT；高价值 Agent persona 来源)
 
 ### 12.4 相关项目（友商）
 
@@ -1199,6 +1207,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 **上游内容与安全能力**：
 
 - **affaan-m/everything-claude-code** (18 万⭐) - ECC 内容池 + AgentShield 来源 https://github.com/affaan-m/everything-claude-code
+- **msitarzewski/agency-agents** (9.6 万⭐) - 80+ Agent persona、17 分类、MIT，中文圈覆盖强 https://github.com/msitarzewski/agency-agents
 
 **其他参考**：
 
@@ -1257,6 +1266,7 @@ find ~/.claude/projects -name '*.jsonl' -print0 \
 |---|---|
 | **SSOT** | Single Source of Truth，CC Switch 用这个词指 `~/.cc-switch/skills/` 这个唯一权威目录 |
 | **Skill** | Claude Code / Codex / Gemini 用的 Agent Skill，本质是一个 Markdown 文件（SKILL.md）+ 资源 |
+| **Agent** | Claude Code 的 role/persona/subagent 定义，通常是 `~/.claude/agents/*.md` 或分类子目录下的 Markdown 文件，和 Skill 的工具包/能力模块不是同一类对象 |
 | **App 矩阵** | 一个 skill 可以在 Claude/Codex/Gemini/OpenCode/OpenClaw/Hermes 这 6 个 app 里独立启用/禁用 |
 | **contentHash** | CC Switch 用这个比对 skill 内容是否变化（不靠 semver） |
 | **Stub** | Popskill 引入的状态。本地内容已删，但 metadata 留着，UI 显示为云角标卡片 |
@@ -1311,11 +1321,12 @@ open swift-app/Package.swift
 - ✅ 静态验证剥离可行性（A 阶段）
 - ✅ 产品形态设计 V1（C 阶段）与 `STYLE.md`
 - ✅ `cc-switch` 作为 git submodule 固定到 v3.14.1
-- ✅ `skill-cli` sidecar 已覆盖 list/detail/toggle/discover/install-plan/install/update/uninstall/import/repo/backup/health
-- ✅ SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译
+- ✅ `skill-cli` sidecar 已覆盖 list/detail/toggle/discover/install-plan/install/update/uninstall/import/repo/backup/agent-list/health
+- ✅ SwiftUI Library / Agents / Discover / Updates / Backups / Insights / Settings 主页面可编译
 - ✅ 行内 Claude/Codex/Gemini toggle、Stub / Rehydrate 与详情页多 app toggle 已接 sidecar
 - ✅ 自定义 skill repository 管理、sidecar health、backup 管理已倒灌进计划
-- ✅ AgentShield sidecar、Library 手动/持久化扫描、安装后 blocked 回滚、unmanaged import 前阻断已落地；下一步补 install-plan/apply，把 Discover 扫描前移
+- ✅ AgentShield sidecar、Library 手动/持久化扫描、install-plan 安全预览、安装后 blocked 回滚、unmanaged import 前阻断已落地
+- ✅ Agent 只读管理已启动：默认扫描 `~/.claude/agents/**/*.md`，解析 name/description/tools/model，SwiftUI Agents 页支持搜索、分类和详情
 - ✅ WebDAV 状态与远端 snapshot 只读入口已落地；upload/download 当前受 CC Switch Tauri State/private module 边界阻塞，先不绕实现
 - ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle/release smoke、development DMG 打包、release manifest/appcast 已落地
 - ✅ Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 已按 60 天 inactive 生命周期 + transcript attribution 最近使用筛选，并支持单个/批量 stub
@@ -1323,4 +1334,4 @@ open swift-app/Package.swift
 - 🟡 Sparkle 菜单入口、feed/key 配置守卫、framework copy hook、release doctor 检查已先落地；官方 SPM binary artifact 下载在本机多次卡住，暂不提交直接依赖
 - 🟡 视觉 tokens 与主要页面容器已按 `STYLE.md` 落地；Discover/Library/Settings/Updates 截图级 polish 与 README 截图已完成，仍需最终全局一致性检查
 
-下一个动作：暂停扩新业务面，继续补 WebDAV 手动同步、公证 release 流程和 Sparkle SDK 正式 link。
+下一个动作：Agent 管理先保持只读边界，继续补来源发现/安装策略设计；并在 Apple Developer Program 到位后收口公证 release 流程和 Sparkle SDK 正式 link。

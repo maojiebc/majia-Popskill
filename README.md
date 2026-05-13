@@ -18,11 +18,12 @@ Popskill aims to be the App Store experience that Claude Code skills deserve on 
 - **Usage Insights** — token spend, top skills, hibernate candidates (parses `~/.claude/projects/*.jsonl`). No other tool does this.
 - **Stub state** — like App Store's "purchased but not downloaded"; reclaim disk without losing the card
 - **WebDAV sync** across devices (reuses [CC Switch](https://github.com/farion1231/cc-switch)'s implementation — zero re-implementation)
+- **Local Agent library** for `~/.claude/agents` role/persona files
 - **AgentShield security scan** for third-party skill installs (persisted Library badges; see [PLAN.md §11.8](./PLAN.md#118-第三方-skill-安全审计agentshield))
 
 **Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
 
-**Current stage**: MVP feature verticals are implemented locally. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install-plan/install/update/uninstall/import/repository/backup/WebDAV status/config flows; SwiftUI Library + Discover + Repositories + Updates + Backups + Insights + Settings compile and pass tests; `scripts/ci-local.sh` verifies Rust/Swift builds, read-only sidecar smoke, native launch smoke, bundle smoke, and release artifact smoke. Remaining v0.1 work is release hardening: Developer ID signing/notarization, Sparkle SDK final link, WebDAV manual sync, and final screenshot QA. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
+**Current stage**: MVP feature verticals are implemented locally. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install-plan/install/update/uninstall/import/repository/backup/WebDAV status/config flows, plus a read-only `agent-list` scan for local Claude Code agents; SwiftUI Library + Agents + Discover + Repositories + Updates + Backups + Insights + Settings compile and pass tests; `scripts/ci-local.sh` verifies Rust/Swift builds, read-only sidecar smoke, native launch smoke, bundle smoke, and release artifact smoke. Remaining v0.1 work is release hardening: Developer ID signing/notarization, Sparkle SDK final link, WebDAV manual sync, and final screenshot QA. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
 
 ## Screenshots
 
@@ -41,7 +42,7 @@ Popskill aims to be the App Store experience that Claude Code skills deserve on 
 
 ### 它是什么
 
-Claude Code 的 Agent Skills 生态在 GitHub 上已经爆炸（[anthropics/skills](https://github.com/anthropics/skills) 13万⭐、各种 awesome-list 60万+⭐ 总和），但**没有一个 Mac 客户端把"发现 / 安装 / 管理 / 统计"做成 App Store 那种体验**。
+Claude Code 的 Agent Skills 生态在 GitHub 上已经爆炸（[anthropics/skills](https://github.com/anthropics/skills) 13万⭐、各种 awesome-list 60万+⭐ 总和），AgencyAgents 这类仓库也证明了 Agent 角色库正在变成中文圈高频入口；但**没有一个 Mac 客户端把"发现 / 安装 / 管理 / 统计"做成 App Store 那种体验**。
 
 Popskill 就是来填这个坑的。
 
@@ -63,7 +64,8 @@ Popskill 就是来填这个坑的。
 3. **多 app toggle**——Library 列表行内切 Claude/Codex/Gemini，详情页支持 OpenCode/Hermes
 4. **Stub 状态**——60 天没用的 skill 本地清掉内容、留 metadata 卡片，要用一键再装
 5. **WebDAV 跨设备同步**——白嫖 CC Switch 已有能力，不重做
-6. **AgentShield 安全审计**——第三方 skill 安装后立即扫描，blocked 自动回滚，安全状态显示到列表和详情页
+6. **Agent 本地管理**——把 `~/.claude/agents` 里的角色/persona 文件纳入同一个 Library 视图，先只读列表，后续再接 AgencyAgents/ECC 来源
+7. **AgentShield 安全审计**——第三方 skill 安装后立即扫描，blocked 自动回滚，安全状态显示到列表和详情页
 
 ### 技术架构（一句话）
 
@@ -85,10 +87,10 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 | A. Sidecar 剥离可行性 | ✅ 静态分析通过（lib.rs:52-56 已 pub use SkillService） |
 | C. 产品形态 V1 | ✅ 5 个页面 wireframe + 状态机 + 16 条决策 |
 | D-prep. 视觉设计语言 | ✅ Surge.app 拆解 + 22 个 design token |
-| **D. MVP 主链路** | ✅ sidecar + SwiftUI Library/Discover/Repositories/Updates/Backups/Insights/Settings 已可编译并通过本地 CI |
+| **D. MVP 主链路** | ✅ sidecar + SwiftUI Library/Agents/Discover/Repositories/Updates/Backups/Insights/Settings 已可编译并通过本地 CI |
 | **E. v0.1 发布收口** | 🚧 签名/公证、Sparkle SDK 正式 link、WebDAV 手动同步；README 截图、主要页面截图级 polish、WebDAV 配置写入、Sparkle readiness hooks 与 transcript skill attribution 已完成 |
 
-**这个仓库目前是 pre-alpha**：已有 Rust sidecar、SwiftUI Library/Discover/Repositories/Updates/Backups/Insights/Settings 页面、transcript scanner 单测和本地 CI。Stub 与 AgentShield 已有可用纵切；WebDAV 目前完成状态/远端 snapshot 读取与配置写入，手动 Sync Now 仍受 CC Switch Tauri State/private module 边界阻塞。正式签名、公证、Sparkle SDK 正式 link 和 App Store 分发还没完成；本地 DMG、release manifest、appcast 生成、Sparkle 配置守卫与 notarize 脚本骨架已先落位。
+**这个仓库目前是 pre-alpha**：已有 Rust sidecar、SwiftUI Library/Agents/Discover/Repositories/Updates/Backups/Insights/Settings 页面、transcript scanner 单测和本地 CI。Stub 与 AgentShield 已有可用纵切；Agent 管理目前完成本机 `~/.claude/agents` 只读列表/搜索/分类详情；WebDAV 目前完成状态/远端 snapshot 读取与配置写入，手动 Sync Now 仍受 CC Switch Tauri State/private module 边界阻塞。正式签名、公证、Sparkle SDK 正式 link 和 App Store 分发还没完成；本地 DMG、release manifest、appcast 生成、Sparkle 配置守卫与 notarize 脚本骨架已先落位。
 
 ### 已落地的 MVP 能力
 
@@ -98,6 +100,7 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 POPSKILL_WEBDAV_PASSWORD='<password>' ./skill-cli/target/debug/skill-cli webdav-configure --base-url <url> --username <user> --password-env POPSKILL_WEBDAV_PASSWORD --remote-root cc-switch-sync --profile default --enabled true --auto-sync false --json
 ./skill-cli/target/debug/skill-cli webdav-remote-info --json
 ./skill-cli/target/debug/skill-cli list --json
+./skill-cli/target/debug/skill-cli agent-list --json
 ./skill-cli/target/debug/skill-cli detail <skill-id> --json
 ./skill-cli/target/debug/skill-cli toggle <skill-id> --app codex --enabled true --json
 ./skill-cli/target/debug/skill-cli scan-unmanaged --json
@@ -125,6 +128,7 @@ POPSKILL_WEBDAV_PASSWORD='<password>' ./skill-cli/target/debug/skill-cli webdav-
 SwiftUI 端已接入：
 
 - Library：本机 skill 列表、All/Active/Inactive/Stubs 过滤、Claude/Codex/Gemini 行内 toggle、详情页 5 App toggle、stub/rehydrate、AgentShield 持久化角标与手动扫描、unmanaged import 前扫描
+- Agents：本机 Claude Code Agent 列表，读取 `~/.claude/agents/**/*.md` frontmatter，支持搜索、分类筛选、详情和打开源文件
 - Discover：搜索 CC Switch 启用的 skill repositories，行内 install-plan 预览，按 Claude/Codex/Gemini/OpenCode/Hermes 安装，安装后跑 AgentShield，blocked 自动回滚
 - Repositories：查看、启停、删除 CC Switch skill discovery sources
 - Updates：按需检查更新、逐条更新、Update All 批量更新、last checked 状态

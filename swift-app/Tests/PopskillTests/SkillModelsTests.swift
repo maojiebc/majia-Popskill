@@ -308,6 +308,31 @@ struct SkillModelsTests {
         #expect(info.artifacts == ["database", "skills"])
     }
 
+    @Test
+    func localAgentDecodesFrontmatterDerivedPayload() throws {
+        let data = """
+        {
+          "id": "engineering/backend-architect",
+          "name": "Backend Architect",
+          "description": "Designs service boundaries and migration plans.",
+          "fileName": "backend-architect.md",
+          "path": "/Users/example/.claude/agents/engineering/backend-architect.md",
+          "category": "engineering",
+          "tools": ["Read", "Write", "Bash"],
+          "model": "sonnet",
+          "lastModifiedAt": 1778603190,
+          "sizeBytes": 2048
+        }
+        """.data(using: .utf8)!
+
+        let agent = try JSONDecoder().decode(LocalAgent.self, from: data)
+
+        #expect(agent.id == "engineering/backend-architect")
+        #expect(agent.categoryLabel == "engineering")
+        #expect(agent.toolSummary == "Read, Write, Bash")
+        #expect(agent.fileURL.path == "/Users/example/.claude/agents/engineering/backend-architect.md")
+    }
+
     private func catalogSkill(repoBranch: String?) -> CatalogSkill {
         CatalogSkill(
             key: "maojiebc/majia-skills/demo",

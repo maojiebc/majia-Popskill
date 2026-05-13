@@ -168,6 +168,30 @@ Returns all skills currently managed by CC Switch.
 }
 ```
 
+### `skill-cli agent-list [--root <agents-dir>] --json`
+
+Returns local Claude Code agents from `~/.claude/agents`. This command is read-only and is not backed by CC Switch. Popskill treats Agent files as role/persona definitions, separate from Skill packages.
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "engineering/backend-architect",
+      "name": "backend-architect",
+      "description": "Designs service boundaries and production-ready backend plans.",
+      "fileName": "backend-architect.md",
+      "path": "/Users/example/.claude/agents/engineering/backend-architect.md",
+      "category": "engineering",
+      "tools": ["Read", "Write", "Bash"],
+      "model": "sonnet",
+      "lastModifiedAt": 1778603190,
+      "sizeBytes": 2048
+    }
+  ]
+}
+```
+
 ### `skill-cli toggle <skill-id> --app <app> --enabled <true|false> --json`
 
 Enables or disables an installed skill for one target app. The command delegates to `SkillService::toggle_app`, so CC Switch remains the source of truth for DB updates and skill symlinks.

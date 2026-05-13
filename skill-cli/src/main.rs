@@ -70,6 +70,15 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// List local Claude Code agents from ~/.claude/agents.
+    AgentList {
+        /// Optional agents directory override for tests or alternate Claude homes.
+        #[arg(long)]
+        root: Option<String>,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// Find local skills that exist on disk but are not managed by CC Switch.
     ScanUnmanaged {
         /// Kept for the Swift client contract; output is JSON either way.
@@ -363,6 +372,15 @@ async fn run() -> Result<()> {
             let skills =
                 SkillService::get_all_installed(&db).context("failed to list installed skills")?;
             print_json(&ApiResponse::ok(skills))
+        }
+        Commands::AgentList { root, json: _ } => {
+            let root = match root {
+                Some(root) => PathBuf::from(root),
+                None => claude_agents_dir()?,
+            };
+            let agents = list_local_agents(&root)
+                .with_context(|| format!("failed to list agents in {}", root.display()))?;
+            print_json(&ApiResponse::ok(agents))
         }
         Commands::ScanUnmanaged { json: _ } => {
             let skills =
@@ -745,6 +763,140 @@ fn normalize_branch(branch: &str) -> String {
     } else {
         trimmed.to_string()
     }
+}
+
+fn claude_agents_dir() -> Result<PathBuf> {
+    Ok(home_dir()?.join(".claude").join("agents"))
+}
+
+fn list_local_agents(root: &Path) -> Result<Vec<LocalAgent>> {
+    if !root.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut files = Vec::new();
+    collect_agent_markdown_files(root, &mut files)
+        .with_context(|| format!("failed to scan {}", root.display()))?;
+
+    let mut agents = Vec::new();
+    for path in files {
+        let content = fs::read_to_string(&path)
+            .with_context(|| format!("failed to read agent file {}", path.display()))?;
+        let metadata = fs::metadata(&path)
+            .with_context(|| format!("failed to read agent metadata {}", path.display()))?;
+        agents.push(local_agent_from_markdown(root, &path, &content, &metadata)?);
+    }
+
+    agents.sort_by(|left, right| {
+        left.name
+            .to_lowercase()
+            .cmp(&right.name.to_lowercase())
+            .then_with(|| left.id.cmp(&right.id))
+    });
+    Ok(agents)
+}
+
+fn collect_agent_markdown_files(root: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
+    for entry in fs::read_dir(root).with_context(|| format!("failed to read {}", root.display()))? {
+        let entry = entry.with_context(|| format!("failed to read entry in {}", root.display()))?;
+        let path = entry.path();
+        let file_type = entry
+            .file_type()
+            .with_context(|| format!("failed to inspect {}", path.display()))?;
+
+        if file_type.is_dir() {
+            collect_agent_markdown_files(&path, files)?;
+        } else if file_type.is_file()
+            && path
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
+        {
+            files.push(path);
+        }
+    }
+    Ok(())
+}
+
+fn local_agent_from_markdown(
+    root: &Path,
+    path: &Path,
+    content: &str,
+    metadata: &fs::Metadata,
+) -> Result<LocalAgent> {
+    let parsed = parse_agent_markdown(content);
+    let file_stem = path
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .context("agent file must have a UTF-8 stem")?;
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .context("agent file must have a UTF-8 name")?
+        .to_string();
+    let relative_path = path
+        .strip_prefix(root)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .to_string();
+    let id = strip_markdown_suffix(&relative_path);
+    let category = path
+        .strip_prefix(root)
+        .ok()
+        .and_then(|relative| relative.parent())
+        .and_then(|parent| parent.components().next())
+        .map(|component| component.as_os_str().to_string_lossy().to_string())
+        .filter(|category| !category.is_empty())
+        .unwrap_or_else(|| "local".to_string());
+
+    Ok(LocalAgent {
+        id,
+        name: parsed.name.unwrap_or_else(|| title_from_slug(file_stem)),
+        description: parsed.description.unwrap_or_else(|| {
+            first_markdown_paragraph(content)
+                .unwrap_or_else(|| "Local Claude Code agent".to_string())
+        }),
+        file_name,
+        path: path.to_string_lossy().to_string(),
+        category,
+        tools: parsed.tools,
+        model: parsed.model,
+        last_modified_at: metadata
+            .modified()
+            .ok()
+            .and_then(system_time_to_unix_timestamp),
+        size_bytes: metadata.len(),
+    })
+}
+
+fn strip_markdown_suffix(value: &str) -> String {
+    value
+        .strip_suffix(".md")
+        .or_else(|| value.strip_suffix(".MD"))
+        .unwrap_or(value)
+        .to_string()
+}
+
+fn title_from_slug(value: &str) -> String {
+    value
+        .replace(['-', '_'], " ")
+        .split_whitespace()
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                Some(first) => format!("{}{}", first.to_uppercase(), chars.as_str()),
+                None => String::new(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn system_time_to_unix_timestamp(value: SystemTime) -> Option<i64> {
+    value
+        .duration_since(UNIX_EPOCH)
+        .ok()
+        .and_then(|duration| i64::try_from(duration.as_secs()).ok())
 }
 
 async fn build_install_plan(
@@ -1231,6 +1383,98 @@ fn first_non_empty_line(value: &str) -> Option<String> {
         .map(ToString::to_string)
 }
 
+fn parse_agent_markdown(content: &str) -> ParsedAgentMarkdown {
+    let Some((frontmatter, body)) = split_frontmatter(content) else {
+        return ParsedAgentMarkdown {
+            name: None,
+            description: first_markdown_paragraph(content),
+            tools: Vec::new(),
+            model: None,
+        };
+    };
+
+    let mut parsed = ParsedAgentMarkdown::default();
+    for line in frontmatter.lines() {
+        let Some((key, value)) = line.split_once(':') else {
+            continue;
+        };
+
+        let key = key.trim();
+        let value = unquote_frontmatter_value(value.trim());
+        if value.is_empty() {
+            continue;
+        }
+
+        match key {
+            "name" => parsed.name = Some(value),
+            "description" => parsed.description = Some(value),
+            "tools" => parsed.tools = split_agent_tools(&value),
+            "model" => parsed.model = Some(value),
+            _ => {}
+        }
+    }
+
+    if parsed.description.is_none() {
+        parsed.description = first_markdown_paragraph(body);
+    }
+
+    parsed
+}
+
+fn split_frontmatter(content: &str) -> Option<(&str, &str)> {
+    let content = content.strip_prefix("---")?;
+    let content = content
+        .strip_prefix("\r\n")
+        .or_else(|| content.strip_prefix('\n'))?;
+    let delimiter = content
+        .find("\n---\n")
+        .map(|index| (index, 5))
+        .or_else(|| content.find("\n---\r\n").map(|index| (index, 6)))?;
+    Some((
+        &content[..delimiter.0],
+        &content[delimiter.0 + delimiter.1..],
+    ))
+}
+
+fn unquote_frontmatter_value(value: &str) -> String {
+    let trimmed = value.trim();
+    if trimmed.len() >= 2 {
+        let bytes = trimmed.as_bytes();
+        if (bytes[0] == b'"' && bytes[trimmed.len() - 1] == b'"')
+            || (bytes[0] == b'\'' && bytes[trimmed.len() - 1] == b'\'')
+        {
+            return trimmed[1..trimmed.len() - 1].to_string();
+        }
+    }
+    trimmed.to_string()
+}
+
+fn split_agent_tools(value: &str) -> Vec<String> {
+    let trimmed = value.trim().trim_start_matches('[').trim_end_matches(']');
+    trimmed
+        .split(',')
+        .map(unquote_frontmatter_value)
+        .map(|tool| tool.trim().to_string())
+        .filter(|tool| !tool.is_empty())
+        .collect()
+}
+
+fn first_markdown_paragraph(content: &str) -> Option<String> {
+    content
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .filter(|line| !line.starts_with('#'))
+        .filter(|line| !line.starts_with("---"))
+        .find(|line| {
+            !line.starts_with("name:")
+                && !line.starts_with("description:")
+                && !line.starts_with("tools:")
+                && !line.starts_with("model:")
+        })
+        .map(ToString::to_string)
+}
+
 fn webdav_status_from_settings_value(settings: serde_json::Value) -> serde_json::Value {
     let Some(mut sync) = settings.get("webdavSync").cloned() else {
         return json!({ "configured": false });
@@ -1331,6 +1575,29 @@ impl ApiResponse<()> {
 struct ApiError {
     code: &'static str,
     message: String,
+}
+
+#[derive(Default)]
+struct ParsedAgentMarkdown {
+    name: Option<String>,
+    description: Option<String>,
+    tools: Vec<String>,
+    model: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalAgent {
+    id: String,
+    name: String,
+    description: String,
+    file_name: String,
+    path: String,
+    category: String,
+    tools: Vec<String>,
+    model: Option<String>,
+    last_modified_at: Option<i64>,
+    size_bytes: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1717,6 +1984,61 @@ mod tests {
         .to_string();
 
         assert!(message.contains("WebDAV base URL is required"));
+    }
+
+    #[test]
+    fn parse_agent_markdown_reads_frontmatter_fields() {
+        let parsed = parse_agent_markdown(
+            r#"---
+name: frontend-developer
+description: Build polished SwiftUI interfaces.
+tools: Read, Write, Bash
+model: sonnet
+---
+# Frontend Developer
+
+Body fallback should not win.
+"#,
+        );
+
+        assert_eq!(parsed.name.as_deref(), Some("frontend-developer"));
+        assert_eq!(
+            parsed.description.as_deref(),
+            Some("Build polished SwiftUI interfaces.")
+        );
+        assert_eq!(parsed.tools, vec!["Read", "Write", "Bash"]);
+        assert_eq!(parsed.model.as_deref(), Some("sonnet"));
+    }
+
+    #[test]
+    fn parse_agent_markdown_falls_back_to_first_paragraph() {
+        let parsed = parse_agent_markdown(
+            r#"# Product Strategist
+
+Turns fuzzy product ideas into crisp release plans.
+"#,
+        );
+
+        assert_eq!(parsed.name, None);
+        assert_eq!(
+            parsed.description.as_deref(),
+            Some("Turns fuzzy product ideas into crisp release plans.")
+        );
+    }
+
+    #[test]
+    fn local_agent_from_markdown_infers_category_and_title() {
+        let root = Path::new("/tmp/agents");
+        let path = root.join("engineering/backend-architect.md");
+        let metadata = fs::metadata(".").unwrap();
+
+        let agent = local_agent_from_markdown(root, &path, "No frontmatter body.", &metadata)
+            .expect("agent should parse");
+
+        assert_eq!(agent.id, "engineering/backend-architect");
+        assert_eq!(agent.name, "Backend Architect");
+        assert_eq!(agent.category, "engineering");
+        assert_eq!(agent.file_name, "backend-architect.md");
     }
 
     fn stub_fixture(id: &str, stubbed_at: i64) -> StubbedSkill {

@@ -50,6 +50,11 @@ actor SkillCLIClient {
         return try Self.decodeResponse([Skill].self, from: data)
     }
 
+    func listAgents() async throws -> [LocalAgent] {
+        let data = try run(arguments: ["agent-list", "--json"])
+        return try Self.decodeResponse([LocalAgent].self, from: data)
+    }
+
     func scanUnmanaged() async throws -> [UnmanagedSkill] {
         let data = try run(arguments: ["scan-unmanaged", "--json"])
         return try Self.decodeResponse([UnmanagedSkill].self, from: data)

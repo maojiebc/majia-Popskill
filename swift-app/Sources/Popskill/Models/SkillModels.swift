@@ -106,6 +106,31 @@ struct Skill: Identifiable, Codable, Equatable {
     }
 }
 
+struct LocalAgent: Identifiable, Codable, Equatable {
+    let id: String
+    let name: String
+    let description: String
+    let fileName: String
+    let path: String
+    let category: String
+    let tools: [String]
+    let model: String?
+    let lastModifiedAt: Int?
+    let sizeBytes: UInt64
+
+    var fileURL: URL {
+        URL(fileURLWithPath: path)
+    }
+
+    var categoryLabel: String {
+        category.isEmpty ? "local" : category
+    }
+
+    var toolSummary: String {
+        tools.isEmpty ? "Default Claude Code tools" : tools.joined(separator: ", ")
+    }
+}
+
 struct CatalogSkill: Identifiable, Codable, Equatable {
     var id: String { key }
 
