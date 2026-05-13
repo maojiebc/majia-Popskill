@@ -127,6 +127,15 @@ struct SkillModelsTests {
     }
 
     @Test
+    func targetAppRegistryCoversCurrentSkillTargets() {
+        #expect(TargetAppRegistry.all.map(\.app) == TargetApp.allCases)
+        #expect(TargetApp.codex.title == "Codex")
+        #expect(TargetApp.codex.symbolName == "chevron.left.forwardslash.chevron.right")
+        #expect(TargetApp.codex.definition.skillDirectory == ".codex/skills")
+        #expect(TargetApp.opencode.definition.detectPath == ".config/opencode")
+    }
+
+    @Test
     func idleCandidateRequiresInactiveAndStaleLifecycle() {
         let referenceDate = Date(timeIntervalSince1970: 2_000_000_000)
         let staleTimestamp = Int(referenceDate.addingTimeInterval(-61 * 24 * 60 * 60).timeIntervalSince1970)
@@ -373,8 +382,29 @@ struct SkillModelsTests {
         #expect(target.id == "kimi")
         #expect(target.primaryPath == "/Users/example/.config/kimi/agents")
         #expect(target.statusLabel == "Detected")
+        #expect(target.pathSummary == "/Users/example/.config/kimi/agents")
+        #expect(target.symbolName == "k.circle")
         #expect(target.source == "agency-agents")
     }
+
+    @Test
+    func agentTargetMissingStateUsesAppStoreStyleStatus() {
+        let target = AgentTarget(
+            id: "qwen",
+            name: "Qwen Code",
+            scope: "user/project",
+            format: "markdown-agent",
+            paths: ["/Users/example/.qwen/agents", "/Users/example/project/.qwen/agents"],
+            detected: false,
+            source: "agency-agents",
+            note: nil
+        )
+
+        #expect(target.statusLabel == "Missing")
+        #expect(target.pathSummary == "/Users/example/.qwen/agents\n/Users/example/project/.qwen/agents")
+        #expect(target.symbolName == "q.circle")
+    }
+
 
     @Test
     func catalogAgentDecodesAgencyAgentsCatalogPayload() throws {
@@ -498,8 +528,25 @@ struct SkillModelsTests {
         #expect(package.componentCount == 2)
         #expect(package.installedComponentCount == 1)
         #expect(package.requiredComponentCount == 2)
+        #expect(package.missingComponentCount == 1)
+        #expect(package.missingRequiredComponentCount == 1)
+        #expect(package.health == .blocked)
         #expect(package.configSchema.first?.storage == "keychain")
         #expect(package.components.all.map(\.displayKey) == ["cli:lark-cli", "skill:lark-doc"])
+    }
+
+    @Test
+    func capabilityPackageHealthSeparatesActivePartialBlockedAndInactive() {
+        #expect(package(components: []).health == .inactive)
+        #expect(package(components: [component(installed: true)]).health == .active)
+        #expect(package(components: [
+            component(id: "installed", installed: true),
+            component(id: "optional", required: false, installed: false)
+        ]).health == .partial)
+        #expect(package(components: [
+            component(id: "installed", installed: true),
+            component(id: "required", required: true, installed: false)
+        ]).health == .blocked)
     }
 
     private func catalogSkill(repoBranch: String?) -> CatalogSkill {
@@ -540,6 +587,36 @@ struct SkillModelsTests {
             installedAt: installedAt,
             updatedAt: updatedAt,
             contentHash: nil
+        )
+    }
+
+    private func package(components: [PackageComponent]) -> CapabilityPackage {
+        CapabilityPackage(
+            id: "pkg:demo",
+            type: .composite,
+            name: "Demo",
+            vendor: nil,
+            summary: "Demo package",
+            source: PackageSource(kind: "builtin", location: "demo", updateStrategy: "manual"),
+            components: PackageComponents(cli: [], skills: components, mcp: [], agents: []),
+            configSchema: [],
+            installed: components.contains(where: \.installed)
+        )
+    }
+
+    private func component(
+        id: String = "demo",
+        required: Bool = true,
+        installed: Bool
+    ) -> PackageComponent {
+        PackageComponent(
+            id: id,
+            name: id,
+            kind: "skill",
+            required: required,
+            installed: installed,
+            status: installed ? "installed" : "declared",
+            location: id
         )
     }
 }

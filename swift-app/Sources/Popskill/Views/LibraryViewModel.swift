@@ -22,6 +22,7 @@ final class LibraryViewModel {
     var hasLoadedOnce = false
     var hasCheckedUpdatesOnce = false
     var lastCheckedUpdatesAt: Date?
+    var lastUpdateCheckError: String?
     var errorMessage: String?
 
     private let client = SkillCLIClient()
@@ -211,8 +212,12 @@ final class LibraryViewModel {
             updates = try await client.checkUpdates()
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             lastCheckedUpdatesAt = Date()
+            lastUpdateCheckError = nil
         } catch {
-            errorMessage = error.localizedDescription
+            lastUpdateCheckError = error.localizedDescription
+            if !silent {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AppToggle: View {
-    let title: String
+    let app: TargetApp
     let isOn: Bool
     let isPending: Bool
     let onChange: (Bool) -> Void
@@ -10,33 +10,44 @@ struct AppToggle: View {
         Button {
             onChange(!isOn)
         } label: {
-            HStack(spacing: 5) {
+            ZStack {
                 if isPending {
                     ProgressView()
                         .controlSize(.mini)
-                        .frame(width: 14, height: 14)
                 } else {
-                    Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(isOn ? Color.accentColor : Color.popStatusNeutral)
+                    Image(systemName: app.symbolName)
+                        .font(.system(size: 13, weight: isOn ? .semibold : .regular))
+                        .foregroundStyle(isOn ? app.accentColor : Color.popStatusNeutral)
                 }
-                Text(title)
-                    .font(.caption.weight(isOn ? .semibold : .regular))
-                    .lineLimit(1)
             }
-            .frame(width: 78, height: 30)
+            .frame(width: 31, height: 30)
         }
         .buttonStyle(.plain)
         .disabled(isPending)
         .background(
-            isOn ? Color.popHighlightFill : Color.popCardBackground.opacity(0.35),
+            isOn ? app.accentColor.opacity(0.14) : Color.popCardBackground.opacity(0.34),
             in: RoundedRectangle(cornerRadius: PopskillRadius.button)
         )
         .overlay(
             RoundedRectangle(cornerRadius: PopskillRadius.button)
-                .stroke(isOn ? Color.accentColor.opacity(0.25) : Color.popBorder, lineWidth: 1)
+                .stroke(isOn ? app.accentColor.opacity(0.38) : Color.popBorder, lineWidth: 1)
         )
         .contentShape(RoundedRectangle(cornerRadius: PopskillRadius.button))
-        .help(title)
+        .help("\(app.title)\(isOn ? " enabled" : " disabled")")
+        .accessibilityLabel(Text(app.title))
+        .accessibilityValue(Text(isOn ? "Enabled" : "Disabled"))
+    }
+}
+
+private extension TargetApp {
+    var accentColor: Color {
+        switch self {
+        case .claude: .orange
+        case .codex: .green
+        case .gemini: .blue
+        case .opencode: .indigo
+        case .hermes: .purple
+        }
     }
 }
 

@@ -460,6 +460,17 @@ struct LibraryView: View {
                 .frame(width: 340)
             }
 
+            HStack(spacing: 8) {
+                Image(systemName: viewModel.lastUpdateCheckError == nil ? "clock.arrow.circlepath" : "exclamationmark.triangle")
+                    .foregroundStyle(viewModel.lastUpdateCheckError == nil ? Color.popTertiaryLabel : Color.popStatusWarning)
+
+                Text(updateCheckSummary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            .help(viewModel.lastUpdateCheckError ?? localization.string("update.autoHelp"))
+
             if viewModel.selectedFilter == .stub {
                 Picker("Restore In", selection: $viewModel.selectedRehydrateApp) {
                     ForEach(TargetApp.allCases, id: \.id) { app in
@@ -473,6 +484,19 @@ struct LibraryView: View {
         .padding(.horizontal, 28)
         .padding(.top, 24)
         .padding(.bottom, 18)
+    }
+
+    private var updateCheckSummary: String {
+        let availability = localization.string("update.availableCount", viewModel.updatableCount)
+        let cadence = viewModel.lastUpdateCheckError == nil
+            ? localization.string("update.autoEvery30m")
+            : localization.string("update.lastCheckFailed")
+
+        guard let lastCheckedUpdatesAt = viewModel.lastCheckedUpdatesAt else {
+            return "\(availability) · \(localization.string("update.checkPending")) · \(cadence)"
+        }
+
+        return "\(availability) · \(localization.string("update.checkedAt", lastCheckedUpdatesAt.formatted(date: .omitted, time: .shortened))) · \(cadence)"
     }
 }
 
@@ -565,15 +589,14 @@ struct PackageDetailPane: View {
 
                         HStack(spacing: 8) {
                             StatusPill(title: package.typeLabel, color: packageColor(package.type))
-                            StatusPill(
-                                title: package.installed ? "Installed" : "Available",
-                                color: package.installed ? .popStatusOK : .popStatusWarning
-                            )
+                            StatusPill(title: package.health.title, color: packageHealthColor(package.health))
                         }
 
                         DetailSection(title: "Update Status", accent: PopskillSectionAccent.color(for: 0)) {
+                            DetailField(title: "Health", value: package.health.title)
                             DetailField(title: "Version", value: localization.string("Not Tracked"))
                             DetailField(title: "Last Updated", value: localization.string("Not Tracked"))
+                            DetailField(title: "Installed Components", value: "\(package.installedComponentCount) / \(package.componentCount)")
                             DetailField(title: "Missing Components", value: "\(package.missingComponentCount)")
                             DetailField(title: "Required Missing", value: "\(package.missingRequiredComponentCount)")
                         }
@@ -654,10 +677,7 @@ struct PackageRow: View {
                             .truncationMode(.tail)
 
                         StatusPill(title: package.typeLabel, color: packageColor(package.type))
-                        StatusPill(
-                            title: package.installed ? "Installed" : "Available",
-                            color: package.installed ? .popStatusOK : .popStatusWarning
-                        )
+                        StatusPill(title: package.health.title, color: packageHealthColor(package.health))
 
                         if package.missingComponentCount > 0 {
                             Label("\(package.missingComponentCount)", systemImage: "icloud.and.arrow.down")
@@ -838,10 +858,10 @@ struct SkillDetailPane: View {
                         }
 
                         DetailSection(title: "Enabled In", accent: PopskillSectionAccent.color(for: 2)) {
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 82), spacing: 8)], spacing: 8) {
+                            HStack(spacing: 7) {
                                 ForEach(TargetApp.allCases, id: \.id) { app in
                                     AppToggle(
-                                        title: app.title,
+                                        app: app,
                                         isOn: skill.apps.isEnabled(app),
                                         isPending: isToggling(skill, app)
                                     ) { enabled in
@@ -1070,7 +1090,7 @@ struct SkillRow: View {
                 LazyVGrid(columns: appToggleColumns, alignment: .leading, spacing: 8) {
                     ForEach(TargetApp.allCases, id: \.id) { app in
                         AppToggle(
-                            title: app.title,
+                            app: app,
                             isOn: skill.apps.isEnabled(app),
                             isPending: isToggling(app)
                         ) { enabled in
@@ -1103,7 +1123,7 @@ struct SkillRow: View {
     }
 
     private var appToggleColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: 78), spacing: 8, alignment: .leading)]
+        [GridItem(.adaptive(minimum: 31), spacing: 7, alignment: .leading)]
     }
 }
 
@@ -1231,6 +1251,19 @@ private func packageColor(_ type: CapabilityPackageType) -> Color {
         return .popSectionPurple
     case .standalone:
         return .popSectionBlue
+    }
+}
+
+private func packageHealthColor(_ health: CapabilityPackageHealth) -> Color {
+    switch health {
+    case .active:
+        return .popStatusOK
+    case .partial:
+        return .popStatusWarning
+    case .inactive:
+        return .popStatusNeutral
+    case .blocked:
+        return .popStatusError
     }
 }
 

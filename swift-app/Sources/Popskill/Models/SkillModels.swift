@@ -10,13 +10,89 @@ enum TargetApp: String, CaseIterable, Identifiable, Codable {
     var id: String { rawValue }
 
     var title: String {
-        switch self {
-        case .claude: "Claude"
-        case .codex: "Codex"
-        case .gemini: "Gemini"
-        case .opencode: "OpenCode"
-        case .hermes: "Hermes"
-        }
+        definition.displayName
+    }
+
+    var symbolName: String {
+        definition.symbolName
+    }
+
+    var definition: TargetAppDefinition {
+        TargetAppRegistry.definition(for: self)
+    }
+}
+
+struct TargetAppDefinition: Identifiable, Equatable {
+    var id: String { app.rawValue }
+
+    let app: TargetApp
+    let displayName: String
+    let symbolName: String
+    let skillDirectory: String
+    let detectPath: String
+    let cliCommands: [String]
+    let note: String?
+}
+
+enum TargetAppRegistry {
+    static let all: [TargetAppDefinition] = [
+        TargetAppDefinition(
+            app: .claude,
+            displayName: "Claude",
+            symbolName: "sparkles",
+            skillDirectory: ".claude/skills",
+            detectPath: ".claude",
+            cliCommands: ["claude"],
+            note: "Claude Code skill directory"
+        ),
+        TargetAppDefinition(
+            app: .codex,
+            displayName: "Codex",
+            symbolName: "chevron.left.forwardslash.chevron.right",
+            skillDirectory: ".codex/skills",
+            detectPath: ".codex",
+            cliCommands: ["codex"],
+            note: "Codex skill directory"
+        ),
+        TargetAppDefinition(
+            app: .gemini,
+            displayName: "Gemini",
+            symbolName: "diamond",
+            skillDirectory: ".gemini/skills",
+            detectPath: ".gemini",
+            cliCommands: ["gemini"],
+            note: "Gemini skill directory"
+        ),
+        TargetAppDefinition(
+            app: .opencode,
+            displayName: "OpenCode",
+            symbolName: "terminal",
+            skillDirectory: ".config/opencode/skills",
+            detectPath: ".config/opencode",
+            cliCommands: ["opencode"],
+            note: "OpenCode XDG skill directory"
+        ),
+        TargetAppDefinition(
+            app: .hermes,
+            displayName: "Hermes",
+            symbolName: "h.circle",
+            skillDirectory: ".hermes/skills",
+            detectPath: ".hermes",
+            cliCommands: ["hermes"],
+            note: "Hermes skill directory"
+        )
+    ]
+
+    static func definition(for app: TargetApp) -> TargetAppDefinition {
+        all.first { $0.app == app } ?? TargetAppDefinition(
+            app: app,
+            displayName: app.rawValue,
+            symbolName: "circle",
+            skillDirectory: "",
+            detectPath: "",
+            cliCommands: [],
+            note: nil
+        )
     }
 }
 
@@ -153,7 +229,34 @@ struct AgentTarget: Identifiable, Codable, Equatable {
     }
 
     var statusLabel: String {
-        detected ? "Detected" : "Not Detected"
+        detected ? "Detected" : "Missing"
+    }
+
+    var pathSummary: String {
+        if paths.isEmpty {
+            return ""
+        }
+        if paths.count == 1 {
+            return paths[0]
+        }
+        return paths.prefix(2).joined(separator: "\n")
+    }
+
+    var symbolName: String {
+        switch id {
+        case "claude-code": "sparkles"
+        case "copilot": "network"
+        case "antigravity": "arrow.up.circle"
+        case "gemini-cli": "diamond"
+        case "opencode": "terminal"
+        case "openclaw": "hammer"
+        case "cursor": "cursorarrow"
+        case "aider": "text.book.closed"
+        case "windsurf": "wind"
+        case "qwen": "q.circle"
+        case "kimi": "k.circle"
+        default: "person.crop.circle"
+        }
     }
 }
 
@@ -210,6 +313,22 @@ enum CapabilityPackageType: String, Codable, Equatable {
     }
 }
 
+enum CapabilityPackageHealth: String, Equatable {
+    case active
+    case partial
+    case inactive
+    case blocked
+
+    var title: String {
+        switch self {
+        case .active: "Active"
+        case .partial: "Partial"
+        case .inactive: "Inactive"
+        case .blocked: "Blocked"
+        }
+    }
+}
+
 struct CapabilityPackage: Identifiable, Codable, Equatable {
     let id: String
     let type: CapabilityPackageType
@@ -235,6 +354,19 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
 
     var typeLabel: String {
         type.title
+    }
+
+    var health: CapabilityPackageHealth {
+        if installedComponentCount == 0 {
+            return .inactive
+        }
+        if missingRequiredComponentCount > 0 {
+            return .blocked
+        }
+        if missingComponentCount > 0 {
+            return .partial
+        }
+        return .active
     }
 
     var sourceLabel: String {

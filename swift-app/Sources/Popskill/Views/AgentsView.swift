@@ -48,6 +48,14 @@ final class AgentsViewModel {
         targets.filter(\.detected).count
     }
 
+    var detectedTargets: [AgentTarget] {
+        targets.filter(\.detected)
+    }
+
+    var missingTargets: [AgentTarget] {
+        targets.filter { !$0.detected }
+    }
+
     func load() async {
         guard !isLoading else {
             return
@@ -289,9 +297,7 @@ struct AgentDetailPane: View {
                         }
 
                         DetailSection(title: "Targets", accent: PopskillSectionAccent.color(for: 2)) {
-                            ForEach(targets.prefix(5)) { target in
-                                DetailField(title: target.name, value: target.statusLabel)
-                            }
+                            AgentTargetOverview(targets: targets)
                         }
 
                         Link(destination: agent.fileURL) {
@@ -318,5 +324,92 @@ struct AgentDetailPane: View {
 
     private func byteCountText(_ value: UInt64) -> String {
         ByteCountFormatter.string(fromByteCount: Int64(value), countStyle: .file)
+    }
+}
+
+struct AgentTargetOverview: View {
+    let targets: [AgentTarget]
+
+    private var detectedTargets: [AgentTarget] {
+        targets.filter(\.detected)
+    }
+
+    private var missingTargets: [AgentTarget] {
+        targets.filter { !$0.detected }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if detectedTargets.isEmpty && missingTargets.isEmpty {
+                LocalizedText("No targets reported")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                targetGroup(title: "Detected", targets: detectedTargets, color: .popStatusOK)
+                targetGroup(title: "Missing", targets: missingTargets, color: .popStatusNeutral)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func targetGroup(title: String, targets: [AgentTarget], color: Color) -> some View {
+        if !targets.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    StatusPill(title: title, color: color)
+                    Text("\(targets.count)")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+
+                ForEach(targets.prefix(6)) { target in
+                    AgentTargetLine(target: target)
+                }
+
+                if targets.count > 6 {
+                    Text("+ \(targets.count - 6) more")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 24)
+                }
+            }
+        }
+    }
+}
+
+struct AgentTargetLine: View {
+    let target: AgentTarget
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: target.symbolName)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(target.detected ? Color.popStatusOK : Color.popStatusNeutral)
+                .frame(width: 16)
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(target.name)
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(1)
+                    StatusPill(
+                        title: target.statusLabel,
+                        color: target.detected ? .popStatusOK : .popStatusNeutral
+                    )
+                }
+
+                Text(target.pathSummary)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+
+                if let note = target.note, !note.isEmpty {
+                    Text(note)
+                        .font(.caption2)
+                        .foregroundStyle(Color.popTertiaryLabel)
+                        .lineLimit(2)
+                }
+            }
+        }
     }
 }

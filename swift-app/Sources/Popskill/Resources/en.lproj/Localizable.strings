@@ -68,6 +68,7 @@
 "Retry" = "Retry";
 
 "Active" = "Active";
+"Partial" = "Partial";
 "Inactive" = "Inactive";
 "Stubs" = "Stubs";
 "All" = "All";
@@ -93,6 +94,7 @@
 "Lifecycle" = "Lifecycle";
 "Source & Docs" = "Source & Docs";
 "Update Status" = "Update Status";
+"Health" = "Health";
 "Components" = "Components";
 "Config" = "Config";
 "No config required" = "No config required";
@@ -104,6 +106,12 @@
 "Update" = "Update";
 "Update All" = "Update All";
 "Check Updates" = "Check Updates";
+"update.availableCount" = "%d updates";
+"update.autoEvery30m" = "auto every 30 min";
+"update.autoHelp" = "Popskill checks installed GitHub-backed skills in the background every 30 minutes.";
+"update.checkedAt" = "checked %@";
+"update.checkPending" = "checking in background";
+"update.lastCheckFailed" = "last check failed";
 "Available" = "Available";
 "Not Tracked" = "Not Tracked";
 "Installed Date" = "Installed Date";
@@ -112,6 +120,7 @@
 "Downloads" = "Downloads";
 "Missing Components" = "Missing Components";
 "Required Missing" = "Required Missing";
+"Installed Components" = "Installed Components";
 "Component Tree" = "Component Tree";
 "package.componentSummary" = "%d components · %d installed · %d required";
 "Directory" = "Directory";
@@ -151,6 +160,8 @@
 
 "Categories" = "Categories";
 "Targets" = "Targets";
+"Detected" = "Detected";
+"Missing" = "Missing";
 "Category" = "Category";
 "All Categories" = "All Categories";
 "Agent" = "Agent";
@@ -162,6 +173,7 @@
 "Size" = "Size";
 "Open Agent File" = "Open Agent File";
 "No Agent Selected" = "No Agent Selected";
+"No targets reported" = "No targets reported";
 
 "Search" = "Search";
 "Search Again" = "Search Again";
