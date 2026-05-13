@@ -52,6 +52,22 @@ jq -e '.ok == false and (.error.message | contains("repository name is required"
   "$invalid_name_output" > /dev/null
 echo "repo-add name validation ok"
 
+invalid_segment_output="$TMP_DIR/invalid-repo-segment-add.err"
+if "$CLI" repo-add \
+  --owner "$OWNER/bad" \
+  --name "$NAME" \
+  --branch main \
+  --enabled false \
+  --json \
+  > /dev/null \
+  2> "$invalid_segment_output"; then
+  echo "expected repository owner with slash to fail" >&2
+  exit 1
+fi
+jq -e '.ok == false and (.error.message | contains("repository owner must not contain slashes or whitespace"))' \
+  "$invalid_segment_output" > /dev/null
+echo "repo-add segment validation ok"
+
 "$CLI" repo-add \
   --owner "$OWNER" \
   --name "$NAME" \
