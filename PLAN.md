@@ -1014,7 +1014,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 | Week 2 | Discover 页 V1 | ✅ 已完成 | 做视觉 polish，补截图/空态文案；Categories/Top Charts 不做独立路由 |
 | Week 3 | Detail 页 + 安装/卸载流程 | ✅ 已完成 | install-plan 目标 App 缓存和风险解释已打磨；更细的失败态仍可继续补 |
 | Week 4 | Insights + transcript 解析 | ✅ 基础完成 | 已补本地聚合/忽略正文/非 skill 级归因说明；真实 skill 级归因样例仍待验证 |
-| Week 5 | Updates 页 + 自动检查 | ✅ Updates 页面完成 | Sparkle SDK 尚未集成；Popskill 自身更新仍是 appcast 生成 smoke |
+| Week 5 | Updates 页 + 自动检查 | ✅ Updates 页面完成，含 Update All 和 last checked 状态 | Sparkle SDK 尚未集成；Popskill 自身更新仍是 appcast 生成 smoke |
 | Week 6 | Stub 状态机 | ✅ 已完成 | 60 天建议已落在 Idle Candidates；后续可补 transcript 归因权重 |
 | Week 7 | WebDAV 同步 UI | 🟡 只读边界已完成 | Settings 已有 status + remote info；配置写入、Keychain、Sync Now 留给 v0.1 收口 |
 | Week 8 | 打磨 + 打包 | 🟡 pipeline 已打通 | 需要 Apple Developer Program 决策、真实签名/公证、Sparkle SDK、README/截图和人工验收 |

@@ -1,4 +1,5 @@
 import Observation
+import Foundation
 import SwiftUI
 
 @MainActor
@@ -6,7 +7,9 @@ import SwiftUI
 final class UpdatesViewModel {
     var updates: [SkillUpdateInfo] = []
     var isChecking = false
+    var isUpdatingAll = false
     var hasCheckedOnce = false
+    var lastCheckedAt: Date?
     var errorMessage: String?
 
     private let client = SkillCLIClient()
@@ -27,6 +30,7 @@ final class UpdatesViewModel {
         do {
             updates = try await client.checkUpdates()
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            lastCheckedAt = Date()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -34,6 +38,10 @@ final class UpdatesViewModel {
 
     func isUpdating(_ id: String) -> Bool {
         updatingIDs.contains(id)
+    }
+
+    var isUpdatingAny: Bool {
+        isUpdatingAll || !updatingIDs.isEmpty
     }
 
     @discardableResult
@@ -57,6 +65,32 @@ final class UpdatesViewModel {
         updatingIDs.remove(update.id)
         return didUpdate
     }
+
+    @discardableResult
+    func updateAll(onUpdated: @escaping () async -> Void) async -> Int {
+        guard !isUpdatingAll, !updates.isEmpty else {
+            return 0
+        }
+
+        isUpdatingAll = true
+        defer {
+            isUpdatingAll = false
+        }
+
+        var updatedCount = 0
+        let pendingUpdates = updates
+        for update in pendingUpdates {
+            if await self.update(update) {
+                updatedCount += 1
+            }
+        }
+
+        if updatedCount > 0 {
+            await onUpdated()
+        }
+
+        return updatedCount
+    }
 }
 
 struct UpdatesView: View {
@@ -69,11 +103,27 @@ struct UpdatesView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Updates")
                         .font(.system(.largeTitle, weight: .bold))
-                    Text("\(viewModel.updates.count) available")
+                    Text(headerSubtitle)
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer()
+
+                Button {
+                    Task {
+                        _ = await viewModel.updateAll(onUpdated: onUpdated)
+                    }
+                } label: {
+                    if viewModel.isUpdatingAll {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Label("Update All", systemImage: "arrow.down.circle")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(viewModel.updates.isEmpty || viewModel.isChecking || viewModel.isUpdatingAny)
+                .help("Update All")
 
                 Button {
                     Task { await viewModel.check() }
@@ -85,9 +135,9 @@ struct UpdatesView: View {
                         Image(systemName: "arrow.clockwise")
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
                 .help("Check Updates")
-                .disabled(viewModel.isChecking)
+                .disabled(viewModel.isChecking || viewModel.isUpdatingAny)
             }
             .padding(.horizontal, 28)
             .padding(.vertical, 20)
@@ -133,7 +183,7 @@ struct UpdatesView: View {
                     }
                     .buttonStyle(.bordered)
                     .help("Update")
-                    .disabled(viewModel.isUpdating(update.id))
+                    .disabled(viewModel.isUpdating(update.id) || viewModel.isUpdatingAll)
                 }
                 .padding(.vertical, 8)
             }
@@ -152,6 +202,15 @@ struct UpdatesView: View {
 
     private var emptyStateTitle: String {
         viewModel.hasCheckedOnce ? "No Updates" : "Check for Updates"
+    }
+
+    private var headerSubtitle: String {
+        let availability = "\(viewModel.updates.count) available"
+        guard let lastCheckedAt = viewModel.lastCheckedAt else {
+            return availability
+        }
+
+        return "\(availability) · checked \(lastCheckedAt.formatted(date: .omitted, time: .shortened))"
     }
 }
 
