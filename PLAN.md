@@ -1466,7 +1466,29 @@ skill-cli package-config <package-id> --key <key> --value-env <env>
 - Package 安装器必须能解释依赖图、缺失组件、冲突路径和回滚策略。
 - AgentShield 从 Skill 级 gate 升级为 Package 级 component gate。
 
-### 15.8 风险边界
+### 15.8 MetaGPT 启发的 v0.2+ 储备
+
+MetaGPT / mgx.dev 不是 Popskill 的对手，也不应进入 v0.1。可借鉴的是信息架构和推荐思路，而不是 Python 多 agent 运行框架本身。
+
+#### Browse By Role
+
+能力包和组件可以补充 role metadata，用来支持按工作角色浏览：
+
+- PM / Architect / Engineer / Designer / Writer / Researcher 等高频角色。
+- 一个 Package 可以属于多个 role，例如 GitHub 同时属于 Engineer 和 Architect。
+- Role 是浏览维度，不是运行时 agent 编排模型。
+
+#### Curated For You
+
+v0.2 可以把当前 Usage Insights 升级为更主动的本地推荐：
+
+- L1：基于本机安装与使用共现，推荐互补 Package。
+- L2：基于 transcript attribution 频次，推荐缺失的 Skills / Agents / Packages。
+- L3：留到 v0.3，再考虑更复杂的 workflow recommendation。
+
+这些推荐必须保持本地优先，不读取消息正文，不引入云端画像。
+
+### 15.9 风险边界
 
 - v0.1 不改主叙事、不改导航、不改数据模型，避免发布延期。
 - v0.2 只做 4 个 P0 能力包，证明模型成立后再扩展。
