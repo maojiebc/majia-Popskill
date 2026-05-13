@@ -6,6 +6,7 @@ import SwiftUI
 final class RepositoriesViewModel {
     var repositories: [SkillRepository] = []
     var isLoading = false
+    var hasLoadedOnce = false
     var errorMessage: String?
 
     private let client = SkillCLIClient()
@@ -20,14 +21,16 @@ final class RepositoriesViewModel {
     func load() async {
         isLoading = true
         errorMessage = nil
+        defer {
+            isLoading = false
+            hasLoadedOnce = true
+        }
 
         do {
             repositories = try await client.listRepositories()
         } catch {
             errorMessage = error.localizedDescription
         }
-
-        isLoading = false
     }
 
     func isPending(_ repository: SkillRepository) -> Bool {
@@ -211,7 +214,7 @@ struct RepositoriesView: View {
             )
         }
         .task {
-            if viewModel.repositories.isEmpty {
+            if !viewModel.hasLoadedOnce {
                 await viewModel.load()
             }
         }

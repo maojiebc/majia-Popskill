@@ -7,6 +7,7 @@ final class BackupsViewModel {
     var backups: [SkillBackup] = []
     var selectedRestoreApp: TargetApp = .codex
     var isLoading = false
+    var hasLoadedOnce = false
     var errorMessage: String?
 
     private let client = SkillCLIClient()
@@ -16,14 +17,16 @@ final class BackupsViewModel {
     func load() async {
         isLoading = true
         errorMessage = nil
+        defer {
+            isLoading = false
+            hasLoadedOnce = true
+        }
 
         do {
             backups = try await client.listBackups()
         } catch {
             errorMessage = error.localizedDescription
         }
-
-        isLoading = false
     }
 
     func isRestoring(_ backupID: String) -> Bool {
@@ -124,7 +127,7 @@ struct BackupsView: View {
         }
         .background(Color.popMainBackground)
         .task {
-            if viewModel.backups.isEmpty {
+            if !viewModel.hasLoadedOnce {
                 await viewModel.load()
             }
         }
