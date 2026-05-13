@@ -248,7 +248,7 @@ actor SkillCLIClient {
     }
 
     private static func resolveExecutableURL() -> URL {
-        if let override = ProcessInfo.processInfo.environment["POPSKILL_CLI"], !override.isEmpty {
+        if let override = executableOverridePath {
             return URL(fileURLWithPath: override)
         }
 
