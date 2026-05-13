@@ -331,43 +331,68 @@ struct CatalogSkillRow: View {
 
             Spacer(minLength: 20)
 
-            if let url = skill.sourceURL {
-                Link(destination: url) {
-                    Image(systemName: "arrow.up.right.square")
+            HStack(spacing: 8) {
+                if let url = skill.sourceURL {
+                    Link(destination: url) {
+                        Image(systemName: "arrow.up.right.square")
+                            .frame(width: 16)
+                    }
+                    .buttonStyle(.bordered)
+                    .help("Open Source")
+                }
+
+                Button {
+                    onPlan()
+                } label: {
+                    if isPlanning {
+                        ProgressView()
+                            .controlSize(.small)
+                            .frame(minWidth: 58)
+                    } else {
+                        CatalogActionLabel(title: "Plan", systemImage: "doc.text.magnifyingglass", minWidth: 58)
+                    }
                 }
                 .buttonStyle(.bordered)
-                .help("Open Source")
-            }
+                .disabled(skill.installed || isPlanning || isInstalling)
+                .help("Preview Install")
 
-            Button {
-                onPlan()
-            } label: {
-                if isPlanning {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Image(systemName: "doc.text.magnifyingglass")
+                Button {
+                    onInstall()
+                } label: {
+                    if isInstalling {
+                        ProgressView()
+                            .controlSize(.small)
+                            .frame(minWidth: 74)
+                    } else {
+                        CatalogActionLabel(
+                            title: skill.installed ? "Installed" : "Install",
+                            systemImage: skill.installed ? "checkmark.circle.fill" : "arrow.down.circle",
+                            minWidth: skill.installed ? 82 : 74
+                        )
+                    }
                 }
+                .buttonStyle(.borderedProminent)
+                .disabled(skill.installed || isInstalling)
+                .help(skill.installed ? "Installed" : "Install")
             }
-            .buttonStyle(.bordered)
-            .disabled(skill.installed || isPlanning || isInstalling)
-            .help("Preview Install")
-
-            Button {
-                onInstall()
-            } label: {
-                if isInstalling {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Image(systemName: skill.installed ? "checkmark.circle.fill" : "arrow.down.circle")
-                }
-            }
-            .buttonStyle(.bordered)
-            .disabled(skill.installed || isInstalling)
-            .help(skill.installed ? "Installed" : "Install")
+            .fixedSize(horizontal: true, vertical: false)
         }
         .frame(minHeight: 68)
+    }
+}
+
+private struct CatalogActionLabel: View {
+    let title: String
+    let systemImage: String
+    let minWidth: CGFloat
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: systemImage)
+            Text(title)
+        }
+        .font(.caption.weight(.semibold))
+        .frame(minWidth: minWidth)
     }
 }
 
