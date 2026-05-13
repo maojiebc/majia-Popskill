@@ -120,7 +120,7 @@
 - **已完成**：行内 Claude/Codex/Gemini toggle、详情页更多 app toggle、Stub / Rehydrate、unmanaged import banner
 - **已完成**：Backups 查看 / 恢复 / 删除，Settings sidecar health 诊断
 - **已完成**：本地 CI、read-only smoke、mutating repo smoke、`.app` development bundle、bundle launch smoke
-- **未完成**：Stub 自动建议 / 批量 stub、WebDAV UI、AgentShield install 前强制拦截与持久化角标、正式 codesign/notarize/Sparkle release
+- **未完成**：Stub 60 天使用数据自动建议 / 批量 stub、WebDAV UI、AgentShield install 前强制拦截与持久化角标、正式 codesign/notarize/Sparkle release
 
 ### 不做的事（避免范围爆炸）
 
@@ -1393,8 +1393,8 @@ open swift-app/Popskill.xcodeproj
 - ✅ 自定义 skill repository 管理、sidecar health、backup 管理已倒灌进计划
 - ✅ AgentShield sidecar 扫描接口与 Library 手动扫描已落地，下一步接 install 前拦截与持久化角标
 - ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle smoke 已落地
-- 🟡 Stub 状态机已完成手动 hibernate/metadata/rehydrate，尚未完成自动建议和批量 stub
+- 🟡 Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 可一键 stub；尚未完成 60 天真实使用数据自动建议和批量 stub
 - 🔴 WebDAV UI、AgentShield 安装拦截/持久化角标、正式 notarize/Sparkle release 尚未落地
 - 🔴 视觉系统仍需按 `STYLE.md` 深度落地，不能停留在默认 SwiftUI 质感
 
-下一个动作：暂停扩新业务面，继续补视觉细节、Stub 自动建议、公证 release 流程和 AgentShield 安装拦截。
+下一个动作：暂停扩新业务面，继续补视觉细节、Stub 60 天自动建议、公证 release 流程和 AgentShield 安装拦截。

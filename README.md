@@ -111,7 +111,7 @@ SwiftUI 端已接入：
 - Repositories：查看、启停、删除 CC Switch skill discovery sources
 - Updates：按需检查更新、逐条更新
 - Backups：查看、恢复、删除 CC Switch uninstall backups
-- Insights：本地扫描 `~/.claude/projects/**/*.jsonl`，聚合 token/session/file/model 指标，含 Recently Used、Token Spend、Idle Candidates
+- Insights：本地扫描 `~/.claude/projects/**/*.jsonl`，聚合 token/session/file/model 指标，含 Recently Used、Token Spend、Idle Candidates，Idle Candidates 可直接转 Stub
 - Settings：sidecar 路径、`POPSKILL_CLI` override、CC Switch skill store 与 Keychain 策略诊断
 
 ### 文档导航

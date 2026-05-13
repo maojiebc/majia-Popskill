@@ -46,14 +46,12 @@ struct IdleCandidatesView: View {
             }
 
             List(idleSkills) { skill in
-                SkillRow(
+                IdleCandidateRow(
                     skill: skill,
-                    isToggling: { app in
-                        viewModel.isToggling(skillID: skill.id, app: app)
-                    }
-                ) { app, enabled in
+                    isStubbing: viewModel.isStubbing(skillID: skill.id)
+                ) {
                     Task {
-                        await viewModel.setEnabled(enabled, for: skill, app: app)
+                        _ = await viewModel.stub(skill)
                     }
                 }
                 .listRowSeparator(.visible)
@@ -75,5 +73,55 @@ struct IdleCandidatesView: View {
                 await viewModel.load()
             }
         }
+    }
+}
+
+struct IdleCandidateRow: View {
+    let skill: Skill
+    let isStubbing: Bool
+    let onStub: () -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            InitialAvatarView(name: skill.name, identifier: skill.id)
+
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 8) {
+                    Text(skill.name)
+                        .font(.system(.headline, weight: .semibold))
+                        .foregroundStyle(Color.popLabel)
+                        .lineLimit(1)
+
+                    StatusPill(title: "Inactive", color: .popStatusNeutral)
+                }
+
+                Text(skill.description)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+
+                Text(skill.sourceLabel)
+                    .font(.caption)
+                    .foregroundStyle(Color.popTertiaryLabel)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 20)
+
+            Button {
+                onStub()
+            } label: {
+                if isStubbing {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Label("Make Stub", systemImage: "icloud.and.arrow.down")
+                }
+            }
+            .buttonStyle(.bordered)
+            .disabled(isStubbing)
+            .help("Make Stub")
+        }
+        .frame(minHeight: 68)
     }
 }
