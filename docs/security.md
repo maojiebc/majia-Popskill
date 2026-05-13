@@ -25,6 +25,8 @@ SQLite may store a boolean like `webdav_configured = true` or a non-secret usern
 
 Install/update/import operations are delegated to CC Switch so Popskill does not duplicate filesystem safety logic. UI actions that remove or overwrite local skill content should stay user-triggered and visibly reversible where CC Switch provides a backup.
 
+Catalog-provided source/readme links should only open `http` or `https` URLs. Unsupported schemes are ignored and Popskill falls back to the repository URL when owner/name metadata is available.
+
 ## Transcript Insights
 
 Insights should aggregate numeric fields and metadata only. Do not display or persist message text unless the user explicitly asks for a transcript inspection workflow.
