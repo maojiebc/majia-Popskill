@@ -24,8 +24,8 @@
 6. [技术栈](#6-技术栈)
 7. [数据模型](#7-数据模型)
 8. [Sidecar 接口设计](#8-sidecar-接口设计)
-9. [第一周 Milestone](#9-第一周-milestone-day-1-5)
-10. [后续阶段](#10-后续阶段-week-2-8)
+9. [第一周 Milestone（已完成）](#9-第一周-milestone-day-1-5)
+10. [后续阶段（进度校准）](#10-后续阶段-week-2-8)
 11. [已知坑 / 风险预案](#11-已知坑--风险预案)
 12. [引用资料](#12-引用资料)
 13. [验证清单](#13-验证清单)
@@ -167,27 +167,32 @@
 │                     │                              │
 │ DISCOVER            │                              │
 │  ✨ Featured        │                              │
-│  📂 Categories      │       [主内容区域]            │
-│  📊 Top Charts      │                              │
+│  🗂 Repositories    │       [主内容区域]            │
 │                     │                              │
 │ MY LIBRARY          │                              │
-│  📦 Installed (47)  │                              │
-│  ⬇ Updates  ●3      │                              │
+│  📦 Installed (61)  │                              │
+│  ⬇ Updates          │                              │
+│  💾 Backups         │                              │
 │  🕐 Recently Used   │                              │
-│  ☁ Stubs (12)       │                              │
 │                     │                              │
 │ INSIGHTS            │                              │
 │  📈 Usage           │                              │
-│  💰 Token Spend     │                              │
+│  💳 Token Spend     │                              │
 │  💤 Idle Candidates │                              │
 │                     │                              │
 │ ─────               │                              │
 │ ⚙ Settings          │                              │
-│ ☁ WebDAV Sync       │                              │
 └─────────────────────┴──────────────────────────────┘
 ```
 
-SwiftUI 实现用 `NavigationSplitView`（三栏：sidebar + content list + detail，但 v1 用两栏就够）。
+当前 SwiftUI 实现用 `NavigationSplitView` 两栏结构，侧边栏与 `RootView.swift` 的 `SidebarSelection` 保持一致。
+
+说明：
+- `Categories` / `Top Charts` 不再作为独立入口，合并进 Discover 的搜索、分组和排序体验。
+- `Stubs` 不再作为独立入口，作为 Library 的过滤 tab（All / Active / Inactive / Stubs）。
+- `Repositories` 是独立管理页，用于启停 CC Switch 发现源，并驱动 Discover 刷新。
+- `Backups` 是独立管理页，用于查看和恢复 skill 备份。
+- `WebDAV`、sidecar health、AgentShield 状态汇总在 Settings 中展示；WebDAV 当前是只读状态/远端探测，手动配置和主动同步留给 v0.1 收口。
 
 ### 3.2 五个核心页面
 
@@ -494,112 +499,80 @@ cd skill-cli && cargo build   # 重新编译，看有没有 API 变化
 
 ```
 ~/projects/popskill/
-├── PLAN.md                          ← 你正在看的这个
-├── README.md                        ← 公开 README（v1 可以简单）
-├── .gitignore                       ← Swift + Rust + macOS 通用
-├── .gitmodules                      ← 引用 cc-switch
+├── PLAN.md                         ← 你正在看的这个
+├── README.md                       ← 公开 README
+├── STYLE.md                        ← 视觉设计语言
+├── LICENSE
+├── .gitignore
+├── .gitmodules                     ← 引用 cc-switch
 │
-├── cc-switch/                       ← git submodule（一行不改）
+├── cc-switch/                      ← git submodule（一行不改）
 │   └── (CC Switch 完整仓库)
 │
-├── skill-cli/                       ← Rust binary, ~600 行
+├── skill-cli/                      ← Rust sidecar binary
 │   ├── Cargo.toml
 │   ├── Cargo.lock
 │   └── src/
-│       ├── main.rs                  ← clap 入口
-│       ├── commands/
-│       │   ├── list.rs
-│       │   ├── install.rs
-│       │   ├── uninstall.rs
-│       │   ├── toggle.rs
-│       │   ├── update.rs
-│       │   ├── discover.rs
-│       │   ├── webdav.rs
-│       │   └── mod.rs
-│       └── output.rs                ← JSON 输出统一格式
+│       └── main.rs                 ← clap 入口 + sidecar commands + tests
 │
 ├── swift-app/
-│   └── Popskill.xcodeproj/
-│       └── (Xcode 项目文件)
-│   └── Popskill/
-│       ├── PopskillApp.swift        ← @main 入口
-│       ├── Info.plist
-│       │
-│       ├── Models/
-│       │   ├── Skill.swift          ← 主数据模型
-│       │   ├── SkillState.swift     ← 状态机 enum
-│       │   ├── App.swift            ← Claude/Codex/Gemini 枚举
-│       │   └── UsageStat.swift      ← 使用统计模型
-│       │
-│       ├── Storage/
-│       │   ├── LocalDB.swift        ← GRDB SQLite 包装
-│       │   ├── LocalDB+Schema.swift ← migrations
-│       │   ├── LocalDB+Skills.swift ← skill DAO
-│       │   ├── LocalDB+Usage.swift  ← usage DAO
-│       │   └── TranscriptParser.swift ← 解析 ~/.claude/projects/*.jsonl
-│       │
-│       ├── SkillCLI/
-│       │   ├── SkillCLIClient.swift ← Process 包装
-│       │   ├── SkillCLIError.swift
-│       │   └── SkillCLIModels.swift ← Codable 模型对应 CLI 输出
-│       │
-│       ├── ViewModels/
-│       │   ├── LibraryViewModel.swift
-│       │   ├── DiscoverViewModel.swift
-│       │   ├── UpdatesViewModel.swift
-│       │   ├── DetailViewModel.swift
-│       │   └── InsightsViewModel.swift
-│       │
-│       ├── Views/
-│       │   ├── RootView.swift       ← NavigationSplitView
-│       │   ├── Sidebar/
-│       │   │   └── SidebarView.swift
-│       │   ├── Discover/
-│       │   │   ├── FeaturedView.swift
-│       │   │   ├── CategoriesView.swift
-│       │   │   └── TopChartsView.swift
-│       │   ├── Library/
-│       │   │   ├── LibraryView.swift
-│       │   │   ├── SkillRow.swift   ← 行内 toggle
-│       │   │   └── SkillFilter.swift
-│       │   ├── Updates/
-│       │   │   └── UpdatesView.swift
-│       │   ├── Detail/
-│       │   │   └── SkillDetailView.swift
-│       │   ├── Insights/
-│       │   │   ├── InsightsView.swift
-│       │   │   └── HibernateCandidatesView.swift
-│       │   ├── Settings/
-│       │   │   └── SettingsView.swift
-│       │   └── WebDAVSync/
-│       │       └── WebDAVSyncView.swift
-│       │
-│       ├── Components/
-│       │   ├── InitialAvatarView.swift ← 首字母+底色头像
-│       │   ├── AppToggle.swift      ← Claude/Codex/Gemini 三联 toggle
-│       │   ├── SkillCard.swift      ← Discover 用的卡片
-│       │   └── EmptyStateView.swift
-│       │
-│       ├── Services/
-│       │   ├── UsageTrackingDaemon.swift ← 后台解析 jsonl
-│       │   ├── UpdateChecker.swift  ← 每 6 小时调 CLI 检查更新
-│       │   └── SparkleUpdater.swift ← App 自身更新
-│       │
-│       └── Resources/
-│           ├── Assets.xcassets
-│           └── Localizable.strings  ← 中文 + 英文
+│   ├── Package.swift               ← Swift Package macOS app
+│   ├── Sources/Popskill/
+│   │   ├── PopskillApp.swift       ← @main 入口
+│   │   ├── Components/
+│   │   │   └── CommonViews.swift
+│   │   ├── Design/
+│   │   │   └── PopskillColors.swift
+│   │   ├── Models/
+│   │   │   ├── SkillModels.swift   ← CLI Codable 模型 + app matrix
+│   │   │   └── UsageModels.swift
+│   │   ├── Security/
+│   │   │   └── KeychainService.swift
+│   │   ├── Services/
+│   │   │   └── SkillCLIClient.swift ← Process 包装
+│   │   ├── Storage/
+│   │   │   └── TranscriptUsageScanner.swift
+│   │   └── Views/
+│   │       ├── RootView.swift      ← NavigationSplitView
+│   │       ├── DiscoverView.swift
+│   │       ├── RepositoriesView.swift
+│   │       ├── LibraryView.swift
+│   │       ├── LibraryViewModel.swift
+│   │       ├── UpdatesView.swift
+│   │       ├── BackupsView.swift
+│   │       ├── RecentActivityView.swift
+│   │       ├── InsightsView.swift
+│   │       ├── TokenSpendView.swift
+│   │       ├── IdleCandidatesView.swift
+│   │       └── SettingsView.swift
+│   └── Tests/PopskillTests/
+│       ├── SkillCLIClientTests.swift
+│       ├── SkillModelsTests.swift
+│       ├── LibraryFilterTests.swift
+│       ├── RepositoryInputTests.swift
+│       ├── TranscriptUsageScannerTests.swift
+│       ├── KeychainServiceTests.swift
+│       └── CommonViewsTests.swift
 │
 ├── docs/
-│   ├── architecture.md              ← 详细架构
-│   ├── data-model.md                ← SQLite schema
-│   ├── ipc.md                       ← Swift ↔ skill-cli 协议
-│   ├── transcript-parsing.md        ← jsonl 归因策略
-│   └── dev-setup.md                 ← 新机器怎么搞起来
+│   ├── ipc.md                      ← Swift ↔ skill-cli 协议
+│   ├── security.md                 ← AgentShield / install gate
+│   └── transcript-parsing.md       ← jsonl 归因策略
 │
 └── scripts/
-    ├── build-cli.sh                 ← 编 skill-cli 并拷到 .app bundle
-    ├── package.sh                   ← 打 dmg
-    └── new-machine-init.sh          ← 新电脑 setup
+    ├── ci-local.sh                 ← 本地 CI 总入口
+    ├── dev-build.sh
+    ├── run-app.sh
+    ├── smoke-cli.sh
+    ├── smoke-cli-mutating.sh
+    ├── smoke-app.sh
+    ├── smoke-bundle.sh
+    ├── package-dev-app.sh
+    ├── package-dmg.sh
+    ├── release-manifest.sh
+    ├── generate-appcast.sh
+    ├── smoke-release.sh
+    └── notarize.sh
 ```
 
 ---
@@ -1008,130 +981,58 @@ struct CLIResponse<T: Decodable>: Decodable {
 
 ---
 
-## 9. 第一周 Milestone (Day 1-5)
+<a id="9-第一周-milestone-day-1-5"></a>
 
-> 目标：**周末有一个能跑、能看到自己 47 个 skill、能切换 Claude/Codex/Gemini 启用状态的 demo**。
+## 9. 第一周 Milestone (Day 1-5) —— ✅ 已全部完成（2026-05-13）
 
-### Day 1：项目 init
+> 这一节现在是历史 bootstrap 记录：最初目标是“周末有一个能跑、能看到本机 skills、能切换 Claude/Codex/Gemini 启用状态的 demo”。当前实现已经超过这个目标，后续推进以 §10 的发布收口清单为准。
 
-**目标**：Xcode 项目能开 + cargo workspace 能编 + git 提交跑通。
+| Day | 原目标 | 当前状态 | 证据 |
+| --- | --- | --- | --- |
+| ✅ Day 1 | 项目 init，Rust + Swift 能跑 | 已完成 | `skill-cli` workspace、`swift-app` Swift Package、`scripts/ci-local.sh` 已打通 |
+| ✅ Day 2 | `skill-cli list` 输出本机 skills JSON | 已完成并扩展 | 已有 `list` / `detail` / `toggle` / `discover` / `install-plan` / `install` / `update` / `uninstall` / `import-unmanaged` / `backups` / `repositories` / `webdav` |
+| ✅ Day 3 | SwiftUI 主框架 + 侧边栏入口 | 已完成并扩展 | `RootView.swift` 已有 Discover、Repositories、Library、Updates、Backups、Recently Used、Insights、Token Spend、Idle Candidates、Settings |
+| ✅ Day 4 | Library 接 `skill-cli` 数据 | 已完成 | `SkillCLIClient` + `LibraryViewModel` + Library UI 已接 sidecar 数据 |
+| ✅ Day 5 | 行内 Claude/Codex/Gemini toggle | 已完成并扩展 | App 矩阵已覆盖 Claude、Codex、Gemini、OpenCode、Hermes，toggle 走 sidecar/CC Switch 状态 |
 
-- [ ] `cd ~/projects/popskill && git init`
-- [ ] 添加 `.gitignore`（标准 Swift + Rust + macOS）
-- [ ] `git submodule add https://github.com/farion1231/cc-switch.git`
-- [ ] `cd cc-switch && git checkout v3.14.1` （pin 一个版本）
-- [ ] `cd .. && mkdir skill-cli && cd skill-cli && cargo init`
-- [ ] 写 `skill-cli/Cargo.toml`（参考 §8.5）
-- [ ] 写最小的 `src/main.rs`（仅一个 `Hello, world!` + 验证能 `use cc_switch_lib`）
-- [ ] `cargo build` —— **这是第一次真编，预计 10-20 分钟**
-- [ ] 如果编不过，看 §11 已知坑
-- [ ] Xcode 打开 → 新建 macOS App → macOS 14+ → SwiftUI → 项目名 Popskill → 保存到 `swift-app/`
-- [ ] Xcode 里跑一下空 App，能看到窗口就 OK
-- [ ] `git add . && git commit -m "Day 1: project init"`
-
-**验收**：`cargo build` 通过 + Xcode 空 App 能起来。
-
-### Day 2：skill-cli 实现 `list` 子命令
-
-**目标**：命令行能打印你那 47 个 skill 的 JSON。
-
-- [ ] 在 `skill-cli/src/main.rs` 用 clap 写 `list` 子命令
-- [ ] 调 `SkillService::get_all_installed(&db)`
-- [ ] 输出 JSON
-- [ ] `cargo run -- list --json | jq` 看到正确数据
-
-**验收**：终端跑 `./target/debug/skill-cli list --json` 输出你 ~/.cc-switch/skills/ 下所有 skill 的 JSON 数组。
-
-### Day 3：SwiftUI 主框架
-
-**目标**：App 起来，左边栏空架子能切换。
-
-- [ ] 加 SPM 依赖：GRDB.swift, Yams
-- [ ] 写 `PopskillApp.swift`（@main）
-- [ ] 写 `RootView.swift` 用 NavigationSplitView
-- [ ] 写 `SidebarView.swift` 列 11 个入口（Discover 3 + Library 4 + Insights 3 + Settings 1）
-- [ ] 每个入口点击切到一个空的内容 View（暂时显示"Coming Soon"）
-- [ ] App 起来能看到完整侧边栏
-
-**验收**：App 能起来，侧边栏完整显示，每个入口能点击切换。
-
-### Day 4：Library 页接 skill-cli 数据
-
-**目标**：真的能看到你的 47 个 skill。
-
-- [ ] 写 `SkillCLIClient.swift`（参考 §8.6）
-- [ ] 写 `LocalDB.swift`（GRDB 初始化）
-- [ ] 写 `LibraryViewModel.swift`（调 SkillCLIClient.list，转换数据）
-- [ ] 写 `LibraryView.swift` + `SkillRow.swift`（List + 头像 + 名字 + 描述）
-- [ ] 写 `InitialAvatarView.swift`（首字母 + hash 到固定底色）
-- [ ] 跑起来看到 47 个 skill
-
-**验收**：Library 页能看到你所有 skill 的列表，有头像 + 名字 + 描述。
-
-### Day 5：行内 Claude/Codex/Gemini toggle
-
-**目标**：能改启用状态，CC Switch 数据同步生效。
-
-- [ ] 在 `SkillRow.swift` 加三个 Toggle
-- [ ] 写 `AppToggle.swift` 组件
-- [ ] 点 toggle 时调 `SkillCLIClient.toggle(skillId, app, enabled)`
-- [ ] toggle 后刷新 ViewModel 数据
-- [ ] 验证：用 toggle 关 Claude，去 `~/.claude/skills/<dir>/` 应该被移除（CC Switch 已经实现的 symlink 切换逻辑）
-
-**验收**：行内 toggle 能切换，CC Switch 数据库 + symlink 跟随变化。**这一步成立，证明整个 sidecar 路线打通**。
+实际已超出第一周计划的内容：
+- Discover 已接 repository discovery、安装计划预览、AgentShield scan gate。
+- Library 已有 unmanaged import、AgentShield 状态持久化、stub / rehydrate 和 idle candidates。
+- Updates、Backups、Repositories 已成为独立页面。
+- Insights 已有 transcript 解析基础、recent activity、token spend。
+- Settings 已展示 sidecar health、repositories、backup path、WebDAV status 和 remote snapshot。
+- release pipeline 已有 DMG、manifest、Sparkle appcast 的 smoke 脚本。
 
 ---
 
-## 10. 后续阶段 (Week 2-8)
+<a id="10-后续阶段-week-2-8"></a>
 
-### Week 2：Discover 页 V1
+## 10. 后续阶段 (Week 2-8) —— 当前进度校准
 
-- Featured 页（硬编码 editor's pick）
-- Categories 页（从 awesome-list 拉数据）
-- Top Charts（接 skills.sh）
-- 卡片点击跳 Detail 页
+| 原阶段 | 原计划 | 当前状态 | 发布前剩余 |
+| --- | --- | --- | --- |
+| Week 2 | Discover 页 V1 | ✅ 已完成 | 做视觉 polish，补截图/空态文案；Categories/Top Charts 不做独立路由 |
+| Week 3 | Detail 页 + 安装/卸载流程 | ✅ 已完成 | 继续打磨 install-plan 的风险解释和失败态 |
+| Week 4 | Insights + transcript 解析 | ✅ 基础完成 | v0.1 前补“真实 transcript 归因样例/说明”，避免 token 解读过度承诺 |
+| Week 5 | Updates 页 + 自动检查 | ✅ Updates 页面完成 | Sparkle SDK 尚未集成；Popskill 自身更新仍是 appcast 生成 smoke |
+| Week 6 | Stub 状态机 | ✅ 已完成 | 60 天建议已落在 Idle Candidates；后续可补 transcript 归因权重 |
+| Week 7 | WebDAV 同步 UI | 🟡 只读边界已完成 | Settings 已有 status + remote info；配置写入、Keychain、Sync Now 留给 v0.1 收口 |
+| Week 8 | 打磨 + 打包 | 🟡 pipeline 已打通 | 需要 Apple Developer Program 决策、真实签名/公证、Sparkle SDK、README/截图和人工验收 |
 
-### Week 3：Detail 页 + 安装/卸载流程
+### v0.1 收口清单
 
-- Detail 页完整布局
-- README 渲染（swift-markdown-ui）
-- 安装/卸载按钮
-- 应用矩阵选择
-
-### Week 4：Insights 页基础 + Transcript 解析
-
-- `TranscriptParser.swift` —— 增量解析 ~/.claude/projects/*.jsonl
-- Token 归因策略实现（窗口归因）
-- Insights 页：Total / Top by Frequency
-- Token Hogs
-
-### Week 5：Updates 页 + 自动检查
-
-- `UpdateChecker.swift` —— 每 6h 调 `skill-cli check-updates`
-- Updates 页布局
-- "Update All" 批量
-- Sparkle 接 Popskill 自身更新
-
-### Week 6：Stub 状态机
-
-- `skill-cli stub` 和 `rehydrate` 子命令
-- Stub 状态的 UI（灰图标 + 云角标）
-- Insights 页的 Hibernate Candidates
-- 60 天自动建议
-
-### Week 7：WebDAV 同步 UI
-
-- 复用 cc_switch_lib 的 WebDAV 功能
-- 设置页 + 同步状态展示
-- "Sync Now" 按钮
-- 替换 webdav_auto_sync 的 Tauri 触发（改用 Swift Timer）
-
-### Week 8：打磨 + 打包
-
-- 修各种 UI 细节
-- 写 README + 截图
-- 打 DMG
-- 第一版发布
+- [x] sidecar/library 主链路：本机 list/detail/toggle/import/update/uninstall/backups/repositories。
+- [x] Discover 安装计划：安装前可预览目标路径、动作和 AgentShield 结果。
+- [x] AgentShield gate：unmanaged import 和 discover install 均能阻断高风险 skill。
+- [x] Stub MVP：stub/rehydrate、Idle Candidates、bulk stub dry-run/执行。
+- [x] WebDAV sidecar 边界：只读 status / remote info / local backup summary。
+- [x] release smoke：DMG、release manifest、Sparkle appcast 生成脚本。
+- [ ] Apple Developer Program：确认是否加入；不加入则只能走 ad-hoc/unsigned 分发说明。
+- [ ] 真实签名/公证：接入 Developer ID 后跑 `notarytool`，补 CI/本地验证文档。
+- [ ] Sparkle SDK：把 appcast 从“可生成”推进到 App 内真实更新检查。
+- [ ] WebDAV v0.1：配置表单、Keychain 保存、手动 Sync Now、冲突/失败态。
+- [ ] Transcript attribution：补真实样例、归因说明和可解释限制。
+- [ ] 视觉 polish：按 `STYLE.md` 对 Discover/Library/Settings/Updates 做统一密度、空态、按钮层级和截图验收。
 
 ---
 
@@ -1377,21 +1278,17 @@ mkdir -p ~/projects && cd ~/projects
 git clone --recurse-submodules <YOUR_REPO_URL> popskill
 cd popskill
 
-# 3. 编 CLI
-cd skill-cli
-cargo build --release
-# 第一次 10-20 分钟，喝杯咖啡
+# 3. 跑本地 CI（会编 Rust sidecar、Swift Package、跑 smoke）
+./scripts/ci-local.sh
 
-# 4. 验证 CLI
-./target/release/skill-cli list --json | jq
+# 4. 单独验证 CLI（可选）
+./skill-cli/target/debug/skill-cli list --json | jq
 
-# 5. 开 Xcode
-open swift-app/Popskill.xcodeproj
+# 5. 启动 App
+./scripts/run-app.sh
 
-# 6. 在 Xcode 里：
-#    - 选 macOS 14+ deployment target
-#    - 选你的 signing team
-#    - Run
+# 6. 需要 Xcode 调试时，打开 Swift Package
+open swift-app/Package.swift
 
 # 完事
 ```
