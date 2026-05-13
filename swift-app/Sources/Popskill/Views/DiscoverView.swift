@@ -218,7 +218,7 @@ struct DiscoverView: View {
 
             if viewModel.selectedContent == .packages {
                 List(viewModel.filteredPackages) { package in
-                    PackageRow(package: package)
+                    PackageRow(package: package, pendingUpdates: 0)
                         .listRowSeparator(.visible)
                         .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
                 }

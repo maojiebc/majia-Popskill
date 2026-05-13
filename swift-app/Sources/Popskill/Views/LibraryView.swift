@@ -53,7 +53,11 @@ struct LibraryView: View {
                     if let packageSkill = skill(forStandalonePackage: selectedPackage) {
                         skillDetailPane(packageSkill)
                     } else {
-                        PackageDetailPane(package: selectedPackage)
+                        PackageDetailPane(
+                            package: selectedPackage,
+                            pendingUpdates: viewModel.updates(for: selectedPackage),
+                            lastCheckedUpdatesAt: viewModel.lastCheckedUpdatesAt
+                        )
                             .frame(width: 360)
                             .popMaterialCard()
                     }
@@ -110,7 +114,10 @@ struct LibraryView: View {
                             PopskillSelectableCard(isSelected: selectedItemID == selectionID) {
                                 selectedItemID = selectionID
                             } content: {
-                                PackageRow(package: package)
+                                PackageRow(
+                                    package: package,
+                                    pendingUpdates: viewModel.updates(for: package).count
+                                )
                             }
                         }
                     }
@@ -562,6 +569,8 @@ struct UnmanagedSkillsBanner: View {
 
 struct PackageDetailPane: View {
     let package: CapabilityPackage?
+    let pendingUpdates: [SkillUpdateInfo]
+    let lastCheckedUpdatesAt: Date?
     @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
@@ -596,6 +605,12 @@ struct PackageDetailPane: View {
                         DetailSection(title: "Update Status", accent: PopskillSectionAccent.color(for: 0)) {
                             let lifecycle = package.lifecycle ?? .untracked
                             DetailField(title: "Health", value: package.health.title)
+                            DetailField(title: "Pending Updates", value: "\(pendingUpdates.count)")
+                            DetailField(
+                                title: "Last Checked",
+                                value: lastCheckedUpdatesAt?.formatted(date: .abbreviated, time: .shortened)
+                                    ?? localization.string("Not Tracked")
+                            )
                             DetailField(
                                 title: "Version",
                                 value: package.source.repoBranch.map { "@\($0)" } ?? localization.string("Not Tracked")
@@ -613,6 +628,24 @@ struct PackageDetailPane: View {
                             DetailField(title: "Required Missing", value: "\(package.missingRequiredComponentCount)")
                             if let hash = lifecycle.contentHash, !hash.isEmpty {
                                 DetailField(title: "Hash", value: String(hash.prefix(12)))
+                            }
+
+                            if !pendingUpdates.isEmpty {
+                                ForEach(pendingUpdates.prefix(3)) { update in
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "arrow.down.circle")
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundStyle(Color.popStatusWarning)
+                                            .frame(width: 16)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(update.name)
+                                                .font(.caption.weight(.semibold))
+                                            Text(hashDeltaSummary(update))
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -689,6 +722,7 @@ struct PackageDetailPane: View {
 
 struct PackageRow: View {
     let package: CapabilityPackage
+    let pendingUpdates: Int
     @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
@@ -706,6 +740,9 @@ struct PackageRow: View {
 
                         StatusPill(title: package.typeLabel, color: packageColor(package.type))
                         StatusPill(title: package.health.title, color: packageHealthColor(package.health))
+                        if pendingUpdates > 0 {
+                            StatusPill(title: "Updates \(pendingUpdates)", color: .popStatusWarning)
+                        }
 
                         if package.missingComponentCount > 0 {
                             Label("\(package.missingComponentCount)", systemImage: "icloud.and.arrow.down")
@@ -1223,6 +1260,11 @@ private func formattedOptionalTimestamp(_ timestamp: Int?, fallback: String) -> 
 
 private func byteCountText(_ bytes: UInt64) -> String {
     ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+}
+
+private func hashDeltaSummary(_ update: SkillUpdateInfo) -> String {
+    let current = update.currentHash.map { String($0.prefix(8)) } ?? "unknown"
+    return "\(current) -> \(String(update.remoteHash.prefix(8)))"
 }
 
 private func briefSummary(_ text: String, maxLength: Int = 180) -> String {

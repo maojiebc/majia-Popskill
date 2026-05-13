@@ -103,6 +103,21 @@ final class LibraryViewModel {
         updates.count
     }
 
+    func updates(for package: CapabilityPackage) -> [SkillUpdateInfo] {
+        guard !updates.isEmpty else {
+            return []
+        }
+
+        let relatedIdentifiers = packageRelatedSkillIdentifiers(for: package)
+        guard !relatedIdentifiers.isEmpty else {
+            return []
+        }
+
+        return updates.filter { update in
+            relatedIdentifiers.contains(update.id.lowercased())
+        }
+    }
+
     func isToggling(skillID: String, app: TargetApp) -> Bool {
         pendingToggles.contains(toggleKey(skillID: skillID, app: app))
     }
@@ -489,6 +504,43 @@ final class LibraryViewModel {
         case .standalone:
             return package.source.kind == "builtin" ? 1 : 2
         }
+    }
+
+    private func packageRelatedSkillIdentifiers(for package: CapabilityPackage) -> Set<String> {
+        let skillComponents = package.components.all.filter { $0.kind.caseInsensitiveCompare("skill") == .orderedSame }
+        guard !skillComponents.isEmpty else {
+            return []
+        }
+
+        var identifiers: Set<String> = []
+        for component in skillComponents {
+            identifiers.insert(component.id.lowercased())
+
+            if let location = component.location?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !location.isEmpty {
+                identifiers.insert(location.lowercased())
+            }
+
+            for skill in skills where packageSkillComponent(component, matches: skill) {
+                identifiers.insert(skill.id.lowercased())
+                identifiers.insert(skill.directory.lowercased())
+            }
+        }
+        return identifiers
+    }
+
+    private func packageSkillComponent(_ component: PackageComponent, matches skill: Skill) -> Bool {
+        if skill.id.caseInsensitiveCompare(component.id) == .orderedSame {
+            return true
+        }
+
+        if let location = component.location?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !location.isEmpty,
+           skill.directory.caseInsensitiveCompare(location) == .orderedSame {
+            return true
+        }
+
+        return skill.name.caseInsensitiveCompare(component.name) == .orderedSame
     }
 }
 
