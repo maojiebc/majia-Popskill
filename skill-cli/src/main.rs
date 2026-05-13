@@ -5,6 +5,7 @@ use cc_switch_lib::{
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -75,6 +76,12 @@ enum Commands {
         /// Optional agents directory override for tests or alternate Claude homes.
         #[arg(long)]
         root: Option<String>,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// List Agent-capable tool targets and their local paths.
+    AgentTargets {
         /// Kept for the Swift client contract; output is JSON either way.
         #[arg(long)]
         json: bool,
@@ -381,6 +388,10 @@ async fn run() -> Result<()> {
             let agents = list_local_agents(&root)
                 .with_context(|| format!("failed to list agents in {}", root.display()))?;
             print_json(&ApiResponse::ok(agents))
+        }
+        Commands::AgentTargets { json: _ } => {
+            let targets = list_agent_targets()?;
+            print_json(&ApiResponse::ok(targets))
         }
         Commands::ScanUnmanaged { json: _ } => {
             let skills =
@@ -897,6 +908,151 @@ fn system_time_to_unix_timestamp(value: SystemTime) -> Option<i64> {
         .duration_since(UNIX_EPOCH)
         .ok()
         .and_then(|duration| i64::try_from(duration.as_secs()).ok())
+}
+
+fn list_agent_targets() -> Result<Vec<AgentTarget>> {
+    let home = home_dir()?;
+    let cwd = env::current_dir().unwrap_or_else(|_| home.clone());
+    Ok(agent_targets_for_paths(&home, &cwd, command_exists))
+}
+
+fn agent_targets_for_paths<F>(home: &Path, cwd: &Path, command_exists: F) -> Vec<AgentTarget>
+where
+    F: Fn(&str) -> bool,
+{
+    let home_path = |relative: &str| home.join(relative).to_string_lossy().to_string();
+    let cwd_path = |relative: &str| cwd.join(relative).to_string_lossy().to_string();
+    let has_home_dir = |relative: &str| home.join(relative).exists();
+    let has_cwd_path = |relative: &str| cwd.join(relative).exists();
+
+    vec![
+        AgentTarget {
+            id: "claude-code".to_string(),
+            name: "Claude Code".to_string(),
+            scope: "user".to_string(),
+            format: "markdown-agent".to_string(),
+            paths: vec![home_path(".claude/agents")],
+            detected: has_home_dir(".claude"),
+            source: "agency-agents".to_string(),
+            note: Some("AgencyAgents copies markdown agents here directly.".to_string()),
+        },
+        AgentTarget {
+            id: "copilot".to_string(),
+            name: "GitHub Copilot".to_string(),
+            scope: "user".to_string(),
+            format: "markdown-agent".to_string(),
+            paths: vec![home_path(".github/agents"), home_path(".copilot/agents")],
+            detected: command_exists("code") || has_home_dir(".github") || has_home_dir(".copilot"),
+            source: "agency-agents".to_string(),
+            note: Some("VS Code may need chat.agentFilesLocations configured.".to_string()),
+        },
+        AgentTarget {
+            id: "antigravity".to_string(),
+            name: "Antigravity".to_string(),
+            scope: "user".to_string(),
+            format: "skill".to_string(),
+            paths: vec![home_path(".gemini/antigravity/skills")],
+            detected: has_home_dir(".gemini/antigravity/skills"),
+            source: "agency-agents".to_string(),
+            note: Some("AgencyAgents converts agents into Antigravity skills.".to_string()),
+        },
+        AgentTarget {
+            id: "gemini-cli".to_string(),
+            name: "Gemini CLI".to_string(),
+            scope: "user".to_string(),
+            format: "extension".to_string(),
+            paths: vec![home_path(".gemini/extensions/agency-agents")],
+            detected: command_exists("gemini") || has_home_dir(".gemini"),
+            source: "agency-agents".to_string(),
+            note: None,
+        },
+        AgentTarget {
+            id: "opencode".to_string(),
+            name: "OpenCode".to_string(),
+            scope: "project".to_string(),
+            format: "markdown-agent".to_string(),
+            paths: vec![cwd_path(".opencode/agents")],
+            detected: command_exists("opencode") || has_home_dir(".config/opencode"),
+            source: "agency-agents".to_string(),
+            note: Some(
+                "Project-scoped target; run Popskill from the project root for this path."
+                    .to_string(),
+            ),
+        },
+        AgentTarget {
+            id: "openclaw".to_string(),
+            name: "OpenClaw".to_string(),
+            scope: "user".to_string(),
+            format: "workspace".to_string(),
+            paths: vec![home_path(".openclaw/agency-agents")],
+            detected: command_exists("openclaw") || has_home_dir(".openclaw"),
+            source: "agency-agents".to_string(),
+            note: Some("OpenClaw uses generated workspace folders.".to_string()),
+        },
+        AgentTarget {
+            id: "cursor".to_string(),
+            name: "Cursor".to_string(),
+            scope: "project".to_string(),
+            format: "rule".to_string(),
+            paths: vec![cwd_path(".cursor/rules")],
+            detected: command_exists("cursor")
+                || has_home_dir(".cursor")
+                || has_cwd_path(".cursor"),
+            source: "agency-agents".to_string(),
+            note: Some("Project-scoped rules target.".to_string()),
+        },
+        AgentTarget {
+            id: "aider".to_string(),
+            name: "Aider".to_string(),
+            scope: "project".to_string(),
+            format: "conventions".to_string(),
+            paths: vec![cwd_path("CONVENTIONS.md")],
+            detected: command_exists("aider") || has_cwd_path("CONVENTIONS.md"),
+            source: "agency-agents".to_string(),
+            note: Some("AgencyAgents emits one project-level conventions file.".to_string()),
+        },
+        AgentTarget {
+            id: "windsurf".to_string(),
+            name: "Windsurf".to_string(),
+            scope: "project".to_string(),
+            format: "rule".to_string(),
+            paths: vec![cwd_path(".windsurfrules")],
+            detected: command_exists("windsurf")
+                || has_home_dir(".codeium")
+                || has_cwd_path(".windsurfrules"),
+            source: "agency-agents".to_string(),
+            note: Some("Project-scoped rules file.".to_string()),
+        },
+        AgentTarget {
+            id: "qwen".to_string(),
+            name: "Qwen Code".to_string(),
+            scope: "user/project".to_string(),
+            format: "markdown-agent".to_string(),
+            paths: vec![home_path(".qwen/agents"), cwd_path(".qwen/agents")],
+            detected: command_exists("qwen") || has_home_dir(".qwen") || has_cwd_path(".qwen"),
+            source: "agency-agents".to_string(),
+            note: Some(
+                "AgencyAgents supports both user-wide and project-scoped Qwen agents.".to_string(),
+            ),
+        },
+        AgentTarget {
+            id: "kimi".to_string(),
+            name: "Kimi Code".to_string(),
+            scope: "user".to_string(),
+            format: "agent-yaml".to_string(),
+            paths: vec![home_path(".config/kimi/agents")],
+            detected: command_exists("kimi") || has_home_dir(".config/kimi"),
+            source: "agency-agents".to_string(),
+            note: Some("AgencyAgents emits agent.yaml plus system.md per agent.".to_string()),
+        },
+    ]
+}
+
+fn command_exists(command: &str) -> bool {
+    let Some(paths) = env::var_os("PATH") else {
+        return false;
+    };
+    env::split_paths(&paths).any(|path| path.join(command).is_file())
 }
 
 async fn build_install_plan(
@@ -1602,6 +1758,19 @@ struct LocalAgent {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct AgentTarget {
+    id: String,
+    name: String,
+    scope: String,
+    format: String,
+    paths: Vec<String>,
+    detected: bool,
+    source: String,
+    note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct StubbedSkill {
     skill: InstalledSkill,
     backup_id: String,
@@ -2039,6 +2208,40 @@ Turns fuzzy product ideas into crisp release plans.
         assert_eq!(agent.name, "Backend Architect");
         assert_eq!(agent.category, "engineering");
         assert_eq!(agent.file_name, "backend-architect.md");
+    }
+
+    #[test]
+    fn agent_targets_include_agency_agents_tool_matrix() {
+        let targets = agent_targets_for_paths(
+            Path::new("/Users/example"),
+            Path::new("/Users/example/project"),
+            |_| false,
+        );
+
+        assert_eq!(targets.len(), 11);
+        assert_eq!(targets[0].id, "claude-code");
+        assert_eq!(targets[0].paths, vec!["/Users/example/.claude/agents"]);
+
+        let qwen = targets
+            .iter()
+            .find(|target| target.id == "qwen")
+            .expect("qwen target should exist");
+        assert_eq!(qwen.scope, "user/project");
+        assert!(
+            qwen.paths
+                .contains(&"/Users/example/.qwen/agents".to_string())
+        );
+        assert!(
+            qwen.paths
+                .contains(&"/Users/example/project/.qwen/agents".to_string())
+        );
+
+        let kimi = targets
+            .iter()
+            .find(|target| target.id == "kimi")
+            .expect("kimi target should exist");
+        assert_eq!(kimi.format, "agent-yaml");
+        assert_eq!(kimi.paths, vec!["/Users/example/.config/kimi/agents"]);
     }
 
     fn stub_fixture(id: &str, stubbed_at: i64) -> StubbedSkill {

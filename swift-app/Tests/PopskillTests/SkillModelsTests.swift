@@ -333,6 +333,29 @@ struct SkillModelsTests {
         #expect(agent.fileURL.path == "/Users/example/.claude/agents/engineering/backend-architect.md")
     }
 
+    @Test
+    func agentTargetDecodesAgencyAgentsToolMatrixPayload() throws {
+        let data = """
+        {
+          "id": "kimi",
+          "name": "Kimi Code",
+          "scope": "user",
+          "format": "agent-yaml",
+          "paths": ["/Users/example/.config/kimi/agents"],
+          "detected": true,
+          "source": "agency-agents",
+          "note": "AgencyAgents emits agent.yaml plus system.md per agent."
+        }
+        """.data(using: .utf8)!
+
+        let target = try JSONDecoder().decode(AgentTarget.self, from: data)
+
+        #expect(target.id == "kimi")
+        #expect(target.primaryPath == "/Users/example/.config/kimi/agents")
+        #expect(target.statusLabel == "Detected")
+        #expect(target.source == "agency-agents")
+    }
+
     private func catalogSkill(repoBranch: String?) -> CatalogSkill {
         CatalogSkill(
             key: "maojiebc/majia-skills/demo",

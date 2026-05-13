@@ -192,6 +192,28 @@ Returns local Claude Code agents from `~/.claude/agents`. This command is read-o
 }
 ```
 
+### `skill-cli agent-targets --json`
+
+Returns read-only diagnostics for Agent-capable tools and the local paths Popskill would use for future Agent install/toggle work. The initial target matrix follows AgencyAgents' supported tools and stays diagnostic-only in v0.1.
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "kimi",
+      "name": "Kimi Code",
+      "scope": "user",
+      "format": "agent-yaml",
+      "paths": ["/Users/example/.config/kimi/agents"],
+      "detected": true,
+      "source": "agency-agents",
+      "note": "AgencyAgents emits agent.yaml plus system.md per agent."
+    }
+  ]
+}
+```
+
 ### `skill-cli toggle <skill-id> --app <app> --enabled <true|false> --json`
 
 Enables or disables an installed skill for one target app. The command delegates to `SkillService::toggle_app`, so CC Switch remains the source of truth for DB updates and skill symlinks.

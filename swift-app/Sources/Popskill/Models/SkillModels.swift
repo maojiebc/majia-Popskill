@@ -131,6 +131,25 @@ struct LocalAgent: Identifiable, Codable, Equatable {
     }
 }
 
+struct AgentTarget: Identifiable, Codable, Equatable {
+    let id: String
+    let name: String
+    let scope: String
+    let format: String
+    let paths: [String]
+    let detected: Bool
+    let source: String
+    let note: String?
+
+    var primaryPath: String {
+        paths.first ?? ""
+    }
+
+    var statusLabel: String {
+        detected ? "Detected" : "Not Detected"
+    }
+}
+
 struct CatalogSkill: Identifiable, Codable, Equatable {
     var id: String { key }
 

@@ -6,6 +6,7 @@ import SwiftUI
 @Observable
 final class AgentsViewModel {
     var agents: [LocalAgent] = []
+    var targets: [AgentTarget] = []
     var searchText = ""
     var selectedCategory = "All"
     var isLoading = false
@@ -43,6 +44,10 @@ final class AgentsViewModel {
         Set(agents.flatMap(\.tools)).count
     }
 
+    var detectedTargetCount: Int {
+        targets.filter(\.detected).count
+    }
+
     func load() async {
         guard !isLoading else {
             return
@@ -56,8 +61,12 @@ final class AgentsViewModel {
         }
 
         do {
-            agents = try await client.listAgents()
+            let loadedAgents = try await client.listAgents()
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            let loadedTargets = try await client.listAgentTargets()
+
+            agents = loadedAgents
+            targets = loadedTargets
             if !categories.contains(selectedCategory) {
                 selectedCategory = "All"
             }
@@ -89,7 +98,7 @@ struct AgentsView: View {
 
                 Divider()
 
-                AgentDetailPane(agent: selectedAgent)
+                AgentDetailPane(agent: selectedAgent, targets: viewModel.targets)
                     .frame(width: 320)
             }
             .onChange(of: viewModel.agents) { _, agents in
@@ -119,7 +128,7 @@ struct AgentsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Agents")
                         .font(.system(.largeTitle, weight: .bold))
-                    Text("\(viewModel.agents.count) Claude Code agents · \(viewModel.categoryCount) categories")
+                    Text("\(viewModel.agents.count) Claude Code agents · \(viewModel.detectedTargetCount)/\(viewModel.targets.count) targets")
                         .foregroundStyle(.secondary)
                 }
 
@@ -128,7 +137,7 @@ struct AgentsView: View {
                 HStack(spacing: 14) {
                     SummaryMetric(title: "Installed", value: viewModel.agents.count)
                     SummaryMetric(title: "Categories", value: viewModel.categoryCount)
-                    SummaryMetric(title: "Tools", value: viewModel.toolCount)
+                    SummaryMetric(title: "Targets", value: viewModel.detectedTargetCount)
                 }
 
                 Button {
@@ -227,6 +236,7 @@ struct AgentRow: View {
 
 struct AgentDetailPane: View {
     let agent: LocalAgent?
+    let targets: [AgentTarget]
 
     var body: some View {
         Group {
@@ -263,6 +273,12 @@ struct AgentDetailPane: View {
                             DetailField(title: "Model", value: agent.model ?? "Default")
                             DetailField(title: "Tools", value: agent.toolSummary)
                             DetailField(title: "Size", value: byteCountText(agent.sizeBytes))
+                        }
+
+                        DetailSection(title: "Targets", accent: PopskillSectionAccent.color(for: 2)) {
+                            ForEach(targets.prefix(5)) { target in
+                                DetailField(title: target.name, value: target.statusLabel)
+                            }
                         }
 
                         Link(destination: agent.fileURL) {
