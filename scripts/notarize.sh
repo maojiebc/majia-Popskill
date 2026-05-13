@@ -28,6 +28,11 @@ require_tool ditto
 require_xcrun_tool notarytool
 require_xcrun_tool stapler
 
+sign_component() {
+  local path="$1"
+  codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$path"
+}
+
 if [[ ! -d "$APP_PATH" ]]; then
   echo "==> App bundle not found, building development bundle"
   "$ROOT_DIR/scripts/package-dev-app.sh" >/dev/null
@@ -42,17 +47,28 @@ if [[ -z "$KEYCHAIN_PROFILE" ]]; then
   [[ -n "$NOTARY_PASSWORD" ]] || die "set POPSKILL_NOTARY_PASSWORD or POPSKILL_NOTARY_KEYCHAIN_PROFILE"
 fi
 
+echo "==> Signing nested frameworks and XPC services"
+if [[ -d "$APP_PATH/Contents/Frameworks" ]]; then
+  while IFS= read -r -d '' xpc; do
+    sign_component "$xpc"
+  done < <(find "$APP_PATH/Contents/Frameworks" -name "*.xpc" -type d -print0 | sort -z)
+
+  while IFS= read -r -d '' framework; do
+    sign_component "$framework"
+  done < <(find "$APP_PATH/Contents/Frameworks" -name "*.framework" -type d -print0 | sort -z)
+fi
+
 echo "==> Signing nested executables"
 if [[ -f "$APP_PATH/Contents/Resources/skill-cli" ]]; then
-  codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP_PATH/Contents/Resources/skill-cli"
+  sign_component "$APP_PATH/Contents/Resources/skill-cli"
 fi
 
 if [[ -f "$APP_PATH/Contents/MacOS/Popskill" ]]; then
-  codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP_PATH/Contents/MacOS/Popskill"
+  sign_component "$APP_PATH/Contents/MacOS/Popskill"
 fi
 
 echo "==> Signing app bundle"
-codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP_PATH"
+sign_component "$APP_PATH"
 codesign --verify --deep --strict --verbose=2 "$APP_PATH"
 
 echo "==> Creating notarization zip"
