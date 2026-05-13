@@ -19,6 +19,7 @@ SPARKLE_PUBLIC_ED_KEY="${POPSKILL_SPARKLE_PUBLIC_ED_KEY:-}"
 APPCAST_DOWNLOAD_URL="${POPSKILL_APPCAST_DOWNLOAD_URL:-}"
 RELEASE_BASE_URL="${POPSKILL_RELEASE_BASE_URL:-}"
 ALLOW_PLACEHOLDER="${POPSKILL_ALLOW_PLACEHOLDER_APPCAST:-false}"
+REQUIRE_SPARKLE="${POPSKILL_REQUIRE_SPARKLE:-false}"
 PLIST_BUDDY="/usr/libexec/PlistBuddy"
 
 failures=0
@@ -36,6 +37,14 @@ warn() {
 fail() {
   failures=$((failures + 1))
   printf '[fail] %s\n' "$*"
+}
+
+warn_or_fail_sparkle() {
+  if [[ "$REQUIRE_SPARKLE" == true ]]; then
+    fail "$*"
+  else
+    warn "$*"
+  fi
 }
 
 check_tool() {
@@ -295,21 +304,28 @@ if [[ -f "$APPCAST_PATH" ]]; then
   if grep -q 'example.com' "$APPCAST_PATH"; then
     fail "appcast contains placeholder example.com URL: $APPCAST_PATH"
   fi
+  if [[ "$REQUIRE_SPARKLE" == true ]]; then
+    if grep -q 'sparkle:edSignature=' "$APPCAST_PATH"; then
+      ok "appcast contains Sparkle EdDSA signature"
+    else
+      fail "appcast is missing sparkle:edSignature; rerun scripts/generate-appcast.sh with POPSKILL_SPARKLE_ED_SIGNATURE"
+    fi
+  fi
 else
-  warn "appcast not found: $APPCAST_PATH (run scripts/generate-appcast.sh for public releases)"
+  warn_or_fail_sparkle "appcast not found: $APPCAST_PATH (run scripts/generate-appcast.sh for public releases)"
 fi
 
 if [[ -n "$SPARKLE_FEED_URL" ]]; then
   check_placeholder_url "POPSKILL_SPARKLE_FEED_URL" "$SPARKLE_FEED_URL"
   ok "Sparkle feed URL is set for the app bundle"
 else
-  warn "set POPSKILL_SPARKLE_FEED_URL before packaging a public Sparkle-enabled app"
+  warn_or_fail_sparkle "set POPSKILL_SPARKLE_FEED_URL before packaging a public Sparkle-enabled app"
 fi
 
 if [[ -n "$SPARKLE_PUBLIC_ED_KEY" ]]; then
   ok "Sparkle public EdDSA key is set for the app bundle"
 else
-  warn "set POPSKILL_SPARKLE_PUBLIC_ED_KEY before packaging a public Sparkle-enabled app"
+  warn_or_fail_sparkle "set POPSKILL_SPARKLE_PUBLIC_ED_KEY before packaging a public Sparkle-enabled app"
 fi
 
 check_placeholder_url "POPSKILL_APPCAST_DOWNLOAD_URL" "$APPCAST_DOWNLOAD_URL"
@@ -318,13 +334,13 @@ check_placeholder_url "POPSKILL_RELEASE_BASE_URL" "$RELEASE_BASE_URL"
 if [[ -n "$APPCAST_DOWNLOAD_URL" || -n "$RELEASE_BASE_URL" ]]; then
   ok "appcast download URL source is set"
 else
-  warn "set POPSKILL_APPCAST_DOWNLOAD_URL or POPSKILL_RELEASE_BASE_URL before generating a public appcast"
+  warn_or_fail_sparkle "set POPSKILL_APPCAST_DOWNLOAD_URL or POPSKILL_RELEASE_BASE_URL before generating a public appcast"
 fi
 
 if [[ -n "${POPSKILL_SPARKLE_ED_SIGNATURE:-}" ]]; then
   ok "Sparkle EdDSA signature is set"
 else
-  warn "POPSKILL_SPARKLE_ED_SIGNATURE is not set; public Sparkle appcasts need a real signature"
+  warn_or_fail_sparkle "POPSKILL_SPARKLE_ED_SIGNATURE is not set; public Sparkle appcasts need a real signature"
 fi
 
 echo

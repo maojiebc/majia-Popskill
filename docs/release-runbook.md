@@ -18,6 +18,7 @@ Before Apple Developer Program credentials are available, this is expected:
 - Release doctor should fail on missing Developer ID identity and missing notary credentials.
 - Release doctor should fail if the Sparkle feed, download URL, app bundle metadata, or existing appcast still contains a placeholder `example.com` URL.
 - When Sparkle env vars are set, release doctor should confirm the `.app` bundle's `SUFeedURL` and `SUPublicEDKey` match those env vars. If they mismatch, rebuild with `scripts/package-dev-app.sh`.
+- Set `POPSKILL_REQUIRE_SPARKLE=true` for public Sparkle-enabled releases so missing feed/key/download/signature/appcast metadata are failures, not warnings.
 - Sparkle is linked in the app. Sparkle warnings are expected until a public feed URL, public EdDSA key, download URL, and update signature are available.
 
 The latest local dry-run snapshot is tracked in [v0.1-release-readiness.md](./v0.1-release-readiness.md).
@@ -62,6 +63,7 @@ export POPSKILL_SPARKLE_FEED_URL="<public-appcast-url>"
 export POPSKILL_SPARKLE_PUBLIC_ED_KEY="<sparkle-public-eddsa-key>"
 export POPSKILL_APPCAST_DOWNLOAD_URL="<public-dmg-download-url>"
 export POPSKILL_SPARKLE_ED_SIGNATURE="<sparkle-dmg-eddsa-signature>"
+export POPSKILL_REQUIRE_SPARKLE=true
 ```
 
 Do not commit these values. Do not paste passwords into command-line arguments except the one-time `notarytool store-credentials` flow.
@@ -92,7 +94,7 @@ Then check release readiness:
 ./scripts/release-doctor.sh
 ```
 
-With Developer ID and notary credentials present, release doctor should have zero failures. Sparkle warnings are allowed only for unsigned/manual distribution builds.
+With Developer ID, notary credentials, and public Sparkle metadata present, release doctor should have zero failures. Sparkle warnings are allowed only for unsigned/manual distribution builds; use `POPSKILL_REQUIRE_SPARKLE=true` for public Sparkle-enabled releases.
 
 If you change `POPSKILL_SPARKLE_FEED_URL`, `POPSKILL_SPARKLE_PUBLIC_ED_KEY`, `POPSKILL_APP_VERSION`, `POPSKILL_APP_BUILD`, or `POPSKILL_BUNDLE_IDENTIFIER`, rebuild the app bundle and regenerate release artifacts before trusting release doctor:
 
