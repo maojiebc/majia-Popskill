@@ -294,6 +294,10 @@ async fn run() -> Result<()> {
             enabled,
             json: _,
         } => {
+            let owner = normalize_required("repository owner", &owner)?;
+            let name = normalize_required("repository name", &name)?;
+            let branch = normalize_branch(&branch);
+
             // Infer CC Switch's SkillRepo type from save_skill_repo to avoid patching the submodule.
             let repo = serde_json::from_value(json!({
                 "owner": owner,
@@ -312,6 +316,8 @@ async fn run() -> Result<()> {
             enabled,
             json: _,
         } => {
+            let owner = normalize_required("repository owner", &owner)?;
+            let name = normalize_required("repository name", &name)?;
             let mut repos = db
                 .get_skill_repos()
                 .context("failed to load skill repositories")?;
@@ -335,6 +341,8 @@ async fn run() -> Result<()> {
             name,
             json: _,
         } => {
+            let owner = normalize_required("repository owner", &owner)?;
+            let name = normalize_required("repository name", &name)?;
             db.delete_skill_repo(&owner, &name)
                 .with_context(|| format!("failed to remove skill repository '{owner}/{name}'"))?;
             print_json(&ApiResponse::ok(json!({
@@ -404,11 +412,9 @@ async fn run() -> Result<()> {
             json: _,
         } => {
             let apps = parse_skill_apps(&apps)?;
-            let imported = SkillService::import_from_apps(
-                &db,
-                vec![ImportSkillSelection { directory, apps }],
-            )
-            .context("failed to import unmanaged skill")?;
+            let imported =
+                SkillService::import_from_apps(&db, vec![ImportSkillSelection { directory, apps }])
+                    .context("failed to import unmanaged skill")?;
             print_json(&ApiResponse::ok(imported))
         }
         Commands::Toggle {
@@ -455,6 +461,23 @@ fn parse_skill_apps(apps: &[String]) -> Result<SkillApps> {
         skill_apps.set_enabled_for(&app_type, true);
     }
     Ok(skill_apps)
+}
+
+fn normalize_required(label: &str, value: &str) -> Result<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        bail!("{label} is required");
+    }
+    Ok(trimmed.to_string())
+}
+
+fn normalize_branch(branch: &str) -> String {
+    let trimmed = branch.trim();
+    if trimmed.is_empty() {
+        "main".to_string()
+    } else {
+        trimmed.to_string()
+    }
 }
 
 fn format_error(error: &anyhow::Error) -> String {
@@ -534,6 +557,28 @@ mod tests {
         assert!(apps.gemini);
         assert!(!apps.opencode);
         assert!(!apps.hermes);
+    }
+
+    #[test]
+    fn normalize_required_trims_non_empty_values() {
+        assert_eq!(
+            normalize_required("repository owner", "  maojiebc  ").unwrap(),
+            "maojiebc"
+        );
+    }
+
+    #[test]
+    fn normalize_required_rejects_blank_values() {
+        let message = normalize_required("repository name", " \n\t ")
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("repository name is required"));
+    }
+
+    #[test]
+    fn normalize_branch_defaults_blank_values_to_main() {
+        assert_eq!(normalize_branch(" \n\t "), "main");
+        assert_eq!(normalize_branch(" dev "), "dev");
     }
 
     #[test]
