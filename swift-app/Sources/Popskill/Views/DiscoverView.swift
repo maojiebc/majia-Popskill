@@ -102,7 +102,7 @@ struct DiscoverView: View {
                     ProgressView()
                         .controlSize(.large)
                 } else if viewModel.skills.isEmpty {
-                    ContentUnavailableView("Search Skills", systemImage: "sparkles")
+                    ContentUnavailableView(emptyStateTitle, systemImage: "sparkles")
                 }
             }
         }
@@ -167,6 +167,18 @@ struct DiscoverView: View {
         }
         .padding(.horizontal, 28)
         .padding(.vertical, 20)
+    }
+
+    private var emptyStateTitle: String {
+        if !viewModel.hasLoadedOnce {
+            return "Search Skills"
+        }
+
+        if viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "No Skills Found"
+        }
+
+        return "No Matching Skills"
     }
 }
 
