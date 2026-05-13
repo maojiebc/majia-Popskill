@@ -79,7 +79,7 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 ```bash
 ./skill-cli/target/debug/skill-cli list --json
 ./skill-cli/target/debug/skill-cli detail <skill-id> --json
-./skill-cli/target/debug/skill-cli toggle <skill-id> --app codex --enabled true
+./skill-cli/target/debug/skill-cli toggle <skill-id> --app codex --enabled true --json
 ./skill-cli/target/debug/skill-cli scan-unmanaged --json
 ./skill-cli/target/debug/skill-cli discover --query pdf --limit 20 --json
 ./skill-cli/target/debug/skill-cli repo-list --json

@@ -165,6 +165,9 @@ enum Commands {
         app: String,
         #[arg(long, action = clap::ArgAction::Set)]
         enabled: bool,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -421,6 +424,7 @@ async fn run() -> Result<()> {
             skill_id,
             app,
             enabled,
+            json: _,
         } => {
             let app_type = parse_target_app(&app)?;
             SkillService::toggle_app(&db, &skill_id, &app_type, enabled)

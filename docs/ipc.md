@@ -78,7 +78,7 @@ Returns all skills currently managed by CC Switch.
 }
 ```
 
-### `skill-cli toggle <skill-id> --app <app> --enabled <true|false>`
+### `skill-cli toggle <skill-id> --app <app> --enabled <true|false> --json`
 
 Enables or disables an installed skill for one target app. The command delegates to `SkillService::toggle_app`, so CC Switch remains the source of truth for DB updates and skill symlinks.
 

@@ -171,6 +171,7 @@ actor SkillCLIClient {
             app.rawValue,
             "--enabled",
             String(enabled),
+            "--json",
         ])
     }
 
