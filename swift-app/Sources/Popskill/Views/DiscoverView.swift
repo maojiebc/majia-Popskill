@@ -12,6 +12,8 @@ final class DiscoverViewModel {
     var errorMessage: String?
 
     private let client = SkillCLIClient()
+    private var installPlans: [CatalogSkill.ID: InstallPlan] = [:]
+    private var planningKeys: Set<String> = []
     private var installingKeys: Set<String> = []
     private var shouldSearchAgain = false
 
@@ -35,6 +37,23 @@ final class DiscoverViewModel {
 
             isLoading = false
         } while shouldSearchAgain
+    }
+
+    func planInstall(_ skill: CatalogSkill) async {
+        guard !planningKeys.contains(skill.key), !skill.installed else {
+            return
+        }
+
+        planningKeys.insert(skill.key)
+        errorMessage = nil
+
+        do {
+            installPlans[skill.key] = try await client.installPlan(skillKey: skill.key, app: selectedInstallApp)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        planningKeys.remove(skill.key)
     }
 
     func install(_ skill: CatalogSkill, onInstalled: @escaping () async -> Void) async {
@@ -72,6 +91,14 @@ final class DiscoverViewModel {
     func isInstalling(_ key: String) -> Bool {
         installingKeys.contains(key)
     }
+
+    func isPlanning(_ key: String) -> Bool {
+        planningKeys.contains(key)
+    }
+
+    func installPlan(for key: String) -> InstallPlan? {
+        installPlans[key]
+    }
 }
 
 struct DiscoverView: View {
@@ -96,12 +123,20 @@ struct DiscoverView: View {
             List(viewModel.skills) { skill in
                 CatalogSkillRow(
                     skill: skill,
-                    isInstalling: viewModel.isInstalling(skill.key)
-                ) {
-                    Task {
-                        await viewModel.install(skill, onInstalled: onInstalled)
+                    installPlan: viewModel.installPlan(for: skill.key),
+                    isPlanning: viewModel.isPlanning(skill.key),
+                    isInstalling: viewModel.isInstalling(skill.key),
+                    onPlan: {
+                        Task {
+                            await viewModel.planInstall(skill)
+                        }
+                    },
+                    onInstall: {
+                        Task {
+                            await viewModel.install(skill, onInstalled: onInstalled)
+                        }
                     }
-                }
+                )
                 .listRowSeparator(.visible)
                 .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
             }
@@ -193,7 +228,10 @@ struct DiscoverView: View {
 
 struct CatalogSkillRow: View {
     let skill: CatalogSkill
+    let installPlan: InstallPlan?
+    let isPlanning: Bool
     let isInstalling: Bool
+    let onPlan: () -> Void
     let onInstall: () -> Void
 
     var body: some View {
@@ -220,6 +258,18 @@ struct CatalogSkillRow: View {
                     .font(.caption)
                     .foregroundStyle(Color.popTertiaryLabel)
                     .lineLimit(1)
+
+                if let installPlan {
+                    HStack(spacing: 6) {
+                        StatusPill(title: installPlan.targetApp.capitalized, color: .popSectionBlue)
+                        Text(installPlan.writes.ssotPath)
+                            .font(.caption)
+                            .foregroundStyle(Color.popTertiaryLabel)
+                            .lineLimit(1)
+                        StatusPill(title: "AgentShield", color: .popStatusNeutral)
+                            .help(installPlan.securityGate)
+                    }
+                }
             }
 
             Spacer(minLength: 20)
@@ -231,6 +281,20 @@ struct CatalogSkillRow: View {
                 .buttonStyle(.bordered)
                 .help("Open Source")
             }
+
+            Button {
+                onPlan()
+            } label: {
+                if isPlanning {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Image(systemName: "doc.text.magnifyingglass")
+                }
+            }
+            .buttonStyle(.bordered)
+            .disabled(skill.installed || isPlanning || isInstalling)
+            .help("Preview Install")
 
             Button {
                 onInstall()

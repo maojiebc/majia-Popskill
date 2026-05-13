@@ -117,7 +117,7 @@
 - **已完成**：AgentShield sidecar + Library 手动/持久化扫描 + install/import gate（blocked 自动回滚或阻断；`security-scan` / `security-scan-list`，支持 `POPSKILL_AGENTSHIELD_BIN`）
 - **已完成**：WebDAV 状态/远端 snapshot 只读纵切（`webdav-status` / `webdav-remote-info`，Settings 显示配置与远端 manifest 状态）
 - **已完成**：自定义 skill repository 管理（`repo-list/add/toggle/remove`），含 URL/owner/name 校验、`.git` 后缀规范化、非法 scheme 拒绝
-- **已完成**：SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译
+- **已完成**：SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译，Discover 已接 install-plan 行内预览
 - **已完成**：行内 Claude/Codex/Gemini toggle、详情页更多 app toggle、Stub / Rehydrate、Idle Candidates 60 天 inactive 筛选 + 批量 Stub、unmanaged import 前扫描
 - **已完成**：Backups 查看 / 恢复 / 删除，Settings sidecar health 诊断
 - **已完成**：本地 CI、read-only smoke、mutating repo smoke、`.app` development bundle、bundle launch smoke、release artifact smoke、development DMG 打包、release manifest/appcast 生成
