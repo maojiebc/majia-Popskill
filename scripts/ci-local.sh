@@ -19,6 +19,7 @@ Runs the local verification suite:
   - Swift tests
   - native launch smoke
   - .app bundle launch smoke
+  - release artifact smoke
 
 Pass --mutating to also run sidecar smoke tests that create and remove
 a temporary CC Switch skill repository.
@@ -46,6 +47,9 @@ echo "==> Local CI: native app launch smoke"
 
 echo "==> Local CI: bundled app launch smoke"
 "$ROOT_DIR/scripts/smoke-bundle.sh" 2
+
+echo "==> Local CI: release artifact smoke"
+"$ROOT_DIR/scripts/smoke-release.sh"
 
 if [[ "$RUN_MUTATING" == true ]]; then
   echo "==> Local CI: mutating sidecar smoke"
