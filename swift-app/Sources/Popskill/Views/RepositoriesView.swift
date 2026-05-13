@@ -28,6 +28,7 @@ final class RepositoriesViewModel {
 
         do {
             repositories = try await client.listRepositories()
+                .sorted { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
         } catch {
             errorMessage = error.localizedDescription
         }
