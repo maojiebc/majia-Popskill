@@ -22,7 +22,7 @@ Popskill aims to be the App Store experience that Claude Code skills deserve on 
 
 **Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
 
-**Current stage**: MVP feature verticals are implemented locally. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install-plan/install/update/uninstall/import/repository/backup/WebDAV status flows; SwiftUI Library + Discover + Repositories + Updates + Backups + Insights + Settings compile and pass tests; `scripts/ci-local.sh` verifies Rust/Swift builds, read-only sidecar smoke, native launch smoke, bundle smoke, and release artifact smoke. Remaining v0.1 work is release hardening: Developer ID signing/notarization, Sparkle SDK integration, WebDAV config/manual sync, transcript attribution explanation, README screenshots, and visual polish. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
+**Current stage**: MVP feature verticals are implemented locally. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install-plan/install/update/uninstall/import/repository/backup/WebDAV status flows; SwiftUI Library + Discover + Repositories + Updates + Backups + Insights + Settings compile and pass tests; `scripts/ci-local.sh` verifies Rust/Swift builds, read-only sidecar smoke, native launch smoke, bundle smoke, and release artifact smoke. Remaining v0.1 work is release hardening: Developer ID signing/notarization, Sparkle SDK integration, WebDAV config/manual sync, skill-level transcript attribution, README screenshots, and visual polish. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
 
 ---
 
@@ -124,6 +124,7 @@ SwiftUI 端已接入：
 
 - ✅ 本地 CI：`./scripts/ci-local.sh` 覆盖 Rust/Swift build、单测、只读 sidecar smoke、App 启动、bundle 启动、release artifact smoke。
 - ✅ Release artifact smoke：可生成本地开发 DMG、release manifest、Sparkle appcast 骨架。
+- ✅ Transcript boundary：Insights UI 和文档说明本地聚合、忽略消息内容、尚非 skill 级精确归因。
 - ⏳ Apple Developer Program：确认 Developer ID 证书；不加入则需要明确 unsigned/ad-hoc 分发说明。
 - ⏳ Notarization：拿到证书后跑 `scripts/notarize.sh`，验证 `stapler validate` 和 Gatekeeper 打开路径。
 - ⏳ Sparkle SDK：当前只能生成 appcast；App 内更新检查尚未集成。

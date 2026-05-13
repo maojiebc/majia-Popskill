@@ -18,6 +18,8 @@ struct TokenSpendView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
+                    TranscriptBoundaryNote()
+
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 14)], spacing: 14) {
                         UsageMetricCard(title: "Total", value: viewModel.summary.totalTokens, accent: PopskillSectionAccent.color(for: 0))
                         UsageMetricCard(title: "Input", value: viewModel.summary.inputTokens, accent: PopskillSectionAccent.color(for: 1))

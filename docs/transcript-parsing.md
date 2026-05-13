@@ -41,6 +41,12 @@ The Insights MVP computes aggregate usage without storing or displaying message 
 
 Recent session labels prefer the transcript `cwd` field so names like `projects/skill-creator` preserve meaningful hyphens. If `cwd` is absent, Popskill falls back to a compact suffix derived from the encoded Claude project folder name.
 
+## Privacy and Interpretation Boundary
+
+Popskill scans transcript files on the local Mac only. The scanner reads JSONL records to extract envelope metadata and `message.usage` counters, but message `content` is ignored and is not stored, displayed, uploaded, or used for ranking.
+
+The current UI intentionally labels these numbers as transcript totals, session activity, and model usage. They should not be presented as exact skill-level spend yet.
+
 ## Attribution Status
 
 The original plan assumed a stable `<command-name>` marker for skill invocation. The initial scan did not verify that marker, so skill-level token attribution remains pending.

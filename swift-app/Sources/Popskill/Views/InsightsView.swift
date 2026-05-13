@@ -77,6 +77,8 @@ struct InsightsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
+                    TranscriptBoundaryNote()
+
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 14)], spacing: 14) {
                         UsageMetricCard(title: "Total Tokens", value: viewModel.summary.totalTokens, accent: PopskillSectionAccent.color(for: 0))
                         UsageMetricCard(title: "Input", value: viewModel.summary.inputTokens, accent: PopskillSectionAccent.color(for: 1))
@@ -118,6 +120,30 @@ struct InsightsView: View {
 
     private var maxModelTokens: Int64 {
         viewModel.summary.modelStats.map(\.totalTokens).max() ?? 0
+    }
+}
+
+struct TranscriptBoundaryNote: View {
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "lock.shield")
+                .font(.title3)
+                .foregroundStyle(Color.popSectionBlue)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Local transcript totals")
+                    .font(.subheadline.weight(.semibold))
+                Text("Message content is ignored. Popskill currently aggregates local session and model usage; skill-level attribution is pending until reliable invocation markers are verified.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .popCard(cornerRadius: PopskillRadius.smallCard, shadowOpacity: 0.02)
     }
 }
 

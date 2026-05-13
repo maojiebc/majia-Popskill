@@ -41,6 +41,10 @@ struct RecentActivityView: View {
                 Divider()
             }
 
+            TranscriptBoundaryNote()
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+
             List(viewModel.summary.recentSessions.prefix(80)) { session in
                 RecentSessionRow(session: session, maxTokens: maxSessionTokens)
                     .listRowSeparator(.visible)
