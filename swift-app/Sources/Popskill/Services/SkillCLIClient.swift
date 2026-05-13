@@ -60,7 +60,11 @@ actor SkillCLIClient {
         return try Self.decodeResponse([SkillRepository].self, from: data)
     }
 
-    func setRepositoryEnabled(_ enabled: Bool, owner: String, name: String) async throws -> SkillRepositoryToggleResult {
+    func setRepositoryEnabled(
+        _ enabled: Bool,
+        owner: String,
+        name: String
+    ) async throws -> SkillRepositoryToggleResult {
         let data = try run(arguments: [
             "repo-toggle",
             "--owner",
