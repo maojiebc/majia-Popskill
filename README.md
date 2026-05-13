@@ -182,6 +182,7 @@ SwiftUI 端已接入：
 - **[docs/security.md](./docs/security.md)** —— Keychain、skill 内容和 transcript insights 的安全边界。
 - **[docs/release-runbook.md](./docs/release-runbook.md)** —— v0.1 签名、公证、DMG 和 Sparkle appcast 发布步骤。
 - **[docs/release-notes-v0.1.md](./docs/release-notes-v0.1.md)** —— v0.1 pre-alpha 发布说明草稿。
+- **[docs/v0.1-qa-checklist.md](./docs/v0.1-qa-checklist.md)** —— v0.1 发布前自动/视觉/隐私/发布产物 QA 清单。
 
 ### 在新机器上接手
 
