@@ -16,11 +16,11 @@ struct AppToggle: View {
                         .controlSize(.mini)
                 } else {
                     Image(systemName: app.symbolName)
-                        .font(.system(size: 13, weight: isOn ? .semibold : .regular))
+                        .font(.system(size: 12, weight: isOn ? .semibold : .regular))
                         .foregroundStyle(isOn ? app.accentColor : Color.popStatusNeutral)
                 }
             }
-            .frame(width: 31, height: 30)
+            .frame(width: 28, height: 28)
         }
         .buttonStyle(.plain)
         .disabled(isPending)
@@ -33,9 +33,51 @@ struct AppToggle: View {
                 .stroke(isOn ? app.accentColor.opacity(0.38) : Color.popBorder, lineWidth: 1)
         )
         .contentShape(RoundedRectangle(cornerRadius: PopskillRadius.button))
-        .help("\(app.title)\(isOn ? " enabled" : " disabled")")
+        .help("\(app.title) · \(isOn ? "Enabled" : "Disabled")")
         .accessibilityLabel(Text(app.title))
         .accessibilityValue(Text(isOn ? "Enabled" : "Disabled"))
+    }
+}
+
+struct AppToggleRow: View {
+    let apps: [TargetApp]
+    let isOn: (TargetApp) -> Bool
+    let isPending: (TargetApp) -> Bool
+    let onToggle: (TargetApp, Bool) -> Void
+    var showsEnabledSummary: Bool = true
+
+    private var enabledCount: Int {
+        apps.filter { app in
+            isOn(app)
+        }.count
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 8) {
+            HStack(spacing: 6) {
+                ForEach(apps, id: \.id) { app in
+                    AppToggle(
+                        app: app,
+                        isOn: isOn(app),
+                        isPending: isPending(app)
+                    ) { enabled in
+                        onToggle(app, enabled)
+                    }
+                }
+            }
+
+            if showsEnabledSummary {
+                Text("\(enabledCount)/\(apps.count)")
+                    .font(.caption2.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.popCardBackground.opacity(0.52), in: Capsule())
+                    .help("Enabled apps")
+                    .accessibilityLabel(Text("Enabled apps"))
+                    .accessibilityValue(Text("\(enabledCount) of \(apps.count)"))
+            }
+        }
     }
 }
 

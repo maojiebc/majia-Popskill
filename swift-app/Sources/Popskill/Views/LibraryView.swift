@@ -909,17 +909,18 @@ struct SkillDetailPane: View {
                         }
 
                         DetailSection(title: "Enabled In", accent: PopskillSectionAccent.color(for: 2)) {
-                            HStack(spacing: 7) {
-                                ForEach(TargetApp.supported, id: \.id) { app in
-                                    AppToggle(
-                                        app: app,
-                                        isOn: skill.apps.isEnabled(app),
-                                        isPending: isToggling(skill, app)
-                                    ) { enabled in
-                                        onToggle(skill, app, enabled)
-                                    }
+                            AppToggleRow(
+                                apps: TargetApp.supported,
+                                isOn: { app in
+                                    skill.apps.isEnabled(app)
+                                },
+                                isPending: { app in
+                                    isToggling(skill, app)
+                                },
+                                onToggle: { app, enabled in
+                                    onToggle(skill, app, enabled)
                                 }
-                            }
+                            )
                         }
 
                         DetailSection(title: "Security", accent: PopskillSectionAccent.color(for: 3)) {
@@ -1154,17 +1155,16 @@ struct SkillRow: View {
                         .lineLimit(1)
                 }
 
-                LazyVGrid(columns: appToggleColumns, alignment: .leading, spacing: 8) {
-                    ForEach(TargetApp.supported, id: \.id) { app in
-                        AppToggle(
-                            app: app,
-                            isOn: skill.apps.isEnabled(app),
-                            isPending: isToggling(app)
-                        ) { enabled in
-                            onToggle(app, enabled)
-                        }
-                    }
-                }
+                AppToggleRow(
+                    apps: TargetApp.supported,
+                    isOn: { app in
+                        skill.apps.isEnabled(app)
+                    },
+                    isPending: { app in
+                        isToggling(app)
+                    },
+                    onToggle: onToggle
+                )
             }
 
             Spacer(minLength: 8)
@@ -1186,12 +1186,9 @@ struct SkillRow: View {
                 .help("Update")
             }
         }
-        .frame(minHeight: 148)
+        .frame(minHeight: 136)
     }
 
-    private var appToggleColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: 31), spacing: 7, alignment: .leading)]
-    }
 }
 
 struct StubRow: View {
