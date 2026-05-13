@@ -11,6 +11,7 @@ final class RepositoriesViewModel {
     private let client = SkillCLIClient()
     private var pendingIDs: Set<SkillRepository.ID> = []
     private var removingIDs: Set<SkillRepository.ID> = []
+    private(set) var isAdding = false
 
     var enabledCount: Int {
         repositories.filter(\.enabled).count
@@ -35,6 +36,42 @@ final class RepositoriesViewModel {
 
     func isRemoving(_ repository: SkillRepository) -> Bool {
         removingIDs.contains(repository.id)
+    }
+
+    @discardableResult
+    func add(owner: String, name: String, branch: String, enabled: Bool) async -> Bool {
+        guard !isAdding else {
+            return false
+        }
+
+        let owner = owner.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let branch = branch.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !owner.isEmpty, !name.isEmpty else {
+            errorMessage = "Repository owner and name are required"
+            return false
+        }
+
+        isAdding = true
+        errorMessage = nil
+
+        do {
+            let repository = try await client.addRepository(
+                owner: owner,
+                name: name,
+                branch: branch.isEmpty ? "main" : branch,
+                enabled: enabled
+            )
+            repositories.removeAll { $0.id == repository.id }
+            repositories.append(repository)
+            repositories.sort { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
+            isAdding = false
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            isAdding = false
+            return false
+        }
     }
 
     func setEnabled(_ enabled: Bool, for repository: SkillRepository) async {
@@ -86,6 +123,7 @@ final class RepositoriesViewModel {
 struct RepositoriesView: View {
     @Bindable var viewModel: RepositoriesViewModel
     let onRepositoriesChanged: () async -> Void
+    @State private var isShowingAddSheet = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -131,6 +169,22 @@ struct RepositoriesView: View {
             }
         }
         .background(Color.popMainBackground)
+        .sheet(isPresented: $isShowingAddSheet) {
+            AddRepositorySheet(
+                isAdding: viewModel.isAdding,
+                onCancel: {
+                    isShowingAddSheet = false
+                },
+                onAdd: { owner, name, branch, enabled in
+                    Task {
+                        if await viewModel.add(owner: owner, name: name, branch: branch, enabled: enabled) {
+                            isShowingAddSheet = false
+                            await onRepositoriesChanged()
+                        }
+                    }
+                }
+            )
+        }
         .task {
             if viewModel.repositories.isEmpty {
                 await viewModel.load()
@@ -150,6 +204,14 @@ struct RepositoriesView: View {
             Spacer()
 
             Button {
+                isShowingAddSheet = true
+            } label: {
+                Image(systemName: "plus")
+            }
+            .buttonStyle(.bordered)
+            .help("Add Repository")
+
+            Button {
                 Task { await viewModel.load() }
             } label: {
                 if viewModel.isLoading {
@@ -165,6 +227,53 @@ struct RepositoriesView: View {
         }
         .padding(.horizontal, 28)
         .padding(.vertical, 20)
+    }
+}
+
+struct AddRepositorySheet: View {
+    let isAdding: Bool
+    let onCancel: () -> Void
+    let onAdd: (String, String, String, Bool) -> Void
+
+    @State private var owner = ""
+    @State private var name = ""
+    @State private var branch = "main"
+    @State private var enabled = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Add Repository")
+                .font(.title2.weight(.bold))
+
+            VStack(alignment: .leading, spacing: 10) {
+                TextField("Owner or organization", text: $owner)
+                TextField("Repository name", text: $name)
+                TextField("Branch", text: $branch)
+                Toggle("Enabled", isOn: $enabled)
+            }
+            .textFieldStyle(.roundedBorder)
+
+            HStack {
+                Spacer()
+                Button("Cancel", action: onCancel)
+                    .keyboardShortcut(.cancelAction)
+                Button {
+                    onAdd(owner, name, branch, enabled)
+                } label: {
+                    if isAdding {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Text("Add")
+                    }
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .disabled(isAdding || owner.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(width: 420)
     }
 }
 

@@ -67,6 +67,20 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Add or replace one configured skill repository.
+    RepoAdd {
+        #[arg(long)]
+        owner: String,
+        #[arg(long)]
+        name: String,
+        #[arg(long, default_value = "main")]
+        branch: String,
+        #[arg(long, action = clap::ArgAction::Set, default_value_t = true)]
+        enabled: bool,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// Enable or disable one configured skill repository.
     RepoToggle {
         #[arg(long)]
@@ -266,6 +280,24 @@ async fn run() -> Result<()> {
                 .get_skill_repos()
                 .context("failed to load skill repositories")?;
             print_json(&ApiResponse::ok(repos))
+        }
+        Commands::RepoAdd {
+            owner,
+            name,
+            branch,
+            enabled,
+            json: _,
+        } => {
+            let repo = serde_json::from_value(json!({
+                "owner": owner,
+                "name": name,
+                "branch": branch,
+                "enabled": enabled
+            }))
+            .context("failed to build skill repository payload")?;
+            db.save_skill_repo(&repo)
+                .context("failed to save skill repository")?;
+            print_json(&ApiResponse::ok(repo))
         }
         Commands::RepoToggle {
             owner,

@@ -161,6 +161,22 @@ Returns CC Switch skill repositories used by Discover.
 }
 ```
 
+### `skill-cli repo-add --owner <owner> --name <name> --branch <branch> --enabled <true|false> --json`
+
+Adds or replaces one CC Switch skill repository used by Discover.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "owner": "example",
+    "name": "skills",
+    "branch": "main",
+    "enabled": true
+  }
+}
+```
+
 ### `skill-cli repo-toggle --owner <owner> --name <name> --enabled <true|false> --json`
 
 Enables or disables one configured skill repository. Installed skills are not modified.

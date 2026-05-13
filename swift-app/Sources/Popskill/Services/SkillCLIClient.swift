@@ -60,6 +60,27 @@ actor SkillCLIClient {
         return try Self.decodeResponse([SkillRepository].self, from: data)
     }
 
+    func addRepository(
+        owner: String,
+        name: String,
+        branch: String,
+        enabled: Bool
+    ) async throws -> SkillRepository {
+        let data = try run(arguments: [
+            "repo-add",
+            "--owner",
+            owner,
+            "--name",
+            name,
+            "--branch",
+            branch,
+            "--enabled",
+            String(enabled),
+            "--json",
+        ])
+        return try Self.decodeResponse(SkillRepository.self, from: data)
+    }
+
     func setRepositoryEnabled(
         _ enabled: Bool,
         owner: String,

@@ -83,6 +83,7 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 ./skill-cli/target/debug/skill-cli scan-unmanaged --json
 ./skill-cli/target/debug/skill-cli discover --query pdf --limit 20 --json
 ./skill-cli/target/debug/skill-cli repo-list --json
+./skill-cli/target/debug/skill-cli repo-add --owner <owner> --name <repo> --branch main --enabled true --json
 ./skill-cli/target/debug/skill-cli repo-toggle --owner <owner> --name <repo> --enabled false --json
 ./skill-cli/target/debug/skill-cli install <skill-key> --app codex --json
 ./skill-cli/target/debug/skill-cli check-updates --json
