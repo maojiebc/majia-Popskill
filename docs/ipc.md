@@ -322,6 +322,34 @@ Restores one Popskill stub from its stored CC Switch backup and enables it for t
 }
 ```
 
+### `skill-cli security-scan <skill-dir> --json`
+
+Runs a third-party skill directory through ECC AgentShield. By default the sidecar invokes `npx --yes ecc-agentshield <skill-dir>`. Set `POPSKILL_AGENTSHIELD_BIN` to point at a pinned local scanner binary/script.
+
+The command returns `ok: true` even when findings are present; callers must inspect `data.status`.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "scanner": "ecc-agentshield",
+    "status": "verified",
+    "summary": "AgentShield completed without reported findings",
+    "exitCode": 0,
+    "stdout": "...",
+    "stderr": "",
+    "scannedAt": 1778603190
+  }
+}
+```
+
+Status values:
+
+- `verified`: scanner completed without obvious findings
+- `warning`: scanner reported lower-confidence findings or exited non-zero without blocking keywords
+- `blocked`: scanner reported high/critical/malicious findings
+- `unavailable`: scanner command could not be launched
+
 ### `skill-cli backup-list --json`
 
 Returns uninstall backups created by CC Switch.

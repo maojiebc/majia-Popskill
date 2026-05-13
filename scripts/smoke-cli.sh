@@ -50,6 +50,14 @@ require_ok backup-list backup-list --json
 require_ok stub-list stub-list --json
 require_ok repo-list repo-list --json
 
+scan_dir="$TMP_DIR/security-scan-skill"
+mkdir -p "$scan_dir"
+printf '# Smoke Skill\n' > "$scan_dir/SKILL.md"
+security_output="$TMP_DIR/security-scan.json"
+POPSKILL_AGENTSHIELD_BIN=/bin/echo "$CLI" security-scan "$scan_dir" --json > "$security_output"
+jq -e '.ok == true and .data.scanner == "ecc-agentshield" and .data.status == "verified"' "$security_output" > /dev/null
+echo "security-scan ok"
+
 health_output="$TMP_DIR/health.json"
 "$CLI" health --json > "$health_output"
 jq -e '.ok == true and (.data.installedCount | type) == "number"' "$health_output" > /dev/null

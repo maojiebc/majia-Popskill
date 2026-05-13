@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::process::ExitCode;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -149,6 +150,13 @@ enum Commands {
         skill_id: String,
         #[arg(long, default_value = "claude")]
         app: String,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Run a third-party skill directory through ECC AgentShield.
+    SecurityScan {
+        skill_dir: String,
         /// Kept for the Swift client contract; output is JSON either way.
         #[arg(long)]
         json: bool,
@@ -436,6 +444,11 @@ async fn run() -> Result<()> {
                 .with_context(|| format!("failed to rehydrate skill '{skill_id}'"))?;
             print_json(&ApiResponse::ok(skill))
         }
+        Commands::SecurityScan { skill_dir, json: _ } => {
+            let result = run_security_scan(Path::new(&skill_dir))
+                .with_context(|| format!("failed to scan skill directory '{skill_dir}'"))?;
+            print_json(&ApiResponse::ok(result))
+        }
         Commands::BackupList { json: _ } => {
             let backups = SkillService::list_backups().context("failed to list skill backups")?;
             print_json(&ApiResponse::ok(backups))
@@ -714,6 +727,119 @@ fn remove_stub(store: &mut StubStore, skill_id: &str) -> Option<StubbedSkill> {
     Some(store.stubs.remove(index))
 }
 
+fn run_security_scan(skill_dir: &Path) -> Result<SecurityScanResult> {
+    if !skill_dir.exists() {
+        bail!("skill directory does not exist: {}", skill_dir.display());
+    }
+    if !skill_dir.is_dir() {
+        bail!("skill path is not a directory: {}", skill_dir.display());
+    }
+
+    let command = agent_shield_command(skill_dir);
+    let output = Command::new(&command.program).args(&command.args).output();
+
+    match output {
+        Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            let exit_code = output.status.code();
+            let status = classify_security_scan(output.status.success(), &stdout, &stderr);
+            let summary = scan_summary(status, &stdout, &stderr);
+
+            Ok(SecurityScanResult {
+                scanner: "ecc-agentshield".to_string(),
+                status,
+                summary,
+                exit_code,
+                stdout,
+                stderr,
+                scanned_at: unix_timestamp(),
+            })
+        }
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(SecurityScanResult {
+            scanner: "ecc-agentshield".to_string(),
+            status: SecurityScanStatus::Unavailable,
+            summary: format!(
+                "AgentShield command is not available. Install Node/npm or set {}.",
+                AGENTSHIELD_BIN_ENV
+            ),
+            exit_code: None,
+            stdout: String::new(),
+            stderr: err.to_string(),
+            scanned_at: unix_timestamp(),
+        }),
+        Err(err) => Err(err).context("failed to launch AgentShield"),
+    }
+}
+
+fn agent_shield_command(skill_dir: &Path) -> AgentShieldCommand {
+    if let Ok(program) = std::env::var(AGENTSHIELD_BIN_ENV) {
+        let program = program.trim();
+        if !program.is_empty() {
+            return AgentShieldCommand {
+                program: program.to_string(),
+                args: vec![skill_dir.to_string_lossy().to_string()],
+            };
+        }
+    }
+
+    AgentShieldCommand {
+        program: "npx".to_string(),
+        args: vec![
+            "--yes".to_string(),
+            "ecc-agentshield".to_string(),
+            skill_dir.to_string_lossy().to_string(),
+        ],
+    }
+}
+
+fn classify_security_scan(success: bool, stdout: &str, stderr: &str) -> SecurityScanStatus {
+    let combined = format!("{stdout}\n{stderr}").to_lowercase();
+    if combined.contains("critical")
+        || combined.contains("high severity")
+        || combined.contains("blocked")
+        || combined.contains("danger")
+        || combined.contains("malicious")
+    {
+        return SecurityScanStatus::Blocked;
+    }
+
+    if combined.contains("warning")
+        || combined.contains("medium severity")
+        || combined.contains("low severity")
+        || combined.contains("suspicious")
+    {
+        return SecurityScanStatus::Warning;
+    }
+
+    if success {
+        SecurityScanStatus::Verified
+    } else {
+        SecurityScanStatus::Warning
+    }
+}
+
+fn scan_summary(status: SecurityScanStatus, stdout: &str, stderr: &str) -> String {
+    first_non_empty_line(stdout)
+        .or_else(|| first_non_empty_line(stderr))
+        .unwrap_or_else(|| match status {
+            SecurityScanStatus::Verified => {
+                "AgentShield completed without reported findings".to_string()
+            }
+            SecurityScanStatus::Warning => "AgentShield completed with warnings".to_string(),
+            SecurityScanStatus::Blocked => "AgentShield reported blocking findings".to_string(),
+            SecurityScanStatus::Unavailable => "AgentShield is unavailable".to_string(),
+        })
+}
+
+fn first_non_empty_line(value: &str) -> Option<String> {
+    value
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .map(ToString::to_string)
+}
+
 fn format_error(error: &anyhow::Error) -> String {
     error
         .chain()
@@ -771,6 +897,35 @@ struct StubbedSkill {
 struct StubStore {
     #[serde(default)]
     stubs: Vec<StubbedSkill>,
+}
+
+const AGENTSHIELD_BIN_ENV: &str = "POPSKILL_AGENTSHIELD_BIN";
+
+struct AgentShieldCommand {
+    program: String,
+    args: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+enum SecurityScanStatus {
+    Verified,
+    Warning,
+    Blocked,
+    Unavailable,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SecurityScanResult {
+    scanner: String,
+    status: SecurityScanStatus,
+    summary: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    exit_code: Option<i32>,
+    stdout: String,
+    stderr: String,
+    scanned_at: i64,
 }
 
 #[cfg(test)]
@@ -905,6 +1060,38 @@ mod tests {
         assert_eq!(removed.skill.id, "skill-a");
         assert_eq!(store.stubs.len(), 1);
         assert_eq!(store.stubs[0].skill.id, "skill-b");
+    }
+
+    #[test]
+    fn classify_security_scan_blocks_high_risk_output() {
+        let status = classify_security_scan(true, "High severity shell execution", "");
+
+        assert_eq!(status, SecurityScanStatus::Blocked);
+    }
+
+    #[test]
+    fn classify_security_scan_warns_on_nonzero_without_blocking_words() {
+        let status = classify_security_scan(false, "scan completed with warnings", "");
+
+        assert_eq!(status, SecurityScanStatus::Warning);
+    }
+
+    #[test]
+    fn classify_security_scan_verifies_clean_success() {
+        let status = classify_security_scan(true, "all checks passed", "");
+
+        assert_eq!(status, SecurityScanStatus::Verified);
+    }
+
+    #[test]
+    fn scan_summary_prefers_first_stdout_line() {
+        let summary = scan_summary(
+            SecurityScanStatus::Warning,
+            "\n  first finding\nsecond",
+            "stderr",
+        );
+
+        assert_eq!(summary, "first finding");
     }
 
     fn stub_fixture(id: &str, stubbed_at: i64) -> StubbedSkill {

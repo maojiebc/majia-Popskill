@@ -114,12 +114,13 @@
 代码已经明显超过最初 Day 1-5 计划，下面这些能力已经落地，后续不要再当成"未来计划"：
 
 - **已完成**：`skill-cli list/detail/toggle/discover/install/update/uninstall/import-unmanaged`
+- **已完成**：AgentShield sidecar 骨架（`security-scan`，支持 `POPSKILL_AGENTSHIELD_BIN`）
 - **已完成**：自定义 skill repository 管理（`repo-list/add/toggle/remove`），含 URL/owner/name 校验、`.git` 后缀规范化、非法 scheme 拒绝
 - **已完成**：SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译
 - **已完成**：行内 Claude/Codex/Gemini toggle、详情页更多 app toggle、Stub / Rehydrate、unmanaged import banner
 - **已完成**：Backups 查看 / 恢复 / 删除，Settings sidecar health 诊断
 - **已完成**：本地 CI、read-only smoke、mutating repo smoke、`.app` development bundle、bundle launch smoke
-- **未完成**：Stub 自动建议 / 批量 stub、WebDAV UI、AgentShield 安全审计、正式 codesign/notarize/Sparkle release
+- **未完成**：Stub 自动建议 / 批量 stub、WebDAV UI、AgentShield install 前强制拦截与 UI 角标、正式 codesign/notarize/Sparkle release
 
 ### 不做的事（避免范围爆炸）
 
@@ -781,6 +782,9 @@ skill-cli stub <skill-id>
 skill-cli rehydrate <skill-id> --app=<claude>
   → 从 Stub 状态恢复（从保存的 backup id 还原，并启用目标 app）
 
+skill-cli security-scan <skill-dir> [--json]
+  → 调 ECC AgentShield，输出 verified / warning / blocked / unavailable 结果
+
 skill-cli update <skill-id>
   → 更新单个 skill
 
@@ -835,9 +839,6 @@ skill-cli search-skills-sh --query=<text> --limit=20 --offset=0 [--json]
 
 skill-cli install-plan <skill-key> --app=<claude>
   → 参考 ECC manifest-driven install，先输出将写入/覆盖/启用的计划
-
-skill-cli security-scan <skill-dir> [--json]
-  → 调 ECC AgentShield，输出 verified / warning / blocked 结果
 ```
 
 ### 8.3 JSON 输出示例
@@ -1390,9 +1391,10 @@ open swift-app/Popskill.xcodeproj
 - ✅ SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译
 - ✅ 行内 Claude/Codex/Gemini toggle、Stub / Rehydrate 与详情页多 app toggle 已接 sidecar
 - ✅ 自定义 skill repository 管理、sidecar health、backup 管理已倒灌进计划
+- ✅ AgentShield sidecar 扫描接口已落地，下一步接 install 前拦截与 UI 角标
 - ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle smoke 已落地
 - 🟡 Stub 状态机已完成手动 hibernate/metadata/rehydrate，尚未完成自动建议和批量 stub
-- 🔴 WebDAV UI、AgentShield 安全审计、正式 notarize/Sparkle release 尚未落地
+- 🔴 WebDAV UI、AgentShield UI/安装拦截、正式 notarize/Sparkle release 尚未落地
 - 🔴 视觉系统仍需按 `STYLE.md` 深度落地，不能停留在默认 SwiftUI 质感
 
-下一个动作：暂停扩新业务面，继续补视觉细节、Stub 自动建议、公证 release 流程和 AgentShield 骨架。
+下一个动作：暂停扩新业务面，继续补视觉细节、Stub 自动建议、公证 release 流程和 AgentShield UI/安装拦截。

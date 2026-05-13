@@ -97,6 +97,7 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 ./skill-cli/target/debug/skill-cli stub-list --json
 ./skill-cli/target/debug/skill-cli stub <skill-id> --json
 ./skill-cli/target/debug/skill-cli rehydrate <skill-id> --app codex --json
+./skill-cli/target/debug/skill-cli security-scan /path/to/skill --json
 ./skill-cli/target/debug/skill-cli backup-list --json
 ./skill-cli/target/debug/skill-cli backup-restore <backup-id> --app codex --json
 ./skill-cli/target/debug/skill-cli backup-delete <backup-id> --json

@@ -126,6 +126,27 @@ struct SkillModelsTests {
         #expect(skill.enabledAppCount == 3)
     }
 
+    @Test
+    func securityScanStatusDecodesBlockedValue() throws {
+        let data = """
+        {
+          "scanner": "ecc-agentshield",
+          "status": "blocked",
+          "summary": "High severity finding",
+          "exitCode": 1,
+          "stdout": "",
+          "stderr": "",
+          "scannedAt": 1778603190
+        }
+        """.data(using: .utf8)!
+
+        let decoder = JSONDecoder()
+        let result = try decoder.decode(SecurityScanResult.self, from: data)
+
+        #expect(result.status == .blocked)
+        #expect(result.exitCode == 1)
+    }
+
     private func catalogSkill(repoBranch: String?) -> CatalogSkill {
         CatalogSkill(
             key: "maojiebc/majia-skills/demo",

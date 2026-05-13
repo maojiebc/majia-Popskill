@@ -165,6 +165,23 @@ struct SidecarHealth: Codable, Equatable {
     let skillBackupPath: String
 }
 
+enum SecurityScanStatus: String, Codable, Equatable {
+    case verified
+    case warning
+    case blocked
+    case unavailable
+}
+
+struct SecurityScanResult: Codable, Equatable {
+    let scanner: String
+    let status: SecurityScanStatus
+    let summary: String
+    let exitCode: Int?
+    let stdout: String
+    let stderr: String
+    let scannedAt: Int
+}
+
 struct SkillApps: Codable, Equatable {
     var claude: Bool
     var codex: Bool
