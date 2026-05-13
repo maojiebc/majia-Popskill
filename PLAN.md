@@ -107,7 +107,7 @@
 - **抄 ECC 的 manifest-driven install**：`skill-cli install` 分 `plan` 和 `apply` 两步，GUI 端能 preview
 - **抄 ECC 的 AgentShield**：第三方 skill 默认做安全审计
 - **绕开 iamzhihuix 的 notarize 坑**：v0.1 就买 Apple Developer Program 做 notarize（详见 §11.7）
-- **绕开 iamzhihuix 的密钥存储坑**：PAT / API key / WebDAV password 进 Keychain，**不进 SQLite**
+- **绕开 iamzhihuix 的密钥存储坑**：Popskill 自有 PAT / API key 进 Keychain，**不进 SQLite**；WebDAV password 当前委托给 CC Switch settings，Popskill 不另存副本
 
 ### 当前实现校准（2026-05-13）
 
@@ -115,14 +115,14 @@
 
 - **已完成**：`skill-cli list/detail/toggle/discover/install-plan/install/update/uninstall/import-unmanaged`
 - **已完成**：AgentShield sidecar + Library 手动/持久化扫描 + install/import gate（blocked 自动回滚或阻断；`security-scan` / `security-scan-list`，支持 `POPSKILL_AGENTSHIELD_BIN`）
-- **已完成**：WebDAV 状态/远端 snapshot 只读纵切（`webdav-status` / `webdav-remote-info`，Settings 显示配置与远端 manifest 状态）
+- **已完成**：WebDAV 状态/远端 snapshot 与配置写入纵切（`webdav-status` / `webdav-configure` / `webdav-remote-info`，Settings 显示配置与远端 manifest 状态）
 - **已完成**：自定义 skill repository 管理（`repo-list/add/toggle/remove`），含 URL/owner/name 校验、`.git` 后缀规范化、非法 scheme 拒绝
 - **已完成**：SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译，Discover 已接 install-plan 行内预览
 - **已完成**：行内 Claude/Codex/Gemini toggle、详情页更多 app toggle、Stub / Rehydrate、Idle Candidates 60 天 inactive + transcript attribution 筛选 + 批量 Stub、unmanaged import 前扫描
 - **已完成**：Backups 查看 / 恢复 / 删除，Settings sidecar health 诊断
 - **已完成**：本地 CI、read-only smoke、mutating repo smoke、`.app` development bundle、bundle launch smoke、release artifact smoke、development DMG 打包、release manifest/appcast 生成
 - **已完成**：Discover/Library/Settings/Updates 截图级 polish（Discover 行 CTA 文案、sidebar badge 导航、Library 行布局、Settings 诊断密度、Updates 空态按钮层级）
-- **未完成**：WebDAV 配置与手动 upload/download sync、正式 codesign/notarize、Sparkle SDK 接入
+- **未完成**：WebDAV 手动 upload/download sync、正式 codesign/notarize、Sparkle SDK 接入
 
 ### 不做的事（避免范围爆炸）
 
@@ -737,6 +737,9 @@ skill-cli health --json
 skill-cli webdav-status [--json]
   → 读取 CC Switch WebDAV sync 设置并脱敏输出
 
+skill-cli webdav-configure --base-url=<url> --username=<u> --password-env=<env> --remote-root=<root> --profile=<profile> --enabled=<true|false> --auto-sync=<true|false> [--json]
+  → 写入 CC Switch WebDAV sync 设置；密码只通过环境变量传入，省略 password-env 时保留旧密码
+
 skill-cli webdav-remote-info [--json]
   → 复用 CC Switch 远端 manifest 查询（未配置/未启用时失败）
 
@@ -815,9 +818,6 @@ skill-cli backup-delete <backup-id> [--json]
 ```bash
 skill-cli webdav sync-now
   → 立刻触发同步
-
-skill-cli webdav configure --url=<url> --username=<u> --password=<p>
-  → 配置 WebDAV
 
 skill-cli search-skills-sh --query=<text> --limit=20 --offset=0 [--json]
   → 搜 skills.sh 公共目录
@@ -1018,7 +1018,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 | Week 4 | Insights + transcript 解析 | ✅ 已完成 | 已验证真实 `attributionSkill` / `attributionPlugin` 字段；Usage / Token Spend 可展示 skill 级统计，仍忽略正文 |
 | Week 5 | Updates 页 + 自动检查 | ✅ Updates 页面完成，含 Update All 和 last checked 状态 | Sparkle SDK 尚未集成；Popskill 自身更新仍是 appcast 生成 smoke |
 | Week 6 | Stub 状态机 | ✅ 已完成 | 60 天建议已落在 Idle Candidates，并避开最近 60 天内有 transcript attribution 使用的 skill |
-| Week 7 | WebDAV 同步 UI | 🟡 只读边界已完成 | Settings 已有 status + remote info；配置写入、Keychain、Sync Now 留给 v0.1 收口 |
+| Week 7 | WebDAV 同步 UI | 🟡 配置/只读边界已完成 | Settings 已有配置写入、status + remote info；Sync Now 留给 v0.1 收口 |
 | Week 8 | 打磨 + 打包 | 🟡 pipeline 已打通，release doctor 可检查 Developer ID/notary 前置条件，README 截图已补 | 需要 Apple Developer Program 通过、真实签名/公证、Sparkle SDK 和人工验收 |
 
 ### v0.1 收口清单
@@ -1027,7 +1027,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 - [x] Discover 安装计划：安装前可预览目标路径、动作、目标 App 和 AgentShield rollback；切换目标 App 会清掉旧计划。
 - [x] AgentShield gate：unmanaged import 和 discover install 均能阻断高风险 skill。
 - [x] Stub MVP：stub/rehydrate、Idle Candidates、bulk stub dry-run/执行。
-- [x] WebDAV sidecar 边界：只读 status / remote info / local backup summary。
+- [x] WebDAV sidecar 边界：配置写入 / 只读 status / remote info / local backup summary。
 - [x] release smoke：DMG、release manifest、Sparkle appcast 生成脚本。
 - [x] release doctor：检查 Developer ID、notarytool/stapler、notary 凭据、app/dmg/appcast 前置条件。
 - [x] 视觉 polish 第一轮：Discover 行内 `Plan` / `Install` 可读，带 badge 的 sidebar 项可导航，Library 行内 app toggle 不挤压标题。
@@ -1035,7 +1035,8 @@ struct CLIResponse<T: Decodable>: Decodable {
 - [ ] Apple Developer Program：确认是否加入；不加入则只能走 ad-hoc/unsigned 分发说明。
 - [ ] 真实签名/公证：接入 Developer ID 后跑 `notarytool`，补 CI/本地验证文档。
 - [ ] Sparkle SDK：把 appcast 从“可生成”推进到 App 内真实更新检查。
-- [ ] WebDAV v0.1：配置表单、Keychain 保存、手动 Sync Now、冲突/失败态。
+- [x] WebDAV 配置表单：Settings 可写入 CC Switch WebDAV settings；新密码通过 sidecar 环境变量传递，状态输出脱敏。
+- [ ] WebDAV Sync Now：upload/download、冲突/失败态。
 - [x] Transcript boundary：UI/文档说明本地聚合并忽略消息正文。
 - [x] Transcript attribution：已验证真实 `attributionSkill` 调用标记，补 skill 级归因统计与 Idle Candidates 最近使用过滤。
 - [x] README 截图：Discover、Library、Usage Insights、Idle Candidates 真实界面截图已补到 `docs/assets/screenshots/`。
@@ -1124,7 +1125,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 - **证书**：使用 **Developer ID Application**，不是 Mac App Distribution
 - **流程**：`package-dev-app.sh` 产出 `.app` → `codesign --options runtime --timestamp` → `ditto` 压 zip → `xcrun notarytool submit --wait` → `xcrun stapler staple` → `stapler validate` → `package-dmg.sh` 产出带 Applications 拖拽入口的 `.dmg` → `release-manifest.sh` 记录 version / build / sha256 / size → `generate-appcast.sh` 生成 Sparkle appcast 骨架
 - **脚本化**：封装成 `scripts/release-doctor.sh`、`scripts/notarize.sh`、`scripts/package-dmg.sh`、`scripts/release-manifest.sh` 与 `scripts/generate-appcast.sh`。每个 Sparkle 更新包都要重新走 codesign + notarize + staple
-- **密钥策略**：Apple app-specific password 走环境变量或 Keychain profile；WebDAV password / PAT / LLM API key 也进 Keychain，**不进 SQLite**
+- **密钥策略**：Apple app-specific password 走环境变量或 Keychain profile；Popskill 自有 PAT / LLM API key 进 Keychain，**不进 SQLite**。WebDAV password 当前由 CC Switch settings 持有，Popskill 仅通过环境变量传给 sidecar，不另存副本。
 
 **验收**：拿一台干净的、没装过 Popskill 的 Mac，从 Releases 下 `.dmg` → 拖进 Applications → 双击打开，**全程零警告弹窗**。
 
@@ -1145,9 +1146,9 @@ struct CLIResponse<T: Decodable>: Decodable {
 
 ### 11.9 WebDAV 写同步 sidecar 边界
 
-**当前状态**：`webdav-status` 与 `webdav-remote-info` 可以直接复用 CC Switch re-export 的无状态 command，Settings 已能显示配置和远端 snapshot。
+**当前状态**：`webdav-status` 与 `webdav-remote-info` 可以直接复用 CC Switch re-export 的无状态 command；`webdav-configure` 通过 `get_settings` → JSON patch → `save_settings` 写入 CC Switch settings，Settings 已能配置、显示状态和远端 snapshot。
 
-**阻塞点**：`webdav_sync_upload` / `webdav_sync_download` 需要 Tauri `State<AppState>`；底层 `services::webdav_sync` 与 `settings::WebDavSyncSettings` 仍在 CC Switch 私有 module 里，Popskill sidecar 不能在不改 submodule 的前提下干净调用。
+**阻塞点**：`webdav_sync_upload` / `webdav_sync_download` 需要 Tauri `State<AppState>`；底层 `services::webdav_sync` 与 `settings::WebDavSyncSettings` 仍在 CC Switch 私有 module 里，Popskill sidecar 不能在不改 submodule 的前提下干净调用。配置写入已绕过类型边界，但 upload/download 仍不能这样处理。
 
 **原则**：不修改 `cc-switch/` submodule，不复制 WebDAV 协议实现。下一步应该等 CC Switch 暴露无 Tauri State 的公共 service API，或在 Popskill 自己侧做一个明确版本锁定的 adapter，并把风险写进测试。
 

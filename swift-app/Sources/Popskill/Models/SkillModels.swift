@@ -251,6 +251,16 @@ struct WebDAVStatus: Codable, Equatable {
     let status: WebDAVSyncStatus?
 }
 
+struct WebDAVConfiguration: Equatable {
+    let enabled: Bool
+    let autoSync: Bool
+    let baseUrl: String
+    let username: String
+    let password: String
+    let remoteRoot: String
+    let profile: String
+}
+
 struct WebDAVSyncStatus: Codable, Equatable {
     let lastSyncAt: Int?
     let lastError: String?

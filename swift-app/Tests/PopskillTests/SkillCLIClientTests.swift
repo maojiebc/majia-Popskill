@@ -60,4 +60,39 @@ struct SkillCLIClientTests {
         #expect(path == NSHomeDirectory() + "/bin/skill-cli")
         #expect(SkillCLIClient.normalizedExecutableOverridePath(" \n\t ") == nil)
     }
+
+    @Test
+    func webDAVConfigureInvocationPassesPasswordThroughEnvironment() {
+        let invocation = SkillCLIClient.webDAVConfigureInvocation(for: WebDAVConfiguration(
+            enabled: true,
+            autoSync: false,
+            baseUrl: "https://dav.example.com",
+            username: "demo",
+            password: "secret with spaces",
+            remoteRoot: "cc-switch-sync",
+            profile: "default"
+        ))
+
+        #expect(invocation.arguments.contains("--password-env"))
+        #expect(!invocation.arguments.contains("secret with spaces"))
+        #expect(invocation.environment?[SkillCLIClient.webDAVPasswordEnvironmentKey] == "secret with spaces")
+    }
+
+    @Test
+    func webDAVConfigureInvocationOmitsPasswordEnvironmentWhenBlank() {
+        let invocation = SkillCLIClient.webDAVConfigureInvocation(for: WebDAVConfiguration(
+            enabled: false,
+            autoSync: true,
+            baseUrl: "https://dav.example.com",
+            username: "demo",
+            password: "",
+            remoteRoot: "team-sync",
+            profile: "work"
+        ))
+
+        #expect(!invocation.arguments.contains("--password-env"))
+        #expect(invocation.environment == nil)
+        #expect(invocation.arguments.contains("team-sync"))
+        #expect(invocation.arguments.contains("work"))
+    }
 }

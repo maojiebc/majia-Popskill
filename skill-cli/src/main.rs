@@ -4,7 +4,7 @@ use cc_switch_lib::{
 };
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{Value, json};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -34,6 +34,26 @@ enum Commands {
     },
     /// Return saved CC Switch WebDAV sync settings with secrets removed.
     WebdavStatus {
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Save CC Switch WebDAV sync settings. Passwords are accepted through an env var only.
+    WebdavConfigure {
+        #[arg(long)]
+        base_url: String,
+        #[arg(long)]
+        username: String,
+        #[arg(long)]
+        password_env: Option<String>,
+        #[arg(long, default_value = "cc-switch-sync")]
+        remote_root: String,
+        #[arg(long, default_value = "default")]
+        profile: String,
+        #[arg(long, action = clap::ArgAction::Set, default_value_t = true)]
+        enabled: bool,
+        #[arg(long, action = clap::ArgAction::Set, default_value_t = false)]
+        auto_sync: bool,
         /// Kept for the Swift client contract; output is JSON either way.
         #[arg(long)]
         json: bool,
@@ -287,6 +307,45 @@ async fn run() -> Result<()> {
             })))
         }
         Commands::WebdavStatus { json: _ } => {
+            let settings = cc_switch_lib::get_settings()
+                .await
+                .map_err(anyhow::Error::msg)?;
+            let value = serde_json::to_value(settings).context("failed to serialize settings")?;
+            print_json(&ApiResponse::ok(webdav_status_from_settings_value(value)))
+        }
+        Commands::WebdavConfigure {
+            base_url,
+            username,
+            password_env,
+            remote_root,
+            profile,
+            enabled,
+            auto_sync,
+            json: _,
+        } => {
+            let password = read_optional_env_secret("WebDAV password env", password_env)?;
+            let settings = cc_switch_lib::get_settings()
+                .await
+                .map_err(anyhow::Error::msg)?;
+            let value = serde_json::to_value(settings).context("failed to serialize settings")?;
+            let value = webdav_configured_settings_value(
+                value,
+                WebDAVConfigureInput {
+                    base_url,
+                    username,
+                    password,
+                    remote_root,
+                    profile,
+                    enabled,
+                    auto_sync,
+                },
+            )?;
+            let updated: cc_switch_lib::AppSettings =
+                serde_json::from_value(value).context("failed to build CC Switch settings")?;
+            cc_switch_lib::save_settings(updated)
+                .await
+                .map_err(anyhow::Error::msg)
+                .context("failed to save WebDAV settings")?;
             let settings = cc_switch_lib::get_settings()
                 .await
                 .map_err(anyhow::Error::msg)?;
@@ -630,6 +689,26 @@ fn normalize_required(label: &str, value: &str) -> Result<String> {
         bail!("{label} is required");
     }
     Ok(trimmed.to_string())
+}
+
+fn normalize_with_default(value: &str, default_value: &str) -> String {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        default_value.to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+fn read_optional_env_secret(label: &str, env_name: Option<String>) -> Result<Option<String>> {
+    let Some(env_name) = env_name else {
+        return Ok(None);
+    };
+
+    let env_name = normalize_required(label, &env_name)?;
+    std::env::var(&env_name)
+        .with_context(|| format!("failed to read {label} '{env_name}'"))
+        .map(Some)
 }
 
 fn normalize_repository_owner(value: &str) -> Result<String> {
@@ -1166,6 +1245,51 @@ fn webdav_status_from_settings_value(settings: serde_json::Value) -> serde_json:
     sync
 }
 
+struct WebDAVConfigureInput {
+    base_url: String,
+    username: String,
+    password: Option<String>,
+    remote_root: String,
+    profile: String,
+    enabled: bool,
+    auto_sync: bool,
+}
+
+fn webdav_configured_settings_value(
+    mut settings: Value,
+    input: WebDAVConfigureInput,
+) -> Result<Value> {
+    let base_url = normalize_required("WebDAV base URL", &input.base_url)?;
+    let username = normalize_required("WebDAV username", &input.username)?;
+    let remote_root = normalize_with_default(&input.remote_root, "cc-switch-sync");
+    let profile = normalize_with_default(&input.profile, "default");
+    let status = settings
+        .get("webdavSync")
+        .and_then(|sync| sync.get("status"))
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+
+    let Some(object) = settings.as_object_mut() else {
+        bail!("CC Switch settings must be a JSON object");
+    };
+
+    object.insert(
+        "webdavSync".to_string(),
+        json!({
+            "enabled": input.enabled,
+            "autoSync": input.auto_sync,
+            "baseUrl": base_url,
+            "username": username,
+            "password": input.password.unwrap_or_default(),
+            "remoteRoot": remote_root,
+            "profile": profile,
+            "status": status
+        }),
+    );
+
+    Ok(settings)
+}
+
 fn format_error(error: &anyhow::Error) -> String {
     error
         .chain()
@@ -1513,6 +1637,86 @@ mod tests {
         assert_eq!(status["configured"], true);
         assert_eq!(status["enabled"], true);
         assert!(status.get("password").is_none());
+    }
+
+    #[test]
+    fn webdav_configure_payload_preserves_status_and_defaults_blank_fields() {
+        let payload = webdav_configured_settings_value(
+            json!({
+                "theme": "system",
+                "webdavSync": {
+                    "enabled": true,
+                    "baseUrl": "https://old.example.com",
+                    "username": "old",
+                    "password": "",
+                    "remoteRoot": "old-root",
+                    "profile": "old-profile",
+                    "status": {
+                        "lastSyncAt": 1778603190,
+                        "lastError": null
+                    }
+                }
+            }),
+            WebDAVConfigureInput {
+                base_url: " https://dav.example.com ".to_string(),
+                username: " demo ".to_string(),
+                password: None,
+                remote_root: " ".to_string(),
+                profile: "\n".to_string(),
+                enabled: true,
+                auto_sync: false,
+            },
+        )
+        .unwrap();
+
+        assert_eq!(payload["theme"], "system");
+        assert_eq!(payload["webdavSync"]["baseUrl"], "https://dav.example.com");
+        assert_eq!(payload["webdavSync"]["username"], "demo");
+        assert_eq!(payload["webdavSync"]["password"], "");
+        assert_eq!(payload["webdavSync"]["remoteRoot"], "cc-switch-sync");
+        assert_eq!(payload["webdavSync"]["profile"], "default");
+        assert_eq!(payload["webdavSync"]["status"]["lastSyncAt"], 1778603190);
+    }
+
+    #[test]
+    fn webdav_configure_payload_uses_env_password_without_sanitizing_it() {
+        let payload = webdav_configured_settings_value(
+            json!({}),
+            WebDAVConfigureInput {
+                base_url: "https://dav.example.com".to_string(),
+                username: "demo".to_string(),
+                password: Some(" secret with spaces ".to_string()),
+                remote_root: "root".to_string(),
+                profile: "profile".to_string(),
+                enabled: false,
+                auto_sync: true,
+            },
+        )
+        .unwrap();
+
+        assert_eq!(payload["webdavSync"]["enabled"], false);
+        assert_eq!(payload["webdavSync"]["autoSync"], true);
+        assert_eq!(payload["webdavSync"]["password"], " secret with spaces ");
+    }
+
+    #[test]
+    fn webdav_configure_payload_requires_url_and_username() {
+        let message = webdav_configured_settings_value(
+            json!({}),
+            WebDAVConfigureInput {
+                base_url: " ".to_string(),
+                username: "demo".to_string(),
+                password: None,
+                remote_root: "root".to_string(),
+                profile: "profile".to_string(),
+                enabled: true,
+                auto_sync: false,
+            },
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(message.contains("WebDAV base URL is required"));
     }
 
     fn stub_fixture(id: &str, stubbed_at: i64) -> StubbedSkill {

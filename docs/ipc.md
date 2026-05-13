@@ -81,6 +81,29 @@ When WebDAV has not been configured:
 }
 ```
 
+### `skill-cli webdav-configure --base-url <url> --username <user> --password-env <env> --remote-root <root> --profile <profile> --enabled <true|false> --auto-sync <true|false> --json`
+
+Writes CC Switch WebDAV sync settings and returns the same sanitized payload as `webdav-status`. Password values are only accepted through an environment variable so they do not appear in argv; omitting `--password-env` keeps the existing saved password.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "configured": true,
+    "enabled": true,
+    "autoSync": false,
+    "baseUrl": "https://dav.example.com/remote.php/dav/files/me",
+    "username": "me",
+    "remoteRoot": "cc-switch-sync",
+    "profile": "default",
+    "status": {
+      "lastSyncAt": null,
+      "lastError": null
+    }
+  }
+}
+```
+
 ### `skill-cli webdav-remote-info --json`
 
 Fetches remote manifest information for the saved enabled WebDAV config. This command fails if WebDAV is unconfigured or disabled.

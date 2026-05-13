@@ -2,6 +2,7 @@ import Foundation
 
 actor SkillCLIClient {
     private let executableURL: URL
+    static let webDAVPasswordEnvironmentKey = "POPSKILL_WEBDAV_PASSWORD"
 
     init(executableURL: URL? = nil) {
         self.executableURL = executableURL ?? Self.resolveExecutableURL()
@@ -30,6 +31,12 @@ actor SkillCLIClient {
 
     func webdavStatus() async throws -> WebDAVStatus {
         let data = try run(arguments: ["webdav-status", "--json"])
+        return try Self.decodeResponse(WebDAVStatus.self, from: data)
+    }
+
+    func configureWebDAV(_ configuration: WebDAVConfiguration) async throws -> WebDAVStatus {
+        let invocation = Self.webDAVConfigureInvocation(for: configuration)
+        let data = try run(arguments: invocation.arguments, environment: invocation.environment)
         return try Self.decodeResponse(WebDAVStatus.self, from: data)
     }
 
@@ -235,10 +242,17 @@ actor SkillCLIClient {
         ])
     }
 
-    private func run(arguments: [String]) throws -> Data {
+    private func run(arguments: [String], environment: [String: String]? = nil) throws -> Data {
         let process = Process()
         process.executableURL = executableURL
         process.arguments = arguments
+        if let environment {
+            var mergedEnvironment = ProcessInfo.processInfo.environment
+            for (key, value) in environment {
+                mergedEnvironment[key] = value
+            }
+            process.environment = mergedEnvironment
+        }
 
         let stdout = Pipe()
         let stderr = Pipe()
@@ -261,6 +275,35 @@ actor SkillCLIClient {
         }
 
         return output
+    }
+
+    static func webDAVConfigureInvocation(
+        for configuration: WebDAVConfiguration
+    ) -> (arguments: [String], environment: [String: String]?) {
+        var arguments = [
+            "webdav-configure",
+            "--base-url",
+            configuration.baseUrl,
+            "--username",
+            configuration.username,
+            "--remote-root",
+            configuration.remoteRoot,
+            "--profile",
+            configuration.profile,
+            "--enabled",
+            String(configuration.enabled),
+            "--auto-sync",
+            String(configuration.autoSync),
+            "--json",
+        ]
+        var environment: [String: String]?
+
+        if !configuration.password.isEmpty {
+            arguments.append(contentsOf: ["--password-env", webDAVPasswordEnvironmentKey])
+            environment = [webDAVPasswordEnvironmentKey: configuration.password]
+        }
+
+        return (arguments, environment)
     }
 
     static func commandFailureMessage(stdout: Data, stderr: Data, status: Int32) -> String {

@@ -11,8 +11,18 @@ final class SettingsViewModel {
     var webdavRemoteError: String?
     var isLoading = false
     var isCheckingWebDAVRemote = false
+    var isSavingWebDAV = false
     var hasLoadedOnce = false
     var errorMessage: String?
+    var webdavSaveMessage: String?
+    var webdavSaveError: String?
+    var webdavBaseURL = ""
+    var webdavUsername = ""
+    var webdavPassword = ""
+    var webdavRemoteRoot = "cc-switch-sync"
+    var webdavProfile = "default"
+    var webdavEnabled = true
+    var webdavAutoSync = false
 
     private let client = SkillCLIClient()
 
@@ -30,7 +40,9 @@ final class SettingsViewModel {
 
         do {
             health = try await client.health()
-            webdavStatus = try await client.webdavStatus()
+            let status = try await client.webdavStatus()
+            webdavStatus = status
+            syncWebDAVForm(from: status)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -52,6 +64,54 @@ final class SettingsViewModel {
         }
 
         isCheckingWebDAVRemote = false
+    }
+
+    func saveWebDAVConfiguration() async {
+        guard !isSavingWebDAV else {
+            return
+        }
+
+        let configuration = WebDAVConfiguration(
+            enabled: webdavEnabled,
+            autoSync: webdavAutoSync,
+            baseUrl: webdavBaseURL,
+            username: webdavUsername,
+            password: webdavPassword,
+            remoteRoot: webdavRemoteRoot,
+            profile: webdavProfile
+        )
+
+        isSavingWebDAV = true
+        webdavSaveMessage = nil
+        webdavSaveError = nil
+        defer { isSavingWebDAV = false }
+
+        do {
+            let status = try await client.configureWebDAV(configuration)
+            webdavStatus = status
+            syncWebDAVForm(from: status)
+            webdavRemoteInfo = nil
+            webdavRemoteError = nil
+            webdavSaveMessage = "Saved to CC Switch settings"
+        } catch {
+            webdavSaveError = error.localizedDescription
+        }
+    }
+
+    var canSaveWebDAVConfiguration: Bool {
+        !isSavingWebDAV
+            && !webdavBaseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !webdavUsername.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func syncWebDAVForm(from status: WebDAVStatus) {
+        webdavBaseURL = status.baseUrl ?? ""
+        webdavUsername = status.username ?? ""
+        webdavPassword = ""
+        webdavRemoteRoot = status.remoteRoot ?? "cc-switch-sync"
+        webdavProfile = status.profile ?? "default"
+        webdavEnabled = status.enabled ?? true
+        webdavAutoSync = status.autoSync ?? false
     }
 }
 
@@ -124,11 +184,13 @@ struct SettingsView: View {
 
                     DetailSection(title: "Secrets", accent: PopskillSectionAccent.color(for: 2)) {
                         DetailField(title: "Local Secrets", value: "Popskill stores its own secrets in macOS Keychain.")
-                        DetailField(title: "WebDAV Credentials", value: "Owned by CC Switch settings. Popskill only reads sanitized status output here.")
+                        DetailField(title: "WebDAV Credentials", value: "Owned by CC Switch settings. New passwords are passed to the sidecar through an environment variable.")
                     }
 
                     DetailSection(title: "WebDAV", accent: PopskillSectionAccent.color(for: 3)) {
                         WebDAVReadinessNote(status: viewModel.webdavStatus)
+                        WebDAVConfigForm(viewModel: viewModel)
+                        Divider()
                         SettingsFieldGrid {
                             DetailField(title: "Configured", value: boolText(viewModel.webdavStatus?.configured))
                             DetailField(title: "Enabled", value: boolText(viewModel.webdavStatus?.enabled))
@@ -221,7 +283,7 @@ struct SettingsView: View {
         }
 
         guard status.configured else {
-            return "Configure WebDAV in CC Switch before fetching remote info"
+            return "Save WebDAV settings before fetching remote info"
         }
 
         guard status.enabled == true else {
@@ -284,6 +346,91 @@ private struct SettingsFieldGrid<Content: View>: View {
     }
 }
 
+private struct WebDAVConfigForm: View {
+    @Bindable var viewModel: SettingsViewModel
+
+    private let columns = [
+        GridItem(.adaptive(minimum: 214), spacing: 12, alignment: .topLeading)
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
+                LabeledField(title: "Base URL") {
+                    TextField("https://dav.example.com/remote.php/dav/files/me", text: $viewModel.webdavBaseURL)
+                }
+
+                LabeledField(title: "Username") {
+                    TextField("me", text: $viewModel.webdavUsername)
+                }
+
+                LabeledField(title: "Password") {
+                    SecureField("Leave blank to keep existing", text: $viewModel.webdavPassword)
+                }
+
+                LabeledField(title: "Remote Root") {
+                    TextField("cc-switch-sync", text: $viewModel.webdavRemoteRoot)
+                }
+
+                LabeledField(title: "Profile") {
+                    TextField("default", text: $viewModel.webdavProfile)
+                }
+            }
+            .textFieldStyle(.roundedBorder)
+
+            HStack(spacing: 16) {
+                Toggle("Enabled", isOn: $viewModel.webdavEnabled)
+                    .toggleStyle(.switch)
+                Toggle("Auto Sync", isOn: $viewModel.webdavAutoSync)
+                    .toggleStyle(.switch)
+
+                Spacer()
+
+                Button {
+                    Task { await viewModel.saveWebDAVConfiguration() }
+                } label: {
+                    if viewModel.isSavingWebDAV {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Label("Save WebDAV", systemImage: "checkmark.circle")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!viewModel.canSaveWebDAVConfiguration)
+                .help("Save WebDAV settings")
+            }
+
+            if let message = viewModel.webdavSaveMessage {
+                Label(message, systemImage: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(Color.popStatusOK)
+            }
+
+            if let error = viewModel.webdavSaveError {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(Color.popStatusError)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+private struct LabeledField<Content: View>: View {
+    let title: String
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            content
+        }
+    }
+}
+
 struct WebDAVReadinessNote: View {
     let status: WebDAVStatus?
 
@@ -325,7 +472,7 @@ struct WebDAVReadinessNote: View {
             return "WebDAV configured but disabled"
         }
 
-        return "WebDAV read-only bridge"
+        return "WebDAV bridge ready"
     }
 
     private var message: String {
@@ -334,7 +481,7 @@ struct WebDAVReadinessNote: View {
         }
 
         guard status.configured else {
-            return "Popskill can inspect CC Switch WebDAV settings once they exist; configuration and Sync Now are still v0.1 work."
+            return "Save a server URL and username to create the CC Switch WebDAV configuration."
         }
 
         guard status.enabled == true else {
