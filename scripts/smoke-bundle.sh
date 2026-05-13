@@ -6,6 +6,7 @@ RUN_SECONDS="${1:-3}"
 APP_DIR="$ROOT_DIR/build/Popskill.app"
 APP_BIN="$APP_DIR/Contents/MacOS/Popskill"
 BUNDLED_CLI="$APP_DIR/Contents/Resources/skill-cli"
+BUNDLED_DOCS="$APP_DIR/Contents/Resources/ipc.md"
 LOG_FILE="$(mktemp)"
 APP_PID=""
 
@@ -27,6 +28,11 @@ fi
 
 if [[ ! -x "$BUNDLED_CLI" ]]; then
   echo "missing bundled skill-cli sidecar: $BUNDLED_CLI" >&2
+  exit 1
+fi
+
+if [[ ! -f "$BUNDLED_DOCS" ]]; then
+  echo "missing bundled IPC docs: $BUNDLED_DOCS" >&2
   exit 1
 fi
 
