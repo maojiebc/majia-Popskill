@@ -33,6 +33,11 @@ USAGE
   esac
 done
 
+echo "==> Local CI: shell script syntax"
+for script in "$ROOT_DIR"/scripts/*.sh; do
+  bash -n "$script"
+done
+
 echo "==> Local CI: build, read-only smoke, and tests"
 "$ROOT_DIR/scripts/dev-build.sh"
 
