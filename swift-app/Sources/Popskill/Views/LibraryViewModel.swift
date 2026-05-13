@@ -112,6 +112,12 @@ final class LibraryViewModel {
                 .sorted { $0.stubbedAt > $1.stubbedAt }
             unmanagedSkills = try await client.scanUnmanaged()
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            securityScanResults = Dictionary(
+                try await client.securityScans().map { ($0.skillId, $0.result) },
+                uniquingKeysWith: { current, replacement in
+                    replacement.scannedAt > current.scannedAt ? replacement : current
+                }
+            )
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -155,6 +161,7 @@ final class LibraryViewModel {
         do {
             _ = try await client.uninstall(skillID: skill.id)
             skills.removeAll { $0.id == skill.id }
+            securityScanResults[skill.id] = nil
             didUninstall = true
         } catch {
             errorMessage = error.localizedDescription
@@ -177,6 +184,7 @@ final class LibraryViewModel {
         do {
             let stub = try await client.stub(skillID: skill.id)
             skills.removeAll { $0.id == skill.id }
+            securityScanResults[skill.id] = nil
             upsertStub(stub)
             didStub = true
         } catch {
@@ -220,6 +228,7 @@ final class LibraryViewModel {
 
         do {
             securityScanResults[skill.id] = try await client.securityScan(
+                skillID: skill.id,
                 skillDirectory: skill.localStoreURL.path
             )
         } catch {

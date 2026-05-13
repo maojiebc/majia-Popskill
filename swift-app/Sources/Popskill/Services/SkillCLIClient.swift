@@ -161,8 +161,18 @@ actor SkillCLIClient {
         return try Self.decodeResponse(Skill.self, from: data)
     }
 
-    func securityScan(skillDirectory: String) async throws -> SecurityScanResult {
-        let data = try run(arguments: ["security-scan", skillDirectory, "--json"])
+    func securityScans() async throws -> [SecurityScanRecord] {
+        let data = try run(arguments: ["security-scan-list", "--json"])
+        return try Self.decodeResponse([SecurityScanRecord].self, from: data)
+    }
+
+    func securityScan(skillID: String? = nil, skillDirectory: String) async throws -> SecurityScanResult {
+        var arguments = ["security-scan", skillDirectory, "--json"]
+        if let skillID {
+            arguments.append(contentsOf: ["--skill-id", skillID])
+        }
+
+        let data = try run(arguments: arguments)
         return try Self.decodeResponse(SecurityScanResult.self, from: data)
     }
 

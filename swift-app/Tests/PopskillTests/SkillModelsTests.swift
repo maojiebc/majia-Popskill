@@ -148,6 +148,32 @@ struct SkillModelsTests {
     }
 
     @Test
+    func securityScanRecordDecodesPersistedPayload() throws {
+        let data = """
+        {
+          "skillId": "owner/repo:demo",
+          "skillDirectory": "/Users/demo/.cc-switch/skills/demo",
+          "result": {
+            "scanner": "ecc-agentshield",
+            "status": "verified",
+            "summary": "AgentShield completed without reported findings",
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "scannedAt": 1778603190
+          }
+        }
+        """.data(using: .utf8)!
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let record = try decoder.decode(SecurityScanRecord.self, from: data)
+
+        #expect(record.skillId == "owner/repo:demo")
+        #expect(record.result.status == .verified)
+    }
+
+    @Test
     func webDAVStatusDecodesUnconfiguredPayload() throws {
         let data = """
         {

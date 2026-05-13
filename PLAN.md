@@ -105,7 +105,7 @@
 - **抄 iamzhihuix 的 GitHub 导入策略**：PAT 认证 + retry fallback 写进 `skill-cli`
 - **抄 iamzhihuix 的项目级目录扫描**：扫 `.skills/`、`.agents/skills/`、`.claude/skills/`，把覆盖率拉满
 - **抄 ECC 的 manifest-driven install**：`skill-cli install` 分 `plan` 和 `apply` 两步，GUI 端能 preview
-- **抄 ECC 的 AgentShield**：第三方 skill 安装前默认做安全审计
+- **抄 ECC 的 AgentShield**：第三方 skill 默认做安全审计
 - **绕开 iamzhihuix 的 notarize 坑**：v0.1 就买 Apple Developer Program 做 notarize（详见 §11.7）
 - **绕开 iamzhihuix 的密钥存储坑**：PAT / API key / WebDAV password 进 Keychain，**不进 SQLite**
 
@@ -114,14 +114,14 @@
 代码已经明显超过最初 Day 1-5 计划，下面这些能力已经落地，后续不要再当成"未来计划"：
 
 - **已完成**：`skill-cli list/detail/toggle/discover/install/update/uninstall/import-unmanaged`
-- **已完成**：AgentShield sidecar + Library 手动扫描骨架（`security-scan`，支持 `POPSKILL_AGENTSHIELD_BIN`）
+- **已完成**：AgentShield sidecar + Library 手动/持久化扫描 + install 后 blocked 自动回滚（`security-scan` / `security-scan-list`，支持 `POPSKILL_AGENTSHIELD_BIN`）
 - **已完成**：WebDAV 状态只读纵切（`webdav-status` / `webdav-remote-info`，Settings 显示已配置状态）
 - **已完成**：自定义 skill repository 管理（`repo-list/add/toggle/remove`），含 URL/owner/name 校验、`.git` 后缀规范化、非法 scheme 拒绝
 - **已完成**：SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译
 - **已完成**：行内 Claude/Codex/Gemini toggle、详情页更多 app toggle、Stub / Rehydrate、unmanaged import banner
 - **已完成**：Backups 查看 / 恢复 / 删除，Settings sidecar health 诊断
 - **已完成**：本地 CI、read-only smoke、mutating repo smoke、`.app` development bundle、bundle launch smoke、development DMG 打包
-- **未完成**：Stub 60 天使用数据自动建议 / 批量 stub、WebDAV 配置与手动 sync、AgentShield install 前强制拦截与持久化角标、正式 codesign/notarize/Sparkle release
+- **未完成**：Stub 60 天使用数据自动建议 / 批量 stub、WebDAV 配置与手动 sync、正式 codesign/notarize/Sparkle release
 
 ### 不做的事（避免范围爆炸）
 
@@ -789,8 +789,11 @@ skill-cli stub <skill-id>
 skill-cli rehydrate <skill-id> --app=<claude>
   → 从 Stub 状态恢复（从保存的 backup id 还原，并启用目标 app）
 
-skill-cli security-scan <skill-dir> [--json]
-  → 调 ECC AgentShield，输出 verified / warning / blocked / unavailable 结果
+skill-cli security-scan <skill-dir> [--skill-id=<skill-id>] [--json]
+  → 调 ECC AgentShield，输出 verified / warning / blocked / unavailable 结果，并可持久化到本地角标
+
+skill-cli security-scan-list [--json]
+  → 列出已持久化的 AgentShield 扫描结果
 
 skill-cli update <skill-id>
   → 更新单个 skill
@@ -1222,12 +1225,12 @@ struct CLIResponse<T: Decodable>: Decodable {
 - **来源**：ECC / everything-claude-code 的 AgentShield
 - **能力**：约 102 条规则、1282 个测试，覆盖 prompt injection、命令执行、敏感文件访问、网络 exfiltration 等风险模式
 - **调用方式**：`npx ecc-agentshield <skill-dir>`，先作为 sidecar 子进程调用，不把 Node runtime 嵌进 SwiftUI
-- **安装路径**：download 后、apply 前扫描；默认阻断高危结果，warning 允许用户显式继续
-- **UI 表达**：Library / Detail 卡片显示 `Verified` / `Warning` / `Blocked` 安全角标；Detail 展示规则摘要
-- **落库**：Popskill SQLite 增加 `security_scan_results`，存 skill id、content hash、scanner version、summary、severity、scanned_at
+- **当前安装路径**：受 CC Switch `install()` 粒度限制，先 install 到 SSOT 后立即扫描；`blocked` 自动调用 uninstall 回滚。后续补 `install-plan/apply` 后再前移到 apply 前扫描
+- **UI 表达**：Library 行与 Detail 卡片显示 `Verified` / `Warning` / `Blocked` / `Unavailable` 安全角标；Detail 展示规则摘要
+- **落库**：当前先用 `~/.popskill/security-scans.json` 记录 skill id、skill directory、summary、severity、scanned_at；后续若引入 Popskill 自有数据库，再迁移到 `security_scan_results`
 - **离线策略**：规则和 npm 包可预热缓存；离线时显示 `Not scanned`，但不伪装成安全
 
-**验收**：安装第三方 skill 前能看到扫描状态；构造含危险命令的测试 skill 会被标记为 `Blocked`，且不会写入目标 app 目录。
+**验收**：安装第三方 skill 后立即得到扫描状态；构造含危险命令的测试 skill 会被标记为 `Blocked`，并被自动回滚。`install-plan/apply` 落地后，把扫描时机前移到写入目标目录之前。
 
 ---
 
@@ -1395,11 +1398,11 @@ open swift-app/Popskill.xcodeproj
 - ✅ SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译
 - ✅ 行内 Claude/Codex/Gemini toggle、Stub / Rehydrate 与详情页多 app toggle 已接 sidecar
 - ✅ 自定义 skill repository 管理、sidecar health、backup 管理已倒灌进计划
-- ✅ AgentShield sidecar 扫描接口与 Library 手动扫描已落地，下一步接 install 前拦截与持久化角标
+- ✅ AgentShield sidecar、Library 手动/持久化扫描、安装后 blocked 回滚已落地；下一步补 install-plan/apply，把扫描前移
 - ✅ WebDAV 状态只读入口已落地，下一步接配置保存和手动 upload/download
 - ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle smoke、development DMG 打包已落地
 - 🟡 Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 可一键 stub；尚未完成 60 天真实使用数据自动建议和批量 stub
-- 🔴 WebDAV 配置/手动 sync、AgentShield 安装拦截/持久化角标、正式 notarize/Sparkle release 尚未落地
+- 🔴 WebDAV 配置/手动 sync、正式 notarize/Sparkle release 尚未落地
 - 🟡 视觉 tokens 与主要页面容器已按 `STYLE.md` 落地；仍需继续做截图级 polish
 
-下一个动作：暂停扩新业务面，继续补视觉细节、Stub 60 天自动建议、WebDAV 配置/同步、公证 release 流程和 AgentShield 安装拦截。
+下一个动作：暂停扩新业务面，继续补视觉细节、Stub 60 天自动建议、WebDAV 配置/同步、公证 release 流程和 install-plan/apply。

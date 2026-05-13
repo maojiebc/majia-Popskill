@@ -125,6 +125,7 @@ struct LibraryView: View {
         List(viewModel.filteredSkills, selection: $selectedSkillID) { skill in
             SkillRow(
                 skill: skill,
+                securityScanResult: viewModel.securityScanResult(skillID: skill.id),
                 isToggling: { app in
                     viewModel.isToggling(skillID: skill.id, app: app)
                 }
@@ -580,6 +581,7 @@ struct StubDetailPane: View {
 
 struct SkillRow: View {
     let skill: Skill
+    let securityScanResult: SecurityScanResult?
     let isToggling: (TargetApp) -> Bool
     let onToggle: (TargetApp, Bool) -> Void
 
@@ -596,6 +598,13 @@ struct SkillRow: View {
 
                     if skill.enabledAppCount == 0 {
                         StatusPill(title: "Inactive", color: .popStatusNeutral)
+                    }
+
+                    if let securityScanResult {
+                        StatusPill(
+                            title: securityScanTitle(securityScanResult),
+                            color: securityScanColor(securityScanResult)
+                        )
                     }
                 }
 

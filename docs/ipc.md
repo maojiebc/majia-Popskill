@@ -254,7 +254,9 @@ Removes one configured skill repository from CC Switch discovery sources. Instal
 
 ### `skill-cli install <skill-key> --app <app> --json`
 
-Discovers the skill by key, installs it through CC Switch, and enables it for the requested app.
+Discovers the skill by key, installs it through CC Switch, enables it for the requested app, then runs AgentShield against the installed SSOT directory. `blocked` results are persisted, the install is rolled back with CC Switch uninstall, and the command exits with an error. `warning` and `unavailable` results are persisted but allowed.
+
+Pass `--skip-security-scan` only for local development bypasses.
 
 ```json
 {
@@ -360,11 +362,11 @@ Restores one Popskill stub from its stored CC Switch backup and enables it for t
 }
 ```
 
-### `skill-cli security-scan <skill-dir> --json`
+### `skill-cli security-scan <skill-dir> [--skill-id <skill-id>] --json`
 
 Runs a third-party skill directory through ECC AgentShield. By default the sidecar invokes `npx --yes ecc-agentshield <skill-dir>`. Set `POPSKILL_AGENTSHIELD_BIN` to point at a pinned local scanner binary/script.
 
-The command returns `ok: true` even when findings are present; callers must inspect `data.status`.
+The command returns `ok: true` even when findings are present; callers must inspect `data.status`. When `--skill-id` is provided, Popskill stores the result in `~/.popskill/security-scans.json` for Library badges.
 
 ```json
 {
@@ -387,6 +389,31 @@ Status values:
 - `warning`: scanner reported lower-confidence findings or exited non-zero without blocking keywords
 - `blocked`: scanner reported high/critical/malicious findings
 - `unavailable`: scanner command could not be launched
+
+### `skill-cli security-scan-list --json`
+
+Returns persisted AgentShield scan results for currently installed skills. Records for uninstalled/stubbed skills are pruned on read.
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "skillId": "owner/repo:directory",
+      "skillDirectory": "/Users/example/.cc-switch/skills/directory",
+      "result": {
+        "scanner": "ecc-agentshield",
+        "status": "verified",
+        "summary": "AgentShield completed without reported findings",
+        "exitCode": 0,
+        "stdout": "",
+        "stderr": "",
+        "scannedAt": 1778603190
+      }
+    }
+  ]
+}
+```
 
 ### `skill-cli backup-list --json`
 

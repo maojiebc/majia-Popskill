@@ -202,6 +202,12 @@ struct SecurityScanResult: Codable, Equatable {
     let scannedAt: Int
 }
 
+struct SecurityScanRecord: Codable, Equatable {
+    let skillId: String
+    let skillDirectory: String
+    let result: SecurityScanResult
+}
+
 struct SkillApps: Codable, Equatable {
     var claude: Bool
     var codex: Bool

@@ -18,7 +18,7 @@ Popskill aims to be the App Store experience that Claude Code skills deserve on 
 - **Usage Insights** — token spend, top skills, hibernate candidates (parses `~/.claude/projects/*.jsonl`). No other tool does this.
 - **Stub state** — like App Store's "purchased but not downloaded"; reclaim disk without losing the card
 - **WebDAV sync** across devices (reuses [CC Switch](https://github.com/farion1231/cc-switch)'s implementation — zero re-implementation)
-- **AgentShield security scan** before third-party skill installs (planned v0.1 path; see [PLAN.md §11.8](./PLAN.md#118-第三方-skill-安全审计agentshield))
+- **AgentShield security scan** for third-party skill installs (persisted Library badges; see [PLAN.md §11.8](./PLAN.md#118-第三方-skill-安全审计agentshield))
 
 **Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
 
@@ -52,7 +52,7 @@ Popskill 就是来填这个坑的。
 3. **多 app toggle**——Library 列表行内切 Claude/Codex/Gemini，详情页支持 OpenCode/Hermes
 4. **Stub 状态**——60 天没用的 skill 本地清掉内容、留 metadata 卡片，要用一键再装
 5. **WebDAV 跨设备同步**——白嫖 CC Switch 已有能力，不重做
-6. **AgentShield 安全审计**——第三方 skill 安装前扫描，安全状态显示到卡片和详情页
+6. **AgentShield 安全审计**——第三方 skill 安装后立即扫描，blocked 自动回滚，安全状态显示到列表和详情页
 
 ### 技术架构（一句话）
 
@@ -100,7 +100,8 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 ./skill-cli/target/debug/skill-cli stub-list --json
 ./skill-cli/target/debug/skill-cli stub <skill-id> --json
 ./skill-cli/target/debug/skill-cli rehydrate <skill-id> --app codex --json
-./skill-cli/target/debug/skill-cli security-scan /path/to/skill --json
+./skill-cli/target/debug/skill-cli security-scan /path/to/skill --skill-id <skill-id> --json
+./skill-cli/target/debug/skill-cli security-scan-list --json
 ./skill-cli/target/debug/skill-cli backup-list --json
 ./skill-cli/target/debug/skill-cli backup-restore <backup-id> --app codex --json
 ./skill-cli/target/debug/skill-cli backup-delete <backup-id> --json
@@ -109,8 +110,8 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 
 SwiftUI 端已接入：
 
-- Library：本机 skill 列表、All/Active/Inactive/Stubs 过滤、Claude/Codex/Gemini 行内 toggle、详情页 5 App toggle、stub/rehydrate、AgentShield 手动扫描、unmanaged import banner
-- Discover：搜索 CC Switch 启用的 skill repositories，按 Claude/Codex/Gemini/OpenCode/Hermes 安装
+- Library：本机 skill 列表、All/Active/Inactive/Stubs 过滤、Claude/Codex/Gemini 行内 toggle、详情页 5 App toggle、stub/rehydrate、AgentShield 持久化角标与手动扫描、unmanaged import banner
+- Discover：搜索 CC Switch 启用的 skill repositories，按 Claude/Codex/Gemini/OpenCode/Hermes 安装，安装后跑 AgentShield，blocked 自动回滚
 - Repositories：查看、启停、删除 CC Switch skill discovery sources
 - Updates：按需检查更新、逐条更新
 - Backups：查看、恢复、删除 CC Switch uninstall backups

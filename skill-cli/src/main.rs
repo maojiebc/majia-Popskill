@@ -126,6 +126,9 @@ enum Commands {
         skill_key: String,
         #[arg(long, default_value = "claude")]
         app: String,
+        /// Skip the AgentShield post-install gate. Intended for local development only.
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        skip_security_scan: bool,
         /// Kept for the Swift client contract; output is JSON either way.
         #[arg(long)]
         json: bool,
@@ -169,6 +172,15 @@ enum Commands {
     /// Run a third-party skill directory through ECC AgentShield.
     SecurityScan {
         skill_dir: String,
+        /// Persist this scan result against an installed skill id.
+        #[arg(long)]
+        skill_id: Option<String>,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// List persisted AgentShield scan results for installed skills.
+    SecurityScanList {
         /// Kept for the Swift client contract; output is JSON either way.
         #[arg(long)]
         json: bool,
@@ -417,6 +429,7 @@ async fn run() -> Result<()> {
         Commands::Install {
             skill_key,
             app,
+            skip_security_scan,
             json: _,
         } => {
             let app_type = parse_target_app(&app)?;
@@ -436,6 +449,18 @@ async fn run() -> Result<()> {
                 .install(&db, &skill, &app_type)
                 .await
                 .with_context(|| format!("failed to install skill '{skill_key}'"))?;
+            if !skip_security_scan {
+                let scan = scan_installed_skill(&installed)
+                    .with_context(|| format!("failed to run AgentShield for '{skill_key}'"))?;
+                if scan.result.status == SecurityScanStatus::Blocked {
+                    let _ = SkillService::uninstall(&db, &installed.id);
+                    bail!(
+                        "AgentShield blocked '{}': {}",
+                        installed.name,
+                        scan.result.summary
+                    );
+                }
+            }
             print_json(&ApiResponse::ok(installed))
         }
         Commands::Update { skill_id, json: _ } => {
@@ -470,10 +495,25 @@ async fn run() -> Result<()> {
                 .with_context(|| format!("failed to rehydrate skill '{skill_id}'"))?;
             print_json(&ApiResponse::ok(skill))
         }
-        Commands::SecurityScan { skill_dir, json: _ } => {
+        Commands::SecurityScan {
+            skill_dir,
+            skill_id,
+            json: _,
+        } => {
             let result = run_security_scan(Path::new(&skill_dir))
                 .with_context(|| format!("failed to scan skill directory '{skill_dir}'"))?;
+            if let Some(skill_id) = skill_id.as_deref() {
+                persist_security_scan(SecurityScanRecord {
+                    skill_id: skill_id.to_string(),
+                    skill_directory: skill_dir,
+                    result: result.clone(),
+                })?;
+            }
             print_json(&ApiResponse::ok(result))
+        }
+        Commands::SecurityScanList { json: _ } => {
+            let scans = list_security_scans(&db).context("failed to list AgentShield scans")?;
+            print_json(&ApiResponse::ok(scans))
         }
         Commands::BackupList { json: _ } => {
             let backups = SkillService::list_backups().context("failed to list skill backups")?;
@@ -658,6 +698,47 @@ fn rehydrate_stub(
     Ok(restored)
 }
 
+fn list_security_scans(db: &Arc<Database>) -> Result<Vec<SecurityScanRecord>> {
+    let mut store = load_security_scan_store()?;
+    let original_count = store.scans.len();
+    let installed = db
+        .get_all_installed_skills()
+        .context("failed to load installed skills while pruning AgentShield scans")?;
+
+    store
+        .scans
+        .retain(|scan| installed.contains_key(&scan.skill_id));
+    store
+        .scans
+        .sort_by_key(|scan| std::cmp::Reverse(scan.result.scanned_at));
+
+    if store.scans.len() != original_count {
+        save_security_scan_store(&store)?;
+    }
+
+    Ok(store.scans)
+}
+
+fn scan_installed_skill(skill: &InstalledSkill) -> Result<SecurityScanRecord> {
+    let skill_dir = SkillService::get_ssot_dir()
+        .context("failed to resolve skill storage directory")?
+        .join(&skill.directory);
+    let result = run_security_scan(&skill_dir)?;
+    let record = SecurityScanRecord {
+        skill_id: skill.id.clone(),
+        skill_directory: skill_dir.to_string_lossy().to_string(),
+        result,
+    };
+    persist_security_scan(record.clone())?;
+    Ok(record)
+}
+
+fn persist_security_scan(record: SecurityScanRecord) -> Result<()> {
+    let mut store = load_security_scan_store()?;
+    upsert_security_scan(&mut store, record);
+    save_security_scan_store(&store)
+}
+
 fn backup_id_from_path(path: &Path) -> Result<String> {
     let backup_id = path
         .file_name()
@@ -720,6 +801,66 @@ fn stub_store_path() -> Result<PathBuf> {
     Ok(home_dir()?.join(".popskill").join("stubs.json"))
 }
 
+fn load_security_scan_store() -> Result<SecurityScanStore> {
+    load_security_scan_store_at(&security_scan_store_path()?)
+}
+
+fn save_security_scan_store(store: &SecurityScanStore) -> Result<()> {
+    save_security_scan_store_at(&security_scan_store_path()?, store)
+}
+
+fn load_security_scan_store_at(path: &Path) -> Result<SecurityScanStore> {
+    if !path.exists() {
+        return Ok(SecurityScanStore::default());
+    }
+
+    let content = fs::read_to_string(path).with_context(|| {
+        format!(
+            "failed to read Popskill AgentShield store {}",
+            path.display()
+        )
+    })?;
+    let store: SecurityScanStore = serde_json::from_str(&content).with_context(|| {
+        format!(
+            "failed to parse Popskill AgentShield store {}",
+            path.display()
+        )
+    })?;
+    Ok(store)
+}
+
+fn save_security_scan_store_at(path: &Path, store: &SecurityScanStore) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).with_context(|| {
+            format!(
+                "failed to create Popskill state directory {}",
+                parent.display()
+            )
+        })?;
+    }
+
+    let temp_path = path.with_extension("json.tmp");
+    let content =
+        serde_json::to_vec_pretty(store).context("failed to serialize AgentShield scans")?;
+    fs::write(&temp_path, content).with_context(|| {
+        format!(
+            "failed to write Popskill AgentShield store {}",
+            temp_path.display()
+        )
+    })?;
+    fs::rename(&temp_path, path).with_context(|| {
+        format!(
+            "failed to replace Popskill AgentShield store {}",
+            path.display()
+        )
+    })?;
+    Ok(())
+}
+
+fn security_scan_store_path() -> Result<PathBuf> {
+    Ok(home_dir()?.join(".popskill").join("security-scans.json"))
+}
+
 fn home_dir() -> Result<PathBuf> {
     let home = std::env::var("HOME").context("HOME is not set")?;
     if home.trim().is_empty() {
@@ -751,6 +892,16 @@ fn remove_stub(store: &mut StubStore, skill_id: &str) -> Option<StubbedSkill> {
         .iter()
         .position(|stub| stub.skill.id == skill_id)?;
     Some(store.stubs.remove(index))
+}
+
+fn upsert_security_scan(store: &mut SecurityScanStore, record: SecurityScanRecord) {
+    store
+        .scans
+        .retain(|existing| existing.skill_id != record.skill_id);
+    store.scans.push(record);
+    store
+        .scans
+        .sort_by_key(|scan| std::cmp::Reverse(scan.result.scanned_at));
 }
 
 fn run_security_scan(skill_dir: &Path) -> Result<SecurityScanResult> {
@@ -937,6 +1088,21 @@ struct StubbedSkill {
 struct StubStore {
     #[serde(default)]
     stubs: Vec<StubbedSkill>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SecurityScanRecord {
+    skill_id: String,
+    skill_directory: String,
+    result: SecurityScanResult,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SecurityScanStore {
+    #[serde(default)]
+    scans: Vec<SecurityScanRecord>,
 }
 
 const AGENTSHIELD_BIN_ENV: &str = "POPSKILL_AGENTSHIELD_BIN";
@@ -1135,6 +1301,20 @@ mod tests {
     }
 
     #[test]
+    fn upsert_security_scan_replaces_existing_skill_and_sorts_newest_first() {
+        let mut store = SecurityScanStore::default();
+
+        upsert_security_scan(&mut store, security_scan_fixture("older", 10));
+        upsert_security_scan(&mut store, security_scan_fixture("newer", 30));
+        upsert_security_scan(&mut store, security_scan_fixture("older", 40));
+
+        assert_eq!(store.scans.len(), 2);
+        assert_eq!(store.scans[0].skill_id, "older");
+        assert_eq!(store.scans[0].result.scanned_at, 40);
+        assert_eq!(store.scans[1].skill_id, "newer");
+    }
+
+    #[test]
     fn webdav_status_reports_unconfigured_when_missing() {
         let status = webdav_status_from_settings_value(json!({}));
 
@@ -1176,6 +1356,22 @@ mod tests {
             backup_id: format!("backup-{id}"),
             backup_path: format!("/tmp/backup-{id}"),
             stubbed_at,
+        }
+    }
+
+    fn security_scan_fixture(skill_id: &str, scanned_at: i64) -> SecurityScanRecord {
+        SecurityScanRecord {
+            skill_id: skill_id.to_string(),
+            skill_directory: format!("/tmp/{skill_id}"),
+            result: SecurityScanResult {
+                scanner: "ecc-agentshield".to_string(),
+                status: SecurityScanStatus::Verified,
+                summary: "ok".to_string(),
+                exit_code: Some(0),
+                stdout: String::new(),
+                stderr: String::new(),
+                scanned_at,
+            },
         }
     }
 }
