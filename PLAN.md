@@ -118,10 +118,10 @@
 - **已完成**：WebDAV 状态/远端 snapshot 只读纵切（`webdav-status` / `webdav-remote-info`，Settings 显示配置与远端 manifest 状态）
 - **已完成**：自定义 skill repository 管理（`repo-list/add/toggle/remove`），含 URL/owner/name 校验、`.git` 后缀规范化、非法 scheme 拒绝
 - **已完成**：SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译
-- **已完成**：行内 Claude/Codex/Gemini toggle、详情页更多 app toggle、Stub / Rehydrate、Idle Candidates 批量 Stub、unmanaged import banner
+- **已完成**：行内 Claude/Codex/Gemini toggle、详情页更多 app toggle、Stub / Rehydrate、Idle Candidates 60 天 inactive 筛选 + 批量 Stub、unmanaged import banner
 - **已完成**：Backups 查看 / 恢复 / 删除，Settings sidecar health 诊断
 - **已完成**：本地 CI、read-only smoke、mutating repo smoke、`.app` development bundle、bundle launch smoke、development DMG 打包
-- **未完成**：Stub 60 天真实使用数据自动建议、WebDAV 配置与手动 upload/download sync、正式 codesign/notarize/Sparkle release
+- **未完成**：Stub 真实 transcript 使用归因自动建议、WebDAV 配置与手动 upload/download sync、正式 codesign/notarize/Sparkle release
 
 ### 不做的事（避免范围爆炸）
 
@@ -1401,7 +1401,7 @@ open swift-app/Popskill.xcodeproj
 - ✅ AgentShield sidecar、Library 手动/持久化扫描、安装后 blocked 回滚已落地；下一步补 install-plan/apply，把扫描前移
 - ✅ WebDAV 状态与远端 snapshot 只读入口已落地，下一步接配置保存和手动 upload/download
 - ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle smoke、development DMG 打包已落地
-- 🟡 Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 可单个/批量 stub；尚未完成 60 天真实使用数据自动建议
+- 🟡 Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 已按 60 天 inactive 生命周期筛选并支持单个/批量 stub；尚未完成 transcript 级真实使用归因
 - 🔴 WebDAV 配置/手动 sync、正式 notarize/Sparkle release 尚未落地
 - 🟡 视觉 tokens 与主要页面容器已按 `STYLE.md` 落地；仍需继续做截图级 polish
 

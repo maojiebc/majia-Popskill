@@ -127,6 +127,37 @@ struct SkillModelsTests {
     }
 
     @Test
+    func idleCandidateRequiresInactiveAndStaleLifecycle() {
+        let referenceDate = Date(timeIntervalSince1970: 2_000_000_000)
+        let staleTimestamp = Int(referenceDate.addingTimeInterval(-61 * 24 * 60 * 60).timeIntervalSince1970)
+        let recentTimestamp = Int(referenceDate.addingTimeInterval(-7 * 24 * 60 * 60).timeIntervalSince1970)
+        let disabledApps = SkillApps(
+            claude: false,
+            codex: false,
+            gemini: false,
+            opencode: false,
+            hermes: false
+        )
+
+        let active = installedSkill(directory: "active", installedAt: staleTimestamp)
+        let staleInactive = installedSkill(directory: "stale", installedAt: staleTimestamp, apps: disabledApps)
+        let recentInactive = installedSkill(directory: "recent", installedAt: recentTimestamp, apps: disabledApps)
+        let recentlyUpdated = installedSkill(
+            directory: "updated",
+            installedAt: staleTimestamp,
+            updatedAt: recentTimestamp,
+            apps: disabledApps
+        )
+        let unknownInactive = installedSkill(directory: "unknown", apps: disabledApps)
+
+        #expect(active.isIdleCandidate(referenceDate: referenceDate) == false)
+        #expect(staleInactive.isIdleCandidate(referenceDate: referenceDate) == true)
+        #expect(recentInactive.isIdleCandidate(referenceDate: referenceDate) == false)
+        #expect(recentlyUpdated.isIdleCandidate(referenceDate: referenceDate) == false)
+        #expect(unknownInactive.isIdleCandidate(referenceDate: referenceDate) == true)
+    }
+
+    @Test
     func securityScanStatusDecodesBlockedValue() throws {
         let data = """
         {
@@ -227,7 +258,18 @@ struct SkillModelsTests {
         )
     }
 
-    private func installedSkill(directory: String) -> Skill {
+    private func installedSkill(
+        directory: String,
+        installedAt: Int? = nil,
+        updatedAt: Int? = nil,
+        apps: SkillApps = SkillApps(
+            claude: true,
+            codex: false,
+            gemini: false,
+            opencode: false,
+            hermes: false
+        )
+    ) -> Skill {
         Skill(
             id: directory,
             name: "Demo",
@@ -236,15 +278,9 @@ struct SkillModelsTests {
             repoOwner: nil,
             repoName: nil,
             readmeUrl: nil,
-            apps: SkillApps(
-                claude: true,
-                codex: false,
-                gemini: false,
-                opencode: false,
-                hermes: false
-            ),
-            installedAt: nil,
-            updatedAt: nil,
+            apps: apps,
+            installedAt: installedAt,
+            updatedAt: updatedAt,
             contentHash: nil
         )
     }

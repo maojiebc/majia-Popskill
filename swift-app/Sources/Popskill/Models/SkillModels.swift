@@ -54,6 +54,31 @@ struct Skill: Identifiable, Codable, Equatable {
             .appendingPathComponent("skills")
             .appendingPathComponent(directory)
     }
+
+    var lastLifecycleTimestamp: Int? {
+        [installedAt, updatedAt]
+            .compactMap { value -> Int? in
+                guard let value, value > 0 else {
+                    return nil
+                }
+                return value
+            }
+            .max()
+    }
+
+    func isIdleCandidate(referenceDate: Date = Date(), thresholdDays: Int = 60) -> Bool {
+        guard enabledAppCount == 0 else {
+            return false
+        }
+
+        guard let lastLifecycleTimestamp else {
+            return true
+        }
+
+        let threshold = TimeInterval(max(0, thresholdDays)) * 24 * 60 * 60
+        let cutoff = Int(referenceDate.addingTimeInterval(-threshold).timeIntervalSince1970)
+        return lastLifecycleTimestamp <= cutoff
+    }
 }
 
 struct CatalogSkill: Identifiable, Codable, Equatable {

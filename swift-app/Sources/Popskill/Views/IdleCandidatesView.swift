@@ -3,9 +3,13 @@ import SwiftUI
 struct IdleCandidatesView: View {
     @Bindable var viewModel: LibraryViewModel
     @State private var isConfirmingBulkStub = false
+    private let idleThresholdDays = 60
 
     private var idleSkills: [Skill] {
-        viewModel.skills.filter { $0.enabledAppCount == 0 }
+        let referenceDate = Date()
+        return viewModel.skills.filter {
+            $0.isIdleCandidate(referenceDate: referenceDate, thresholdDays: idleThresholdDays)
+        }
     }
 
     var body: some View {
@@ -14,7 +18,7 @@ struct IdleCandidatesView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Idle Candidates")
                         .font(.system(.largeTitle, weight: .bold))
-                    Text("\(idleSkills.count) inactive of \(viewModel.skills.count) installed")
+                    Text("\(idleSkills.count) inactive for \(idleThresholdDays)+ days of \(viewModel.skills.count) installed")
                         .foregroundStyle(.secondary)
                 }
 
@@ -122,7 +126,7 @@ struct IdleCandidateRow: View {
                         .foregroundStyle(Color.popLabel)
                         .lineLimit(1)
 
-                    StatusPill(title: "Inactive", color: .popStatusNeutral)
+                    StatusPill(title: idleBadgeTitle, color: .popStatusNeutral)
                 }
 
                 Text(skill.description)
@@ -153,5 +157,14 @@ struct IdleCandidateRow: View {
             .help("Make Stub")
         }
         .frame(minHeight: 68)
+    }
+
+    private var idleBadgeTitle: String {
+        guard let timestamp = skill.lastLifecycleTimestamp else {
+            return "Inactive"
+        }
+
+        let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+        return date.formatted(date: .abbreviated, time: .omitted)
     }
 }
