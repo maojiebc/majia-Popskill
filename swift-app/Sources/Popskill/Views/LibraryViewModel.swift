@@ -12,6 +12,7 @@ final class LibraryViewModel {
     var selectedFilter: LibraryFilter = .all
     var selectedRehydrateApp: TargetApp = .codex
     var isLoading = false
+    var isBulkStubbing = false
     var hasLoadedOnce = false
     var errorMessage: String?
 
@@ -236,6 +237,32 @@ final class LibraryViewModel {
         }
 
         scanningSecurityIDs.remove(skill.id)
+    }
+
+    @discardableResult
+    func stubAll(_ candidates: [Skill]) async -> Int {
+        guard !isBulkStubbing else {
+            return 0
+        }
+
+        isBulkStubbing = true
+        defer { isBulkStubbing = false }
+
+        var stubbedCount = 0
+        for candidate in candidates {
+            guard
+                candidate.enabledAppCount == 0,
+                skills.contains(where: { $0.id == candidate.id })
+            else {
+                continue
+            }
+
+            if await stub(candidate) {
+                stubbedCount += 1
+            }
+        }
+
+        return stubbedCount
     }
 
     @discardableResult

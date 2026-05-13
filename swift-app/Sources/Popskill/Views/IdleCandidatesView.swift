@@ -2,6 +2,7 @@ import SwiftUI
 
 struct IdleCandidatesView: View {
     @Bindable var viewModel: LibraryViewModel
+    @State private var isConfirmingBulkStub = false
 
     private var idleSkills: [Skill] {
         viewModel.skills.filter { $0.enabledAppCount == 0 }
@@ -18,6 +19,20 @@ struct IdleCandidatesView: View {
                 }
 
                 Spacer()
+
+                Button {
+                    isConfirmingBulkStub = true
+                } label: {
+                    if viewModel.isBulkStubbing {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Label("Stub All", systemImage: "tray.and.arrow.down")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(idleSkills.isEmpty || viewModel.isBulkStubbing)
+                .help("Make All Idle Skills Stub")
 
                 Button {
                     Task { await viewModel.load() }
@@ -48,7 +63,7 @@ struct IdleCandidatesView: View {
             List(idleSkills) { skill in
                 IdleCandidateRow(
                     skill: skill,
-                    isStubbing: viewModel.isStubbing(skillID: skill.id)
+                    isStubbing: viewModel.isStubbing(skillID: skill.id) || viewModel.isBulkStubbing
                 ) {
                     Task {
                         _ = await viewModel.stub(skill)
@@ -72,6 +87,21 @@ struct IdleCandidatesView: View {
             if !viewModel.hasLoadedOnce {
                 await viewModel.load()
             }
+        }
+        .confirmationDialog(
+            "Make \(idleSkills.count) Idle Skills Stub?",
+            isPresented: $isConfirmingBulkStub
+        ) {
+            Button("Make Stubs", role: .destructive) {
+                let candidates = idleSkills
+                Task {
+                    _ = await viewModel.stubAll(candidates)
+                }
+            }
+
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Popskill will keep recoverable metadata and CC Switch backups for each selected skill.")
         }
     }
 }
