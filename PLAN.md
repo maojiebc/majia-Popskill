@@ -1362,6 +1362,10 @@ components:
   mcp:
     - id: lark-openapi-mcp
       required: false
+      registry:
+        source: anthropic-mcp-registry
+        namespace: bytedance
+        server_id: lark-openapi-mcp
   skills:
     - id: lark-doc
       depends_on: [lark-cli]
