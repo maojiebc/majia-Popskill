@@ -84,7 +84,7 @@ final class RepositoriesViewModel {
         let nameInput = nameInput.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if !nameInput.isEmpty {
-            return ownerInput.isEmpty ? nil : (ownerInput, nameInput)
+            return ownerInput.isEmpty ? nil : (ownerInput, Self.strippingGitSuffix(from: nameInput))
         }
 
         let normalized = ownerInput
@@ -98,12 +98,14 @@ final class RepositoriesViewModel {
             return nil
         }
 
-        var name = String(parts[1])
-        if name.hasSuffix(".git") {
-            name.removeLast(4)
-        }
+        return (String(parts[0]), Self.strippingGitSuffix(from: String(parts[1])))
+    }
 
-        return (String(parts[0]), name)
+    nonisolated private static func strippingGitSuffix(from value: String) -> String {
+        guard value.hasSuffix(".git") else {
+            return value
+        }
+        return String(value.dropLast(4))
     }
 
     func setEnabled(_ enabled: Bool, for repository: SkillRepository) async {

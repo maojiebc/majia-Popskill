@@ -6,7 +6,7 @@ struct RepositoryInputTests {
     func parsesOwnerAndNameFields() {
         let parts = RepositoriesViewModel.normalizedRepositoryParts(
             ownerInput: " anthropics ",
-            nameInput: " skills "
+            nameInput: " skills.git "
         )
 
         #expect(parts?.owner == "anthropics")
