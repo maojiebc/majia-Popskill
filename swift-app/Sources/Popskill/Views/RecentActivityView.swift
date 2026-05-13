@@ -58,7 +58,7 @@ struct RecentActivityView: View {
         }
         .background(Color.popMainBackground)
         .task {
-            if viewModel.summary.filesScanned == 0 {
+            if !viewModel.hasScannedOnce {
                 await viewModel.scan()
             }
         }

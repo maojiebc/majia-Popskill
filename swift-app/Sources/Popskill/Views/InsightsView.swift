@@ -6,6 +6,7 @@ import SwiftUI
 final class InsightsViewModel {
     var summary = UsageSummary()
     var isScanning = false
+    var hasScannedOnce = false
     var errorMessage: String?
 
     private let scanner = TranscriptUsageScanner()
@@ -13,6 +14,10 @@ final class InsightsViewModel {
     func scan() async {
         isScanning = true
         errorMessage = nil
+        defer {
+            isScanning = false
+            hasScannedOnce = true
+        }
 
         do {
             let scanner = self.scanner
@@ -22,8 +27,6 @@ final class InsightsViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
-
-        isScanning = false
     }
 }
 
@@ -103,7 +106,7 @@ struct InsightsView: View {
         }
         .background(Color.popMainBackground)
         .task {
-            if viewModel.summary.filesScanned == 0 {
+            if !viewModel.hasScannedOnce {
                 await viewModel.scan()
             }
         }
