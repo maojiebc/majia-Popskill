@@ -276,11 +276,20 @@ struct SkillDetailPane: View {
                             }
                         }
 
-                        if let readmeUrl = skill.readmeUrl, let url = URL(string: readmeUrl) {
-                            Link(destination: url) {
-                                Label("Open Source", systemImage: "arrow.up.right.square")
+                        HStack(spacing: 10) {
+                            if FileManager.default.fileExists(atPath: skill.localStoreURL.path) {
+                                Link(destination: skill.localStoreURL) {
+                                    Label("Open Folder", systemImage: "folder")
+                                }
+                                .buttonStyle(.bordered)
                             }
-                            .buttonStyle(.bordered)
+
+                            if let readmeUrl = skill.readmeUrl, let url = URL(string: readmeUrl) {
+                                Link(destination: url) {
+                                    Label("Open Source", systemImage: "arrow.up.right.square")
+                                }
+                                .buttonStyle(.bordered)
+                            }
                         }
 
                         Button(role: .destructive) {

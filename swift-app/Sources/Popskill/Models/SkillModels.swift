@@ -43,6 +43,13 @@ struct Skill: Identifiable, Codable, Equatable {
     var enabledAppCount: Int {
         TargetApp.allCases.filter { apps.isEnabled($0) }.count
     }
+
+    var localStoreURL: URL {
+        URL(fileURLWithPath: NSHomeDirectory())
+            .appendingPathComponent(".cc-switch")
+            .appendingPathComponent("skills")
+            .appendingPathComponent(directory)
+    }
 }
 
 struct CatalogSkill: Identifiable, Codable, Equatable {
