@@ -33,6 +33,7 @@ jq -e '
 
 POPSKILL_APPCAST_PATH="$APPCAST" \
 POPSKILL_APPCAST_DOWNLOAD_URL="https://example.com/Popskill.dmg" \
+POPSKILL_ALLOW_PLACEHOLDER_APPCAST=true \
   "$ROOT_DIR/scripts/generate-appcast.sh" > "$TMP_DIR/generate-appcast.out"
 
 grep -q '<rss version="2.0"' "$APPCAST"

@@ -113,12 +113,13 @@ After notarization succeeds:
 ./scripts/generate-appcast.sh
 ```
 
-Verify the appcast smoke path:
+Verify the appcast smoke path without writing a public appcast:
 
 ```bash
-POPSKILL_APPCAST_DOWNLOAD_URL="https://example.com/Popskill.dmg" \
-  ./scripts/generate-appcast.sh
+./scripts/smoke-release.sh
 ```
+
+`generate-appcast.sh` refuses `example.com` placeholder URLs unless `POPSKILL_ALLOW_PLACEHOLDER_APPCAST=true` is set by smoke tests.
 
 ## Manual Gatekeeper Check
 

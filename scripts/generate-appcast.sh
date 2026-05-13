@@ -7,6 +7,7 @@ APPCAST_PATH="${POPSKILL_APPCAST_PATH:-$ROOT_DIR/build/appcast.xml}"
 DOWNLOAD_URL_OVERRIDE="${POPSKILL_APPCAST_DOWNLOAD_URL:-}"
 ED_SIGNATURE="${POPSKILL_SPARKLE_ED_SIGNATURE:-}"
 MINIMUM_SYSTEM_VERSION="${POPSKILL_MINIMUM_SYSTEM_VERSION:-14.0}"
+ALLOW_PLACEHOLDER="${POPSKILL_ALLOW_PLACEHOLDER_APPCAST:-false}"
 
 die() {
   echo "generate-appcast: $*" >&2
@@ -42,6 +43,10 @@ if [[ -n "$DOWNLOAD_URL_OVERRIDE" ]]; then
 fi
 
 [[ -n "$DOWNLOAD_URL" ]] || die "set POPSKILL_APPCAST_DOWNLOAD_URL or generate the manifest with POPSKILL_RELEASE_BASE_URL"
+
+if [[ "$DOWNLOAD_URL" == *"example.com"* && "$ALLOW_PLACEHOLDER" != true ]]; then
+  die "refusing placeholder appcast download URL: $DOWNLOAD_URL"
+fi
 
 VERSION_XML="$(printf '%s' "$VERSION" | xml_escape)"
 BUILD_XML="$(printf '%s' "$BUILD" | xml_escape)"
