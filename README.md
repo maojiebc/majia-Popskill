@@ -172,6 +172,10 @@ cd ~/projects/popskill
 # 生成 release metadata（version / build / dmg sha256 / size）
 ./scripts/release-manifest.sh
 
+# 从 release metadata 生成 Sparkle appcast 骨架（正式发布时传真实下载 URL/签名）
+POPSKILL_APPCAST_DOWNLOAD_URL="https://example.com/Popskill.dmg" \
+./scripts/generate-appcast.sh
+
 # v0.1 发布前的签名/公证骨架（需要 Apple Developer ID 凭据）
 POPSKILL_DEVELOPER_ID_APPLICATION="Developer ID Application: Name (TEAMID)" \
 POPSKILL_APPLE_ID="you@example.com" \
