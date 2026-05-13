@@ -196,12 +196,18 @@ async fn run() -> Result<()> {
             let unmanaged =
                 SkillService::scan_unmanaged(&db).context("failed to scan unmanaged skills")?;
             let backups = SkillService::list_backups().context("failed to list skill backups")?;
+            let repositories = db
+                .get_skill_repos()
+                .context("failed to load skill repositories")?;
+            let enabled_repository_count = repositories.iter().filter(|repo| repo.enabled).count();
             let home = std::env::var("HOME").unwrap_or_default();
             print_json(&ApiResponse::ok(json!({
                 "sidecarVersion": env!("CARGO_PKG_VERSION"),
                 "installedCount": skills.len(),
                 "unmanagedCount": unmanaged.len(),
                 "backupCount": backups.len(),
+                "repositoryCount": repositories.len(),
+                "enabledRepositoryCount": enabled_repository_count,
                 "skillStorePath": format!("{home}/.cc-switch/skills"),
                 "skillBackupPath": format!("{home}/.cc-switch/skill-backups")
             })))

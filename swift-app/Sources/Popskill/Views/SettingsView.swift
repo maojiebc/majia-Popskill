@@ -82,6 +82,7 @@ struct SettingsView: View {
                         DetailField(title: "Installed", value: countText(viewModel.health?.installedCount))
                         DetailField(title: "Unmanaged", value: countText(viewModel.health?.unmanagedCount))
                         DetailField(title: "Backups", value: countText(viewModel.health?.backupCount))
+                        DetailField(title: "Repositories", value: repositoryCountText)
                         DetailField(title: "Skill Store", value: viewModel.health?.skillStorePath ?? skillStorePath)
                         DetailField(title: "Skill Backups", value: viewModel.health?.skillBackupPath ?? backupPath)
                     }
@@ -112,6 +113,13 @@ struct SettingsView: View {
 
     private func countText(_ value: Int?) -> String {
         value.map(String.init) ?? "Unknown"
+    }
+
+    private var repositoryCountText: String {
+        guard let health = viewModel.health else {
+            return "Unknown"
+        }
+        return "\(health.enabledRepositoryCount) enabled of \(health.repositoryCount)"
     }
 
     private var ipcDocsURL: URL? {

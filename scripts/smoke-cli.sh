@@ -48,7 +48,7 @@ health_output="$TMP_DIR/health.json"
 "$CLI" health --json > "$health_output"
 jq -e '.ok == true and (.data.installedCount | type) == "number"' "$health_output" > /dev/null
 printf "health "
-jq -c '{ok, installed: .data.installedCount, unmanaged: .data.unmanagedCount, backups: .data.backupCount, version: .data.sidecarVersion}' "$health_output"
+jq -c '{ok, installed: .data.installedCount, unmanaged: .data.unmanagedCount, backups: .data.backupCount, repositories: .data.repositoryCount, enabledRepositories: .data.enabledRepositoryCount, version: .data.sidecarVersion}' "$health_output"
 
 missing_stderr="$TMP_DIR/missing-detail.err"
 if "$CLI" detail "__popskill_missing_skill__" --json > /dev/null 2> "$missing_stderr"; then

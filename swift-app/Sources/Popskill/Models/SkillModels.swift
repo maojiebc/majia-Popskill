@@ -112,6 +112,8 @@ struct SidecarHealth: Codable, Equatable {
     let installedCount: Int
     let unmanagedCount: Int
     let backupCount: Int
+    let repositoryCount: Int
+    let enabledRepositoryCount: Int
     let skillStorePath: String
     let skillBackupPath: String
 }

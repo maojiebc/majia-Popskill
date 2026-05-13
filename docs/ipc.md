@@ -39,6 +39,8 @@ Returns local sidecar and CC Switch diagnostics used by Settings.
     "installedCount": 61,
     "unmanagedCount": 0,
     "backupCount": 10,
+    "repositoryCount": 13,
+    "enabledRepositoryCount": 12,
     "skillStorePath": "/Users/example/.cc-switch/skills",
     "skillBackupPath": "/Users/example/.cc-switch/skill-backups"
   }
