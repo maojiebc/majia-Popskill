@@ -36,6 +36,22 @@ jq -e '.ok == false and (.error.message | contains("repository owner is required
   "$invalid_output" > /dev/null
 echo "repo-add validation ok"
 
+invalid_name_output="$TMP_DIR/invalid-repo-name-add.err"
+if "$CLI" repo-add \
+  --owner "$OWNER" \
+  --name ".git" \
+  --branch main \
+  --enabled false \
+  --json \
+  > /dev/null \
+  2> "$invalid_name_output"; then
+  echo "expected empty repository name after .git stripping to fail" >&2
+  exit 1
+fi
+jq -e '.ok == false and (.error.message | contains("repository name is required"))' \
+  "$invalid_name_output" > /dev/null
+echo "repo-add name validation ok"
+
 "$CLI" repo-add \
   --owner "$OWNER" \
   --name "$NAME" \
