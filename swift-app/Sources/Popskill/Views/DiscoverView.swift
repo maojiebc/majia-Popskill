@@ -13,23 +13,28 @@ final class DiscoverViewModel {
 
     private let client = SkillCLIClient()
     private var installingKeys: Set<String> = []
+    private var shouldSearchAgain = false
 
     func search() async {
-        guard !isLoading else {
+        if isLoading {
+            shouldSearchAgain = true
             return
         }
 
-        isLoading = true
-        errorMessage = nil
+        repeat {
+            shouldSearchAgain = false
+            isLoading = true
+            errorMessage = nil
 
-        do {
-            skills = try await client.discover(query: query, limit: 80)
-            hasLoadedOnce = true
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+            do {
+                skills = try await client.discover(query: query, limit: 80)
+                hasLoadedOnce = true
+            } catch {
+                errorMessage = error.localizedDescription
+            }
 
-        isLoading = false
+            isLoading = false
+        } while shouldSearchAgain
     }
 
     func install(_ skill: CatalogSkill, onInstalled: @escaping () async -> Void) async {
