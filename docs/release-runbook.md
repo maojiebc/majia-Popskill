@@ -127,6 +127,7 @@ After notarization succeeds:
 ./scripts/package-dmg.sh
 ./scripts/release-manifest.sh
 ./scripts/generate-appcast.sh
+POPSKILL_REQUIRE_SPARKLE=true ./scripts/release-doctor.sh
 ```
 
 Verify the appcast smoke path without writing a public appcast:
@@ -136,6 +137,30 @@ Verify the appcast smoke path without writing a public appcast:
 ```
 
 `generate-appcast.sh` refuses `example.com` placeholder URLs unless `POPSKILL_ALLOW_PLACEHOLDER_APPCAST=true` is set by smoke tests.
+
+## GitHub Release Draft
+
+Create the GitHub release as a draft first. Do not mark it as latest until Gatekeeper and Sparkle checks pass from the uploaded assets.
+
+Expected assets:
+
+- `build/Popskill.dmg`
+- `build/release-manifest.json`
+- `build/appcast.xml`
+
+Before uploading, confirm `build/appcast.xml` points at the final public DMG URL and contains a real `sparkle:edSignature` value.
+
+```bash
+gh release create v0.1.0 \
+  build/Popskill.dmg \
+  build/release-manifest.json \
+  build/appcast.xml \
+  --draft \
+  --title "Popskill v0.1.0" \
+  --notes-file docs/release-notes-v0.1.md
+```
+
+After upload, download the DMG from the draft release URL on a clean macOS user account and repeat the Gatekeeper check below. If the appcast URL changes after upload, regenerate `release-manifest.json` and `appcast.xml`, then rerun `POPSKILL_REQUIRE_SPARKLE=true ./scripts/release-doctor.sh` before replacing the draft assets.
 
 ## Manual Gatekeeper Check
 
