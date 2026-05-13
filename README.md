@@ -119,6 +119,7 @@ SwiftUI 端已接入：
 - **[STYLE.md](./STYLE.md)**（~840 行）—— 视觉设计语言，含立即可用的 SwiftUI design token 代码。
 - **[docs/ipc.md](./docs/ipc.md)** —— SwiftUI ↔ `skill-cli` JSON 合约。
 - **[docs/transcript-parsing.md](./docs/transcript-parsing.md)** —— Claude transcript 字段观察和 Insights MVP 策略。
+- **[docs/security.md](./docs/security.md)** —— Keychain、skill 内容和 transcript insights 的安全边界。
 
 ### 在新机器上接手
 
