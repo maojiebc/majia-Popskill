@@ -356,6 +356,34 @@ struct SkillModelsTests {
         #expect(target.source == "agency-agents")
     }
 
+    @Test
+    func catalogAgentDecodesAgencyAgentsCatalogPayload() throws {
+        let data = """
+        {
+          "id": "msitarzewski/agency-agents:marketing/xiaohongshu-specialist",
+          "name": "xiaohongshu-specialist",
+          "description": "Builds Xiaohongshu content plans.",
+          "path": "marketing/xiaohongshu-specialist.md",
+          "category": "marketing",
+          "repoOwner": "msitarzewski",
+          "repoName": "agency-agents",
+          "repoBranch": "main",
+          "readmeUrl": "https://github.com/msitarzewski/agency-agents/blob/main/marketing/xiaohongshu-specialist.md",
+          "rawUrl": "https://raw.githubusercontent.com/msitarzewski/agency-agents/main/marketing/xiaohongshu-specialist.md",
+          "tools": ["Read", "Write"],
+          "model": "sonnet",
+          "source": "agency-agents"
+        }
+        """.data(using: .utf8)!
+
+        let agent = try JSONDecoder().decode(CatalogAgent.self, from: data)
+
+        #expect(agent.category == "marketing")
+        #expect(agent.repoName == "agency-agents")
+        #expect(agent.tools == ["Read", "Write"])
+        #expect(agent.source == "agency-agents")
+    }
+
     private func catalogSkill(repoBranch: String?) -> CatalogSkill {
         CatalogSkill(
             key: "maojiebc/majia-skills/demo",

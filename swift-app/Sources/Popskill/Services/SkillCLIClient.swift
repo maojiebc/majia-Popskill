@@ -60,6 +60,15 @@ actor SkillCLIClient {
         return try Self.decodeResponse([AgentTarget].self, from: data)
     }
 
+    func catalogAgents(query: String? = nil, limit: Int = 80) async throws -> [CatalogAgent] {
+        var arguments = ["agent-catalog", "--json", "--limit", String(limit)]
+        if let query, !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            arguments += ["--query", query]
+        }
+        let data = try run(arguments: arguments)
+        return try Self.decodeResponse([CatalogAgent].self, from: data)
+    }
+
     func scanUnmanaged() async throws -> [UnmanagedSkill] {
         let data = try run(arguments: ["scan-unmanaged", "--json"])
         return try Self.decodeResponse([UnmanagedSkill].self, from: data)

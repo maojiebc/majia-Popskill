@@ -7,6 +7,7 @@ edition = "2024"
 anyhow = "1"
 cc_switch_lib = { package = "cc-switch", path = "../cc-switch/src-tauri" }
 clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

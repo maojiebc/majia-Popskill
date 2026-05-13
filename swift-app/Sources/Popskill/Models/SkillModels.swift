@@ -150,6 +150,22 @@ struct AgentTarget: Identifiable, Codable, Equatable {
     }
 }
 
+struct CatalogAgent: Identifiable, Codable, Equatable {
+    let id: String
+    let name: String
+    let description: String
+    let path: String
+    let category: String
+    let repoOwner: String
+    let repoName: String
+    let repoBranch: String
+    let readmeUrl: String
+    let rawUrl: String
+    let tools: [String]
+    let model: String?
+    let source: String
+}
+
 struct CatalogSkill: Identifiable, Codable, Equatable {
     var id: String { key }
 

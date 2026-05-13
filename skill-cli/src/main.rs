@@ -86,6 +86,16 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Discover read-only Agent definitions from AgencyAgents.
+    AgentCatalog {
+        #[arg(long)]
+        query: Option<String>,
+        #[arg(long, default_value_t = 80)]
+        limit: usize,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// Find local skills that exist on disk but are not managed by CC Switch.
     ScanUnmanaged {
         /// Kept for the Swift client contract; output is JSON either way.
@@ -392,6 +402,14 @@ async fn run() -> Result<()> {
         Commands::AgentTargets { json: _ } => {
             let targets = list_agent_targets()?;
             print_json(&ApiResponse::ok(targets))
+        }
+        Commands::AgentCatalog {
+            query,
+            limit,
+            json: _,
+        } => {
+            let agents = discover_agency_agents(query.as_deref(), limit).await?;
+            print_json(&ApiResponse::ok(agents))
         }
         Commands::ScanUnmanaged { json: _ } => {
             let skills =
@@ -1053,6 +1071,143 @@ fn command_exists(command: &str) -> bool {
         return false;
     };
     env::split_paths(&paths).any(|path| path.join(command).is_file())
+}
+
+const AGENCY_AGENTS_REPO_OWNER: &str = "msitarzewski";
+const AGENCY_AGENTS_REPO_NAME: &str = "agency-agents";
+const AGENCY_AGENTS_BRANCH: &str = "main";
+const AGENCY_AGENTS_TREE_URL: &str =
+    "https://api.github.com/repos/msitarzewski/agency-agents/git/trees/main?recursive=1";
+const AGENCY_AGENT_CATEGORIES: &[&str] = &[
+    "academic",
+    "design",
+    "engineering",
+    "finance",
+    "game-development",
+    "marketing",
+    "paid-media",
+    "product",
+    "project-management",
+    "sales",
+    "spatial-computing",
+    "specialized",
+    "strategy",
+    "support",
+    "testing",
+];
+
+async fn discover_agency_agents(query: Option<&str>, limit: usize) -> Result<Vec<CatalogAgent>> {
+    if limit == 0 {
+        return Ok(Vec::new());
+    }
+
+    let client = reqwest::Client::builder()
+        .user_agent("Popskill/0.1")
+        .build()
+        .context("failed to build GitHub client")?;
+    let response = client
+        .get(AGENCY_AGENTS_TREE_URL)
+        .send()
+        .await
+        .context("failed to fetch AgencyAgents tree")?
+        .error_for_status()
+        .context("AgencyAgents tree request failed")?
+        .json::<GitHubTreeResponse>()
+        .await
+        .context("failed to parse AgencyAgents tree")?;
+
+    let normalized_query = query
+        .map(|query| query.trim().to_lowercase())
+        .filter(|query| !query.is_empty());
+    let mut agents: Vec<CatalogAgent> = response
+        .tree
+        .into_iter()
+        .filter_map(|entry| catalog_agent_from_tree_path(&entry.path, &entry.kind))
+        .filter(|agent| agent_matches_query(agent, normalized_query.as_deref()))
+        .take(limit)
+        .collect();
+
+    for agent in &mut agents {
+        if let Ok(content) = fetch_agency_agent_markdown(&client, &agent.path).await {
+            let parsed = parse_agent_markdown(&content);
+            if let Some(name) = parsed.name {
+                agent.name = name;
+            }
+            if let Some(description) = parsed.description {
+                agent.description = description;
+            }
+            agent.tools = parsed.tools;
+            agent.model = parsed.model;
+        }
+    }
+
+    Ok(agents)
+}
+
+async fn fetch_agency_agent_markdown(client: &reqwest::Client, path: &str) -> Result<String> {
+    let url = agency_agent_raw_url(path);
+    client
+        .get(url)
+        .send()
+        .await
+        .with_context(|| format!("failed to fetch AgencyAgents agent {path}"))?
+        .error_for_status()
+        .with_context(|| format!("AgencyAgents agent request failed for {path}"))?
+        .text()
+        .await
+        .with_context(|| format!("failed to read AgencyAgents agent {path}"))
+}
+
+fn catalog_agent_from_tree_path(path: &str, kind: &str) -> Option<CatalogAgent> {
+    if kind != "blob" || !path.ends_with(".md") {
+        return None;
+    }
+
+    let (category, file_name) = path.split_once('/')?;
+    if !AGENCY_AGENT_CATEGORIES.contains(&category) || file_name.contains('/') {
+        return None;
+    }
+
+    let file_stem = Path::new(file_name).file_stem()?.to_str()?;
+    let directory = strip_markdown_suffix(path);
+    Some(CatalogAgent {
+        id: format!("{AGENCY_AGENTS_REPO_OWNER}/{AGENCY_AGENTS_REPO_NAME}:{directory}"),
+        name: title_from_slug(file_stem),
+        description: format!("AgencyAgents {} agent", title_from_slug(category)),
+        path: path.to_string(),
+        category: category.to_string(),
+        repo_owner: AGENCY_AGENTS_REPO_OWNER.to_string(),
+        repo_name: AGENCY_AGENTS_REPO_NAME.to_string(),
+        repo_branch: AGENCY_AGENTS_BRANCH.to_string(),
+        readme_url: agency_agent_readme_url(path),
+        raw_url: agency_agent_raw_url(path),
+        tools: Vec::new(),
+        model: None,
+        source: "agency-agents".to_string(),
+    })
+}
+
+fn agent_matches_query(agent: &CatalogAgent, query: Option<&str>) -> bool {
+    let Some(query) = query else {
+        return true;
+    };
+
+    agent.name.to_lowercase().contains(query)
+        || agent.description.to_lowercase().contains(query)
+        || agent.category.to_lowercase().contains(query)
+        || agent.path.to_lowercase().contains(query)
+}
+
+fn agency_agent_readme_url(path: &str) -> String {
+    format!(
+        "https://github.com/{AGENCY_AGENTS_REPO_OWNER}/{AGENCY_AGENTS_REPO_NAME}/blob/{AGENCY_AGENTS_BRANCH}/{path}"
+    )
+}
+
+fn agency_agent_raw_url(path: &str) -> String {
+    format!(
+        "https://raw.githubusercontent.com/{AGENCY_AGENTS_REPO_OWNER}/{AGENCY_AGENTS_REPO_NAME}/{AGENCY_AGENTS_BRANCH}/{path}"
+    )
 }
 
 async fn build_install_plan(
@@ -1769,6 +1924,36 @@ struct AgentTarget {
     note: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+struct GitHubTreeResponse {
+    tree: Vec<GitHubTreeEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GitHubTreeEntry {
+    path: String,
+    #[serde(rename = "type")]
+    kind: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CatalogAgent {
+    id: String,
+    name: String,
+    description: String,
+    path: String,
+    category: String,
+    repo_owner: String,
+    repo_name: String,
+    repo_branch: String,
+    readme_url: String,
+    raw_url: String,
+    tools: Vec<String>,
+    model: Option<String>,
+    source: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct StubbedSkill {
@@ -2242,6 +2427,35 @@ Turns fuzzy product ideas into crisp release plans.
             .expect("kimi target should exist");
         assert_eq!(kimi.format, "agent-yaml");
         assert_eq!(kimi.paths, vec!["/Users/example/.config/kimi/agents"]);
+    }
+
+    #[test]
+    fn catalog_agent_from_tree_path_builds_agency_agents_payload() {
+        let agent = catalog_agent_from_tree_path("marketing/xiaohongshu-specialist.md", "blob")
+            .expect("agent should parse");
+
+        assert_eq!(
+            agent.id,
+            "msitarzewski/agency-agents:marketing/xiaohongshu-specialist"
+        );
+        assert_eq!(agent.name, "Xiaohongshu Specialist");
+        assert_eq!(agent.category, "marketing");
+        assert_eq!(
+            agent.readme_url,
+            "https://github.com/msitarzewski/agency-agents/blob/main/marketing/xiaohongshu-specialist.md"
+        );
+        assert!(agent.raw_url.contains("raw.githubusercontent.com"));
+    }
+
+    #[test]
+    fn catalog_agent_from_tree_path_rejects_non_agent_markdown() {
+        assert!(catalog_agent_from_tree_path("README.md", "blob").is_none());
+        assert!(catalog_agent_from_tree_path("examples/example.md", "blob").is_none());
+        assert!(
+            catalog_agent_from_tree_path("engineering/backend-developer.txt", "blob").is_none()
+        );
+        assert!(catalog_agent_from_tree_path("engineering/nested/agent.md", "blob").is_none());
+        assert!(catalog_agent_from_tree_path("engineering/backend-developer.md", "tree").is_none());
     }
 
     fn stub_fixture(id: &str, stubbed_at: i64) -> StubbedSkill {

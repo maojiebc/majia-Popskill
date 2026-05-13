@@ -214,6 +214,33 @@ Returns read-only diagnostics for Agent-capable tools and the local paths Popski
 }
 ```
 
+### `skill-cli agent-catalog [--query <text>] [--limit <n>] --json`
+
+Returns a read-only AgencyAgents catalog preview. The command fetches the repository tree, filters installable Agent markdown from the AgencyAgents category directories, and enriches returned rows with frontmatter when the raw markdown fetch succeeds.
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "msitarzewski/agency-agents:marketing/xiaohongshu-specialist",
+      "name": "xiaohongshu-specialist",
+      "description": "Builds Xiaohongshu content plans.",
+      "path": "marketing/xiaohongshu-specialist.md",
+      "category": "marketing",
+      "repoOwner": "msitarzewski",
+      "repoName": "agency-agents",
+      "repoBranch": "main",
+      "readmeUrl": "https://github.com/msitarzewski/agency-agents/blob/main/marketing/xiaohongshu-specialist.md",
+      "rawUrl": "https://raw.githubusercontent.com/msitarzewski/agency-agents/main/marketing/xiaohongshu-specialist.md",
+      "tools": ["Read", "Write"],
+      "model": "sonnet",
+      "source": "agency-agents"
+    }
+  ]
+}
+```
+
 ### `skill-cli toggle <skill-id> --app <app> --enabled <true|false> --json`
 
 Enables or disables an installed skill for one target app. The command delegates to `SkillService::toggle_app`, so CC Switch remains the source of truth for DB updates and skill symlinks.

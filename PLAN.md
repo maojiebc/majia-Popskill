@@ -117,7 +117,7 @@
 代码已经明显超过最初 Day 1-5 计划，下面这些能力已经落地，后续不要再当成"未来计划"：
 
 - **已完成**：`skill-cli list/detail/toggle/discover/install-plan/install/update/uninstall/import-unmanaged`
-- **已完成**：本机 Claude Code Agent 只读管理纵切（`skill-cli agent-list` / `agent-targets` + SwiftUI Agents 页，扫描 `~/.claude/agents/**/*.md`，并展示 Agent 工具 target 诊断）
+- **已完成**：本机 Claude Code Agent 只读管理纵切（`skill-cli agent-list` / `agent-targets` / `agent-catalog` + SwiftUI Agents 页，扫描 `~/.claude/agents/**/*.md`，展示 Agent 工具 target 诊断，并只读预览 AgencyAgents catalog）
 - **已完成**：AgentShield sidecar + Library 手动/持久化扫描 + install/import gate（blocked 自动回滚或阻断；`security-scan` / `security-scan-list`，支持 `POPSKILL_AGENTSHIELD_BIN`）
 - **已完成**：WebDAV 状态/远端 snapshot 与配置写入纵切（`webdav-status` / `webdav-configure` / `webdav-remote-info`，Settings 显示配置与远端 manifest 状态）
 - **已完成**：自定义 skill repository 管理（`repo-list/add/toggle/remove`），含 URL/owner/name 校验、`.git` 后缀规范化、非法 scheme 拒绝
@@ -757,6 +757,9 @@ skill-cli agent-list [--root=<agents-dir>] [--json]
 skill-cli agent-targets [--json]
   → 只读列出 AgencyAgents 验证过的 Agent-capable 工具目标路径与本机 detected 状态
 
+skill-cli agent-catalog [--query=<text>] [--limit=<n>] [--json]
+  → 只读发现 AgencyAgents 的 installable Agent markdown，解析 frontmatter 作为后续安装计划输入
+
 skill-cli detail <skill-id> [--json]
   → 单个 skill 详情
 
@@ -1325,12 +1328,12 @@ open swift-app/Package.swift
 - ✅ 静态验证剥离可行性（A 阶段）
 - ✅ 产品形态设计 V1（C 阶段）与 `STYLE.md`
 - ✅ `cc-switch` 作为 git submodule 固定到 v3.14.1
-- ✅ `skill-cli` sidecar 已覆盖 list/detail/toggle/discover/install-plan/install/update/uninstall/import/repo/backup/agent-list/agent-targets/health
+- ✅ `skill-cli` sidecar 已覆盖 list/detail/toggle/discover/install-plan/install/update/uninstall/import/repo/backup/agent-list/agent-targets/agent-catalog/health
 - ✅ SwiftUI Library / Agents / Discover / Updates / Backups / Insights / Settings 主页面可编译
 - ✅ 行内 Claude/Codex/Gemini toggle、Stub / Rehydrate 与详情页多 app toggle 已接 sidecar
 - ✅ 自定义 skill repository 管理、sidecar health、backup 管理已倒灌进计划
 - ✅ AgentShield sidecar、Library 手动/持久化扫描、install-plan 安全预览、安装后 blocked 回滚、unmanaged import 前阻断已落地
-- ✅ Agent 只读管理已启动：默认扫描 `~/.claude/agents/**/*.md`，解析 name/description/tools/model，SwiftUI Agents 页支持搜索、分类、详情和 Agent target 诊断
+- ✅ Agent 只读管理已启动：默认扫描 `~/.claude/agents/**/*.md`，解析 name/description/tools/model；AgencyAgents catalog 可只读发现；SwiftUI Agents 页支持搜索、分类、详情和 Agent target 诊断
 - ✅ WebDAV 状态与远端 snapshot 只读入口已落地；upload/download 当前受 CC Switch Tauri State/private module 边界阻塞，先不绕实现
 - ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle/release smoke、development DMG 打包、release manifest/appcast 已落地
 - ✅ Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 已按 60 天 inactive 生命周期 + transcript attribution 最近使用筛选，并支持单个/批量 stub
