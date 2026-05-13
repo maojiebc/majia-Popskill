@@ -294,6 +294,7 @@ async fn run() -> Result<()> {
             enabled,
             json: _,
         } => {
+            // Infer CC Switch's SkillRepo type from save_skill_repo to avoid patching the submodule.
             let repo = serde_json::from_value(json!({
                 "owner": owner,
                 "name": name,
