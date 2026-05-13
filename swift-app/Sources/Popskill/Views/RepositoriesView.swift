@@ -318,6 +318,12 @@ struct RepositoryRow: View {
             .disabled(isPending || isRemoving)
             .help(repository.enabled ? "Disable repository" : "Enable repository")
 
+            Link(destination: repositoryURL) {
+                Image(systemName: "arrow.up.right.square")
+            }
+            .buttonStyle(.bordered)
+            .help("Open Repository")
+
             Button(role: .destructive) {
                 isConfirmingRemove = true
             } label: {
@@ -345,5 +351,13 @@ struct RepositoryRow: View {
             }
         }
         .frame(minHeight: 68)
+    }
+
+    private var repositoryURL: URL {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "github.com"
+        components.path = "/\(repository.owner)/\(repository.name)"
+        return components.url ?? URL(fileURLWithPath: "/")
     }
 }
