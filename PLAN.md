@@ -120,7 +120,7 @@
 - **已完成**：SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译
 - **已完成**：行内 Claude/Codex/Gemini toggle、详情页更多 app toggle、Stub / Rehydrate、unmanaged import banner
 - **已完成**：Backups 查看 / 恢复 / 删除，Settings sidecar health 诊断
-- **已完成**：本地 CI、read-only smoke、mutating repo smoke、`.app` development bundle、bundle launch smoke
+- **已完成**：本地 CI、read-only smoke、mutating repo smoke、`.app` development bundle、bundle launch smoke、development DMG 打包
 - **未完成**：Stub 60 天使用数据自动建议 / 批量 stub、WebDAV 配置与手动 sync、AgentShield install 前强制拦截与持久化角标、正式 codesign/notarize/Sparkle release
 
 ### 不做的事（避免范围爆炸）
@@ -1208,8 +1208,8 @@ struct CLIResponse<T: Decodable>: Decodable {
 - **成本**：Apple Developer Program **$99 / 年**。一个会员覆盖 macOS / iOS / 全平台，notarization 本身免费
 - **身份选择**：先用 **Individual**；Organization 需要 D-U-N-S 编号，周期更长
 - **证书**：使用 **Developer ID Application**，不是 Mac App Distribution
-- **流程**：`package-dev-app.sh` 产出 `.app` → `codesign --options runtime --timestamp` → `ditto` 压 zip → `xcrun notarytool submit --wait` → `xcrun stapler staple` → `stapler validate`
-- **脚本化**：封装成 `scripts/notarize.sh`。每个 Sparkle 更新包都要重新走 codesign + notarize + staple
+- **流程**：`package-dev-app.sh` 产出 `.app` → `codesign --options runtime --timestamp` → `ditto` 压 zip → `xcrun notarytool submit --wait` → `xcrun stapler staple` → `stapler validate` → `package-dmg.sh` 产出带 Applications 拖拽入口的 `.dmg`
+- **脚本化**：封装成 `scripts/notarize.sh` 与 `scripts/package-dmg.sh`。每个 Sparkle 更新包都要重新走 codesign + notarize + staple
 - **密钥策略**：Apple app-specific password 走环境变量或 Keychain profile；WebDAV password / PAT / LLM API key 也进 Keychain，**不进 SQLite**
 
 **验收**：拿一台干净的、没装过 Popskill 的 Mac，从 Releases 下 `.dmg` → 拖进 Applications → 双击打开，**全程零警告弹窗**。
@@ -1397,9 +1397,9 @@ open swift-app/Popskill.xcodeproj
 - ✅ 自定义 skill repository 管理、sidecar health、backup 管理已倒灌进计划
 - ✅ AgentShield sidecar 扫描接口与 Library 手动扫描已落地，下一步接 install 前拦截与持久化角标
 - ✅ WebDAV 状态只读入口已落地，下一步接配置保存和手动 upload/download
-- ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle smoke 已落地
+- ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle smoke、development DMG 打包已落地
 - 🟡 Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 可一键 stub；尚未完成 60 天真实使用数据自动建议和批量 stub
 - 🔴 WebDAV 配置/手动 sync、AgentShield 安装拦截/持久化角标、正式 notarize/Sparkle release 尚未落地
-- 🔴 视觉系统仍需按 `STYLE.md` 深度落地，不能停留在默认 SwiftUI 质感
+- 🟡 视觉 tokens 与主要页面容器已按 `STYLE.md` 落地；仍需继续做截图级 polish
 
 下一个动作：暂停扩新业务面，继续补视觉细节、Stub 60 天自动建议、WebDAV 配置/同步、公证 release 流程和 AgentShield 安装拦截。

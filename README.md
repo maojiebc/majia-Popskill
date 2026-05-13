@@ -22,7 +22,7 @@ Popskill aims to be the App Store experience that Claude Code skills deserve on 
 
 **Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
 
-**Current stage**: design + planning complete; MVP scaffolding is underway. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install/update/uninstall/import/repository/backup flows, SwiftUI Library + Discover + Updates + Backups + Insights compile locally, `scripts/dev-build.sh` verifies Rust build/tests + read-only sidecar smoke + Swift tests, and `scripts/notarize.sh` now sketches the v0.1 release signing path. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
+**Current stage**: design + planning complete; MVP scaffolding is underway. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install/update/uninstall/import/repository/backup flows, SwiftUI Library + Discover + Updates + Backups + Insights compile locally, `scripts/dev-build.sh` verifies Rust build/tests + read-only sidecar smoke + Swift tests, and `scripts/package-dmg.sh` + `scripts/notarize.sh` sketch the v0.1 release path. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
 
 ---
 
@@ -76,7 +76,7 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 | D-prep. 视觉设计语言 | ✅ Surge.app 拆解 + 22 个 design token |
 | **D. 脚手架 init + Day 1** | 🚧 **已启动：sidecar + SwiftUI Library/Discover/Updates/Backups/Insights MVP 可编译** |
 
-**这个仓库目前是 pre-alpha**：已有 Rust sidecar、SwiftUI Library/Discover/Updates/Backups/Insights 页面、transcript scanner 单测和本地开发脚本。Stub/WebDAV、AgentShield、正式打包签名和 App Store 分发还没完成；notarize 脚本骨架已先落位。
+**这个仓库目前是 pre-alpha**：已有 Rust sidecar、SwiftUI Library/Discover/Updates/Backups/Insights 页面、transcript scanner 单测和本地开发脚本。Stub/WebDAV/AgentShield 已有纵切骨架；正式签名、公证、Sparkle 更新和 App Store 分发还没完成；本地 DMG 与 notarize 脚本骨架已先落位。
 
 ### 已落地的 MVP 能力
 
@@ -164,6 +164,9 @@ cd ~/projects/popskill
 
 # 验证 .app bundle 能使用内置 skill-cli 启动
 ./scripts/smoke-bundle.sh
+
+# 生成本地开发 DMG（含 Applications 拖拽入口），并输出 sha256
+./scripts/package-dmg.sh
 
 # v0.1 发布前的签名/公证骨架（需要 Apple Developer ID 凭据）
 POPSKILL_DEVELOPER_ID_APPLICATION="Developer ID Application: Name (TEAMID)" \
