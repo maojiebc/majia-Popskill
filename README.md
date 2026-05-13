@@ -142,6 +142,9 @@ cd ~/projects/popskill
 # 生成本地开发 .app bundle（内含 skill-cli sidecar）
 ./scripts/package-dev-app.sh
 
+# 验证 .app bundle 能使用内置 skill-cli 启动
+./scripts/smoke-bundle.sh
+
 # 本地启动 SwiftUI app
 ./scripts/run-app.sh
 ```
