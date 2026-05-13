@@ -77,9 +77,9 @@ struct KeychainService {
     }
 
     static func accountName(for key: String) -> String {
-        key.trimmingCharacters(in: .whitespacesAndNewlines)
+        key.split(whereSeparator: \.isWhitespace)
+            .joined(separator: "-")
             .lowercased()
-            .replacingOccurrences(of: " ", with: "-")
     }
 
     private func check(_ status: OSStatus) throws {
