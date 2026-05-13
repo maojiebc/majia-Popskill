@@ -67,7 +67,11 @@ struct CatalogSkill: Identifiable, Codable, Equatable {
 
     var sourceLabel: String {
         if let repoOwner, let repoName {
-            return "\(repoOwner)/\(repoName)"
+            let label = "\(repoOwner)/\(repoName)"
+            if let repoBranch, !repoBranch.isEmpty, repoBranch != "main" {
+                return "\(label)@\(repoBranch)"
+            }
+            return label
         }
         return directory
     }
