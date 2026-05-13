@@ -73,6 +73,12 @@
 "All" = "全部";
 "Composite" = "复合包";
 "Standalone" = "独立包";
+"Sort" = "排序";
+"sort.name" = "名称";
+"sort.installedAt" = "安装时间";
+"sort.lastUsedAt" = "最近使用";
+"sort.size" = "大小";
+"sort.lastUpdatedAt" = "最近更新";
 "Filter" = "筛选";
 "Package Type" = "能力包类型";
 "Capability Packages" = "能力包";
@@ -92,6 +98,9 @@
 "Type" = "类型";
 "Location" = "位置";
 "Update Strategy" = "更新策略";
+"Update" = "更新";
+"Update All" = "全部更新";
+"Check Updates" = "检查更新";
 "Available" = "可用";
 "Component Tree" = "组件树";
 "package.componentSummary" = "%d 个组件 · %d 个已安装 · %d 个必需";

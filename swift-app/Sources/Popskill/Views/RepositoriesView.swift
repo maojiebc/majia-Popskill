@@ -358,7 +358,7 @@ struct RepositoryRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            InitialAvatarView(name: repository.name, identifier: repository.id)
+            PackageAvatar(name: repository.name, identifier: repository.id)
 
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 8) {

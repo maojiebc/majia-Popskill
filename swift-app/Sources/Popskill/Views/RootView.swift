@@ -1,15 +1,11 @@
 import SwiftUI
 
 enum SidebarSelection: String, CaseIterable, Identifiable {
-    case featured
     case repositories
     case installed
     case agents
-    case updates
     case backups
-    case recentlyUsed
     case usage
-    case tokenSpend
     case idleCandidates
     case settings
 
@@ -17,15 +13,11 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
 
     var titleKey: String {
         switch self {
-        case .featured: "sidebar.featured"
         case .repositories: "sidebar.repositories"
         case .installed: "sidebar.installed"
         case .agents: "sidebar.agents"
-        case .updates: "sidebar.updates"
         case .backups: "sidebar.backups"
-        case .recentlyUsed: "sidebar.recentlyUsed"
         case .usage: "sidebar.usage"
-        case .tokenSpend: "sidebar.tokenSpend"
         case .idleCandidates: "sidebar.idleCandidates"
         case .settings: "sidebar.settings"
         }
@@ -33,15 +25,11 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
 
     var symbolName: String {
         switch self {
-        case .featured: "sparkles"
         case .repositories: "folder.badge.gearshape"
         case .installed: "shippingbox"
         case .agents: "person.crop.circle"
-        case .updates: "arrow.down.circle"
         case .backups: "clock.arrow.circlepath"
-        case .recentlyUsed: "clock"
         case .usage: "chart.xyaxis.line"
-        case .tokenSpend: "creditcard"
         case .idleCandidates: "archivebox"
         case .settings: "gearshape"
         }
@@ -49,13 +37,11 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
 }
 
 struct RootView: View {
-    @State private var selection: SidebarSelection? = .featured
+    @State private var selection: SidebarSelection? = .installed
     @AppStorage("preferredLanguage") private var preferredLanguage = AppLanguage.system.rawValue
-    @State private var discover = DiscoverViewModel()
     @State private var repositories = RepositoriesViewModel()
     @State private var library = LibraryViewModel()
     @State private var agents = AgentsViewModel()
-    @State private var updates = UpdatesViewModel()
     @State private var backups = BackupsViewModel()
     @State private var insights = InsightsViewModel()
     @State private var settings = SettingsViewModel()
@@ -72,25 +58,25 @@ struct RootView: View {
         NavigationSplitView {
             List {
                 Section {
-                    sidebarLink(.featured)
                     sidebarLink(.repositories, badge: repositories.repositories.isEmpty ? nil : repositories.enabledCount)
                 } header: {
                     LocalizedText("section.discover")
                 }
 
                 Section {
-                    sidebarLink(.installed, badge: library.skills.count)
+                    sidebarLink(
+                        .installed,
+                        badge: library.skills.count,
+                        updateBadge: library.updatableCount > 0 ? library.updatableCount : nil
+                    )
                     sidebarLink(.agents, badge: agents.agents.isEmpty ? nil : agents.agents.count)
-                    sidebarLink(.updates, badge: updates.updates.isEmpty ? nil : updates.updates.count)
                     sidebarLink(.backups, badge: backups.backups.isEmpty ? nil : backups.backups.count)
-                    sidebarLink(.recentlyUsed)
                 } header: {
                     LocalizedText("section.myLibrary")
                 }
 
                 Section {
                     sidebarLink(.usage)
-                    sidebarLink(.tokenSpend)
                     sidebarLink(.idleCandidates)
                 } header: {
                     LocalizedText("section.insights")
@@ -103,22 +89,8 @@ struct RootView: View {
             .navigationSplitViewColumnWidth(min: 220, ideal: 240)
         } detail: {
             switch selection ?? .installed {
-            case .featured:
-                DiscoverView(
-                    viewModel: discover,
-                    repositorySummary: repositorySummary,
-                    onManageRepositories: {
-                        selection = .repositories
-                    }
-                ) {
-                    await library.load()
-                    await settings.load()
-                }
             case .repositories:
                 RepositoriesView(viewModel: repositories) {
-                    if discover.hasLoadedOnce {
-                        await discover.search()
-                    }
                     await settings.load()
                 }
             case .installed:
@@ -128,11 +100,6 @@ struct RootView: View {
                 }
             case .agents:
                 AgentsView(viewModel: agents)
-            case .updates:
-                UpdatesView(viewModel: updates) {
-                    await library.load()
-                    await settings.load()
-                }
             case .backups:
                 BackupsView(viewModel: backups) {
                     await library.load()
@@ -140,12 +107,8 @@ struct RootView: View {
                 } onBackupsChanged: {
                     await settings.load()
                 }
-            case .recentlyUsed:
-                RecentActivityView(viewModel: insights)
             case .usage:
                 InsightsView(viewModel: insights)
-            case .tokenSpend:
-                TokenSpendView(viewModel: insights)
             case .idleCandidates:
                 IdleCandidatesView(viewModel: library, insightsViewModel: insights)
             case .settings:
@@ -159,24 +122,8 @@ struct RootView: View {
         }
     }
 
-    private var repositorySummary: String {
-        let totalCount = repositories.repositories.count
-        let enabledCount = repositories.enabledCount
-
-        guard totalCount > 0 else {
-            return "Discover skills from enabled CC Switch repositories"
-        }
-
-        if enabledCount == totalCount {
-            let noun = enabledCount == 1 ? "repository" : "repositories"
-            return "Discover skills from \(enabledCount) enabled \(noun)"
-        }
-
-        return "Discover skills from \(enabledCount) enabled of \(totalCount) repositories"
-    }
-
     @ViewBuilder
-    private func sidebarLink(_ item: SidebarSelection, badge: Int? = nil) -> some View {
+    private func sidebarLink(_ item: SidebarSelection, badge: Int? = nil, updateBadge: Int? = nil) -> some View {
         let isSelected = selection == item
 
         Button {
@@ -205,6 +152,17 @@ struct RootView: View {
                             Capsule().fill(
                                 isSelected ? Color.accentColor.opacity(0.14) : Color.secondary.opacity(0.12)
                             )
+                        )
+                }
+
+                if let updateBadge {
+                    Text("↓\(updateBadge)")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Color.popStatusWarning)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule().fill(Color.popStatusWarning.opacity(isSelected ? 0.18 : 0.12))
                         )
                 }
             }

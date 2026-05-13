@@ -443,7 +443,7 @@ struct CatalogSkillRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            InitialAvatarView(name: skill.name, identifier: skill.key)
+            PackageAvatar(name: skill.name, identifier: skill.key)
 
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 8) {

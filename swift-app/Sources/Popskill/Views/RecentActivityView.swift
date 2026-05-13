@@ -79,7 +79,7 @@ struct RecentSessionRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            InitialAvatarView(name: session.projectName, identifier: session.sessionID)
+            PackageAvatar(name: session.projectName, identifier: session.sessionID)
 
             VStack(alignment: .leading, spacing: 7) {
                 HStack(spacing: 8) {

@@ -39,12 +39,32 @@ struct LibraryFilterTests {
         #expect(PackageFilter.standalone.includes(standalone))
     }
 
-    private func skill(enabledInClaude: Bool) -> Skill {
+    @Test
+    func librarySortOptionsUseExpectedOrdering() {
+        let alpha = skill(id: "alpha", name: "Alpha", installedAt: 10, updatedAt: 20, lastUsedAt: 30, sizeBytes: 40)
+        let beta = skill(id: "beta", name: "Beta", installedAt: 30, updatedAt: 10, lastUsedAt: 20, sizeBytes: 80)
+
+        #expect(LibrarySortOption.name.areInIncreasingOrder(alpha, beta))
+        #expect(LibrarySortOption.installedAt.areInIncreasingOrder(beta, alpha))
+        #expect(LibrarySortOption.lastUsedAt.areInIncreasingOrder(alpha, beta))
+        #expect(LibrarySortOption.size.areInIncreasingOrder(beta, alpha))
+        #expect(LibrarySortOption.lastUpdatedAt.areInIncreasingOrder(alpha, beta))
+    }
+
+    private func skill(
+        id: String? = nil,
+        name: String = "Demo",
+        enabledInClaude: Bool = true,
+        installedAt: Int? = nil,
+        updatedAt: Int? = nil,
+        lastUsedAt: Int? = nil,
+        sizeBytes: UInt64? = nil
+    ) -> Skill {
         Skill(
-            id: enabledInClaude ? "active" : "inactive",
-            name: "Demo",
+            id: id ?? (enabledInClaude ? "active" : "inactive"),
+            name: name,
             description: "Demo skill",
-            directory: "demo",
+            directory: id ?? "demo",
             repoOwner: nil,
             repoName: nil,
             readmeUrl: nil,
@@ -55,9 +75,11 @@ struct LibraryFilterTests {
                 opencode: false,
                 hermes: false
             ),
-            installedAt: nil,
-            updatedAt: nil,
-            contentHash: nil
+            installedAt: installedAt,
+            updatedAt: updatedAt,
+            contentHash: nil,
+            lastUsedAt: lastUsedAt,
+            sizeBytes: sizeBytes
         )
     }
 

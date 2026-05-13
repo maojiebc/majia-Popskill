@@ -25,6 +25,24 @@ struct CommonViewsTests {
     }
 
     @Test
+    func packageAvatarInitialsFollowMajiaDashRules() {
+        #expect(PackageAvatar.computeInitials(for: "caveman") == "CA")
+        #expect(PackageAvatar.computeInitials(for: "lark-doc") == "LD")
+        #expect(PackageAvatar.computeInitials(for: "majia-ota-skill") == "MOS")
+        #expect(PackageAvatar.computeInitials(for: "baoyu-article-illustrator") == "BAI")
+        #expect(PackageAvatar.computeInitials(for: "baoyu-image-cards-helper") == "BIC")
+        #expect(PackageAvatar.computeInitials(for: "agent-skill-pack-cli-tool") == "ASP")
+    }
+
+    @Test
+    func packageAvatarInitialsHandleEdges() {
+        #expect(PackageAvatar.computeInitials(for: "_internal-skill") == "IS")
+        #expect(PackageAvatar.computeInitials(for: "lark-doc-v2") == "LDV")
+        #expect(PackageAvatar.computeInitials(for: "  opennews  ") == "OP")
+        #expect(PackageAvatar.computeInitials(for: "---") == "S")
+    }
+
+    @Test
     func sectionAccentIndexWrapsForwardAndBackward() {
         #expect(PopskillSectionAccent.index(for: 0) == 0)
         #expect(PopskillSectionAccent.index(for: 4) == 0)

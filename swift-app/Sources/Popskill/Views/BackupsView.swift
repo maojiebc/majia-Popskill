@@ -189,7 +189,7 @@ struct SkillBackupRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            InitialAvatarView(name: backup.skill.name, identifier: backup.backupId)
+            PackageAvatar(name: backup.skill.name, identifier: backup.backupId)
 
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 8) {

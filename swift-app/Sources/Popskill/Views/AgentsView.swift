@@ -220,7 +220,7 @@ struct AgentRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
-            InitialAvatarView(name: agent.name, identifier: agent.id)
+            PackageAvatar(name: agent.name, identifier: agent.id)
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
@@ -258,8 +258,7 @@ struct AgentDetailPane: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         HStack(spacing: 12) {
-                            InitialAvatarView(name: agent.name, identifier: agent.id)
-                                .frame(width: 52, height: 52)
+                            PackageAvatar(name: agent.name, identifier: agent.id, size: 52)
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(agent.name)

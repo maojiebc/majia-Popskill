@@ -170,7 +170,7 @@ struct IdleCandidateRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            InitialAvatarView(name: skill.name, identifier: skill.id)
+            PackageAvatar(name: skill.name, identifier: skill.id)
 
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 8) {

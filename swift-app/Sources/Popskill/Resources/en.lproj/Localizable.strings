@@ -73,6 +73,12 @@
 "All" = "All";
 "Composite" = "Composite";
 "Standalone" = "Standalone";
+"Sort" = "Sort";
+"sort.name" = "Name";
+"sort.installedAt" = "Install Date";
+"sort.lastUsedAt" = "Recently Used";
+"sort.size" = "Size";
+"sort.lastUpdatedAt" = "Last Updated";
 "Filter" = "Filter";
 "Package Type" = "Package Type";
 "Capability Packages" = "Capability Packages";
@@ -92,6 +98,9 @@
 "Type" = "Type";
 "Location" = "Location";
 "Update Strategy" = "Update Strategy";
+"Update" = "Update";
+"Update All" = "Update All";
+"Check Updates" = "Check Updates";
 "Available" = "Available";
 "Component Tree" = "Component Tree";
 "package.componentSummary" = "%d components · %d installed · %d required";

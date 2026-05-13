@@ -307,21 +307,18 @@ actor SkillCLIClient {
             process.environment = mergedEnvironment
         }
 
-        let stdout = Pipe()
-        let stderr = Pipe()
-        process.standardOutput = stdout
-        process.standardError = stderr
+        let outputPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = outputPipe
 
         try process.run()
+        let output = outputPipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
-
-        let output = stdout.fileHandleForReading.readDataToEndOfFile()
-        let errorOutput = stderr.fileHandleForReading.readDataToEndOfFile()
 
         guard process.terminationStatus == 0 else {
             let message = Self.commandFailureMessage(
                 stdout: output,
-                stderr: errorOutput,
+                stderr: Data(),
                 status: process.terminationStatus
             )
             throw CLIClientError.commandFailed(message)

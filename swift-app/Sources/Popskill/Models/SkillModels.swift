@@ -32,6 +32,8 @@ struct Skill: Identifiable, Codable, Equatable {
     let installedAt: Int?
     let updatedAt: Int?
     let contentHash: String?
+    var lastUsedAt: Int? = nil
+    var sizeBytes: UInt64? = nil
 
     var sourceLabel: String {
         if let repoOwner, let repoName, !repoOwner.isEmpty, !repoName.isEmpty {

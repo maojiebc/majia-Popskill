@@ -163,6 +163,8 @@ struct LibraryView: View {
                             } content: {
                                 SkillRow(
                                     skill: skill,
+                                    updateInfo: viewModel.updateInfo(skillID: skill.id),
+                                    isUpdating: viewModel.isUpdating(skillID: skill.id),
                                     securityScanResult: viewModel.securityScanResult(skillID: skill.id),
                                     isToggling: { app in
                                         viewModel.isToggling(skillID: skill.id, app: app)
@@ -170,6 +172,12 @@ struct LibraryView: View {
                                 ) { app, enabled in
                                     Task {
                                         await viewModel.setEnabled(enabled, for: skill, app: app)
+                                    }
+                                } onUpdate: { update in
+                                    Task {
+                                        if await viewModel.update(update) {
+                                            await onLibraryMutation()
+                                        }
                                     }
                                 }
                             }
@@ -410,6 +418,40 @@ struct LibraryView: View {
                     )
                 }
 
+                if viewModel.updatableCount > 0 || viewModel.isUpdatingAll {
+                    Button {
+                        Task {
+                            if await viewModel.updateAll() > 0 {
+                                await onLibraryMutation()
+                            }
+                        }
+                    } label: {
+                        if viewModel.isUpdatingAll {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Label(localization.string("Update All"), systemImage: "arrow.down.circle")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .help("Update All")
+                    .disabled(viewModel.isCheckingUpdates || viewModel.isUpdatingAny)
+                }
+
+                Button {
+                    Task { await viewModel.checkUpdates() }
+                } label: {
+                    if viewModel.isCheckingUpdates {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: "arrow.down.circle")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .help("Check Updates")
+                .disabled(viewModel.isCheckingUpdates || viewModel.isUpdatingAny)
+
                 Button {
                     Task { await viewModel.load() }
                 } label: {
@@ -426,6 +468,15 @@ struct LibraryView: View {
             }
 
             HStack(spacing: 12) {
+                Picker("Sort", selection: $viewModel.sortOption) {
+                    ForEach(LibrarySortOption.allCases) { option in
+                        Text(localization.string(option.title)).tag(option)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .frame(width: 150)
+
                 Picker("Package Type", selection: $viewModel.selectedPackageFilter) {
                     ForEach(PackageFilter.allCases) { filter in
                         Text(localization.string(filter.title)).tag(filter)
@@ -530,8 +581,7 @@ struct PackageDetailPane: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         HStack(spacing: 12) {
-                            PackageIcon(type: package.type)
-                                .frame(width: 52, height: 52)
+                            PackageAvatar(name: package.name, identifier: package.id, size: 52)
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(package.name)
@@ -612,7 +662,7 @@ struct PackageRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
-            PackageIcon(type: package.type)
+            PackageAvatar(name: package.name, identifier: package.id)
 
             VStack(alignment: .leading, spacing: 9) {
                 VStack(alignment: .leading, spacing: 5) {
@@ -662,21 +712,6 @@ struct PackageRow: View {
             }
         }
         .frame(minHeight: package.type == .composite ? 128 : 82)
-    }
-}
-
-struct PackageIcon: View {
-    let type: CapabilityPackageType
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: PopskillRadius.smallCard)
-                .fill(packageColor(type).opacity(0.16))
-            Image(systemName: type == .composite ? "square.stack.3d.up.fill" : "doc.badge.gearshape.fill")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(packageColor(type))
-        }
-        .frame(width: 44, height: 44)
     }
 }
 
@@ -741,8 +776,7 @@ struct SkillDetailPane: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         HStack(spacing: 12) {
-                            InitialAvatarView(name: skill.name, identifier: skill.id)
-                                .frame(width: 52, height: 52)
+                            PackageAvatar(name: skill.name, identifier: skill.id, size: 52)
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(skill.name)
@@ -909,8 +943,7 @@ struct StubDetailPane: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         HStack(spacing: 12) {
-                            InitialAvatarView(name: stub.skill.name, identifier: stub.skill.id)
-                                .frame(width: 52, height: 52)
+                            PackageAvatar(name: stub.skill.name, identifier: stub.skill.id, size: 52)
                                 .saturation(0.2)
                                 .opacity(0.78)
 
@@ -967,13 +1000,17 @@ struct StubDetailPane: View {
 
 struct SkillRow: View {
     let skill: Skill
+    let updateInfo: SkillUpdateInfo?
+    let isUpdating: Bool
     let securityScanResult: SecurityScanResult?
     let isToggling: (TargetApp) -> Bool
     let onToggle: (TargetApp, Bool) -> Void
+    let onUpdate: (SkillUpdateInfo) -> Void
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
-            InitialAvatarView(name: skill.name, identifier: skill.id)
+            PackageAvatar(name: skill.name, identifier: skill.id)
 
             VStack(alignment: .leading, spacing: 9) {
                 VStack(alignment: .leading, spacing: 5) {
@@ -993,6 +1030,10 @@ struct SkillRow: View {
                                 title: securityScanTitle(securityScanResult),
                                 color: securityScanColor(securityScanResult)
                             )
+                        }
+
+                        if updateInfo != nil {
+                            StatusPill(title: "Updates", color: .popStatusWarning)
                         }
                     }
 
@@ -1019,6 +1060,25 @@ struct SkillRow: View {
                     }
                 }
             }
+
+            Spacer(minLength: 8)
+
+            if let updateInfo {
+                Button {
+                    onUpdate(updateInfo)
+                } label: {
+                    if isUpdating {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Label(localization.string("Update"), systemImage: "arrow.down.circle")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(isUpdating)
+                .help("Update")
+            }
         }
         .frame(minHeight: 148)
     }
@@ -1035,7 +1095,7 @@ struct StubRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            InitialAvatarView(name: stub.skill.name, identifier: stub.skill.id)
+            PackageAvatar(name: stub.skill.name, identifier: stub.skill.id)
                 .saturation(0.2)
                 .opacity(0.78)
 

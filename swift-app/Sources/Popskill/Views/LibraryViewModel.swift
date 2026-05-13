@@ -8,18 +8,25 @@ final class LibraryViewModel {
     var packages: [CapabilityPackage] = []
     var stubs: [StubbedSkill] = []
     var unmanagedSkills: [UnmanagedSkill] = []
+    var updates: [SkillUpdateInfo] = []
     var securityScanResults: [Skill.ID: SecurityScanResult] = [:]
     var searchText = ""
     var selectedFilter: LibraryFilter = .all
     var selectedPackageFilter: PackageFilter = .all
+    var sortOption: LibrarySortOption = .lastUsedAt
     var selectedRehydrateApp: TargetApp = .codex
     var isLoading = false
+    var isCheckingUpdates = false
+    var isUpdatingAll = false
     var isBulkStubbing = false
     var hasLoadedOnce = false
+    var hasCheckedUpdatesOnce = false
+    var lastCheckedUpdatesAt: Date?
     var errorMessage: String?
 
     private let client = SkillCLIClient()
     private var pendingToggles: Set<String> = []
+    private var updatingIDs: Set<String> = []
     private var uninstallingIDs: Set<String> = []
     private var stubbingIDs: Set<String> = []
     private var rehydratingIDs: Set<String> = []
@@ -37,7 +44,7 @@ final class LibraryViewModel {
                 || skill.description.lowercased().contains(query)
                 || skill.sourceLabel.lowercased().contains(query)
                 || skill.directory.lowercased().contains(query)
-        }
+        }.sorted(by: sortOption.areInIncreasingOrder)
     }
 
     var filteredStubs: [StubbedSkill] {
@@ -87,8 +94,24 @@ final class LibraryViewModel {
         stubs.count
     }
 
+    var updatableCount: Int {
+        updates.count
+    }
+
     func isToggling(skillID: String, app: TargetApp) -> Bool {
         pendingToggles.contains(toggleKey(skillID: skillID, app: app))
+    }
+
+    func updateInfo(skillID: String) -> SkillUpdateInfo? {
+        updates.first { $0.id == skillID }
+    }
+
+    func isUpdating(skillID: String) -> Bool {
+        updatingIDs.contains(skillID)
+    }
+
+    var isUpdatingAny: Bool {
+        isUpdatingAll || !updatingIDs.isEmpty
     }
 
     func isUninstalling(skillID: String) -> Bool {
@@ -147,6 +170,72 @@ final class LibraryViewModel {
         }
     }
 
+    func checkUpdates() async {
+        guard !isCheckingUpdates else {
+            return
+        }
+
+        isCheckingUpdates = true
+        errorMessage = nil
+        defer {
+            isCheckingUpdates = false
+            hasCheckedUpdatesOnce = true
+        }
+
+        do {
+            updates = try await client.checkUpdates()
+                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            lastCheckedUpdatesAt = Date()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    @discardableResult
+    func update(_ update: SkillUpdateInfo) async -> Bool {
+        guard !updatingIDs.contains(update.id) else {
+            return false
+        }
+
+        updatingIDs.insert(update.id)
+        errorMessage = nil
+        var didUpdate = false
+
+        do {
+            let skill = try await client.update(skillID: update.id)
+            updates.removeAll { $0.id == update.id }
+            upsertSkill(skill)
+            didUpdate = true
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        updatingIDs.remove(update.id)
+        return didUpdate
+    }
+
+    @discardableResult
+    func updateAll() async -> Int {
+        guard !isUpdatingAll, !updates.isEmpty else {
+            return 0
+        }
+
+        isUpdatingAll = true
+        defer {
+            isUpdatingAll = false
+        }
+
+        var updatedCount = 0
+        let pendingUpdates = updates
+        for update in pendingUpdates {
+            if await self.update(update) {
+                updatedCount += 1
+            }
+        }
+
+        return updatedCount
+    }
+
     func setEnabled(_ enabled: Bool, for skill: Skill, app: TargetApp) async {
         guard let index = skills.firstIndex(where: { $0.id == skill.id }) else {
             return
@@ -185,6 +274,7 @@ final class LibraryViewModel {
         do {
             _ = try await client.uninstall(skillID: skill.id)
             skills.removeAll { $0.id == skill.id }
+            updates.removeAll { $0.id == skill.id }
             securityScanResults[skill.id] = nil
             didUninstall = true
         } catch {
@@ -208,6 +298,7 @@ final class LibraryViewModel {
         do {
             let stub = try await client.stub(skillID: skill.id)
             skills.removeAll { $0.id == skill.id }
+            updates.removeAll { $0.id == skill.id }
             securityScanResults[skill.id] = nil
             upsertStub(stub)
             didStub = true
@@ -400,5 +491,66 @@ enum PackageFilter: String, CaseIterable, Identifiable {
         case .standalone:
             return package.type == .standalone
         }
+    }
+}
+
+enum LibrarySortOption: String, CaseIterable, Identifiable {
+    case name
+    case installedAt
+    case lastUsedAt
+    case size
+    case lastUpdatedAt
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .name: "sort.name"
+        case .installedAt: "sort.installedAt"
+        case .lastUsedAt: "sort.lastUsedAt"
+        case .size: "sort.size"
+        case .lastUpdatedAt: "sort.lastUpdatedAt"
+        }
+    }
+
+    func areInIncreasingOrder(_ left: Skill, _ right: Skill) -> Bool {
+        switch self {
+        case .name:
+            return nameOrder(left, right)
+        case .installedAt:
+            return timestampOrder(left.installedAt, right.installedAt, left, right)
+        case .lastUsedAt:
+            return timestampOrder(left.lastUsedAt, right.lastUsedAt, left, right)
+        case .size:
+            return sizeOrder(left.sizeBytes, right.sizeBytes, left, right)
+        case .lastUpdatedAt:
+            return timestampOrder(left.updatedAt, right.updatedAt, left, right)
+        }
+    }
+
+    private func timestampOrder(_ leftValue: Int?, _ rightValue: Int?, _ left: Skill, _ right: Skill) -> Bool {
+        let leftTimestamp = leftValue ?? 0
+        let rightTimestamp = rightValue ?? 0
+        if leftTimestamp != rightTimestamp {
+            return leftTimestamp > rightTimestamp
+        }
+        return nameOrder(left, right)
+    }
+
+    private func sizeOrder(_ leftValue: UInt64?, _ rightValue: UInt64?, _ left: Skill, _ right: Skill) -> Bool {
+        let leftSize = leftValue ?? 0
+        let rightSize = rightValue ?? 0
+        if leftSize != rightSize {
+            return leftSize > rightSize
+        }
+        return nameOrder(left, right)
+    }
+
+    private func nameOrder(_ left: Skill, _ right: Skill) -> Bool {
+        let nameOrder = left.name.localizedCaseInsensitiveCompare(right.name)
+        if nameOrder != .orderedSame {
+            return nameOrder == .orderedAscending
+        }
+        return left.id < right.id
     }
 }
