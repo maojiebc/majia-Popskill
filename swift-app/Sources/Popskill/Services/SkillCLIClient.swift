@@ -69,6 +69,11 @@ actor SkillCLIClient {
         return try Self.decodeResponse([CatalogAgent].self, from: data)
     }
 
+    func agentInstallPlan(agentKey: String, target: String = "claude-code") async throws -> AgentInstallPlan {
+        let data = try run(arguments: ["agent-install-plan", agentKey, "--target", target, "--json"])
+        return try Self.decodeResponse(AgentInstallPlan.self, from: data)
+    }
+
     func scanUnmanaged() async throws -> [UnmanagedSkill] {
         let data = try run(arguments: ["scan-unmanaged", "--json"])
         return try Self.decodeResponse([UnmanagedSkill].self, from: data)

@@ -96,6 +96,15 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Preview an AgencyAgents install without writing files.
+    AgentInstallPlan {
+        agent_key: String,
+        #[arg(long, default_value = "claude-code")]
+        target: String,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// Find local skills that exist on disk but are not managed by CC Switch.
     ScanUnmanaged {
         /// Kept for the Swift client contract; output is JSON either way.
@@ -410,6 +419,14 @@ async fn run() -> Result<()> {
         } => {
             let agents = discover_agency_agents(query.as_deref(), limit).await?;
             print_json(&ApiResponse::ok(agents))
+        }
+        Commands::AgentInstallPlan {
+            agent_key,
+            target,
+            json: _,
+        } => {
+            let plan = build_agent_install_plan(&agent_key, &target)?;
+            print_json(&ApiResponse::ok(plan))
         }
         Commands::ScanUnmanaged { json: _ } => {
             let skills =
@@ -1210,6 +1227,84 @@ fn agency_agent_raw_url(path: &str) -> String {
     )
 }
 
+fn build_agent_install_plan(agent_key: &str, target_id: &str) -> Result<AgentInstallPlan> {
+    let agent = agency_agent_from_key(agent_key)?;
+    let target = list_agent_targets()?
+        .into_iter()
+        .find(|target| target.id == target_id)
+        .with_context(|| format!("unsupported agent target: {target_id}"))?;
+    let writes = target_destination_paths(&target, &agent.path)?;
+    let conflicts = writes
+        .iter()
+        .filter(|path| Path::new(path.as_str()).exists())
+        .cloned()
+        .collect::<Vec<_>>();
+    let mut steps = vec!["fetchFromAgencyAgents".to_string()];
+    if target.format != "markdown-agent" {
+        steps.push("convertForTargetFormat".to_string());
+    }
+    steps.push("writeAgentFile".to_string());
+
+    Ok(AgentInstallPlan {
+        agent_id: agent.id.clone(),
+        name: agent.name.clone(),
+        target_id: target.id.clone(),
+        target_name: target.name.clone(),
+        target_format: target.format.clone(),
+        source: AgentInstallSource {
+            repo_owner: agent.repo_owner,
+            repo_name: agent.repo_name,
+            repo_branch: agent.repo_branch,
+            path: agent.path,
+            raw_url: agent.raw_url,
+        },
+        writes,
+        conflict: if conflicts.is_empty() {
+            None
+        } else {
+            Some(AgentInstallConflict { paths: conflicts })
+        },
+        requires_conversion: target.format != "markdown-agent",
+        steps,
+    })
+}
+
+fn agency_agent_from_key(agent_key: &str) -> Result<CatalogAgent> {
+    let path = agent_key
+        .split_once(':')
+        .map(|(_, path)| path)
+        .unwrap_or(agent_key)
+        .trim()
+        .trim_start_matches('/');
+    let path = if path.ends_with(".md") {
+        path.to_string()
+    } else {
+        format!("{path}.md")
+    };
+    catalog_agent_from_tree_path(&path, "blob")
+        .with_context(|| format!("unsupported AgencyAgents agent key: {agent_key}"))
+}
+
+fn target_destination_paths(target: &AgentTarget, agent_path: &str) -> Result<Vec<String>> {
+    let file_name = Path::new(agent_path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .context("agent path must have a UTF-8 file name")?;
+
+    Ok(target
+        .paths
+        .iter()
+        .map(|path| {
+            let target_path = Path::new(path);
+            if target_path.extension().is_some() {
+                path.clone()
+            } else {
+                target_path.join(file_name).to_string_lossy().to_string()
+            }
+        })
+        .collect())
+}
+
 async fn build_install_plan(
     db: &Arc<Database>,
     skill_key: &str,
@@ -1956,6 +2051,37 @@ struct CatalogAgent {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct AgentInstallPlan {
+    agent_id: String,
+    name: String,
+    target_id: String,
+    target_name: String,
+    target_format: String,
+    source: AgentInstallSource,
+    writes: Vec<String>,
+    conflict: Option<AgentInstallConflict>,
+    requires_conversion: bool,
+    steps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AgentInstallSource {
+    repo_owner: String,
+    repo_name: String,
+    repo_branch: String,
+    path: String,
+    raw_url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AgentInstallConflict {
+    paths: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct StubbedSkill {
     skill: InstalledSkill,
     backup_id: String,
@@ -2456,6 +2582,60 @@ Turns fuzzy product ideas into crisp release plans.
         );
         assert!(catalog_agent_from_tree_path("engineering/nested/agent.md", "blob").is_none());
         assert!(catalog_agent_from_tree_path("engineering/backend-developer.md", "tree").is_none());
+    }
+
+    #[test]
+    fn agency_agent_from_key_accepts_repo_prefixed_and_plain_paths() {
+        let prefixed = agency_agent_from_key(
+            "msitarzewski/agency-agents:marketing/marketing-xiaohongshu-specialist",
+        )
+        .expect("prefixed key should parse");
+        let plain = agency_agent_from_key("marketing/marketing-xiaohongshu-specialist.md")
+            .expect("plain path should parse");
+
+        assert_eq!(
+            prefixed.path,
+            "marketing/marketing-xiaohongshu-specialist.md"
+        );
+        assert_eq!(plain.id, prefixed.id);
+    }
+
+    #[test]
+    fn target_destination_paths_append_markdown_to_directory_targets() {
+        let target = AgentTarget {
+            id: "claude-code".to_string(),
+            name: "Claude Code".to_string(),
+            scope: "user".to_string(),
+            format: "markdown-agent".to_string(),
+            paths: vec!["/Users/example/.claude/agents".to_string()],
+            detected: true,
+            source: "agency-agents".to_string(),
+            note: None,
+        };
+
+        let writes = target_destination_paths(&target, "marketing/demo-agent.md")
+            .expect("writes should plan");
+
+        assert_eq!(writes, vec!["/Users/example/.claude/agents/demo-agent.md"]);
+    }
+
+    #[test]
+    fn target_destination_paths_preserve_file_targets() {
+        let target = AgentTarget {
+            id: "aider".to_string(),
+            name: "Aider".to_string(),
+            scope: "project".to_string(),
+            format: "conventions".to_string(),
+            paths: vec!["/Users/example/project/CONVENTIONS.md".to_string()],
+            detected: false,
+            source: "agency-agents".to_string(),
+            note: None,
+        };
+
+        let writes = target_destination_paths(&target, "engineering/backend.md")
+            .expect("writes should plan");
+
+        assert_eq!(writes, vec!["/Users/example/project/CONVENTIONS.md"]);
     }
 
     fn stub_fixture(id: &str, stubbed_at: i64) -> StubbedSkill {

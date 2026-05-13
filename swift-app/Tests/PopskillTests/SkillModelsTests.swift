@@ -384,6 +384,38 @@ struct SkillModelsTests {
         #expect(agent.source == "agency-agents")
     }
 
+    @Test
+    func agentInstallPlanDecodesPreviewPayload() throws {
+        let data = """
+        {
+          "agentId": "msitarzewski/agency-agents:marketing/xiaohongshu-specialist",
+          "name": "Xiaohongshu Specialist",
+          "targetId": "claude-code",
+          "targetName": "Claude Code",
+          "targetFormat": "markdown-agent",
+          "source": {
+            "repoOwner": "msitarzewski",
+            "repoName": "agency-agents",
+            "repoBranch": "main",
+            "path": "marketing/xiaohongshu-specialist.md",
+            "rawUrl": "https://raw.githubusercontent.com/msitarzewski/agency-agents/main/marketing/xiaohongshu-specialist.md"
+          },
+          "writes": ["/Users/example/.claude/agents/xiaohongshu-specialist.md"],
+          "conflict": null,
+          "requiresConversion": false,
+          "steps": ["fetchFromAgencyAgents", "writeAgentFile"]
+        }
+        """.data(using: .utf8)!
+
+        let plan = try JSONDecoder().decode(AgentInstallPlan.self, from: data)
+
+        #expect(plan.agentId == "msitarzewski/agency-agents:marketing/xiaohongshu-specialist")
+        #expect(plan.targetId == "claude-code")
+        #expect(plan.source.repoName == "agency-agents")
+        #expect(plan.writes == ["/Users/example/.claude/agents/xiaohongshu-specialist.md"])
+        #expect(plan.requiresConversion == false)
+    }
+
     private func catalogSkill(repoBranch: String?) -> CatalogSkill {
         CatalogSkill(
             key: "maojiebc/majia-skills/demo",

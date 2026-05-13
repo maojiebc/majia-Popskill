@@ -241,6 +241,34 @@ Returns a read-only AgencyAgents catalog preview. The command fetches the reposi
 }
 ```
 
+### `skill-cli agent-install-plan <agent-key> --target <target-id> --json`
+
+Returns a read-only install preview for one AgencyAgents agent and one Agent-capable target. It does not create directories or write files. `agent-key` accepts either the catalog id form (`msitarzewski/agency-agents:marketing/example`) or a plain AgencyAgents path (`marketing/example.md`).
+
+```json
+{
+  "ok": true,
+  "data": {
+    "agentId": "msitarzewski/agency-agents:marketing/xiaohongshu-specialist",
+    "name": "Xiaohongshu Specialist",
+    "targetId": "claude-code",
+    "targetName": "Claude Code",
+    "targetFormat": "markdown-agent",
+    "source": {
+      "repoOwner": "msitarzewski",
+      "repoName": "agency-agents",
+      "repoBranch": "main",
+      "path": "marketing/xiaohongshu-specialist.md",
+      "rawUrl": "https://raw.githubusercontent.com/msitarzewski/agency-agents/main/marketing/xiaohongshu-specialist.md"
+    },
+    "writes": ["/Users/example/.claude/agents/xiaohongshu-specialist.md"],
+    "conflict": null,
+    "requiresConversion": false,
+    "steps": ["fetchFromAgencyAgents", "writeAgentFile"]
+  }
+}
+```
+
 ### `skill-cli toggle <skill-id> --app <app> --enabled <true|false> --json`
 
 Enables or disables an installed skill for one target app. The command delegates to `SkillService::toggle_app`, so CC Switch remains the source of truth for DB updates and skill symlinks.

@@ -23,7 +23,7 @@ Popskill aims to be the App Store experience that Claude Code skills deserve on 
 
 **Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
 
-**Current stage**: MVP feature verticals are implemented locally. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install-plan/install/update/uninstall/import/repository/backup/WebDAV status/config flows, plus read-only `agent-list`, `agent-targets`, and `agent-catalog` scans for local Claude Code agents, Agent-capable tools, and AgencyAgents content; SwiftUI Library + Agents + Discover + Repositories + Updates + Backups + Insights + Settings compile and pass tests; `scripts/ci-local.sh` verifies Rust/Swift builds, read-only sidecar smoke, native launch smoke, bundle smoke, and release artifact smoke. Remaining v0.1 work is release hardening: Developer ID signing/notarization, Sparkle SDK final link, WebDAV manual sync, and final screenshot QA. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
+**Current stage**: MVP feature verticals are implemented locally. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install-plan/install/update/uninstall/import/repository/backup/WebDAV status/config flows, plus read-only `agent-list`, `agent-targets`, `agent-catalog`, and `agent-install-plan` flows for local Claude Code agents, Agent-capable tools, and AgencyAgents content; SwiftUI Library + Agents + Discover + Repositories + Updates + Backups + Insights + Settings compile and pass tests; `scripts/ci-local.sh` verifies Rust/Swift builds, read-only sidecar smoke, native launch smoke, bundle smoke, and release artifact smoke. Remaining v0.1 work is release hardening: Developer ID signing/notarization, Sparkle SDK final link, WebDAV manual sync, and final screenshot QA. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
 
 ## Screenshots
 
@@ -107,6 +107,7 @@ POPSKILL_WEBDAV_PASSWORD='<password>' ./skill-cli/target/debug/skill-cli webdav-
 ./skill-cli/target/debug/skill-cli agent-list --json
 ./skill-cli/target/debug/skill-cli agent-targets --json
 ./skill-cli/target/debug/skill-cli agent-catalog --query xiaohongshu --limit 10 --json
+./skill-cli/target/debug/skill-cli agent-install-plan msitarzewski/agency-agents:marketing/marketing-xiaohongshu-specialist --target claude-code --json
 ./skill-cli/target/debug/skill-cli detail <skill-id> --json
 ./skill-cli/target/debug/skill-cli toggle <skill-id> --app codex --enabled true --json
 ./skill-cli/target/debug/skill-cli scan-unmanaged --json

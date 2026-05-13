@@ -166,6 +166,31 @@ struct CatalogAgent: Identifiable, Codable, Equatable {
     let source: String
 }
 
+struct AgentInstallPlan: Codable, Equatable {
+    let agentId: String
+    let name: String
+    let targetId: String
+    let targetName: String
+    let targetFormat: String
+    let source: AgentInstallSource
+    let writes: [String]
+    let conflict: AgentInstallConflict?
+    let requiresConversion: Bool
+    let steps: [String]
+}
+
+struct AgentInstallSource: Codable, Equatable {
+    let repoOwner: String
+    let repoName: String
+    let repoBranch: String
+    let path: String
+    let rawUrl: String
+}
+
+struct AgentInstallConflict: Codable, Equatable {
+    let paths: [String]
+}
+
 struct CatalogSkill: Identifiable, Codable, Equatable {
     var id: String { key }
 
