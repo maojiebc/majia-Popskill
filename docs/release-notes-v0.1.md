@@ -12,7 +12,7 @@ Popskill v0.1 is a pre-alpha macOS app for managing Claude Code Agent Skills wit
 - Stub / Rehydrate flow for reclaiming disk while keeping a Library card.
 - Local transcript-based Usage Insights with token/session/file/model/skill attribution.
 - AgentShield security scanning for third-party install/import flows.
-- WebDAV status, remote snapshot inspection, and Settings-based config write.
+- WebDAV status, remote snapshot inspection, manual sync readiness diagnostics, and Settings-based config write.
 - Local Agent library view for `~/.claude/agents`, Agent target diagnostics, AgencyAgents catalog preview, and Agent install-plan preview.
 - Local release pipeline: development `.app`, DMG, release manifest, appcast generation, screenshot smoke, bundle smoke, and release doctor.
 
@@ -26,7 +26,7 @@ Popskill v0.1 is a pre-alpha macOS app for managing Claude Code Agent Skills wit
 ## Known Limits
 
 - This is pre-alpha software. Expect rough edges.
-- WebDAV manual Sync Now is not implemented yet because CC Switch upload/download logic currently crosses private Tauri state/module boundaries.
+- WebDAV manual Sync Now is not implemented yet because CC Switch upload/download logic currently crosses private Tauri state/module boundaries; `webdav-sync-plan` exposes that blocked readiness without mutating local or remote state.
 - Sparkle 2.9.1 is linked and appcast generation is present, but public in-app update checks require a configured feed URL, public EdDSA key, and signed update payload.
 - Public distribution requires Apple Developer ID signing and notarization.
 - AgencyAgents catalog preview uses the GitHub API. Set `GITHUB_TOKEN` or `GH_TOKEN` if unauthenticated rate limits are hit.

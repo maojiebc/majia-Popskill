@@ -8,6 +8,7 @@ final class SettingsViewModel {
     var health: SidecarHealth?
     var webdavStatus: WebDAVStatus?
     var webdavRemoteInfo: WebDAVRemoteInfo?
+    var webdavSyncPlan: WebDAVSyncPlan?
     var webdavRemoteError: String?
     var isLoading = false
     var isCheckingWebDAVRemote = false
@@ -41,6 +42,7 @@ final class SettingsViewModel {
         do {
             health = try await client.health()
             let status = try await client.webdavStatus()
+            webdavSyncPlan = try await client.webdavSyncPlan()
             webdavStatus = status
             syncWebDAVForm(from: status)
         } catch {
@@ -188,7 +190,7 @@ struct SettingsView: View {
                     }
 
                     DetailSection(title: "WebDAV", accent: PopskillSectionAccent.color(for: 3)) {
-                        WebDAVReadinessNote(status: viewModel.webdavStatus)
+                        WebDAVReadinessNote(status: viewModel.webdavStatus, syncPlan: viewModel.webdavSyncPlan)
                         WebDAVConfigForm(viewModel: viewModel)
                         Divider()
                         SettingsFieldGrid {
@@ -198,9 +200,11 @@ struct SettingsView: View {
                             DetailField(title: "Profile", value: viewModel.webdavStatus?.profile ?? "default")
                             DetailField(title: "Last Sync", value: timestampText(viewModel.webdavStatus?.status?.lastSyncAt))
                             DetailField(title: "Last Error", value: viewModel.webdavStatus?.status?.lastError ?? "None")
+                            DetailField(title: "Manual Sync", value: viewModel.webdavSyncPlan?.readiness ?? "Unknown")
                         }
                         DetailField(title: "Base URL", value: viewModel.webdavStatus?.baseUrl ?? "Not set")
                         DetailField(title: "Remote Root", value: viewModel.webdavStatus?.remoteRoot ?? "cc-switch-sync")
+                        DetailField(title: "Sync Boundary", value: viewModel.webdavSyncPlan?.summary ?? "Not checked")
                         Divider()
                         HStack {
                             Button {
@@ -433,6 +437,7 @@ private struct LabeledField<Content: View>: View {
 
 struct WebDAVReadinessNote: View {
     let status: WebDAVStatus?
+    let syncPlan: WebDAVSyncPlan?
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -472,7 +477,7 @@ struct WebDAVReadinessNote: View {
             return "WebDAV configured but disabled"
         }
 
-        return "WebDAV bridge ready"
+        return syncPlan?.available == true ? "WebDAV sync ready" : "WebDAV remote read-only"
     }
 
     private var message: String {
@@ -488,7 +493,7 @@ struct WebDAVReadinessNote: View {
             return "Remote snapshot lookup is disabled until CC Switch WebDAV sync is enabled."
         }
 
-        return "Remote snapshot lookup is available. Upload/download sync is intentionally not exposed from the sidecar yet."
+        return syncPlan?.summary ?? "Remote snapshot lookup is available. Upload/download sync is intentionally not exposed from the sidecar yet."
     }
 
     private var symbolName: String {

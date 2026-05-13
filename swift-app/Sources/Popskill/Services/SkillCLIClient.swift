@@ -45,6 +45,11 @@ actor SkillCLIClient {
         return try Self.decodeResponse(WebDAVRemoteInfo.self, from: data)
     }
 
+    func webdavSyncPlan() async throws -> WebDAVSyncPlan {
+        let data = try run(arguments: ["webdav-sync-plan", "--json"])
+        return try Self.decodeResponse(WebDAVSyncPlan.self, from: data)
+    }
+
     func list() async throws -> [Skill] {
         let data = try run(arguments: ["list", "--json"])
         return try Self.decodeResponse([Skill].self, from: data)

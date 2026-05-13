@@ -50,6 +50,11 @@ require_ok backup-list backup-list --json
 require_ok stub-list stub-list --json
 require_ok repo-list repo-list --json
 require_ok webdav-status webdav-status --json
+webdav_sync_plan_output="$TMP_DIR/webdav-sync-plan.json"
+"$CLI" webdav-sync-plan --json > "$webdav_sync_plan_output"
+jq -e '.ok == true and .data.available == false and (.data.safeActions | index("webdav-status --json"))' \
+  "$webdav_sync_plan_output" > /dev/null
+echo "webdav-sync-plan ok"
 require_ok security-scan-list security-scan-list --json
 
 agent_root="$TMP_DIR/agents"

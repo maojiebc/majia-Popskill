@@ -137,6 +137,30 @@ When no compatible remote snapshot exists, CC Switch returns:
 }
 ```
 
+### `skill-cli webdav-sync-plan --json`
+
+Explains manual WebDAV upload/download readiness without mutating local or remote state. In v0.1 this is a structured blocked state because CC Switch upload/download still crosses Tauri `State<AppState>` and private module boundaries.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "available": false,
+    "readiness": "blocked-by-cc-switch-boundary",
+    "summary": "Remote snapshot lookup is available, but manual upload/download is not exposed from the sidecar yet.",
+    "blockedBy": [
+      "CC Switch webdav_sync_upload/webdav_sync_download currently require Tauri State<AppState>."
+    ],
+    "safeActions": [
+      "webdav-status --json",
+      "webdav-remote-info --json",
+      "webdav-configure --json"
+    ],
+    "requiresSubmoduleApi": true
+  }
+}
+```
+
 ### `skill-cli list --json`
 
 Returns all skills currently managed by CC Switch.

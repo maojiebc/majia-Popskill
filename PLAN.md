@@ -120,7 +120,7 @@
 - **已完成**：`skill-cli list/detail/toggle/discover/install-plan/install/update/uninstall/import-unmanaged`
 - **已完成**：本机 Claude Code Agent 只读管理纵切（`skill-cli agent-list` / `agent-targets` / `agent-catalog` / `agent-install-plan` + SwiftUI Agents 页，扫描 `~/.claude/agents/**/*.md`，展示 Agent 工具 target 诊断，只读预览 AgencyAgents catalog，并可预览写入路径）
 - **已完成**：AgentShield sidecar + Library 手动/持久化扫描 + install/import gate（blocked 自动回滚或阻断；`security-scan` / `security-scan-list`，支持 `POPSKILL_AGENTSHIELD_BIN`）
-- **已完成**：WebDAV 状态/远端 snapshot 与配置写入纵切（`webdav-status` / `webdav-configure` / `webdav-remote-info`，Settings 显示配置与远端 manifest 状态）
+- **已完成**：WebDAV 状态/远端 snapshot、手动同步 readiness plan 与配置写入纵切（`webdav-status` / `webdav-configure` / `webdav-remote-info` / `webdav-sync-plan`，Settings 显示配置、远端 manifest 状态与手动 sync 边界）
 - **已完成**：自定义 skill repository 管理（`repo-list/add/toggle/remove`），含 URL/owner/name 校验、`.git` 后缀规范化、非法 scheme 拒绝
 - **已完成**：SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译，Discover 已接 install-plan 行内预览
 - **已完成**：行内 Claude/Codex/Gemini toggle、详情页更多 app toggle、Stub / Rehydrate、Idle Candidates 60 天 inactive + transcript attribution 筛选 + 批量 Stub、unmanaged import 前扫描
@@ -749,6 +749,9 @@ skill-cli webdav-configure --base-url=<url> --username=<u> --password-env=<env> 
 skill-cli webdav-remote-info [--json]
   → 复用 CC Switch 远端 manifest 查询（未配置/未启用时失败）
 
+skill-cli webdav-sync-plan [--json]
+  → 返回手动 upload/download readiness 与 CC Switch private/Tauri 边界原因，不修改本地或远端状态
+
 skill-cli list [--json]
   → 输出所有已装 skill（对应 SkillService::get_all_installed）
 
@@ -1020,7 +1023,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 - Library 已有 unmanaged import、AgentShield 状态持久化、stub / rehydrate 和 idle candidates。
 - Updates、Backups、Repositories 已成为独立页面。
 - Insights 已有 transcript 解析基础、recent activity、token spend。
-- Settings 已展示 sidecar health、repositories、backup path、WebDAV status 和 remote snapshot。
+- Settings 已展示 sidecar health、repositories、backup path、WebDAV status、remote snapshot 和 manual sync readiness。
 - release pipeline 已有 DMG、manifest、Sparkle appcast 的 smoke 脚本。
 
 ---
@@ -1045,7 +1048,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 - [x] Discover 安装计划：安装前可预览目标路径、动作、目标 App 和 AgentShield rollback；切换目标 App 会清掉旧计划。
 - [x] AgentShield gate：unmanaged import 和 discover install 均能阻断高风险 skill。
 - [x] Stub MVP：stub/rehydrate、Idle Candidates、bulk stub dry-run/执行。
-- [x] WebDAV sidecar 边界：配置写入 / 只读 status / remote info / local backup summary。
+- [x] WebDAV sidecar 边界：配置写入 / 只读 status / remote info / manual sync plan / local backup summary。
 - [x] Agent sidecar smoke：`agent-list` / `agent-targets` / `agent-install-plan` 已纳入只读 smoke；`agent-catalog` 因 GitHub rate limit 不进默认 CI。
 - [x] release smoke：DMG、release manifest、Sparkle appcast 生成脚本。
 - [x] release doctor：检查 Developer ID、notarytool/stapler、notary 凭据、app/dmg/appcast 和 Sparkle framework/rpath 前置条件。
@@ -1058,7 +1061,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 - [x] Sparkle SDK link：App 已正式链接 Sparkle 2.9.1，当前已完成菜单入口、`SUFeedURL` / `SUPublicEDKey` 配置守卫、bundle framework copy hooks、release doctor 检查与 Sparkle key/sign_update wrapper。
 - [ ] Sparkle public update smoke：配置真实 feed、public EdDSA key、signed notarized payload 后，在 App 内完成一次公开更新检查。
 - [x] WebDAV 配置表单：Settings 可写入 CC Switch WebDAV settings；新密码通过 sidecar 环境变量传递，状态输出脱敏。
-- [ ] WebDAV Sync Now：upload/download、冲突/失败态。
+- [ ] WebDAV Sync Now：upload/download、冲突/失败态；当前先以 `webdav-sync-plan` 暴露明确 blocked readiness。
 - [x] Transcript boundary：UI/文档说明本地聚合并忽略消息正文。
 - [x] Transcript attribution：已验证真实 `attributionSkill` 调用标记，补 skill 级归因统计与 Idle Candidates 最近使用过滤。
 - [x] README 截图：Discover、Library、Usage Insights、Idle Candidates 真实界面截图已补到 `docs/assets/screenshots/`。
@@ -1170,7 +1173,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 
 ### 11.9 WebDAV 写同步 sidecar 边界
 
-**当前状态**：`webdav-status` 与 `webdav-remote-info` 可以直接复用 CC Switch re-export 的无状态 command；`webdav-configure` 通过 `get_settings` → JSON patch → `save_settings` 写入 CC Switch settings，Settings 已能配置、显示状态和远端 snapshot。
+**当前状态**：`webdav-status` 与 `webdav-remote-info` 可以直接复用 CC Switch re-export 的无状态 command；`webdav-configure` 通过 `get_settings` → JSON patch → `save_settings` 写入 CC Switch settings；`webdav-sync-plan` 以只读 contract 暴露手动 upload/download 的 blocked readiness。Settings 已能配置、显示状态、远端 snapshot 和手动 sync 边界。
 
 **阻塞点**：`webdav_sync_upload` / `webdav_sync_download` 需要 Tauri `State<AppState>`；底层 `services::webdav_sync` 与 `settings::WebDavSyncSettings` 仍在 CC Switch 私有 module 里，Popskill sidecar 不能在不改 submodule 的前提下干净调用。配置写入已绕过类型边界，但 upload/download 仍不能这样处理。
 
@@ -1486,7 +1489,7 @@ open swift-app/Package.swift
 - ✅ 自定义 skill repository 管理、sidecar health、backup 管理已倒灌进计划
 - ✅ AgentShield sidecar、Library 手动/持久化扫描、install-plan 安全预览、安装后 blocked 回滚、unmanaged import 前阻断已落地
 - ✅ Agent 只读管理已启动：默认扫描 `~/.claude/agents/**/*.md`，解析 name/description/tools/model；AgencyAgents catalog 可只读发现；agent-install-plan 可预览写入路径/冲突/转换需求；SwiftUI Agents 页支持搜索、分类、详情和 Agent target 诊断
-- ✅ WebDAV 状态与远端 snapshot 只读入口已落地；upload/download 当前受 CC Switch Tauri State/private module 边界阻塞，先不绕实现
+- ✅ WebDAV 状态、远端 snapshot 与 manual sync plan 只读入口已落地；upload/download 当前受 CC Switch Tauri State/private module 边界阻塞，先不绕实现
 - ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle/release smoke、development DMG 打包、release manifest/appcast 已落地
 - ✅ Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 已按 60 天 inactive 生命周期 + transcript attribution 最近使用筛选，并支持单个/批量 stub
 - 🔴 WebDAV 手动 sync、正式 notarize、Sparkle 公开更新实测尚未落地

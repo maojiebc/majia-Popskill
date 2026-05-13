@@ -65,6 +65,12 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Explain current WebDAV manual sync readiness without uploading or downloading.
+    WebdavSyncPlan {
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// List all skills managed by CC Switch.
     List {
         /// Kept for the Swift client contract; output is JSON either way.
@@ -393,6 +399,15 @@ async fn run() -> Result<()> {
                 .map_err(anyhow::Error::msg)
                 .context("failed to fetch WebDAV remote info")?;
             print_json(&ApiResponse::ok(info))
+        }
+        Commands::WebdavSyncPlan { json: _ } => {
+            let settings = cc_switch_lib::get_settings()
+                .await
+                .map_err(anyhow::Error::msg)?;
+            let value = serde_json::to_value(settings).context("failed to serialize settings")?;
+            print_json(&ApiResponse::ok(webdav_sync_plan_from_settings_value(
+                value,
+            )))
         }
         Commands::List { json: _ } => {
             let skills =
@@ -1913,6 +1928,52 @@ fn webdav_status_from_settings_value(settings: serde_json::Value) -> serde_json:
     sync
 }
 
+fn webdav_sync_plan_from_settings_value(settings: serde_json::Value) -> serde_json::Value {
+    let status = webdav_status_from_settings_value(settings);
+    let configured = status
+        .get("configured")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let enabled = status
+        .get("enabled")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+
+    let (readiness, summary) = if !configured {
+        (
+            "unconfigured",
+            "Save WebDAV settings before manual sync can be evaluated.",
+        )
+    } else if !enabled {
+        (
+            "disabled",
+            "Enable WebDAV sync before manual upload/download can be evaluated.",
+        )
+    } else {
+        (
+            "blocked-by-cc-switch-boundary",
+            "Remote snapshot lookup is available, but manual upload/download is not exposed from the sidecar yet.",
+        )
+    };
+
+    json!({
+        "available": false,
+        "readiness": readiness,
+        "summary": summary,
+        "blockedBy": [
+            "CC Switch webdav_sync_upload/webdav_sync_download currently require Tauri State<AppState>.",
+            "The underlying WebDAV sync service and settings types are private to the CC Switch submodule.",
+            "Popskill does not modify cc-switch/ and does not copy the WebDAV protocol implementation for v0.1."
+        ],
+        "safeActions": [
+            "webdav-status --json",
+            "webdav-remote-info --json",
+            "webdav-configure --json"
+        ],
+        "requiresSubmoduleApi": true
+    })
+}
+
 struct WebDAVConfigureInput {
     base_url: String,
     username: String,
@@ -2402,6 +2463,40 @@ mod tests {
         assert_eq!(status["configured"], true);
         assert_eq!(status["enabled"], true);
         assert!(status.get("password").is_none());
+    }
+
+    #[test]
+    fn webdav_sync_plan_reports_unconfigured_state() {
+        let plan = webdav_sync_plan_from_settings_value(json!({}));
+
+        assert_eq!(plan["available"], false);
+        assert_eq!(plan["readiness"], "unconfigured");
+        assert_eq!(plan["requiresSubmoduleApi"], true);
+    }
+
+    #[test]
+    fn webdav_sync_plan_explains_blocked_manual_sync() {
+        let plan = webdav_sync_plan_from_settings_value(json!({
+            "webdavSync": {
+                "enabled": true,
+                "autoSync": false,
+                "baseUrl": "https://dav.example.com",
+                "username": "demo",
+                "password": "secret",
+                "remoteRoot": "cc-switch-sync",
+                "profile": "default"
+            }
+        }));
+
+        assert_eq!(plan["available"], false);
+        assert_eq!(plan["readiness"], "blocked-by-cc-switch-boundary");
+        assert!(
+            plan["summary"]
+                .as_str()
+                .unwrap()
+                .contains("manual upload/download")
+        );
+        assert!(plan["blockedBy"].as_array().unwrap().len() >= 2);
     }
 
     #[test]

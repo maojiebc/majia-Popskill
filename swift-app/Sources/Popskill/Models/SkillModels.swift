@@ -369,6 +369,15 @@ struct WebDAVRemoteInfo: Codable, Equatable {
     let remotePath: String?
 }
 
+struct WebDAVSyncPlan: Codable, Equatable {
+    let available: Bool
+    let readiness: String
+    let summary: String
+    let blockedBy: [String]
+    let safeActions: [String]
+    let requiresSubmoduleApi: Bool
+}
+
 enum SecurityScanStatus: String, Codable, Equatable {
     case verified
     case warning

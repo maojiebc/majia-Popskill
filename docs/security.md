@@ -20,7 +20,7 @@ app.popskill.secrets
 
 SQLite may store a boolean like `webdav_configured = true` or a non-secret username/server URL, but never the password/token itself.
 
-WebDAV is currently delegated to CC Switch settings because the sync implementation lives there. Popskill does not store a second copy of the WebDAV password; when saving a new password it passes the value to `skill-cli` through an environment variable, and `webdav-status` always returns a sanitized payload.
+WebDAV is currently delegated to CC Switch settings because the sync implementation lives there. Popskill does not store a second copy of the WebDAV password; when saving a new password it passes the value to `skill-cli` through an environment variable, and `webdav-status` always returns a sanitized payload. `webdav-sync-plan` is read-only and returns sync readiness metadata without touching local or remote state.
 
 ## Skill Content
 

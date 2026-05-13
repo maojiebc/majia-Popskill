@@ -309,6 +309,26 @@ struct SkillModelsTests {
     }
 
     @Test
+    func webDAVSyncPlanDecodesBoundaryPayload() throws {
+        let data = """
+        {
+          "available": false,
+          "readiness": "blocked-by-cc-switch-boundary",
+          "summary": "Remote snapshot lookup is available, but manual upload/download is not exposed from the sidecar yet.",
+          "blockedBy": ["Tauri State boundary"],
+          "safeActions": ["webdav-status --json"],
+          "requiresSubmoduleApi": true
+        }
+        """.data(using: .utf8)!
+
+        let plan = try JSONDecoder().decode(WebDAVSyncPlan.self, from: data)
+
+        #expect(plan.available == false)
+        #expect(plan.readiness == "blocked-by-cc-switch-boundary")
+        #expect(plan.requiresSubmoduleApi == true)
+    }
+
+    @Test
     func localAgentDecodesFrontmatterDerivedPayload() throws {
         let data = """
         {
