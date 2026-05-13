@@ -158,6 +158,35 @@ struct SkillModelsTests {
     }
 
     @Test
+    func installedSkillMatchesTranscriptAttributionIdentifiers() {
+        let skill = Skill(
+            id: "jimliu/baoyu-skills:baoyu-image-gen",
+            name: "baoyu-image-gen",
+            description: "Image generation",
+            directory: "baoyu-image-gen",
+            repoOwner: "jimliu",
+            repoName: "baoyu-skills",
+            readmeUrl: nil,
+            apps: SkillApps(
+                claude: false,
+                codex: true,
+                gemini: false,
+                opencode: false,
+                hermes: false
+            ),
+            installedAt: nil,
+            updatedAt: nil,
+            contentHash: nil
+        )
+
+        #expect(skill.matchesAttributionSkill("jimliu/baoyu-skills:baoyu-image-gen"))
+        #expect(skill.matchesAttributionSkill("baoyu-image-gen"))
+        #expect(skill.matchesAttributionSkill("BAOYU-IMAGE-GEN"))
+        #expect(skill.matchesAttributionSkill("other-plugin:baoyu-image-gen"))
+        #expect(!skill.matchesAttributionSkill("baoyu-cover-image"))
+    }
+
+    @Test
     func installPlanDecodesPreviewPayload() throws {
         let data = """
         {

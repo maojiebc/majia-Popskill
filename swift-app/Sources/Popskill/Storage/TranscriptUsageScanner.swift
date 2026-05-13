@@ -13,6 +13,7 @@ struct TranscriptUsageScanner {
     func scan() throws -> UsageSummary {
         var summary = UsageSummary()
         var modelStats: [String: ModelUsageStat] = [:]
+        var skillStats: [String: SkillUsageStat] = [:]
         var sessionStats: [String: SessionUsageStat] = [:]
 
         guard let enumerator = FileManager.default.enumerator(
@@ -29,6 +30,7 @@ struct TranscriptUsageScanner {
                 fileURL: fileURL,
                 summary: &summary,
                 modelStats: &modelStats,
+                skillStats: &skillStats,
                 sessionStats: &sessionStats
             )
         }
@@ -37,6 +39,12 @@ struct TranscriptUsageScanner {
         summary.modelStats = modelStats.values.sorted {
             if $0.totalTokens == $1.totalTokens {
                 return $0.model < $1.model
+            }
+            return $0.totalTokens > $1.totalTokens
+        }
+        summary.skillStats = skillStats.values.sorted {
+            if $0.totalTokens == $1.totalTokens {
+                return $0.skillID < $1.skillID
             }
             return $0.totalTokens > $1.totalTokens
         }
@@ -62,6 +70,7 @@ struct TranscriptUsageScanner {
         fileURL: URL,
         summary: inout UsageSummary,
         modelStats: inout [String: ModelUsageStat],
+        skillStats: inout [String: SkillUsageStat],
         sessionStats: inout [String: SessionUsageStat]
     ) throws {
         let data = try Data(contentsOf: fileURL, options: [.mappedIfSafe])
@@ -157,6 +166,31 @@ struct TranscriptUsageScanner {
             stat.cacheCreationTokens += cacheCreationTokens
             stat.cacheReadTokens += cacheReadTokens
             modelStats[model] = stat
+
+            if let attributionSkill = attributionIdentifier(object["attributionSkill"]) {
+                summary.attributedSkillUsageEvents += 1
+                var skillStat = skillStats[attributionSkill] ?? SkillUsageStat(
+                    skillID: attributionSkill,
+                    sourcePlugin: stringValue(object["attributionPlugin"]),
+                    usageEvents: 0,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 0,
+                    lastUsedAt: nil
+                )
+                if skillStat.sourcePlugin == nil {
+                    skillStat.sourcePlugin = stringValue(object["attributionPlugin"])
+                }
+                skillStat.addUsage(
+                    inputTokens: inputTokens,
+                    outputTokens: outputTokens,
+                    cacheCreationTokens: cacheCreationTokens,
+                    cacheReadTokens: cacheReadTokens,
+                    timestamp: timestamp
+                )
+                skillStats[attributionSkill] = skillStat
+            }
         }
     }
 
@@ -182,6 +216,30 @@ struct TranscriptUsageScanner {
             return date
         }
         return Self.iso8601.date(from: timestamp)
+    }
+
+    private func attributionIdentifier(_ value: Any?) -> String? {
+        if let value = stringValue(value) {
+            return value
+        }
+
+        guard let object = value as? [String: Any] else {
+            return nil
+        }
+
+        return stringValue(object["id"])
+            ?? stringValue(object["name"])
+            ?? stringValue(object["command"])
+            ?? stringValue(object["path"])
+    }
+
+    private func stringValue(_ value: Any?) -> String? {
+        guard let value = value as? String else {
+            return nil
+        }
+
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     private func projectName(for fileURL: URL) -> String {

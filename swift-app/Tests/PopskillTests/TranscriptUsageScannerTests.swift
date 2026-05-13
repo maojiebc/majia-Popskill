@@ -76,4 +76,40 @@ struct TranscriptUsageScannerTests {
 
         #expect(summary.recentSessions.first?.projectName == "projects/skill-creator")
     }
+
+    @Test
+    func aggregatesSkillAttributionWithoutReadingMessageText() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let project = root.appendingPathComponent("project", isDirectory: true)
+        try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: root)
+        }
+
+        let transcript = project.appendingPathComponent("session.jsonl")
+        let lines = [
+            #"{"type":"assistant","sessionId":"s1","timestamp":"2026-05-12T01:01:00.000Z","attributionSkill":"baoyu-image-gen","attributionPlugin":"baoyu-skills","message":{"role":"assistant","model":"claude-opus","content":"private text","usage":{"input_tokens":10,"output_tokens":5}}}"#,
+            #"{"type":"assistant","sessionId":"s1","timestamp":"2026-05-12T01:05:00.000Z","attributionSkill":"baoyu-image-gen","attributionPlugin":"baoyu-skills","message":{"role":"assistant","model":"claude-opus","content":"more private text","usage":{"input_tokens":3,"output_tokens":2,"cache_read_input_tokens":4}}}"#,
+            #"{"type":"assistant","sessionId":"s1","timestamp":"2026-05-12T01:08:00.000Z","message":{"role":"assistant","model":"claude-opus","usage":{"input_tokens":7,"output_tokens":1}}}"#,
+            #"{"type":"assistant","sessionId":"s1","timestamp":"2026-05-12T01:09:00.000Z","attributionSkill":"ignored-no-usage","message":{"role":"assistant","content":"private text"}}"#,
+        ]
+        try lines.joined(separator: "\n").write(to: transcript, atomically: true, encoding: .utf8)
+
+        let summary = try TranscriptUsageScanner(projectsURL: root).scan()
+
+        #expect(summary.usageEvents == 3)
+        #expect(summary.attributedSkillUsageEvents == 2)
+        #expect(summary.unattributedUsageEvents == 1)
+        #expect(summary.skillStats.map(\.skillID) == ["baoyu-image-gen"])
+
+        let stat = try #require(summary.skillStats.first)
+        #expect(stat.sourcePlugin == "baoyu-skills")
+        #expect(stat.usageEvents == 2)
+        #expect(stat.inputTokens == 13)
+        #expect(stat.outputTokens == 7)
+        #expect(stat.cacheReadTokens == 4)
+        #expect(stat.totalTokens == 24)
+        #expect(stat.lastUsedAt != nil)
+    }
 }

@@ -86,17 +86,29 @@ struct InsightsView: View {
                         UsageMetricCard(title: "Cache Read", value: viewModel.summary.cacheReadTokens, accent: PopskillSectionAccent.color(for: 3))
                         UsageMetricCard(title: "Cache Create", value: viewModel.summary.cacheCreationTokens, accent: PopskillSectionAccent.color(for: 4))
                         UsageMetricCard(title: "Usage Events", value: Int64(viewModel.summary.usageEvents), accent: PopskillSectionAccent.color(for: 5))
+                        UsageMetricCard(title: "Skill Events", value: Int64(viewModel.summary.attributedSkillUsageEvents), accent: PopskillSectionAccent.color(for: 6))
                     }
 
                     DetailSection(title: "Source", accent: PopskillSectionAccent.color(for: 1)) {
                         DetailField(title: "Transcript Files", value: "\(viewModel.summary.filesScanned)")
                         DetailField(title: "Sessions", value: "\(viewModel.summary.sessions)")
+                        DetailField(title: "Skill Attribution", value: "\(viewModel.summary.attributedSkillUsageEvents) of \(viewModel.summary.usageEvents) events")
                     }
 
                     DetailSection(title: "Models", accent: PopskillSectionAccent.color(for: 2)) {
                         VStack(spacing: 8) {
                             ForEach(viewModel.summary.modelStats.prefix(8)) { stat in
                                 ModelUsageRow(stat: stat, maxTokens: maxModelTokens)
+                            }
+                        }
+                    }
+
+                    if !viewModel.summary.skillStats.isEmpty {
+                        DetailSection(title: "Skills", accent: PopskillSectionAccent.color(for: 3)) {
+                            VStack(spacing: 8) {
+                                ForEach(viewModel.summary.skillStats.prefix(8)) { stat in
+                                    SkillUsageRow(stat: stat, maxTokens: maxSkillTokens)
+                                }
                             }
                         }
                     }
@@ -121,6 +133,10 @@ struct InsightsView: View {
     private var maxModelTokens: Int64 {
         viewModel.summary.modelStats.map(\.totalTokens).max() ?? 0
     }
+
+    private var maxSkillTokens: Int64 {
+        viewModel.summary.skillStats.map(\.totalTokens).max() ?? 0
+    }
 }
 
 struct TranscriptBoundaryNote: View {
@@ -134,7 +150,7 @@ struct TranscriptBoundaryNote: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Local transcript totals")
                     .font(.subheadline.weight(.semibold))
-                Text("Message content is ignored. Popskill currently aggregates local session and model usage; skill-level attribution is pending until reliable invocation markers are verified.")
+                Text("Message content is ignored. Skill totals use Claude Code's top-level attributionSkill marker when present; other usage remains grouped by session and model.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -211,6 +227,69 @@ struct ModelUsageRow: View {
         }
         .padding(12)
         .popCard(cornerRadius: PopskillRadius.smallCard, shadowOpacity: 0.02)
+    }
+
+    private var widthRatio: Double {
+        guard maxTokens > 0 else {
+            return 0
+        }
+        return max(0.02, min(1, Double(stat.totalTokens) / Double(maxTokens)))
+    }
+}
+
+struct SkillUsageRow: View {
+    let stat: SkillUsageStat
+    let maxTokens: Int64
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text(stat.skillID)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+
+                if let sourcePlugin = stat.sourcePlugin {
+                    StatusPill(title: sourcePlugin, color: .popStatusNeutral)
+                }
+
+                Spacer()
+
+                Text(stat.totalTokens.formatted(.number.notation(.compactName)))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.popHeaderBackground)
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.popSectionGreen.opacity(0.68))
+                        .frame(width: proxy.size.width * widthRatio)
+                }
+            }
+            .frame(height: 7)
+
+            Text(detailText)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(12)
+        .popCard(cornerRadius: PopskillRadius.smallCard, shadowOpacity: 0.02)
+    }
+
+    private var detailText: String {
+        var parts = [
+            "\(stat.usageEvents) events",
+            "input \(stat.inputTokens.formatted(.number.notation(.compactName)))",
+            "output \(stat.outputTokens.formatted(.number.notation(.compactName)))"
+        ]
+
+        if let lastUsedAt = stat.lastUsedAt {
+            parts.append("last \(lastUsedAt.formatted(date: .abbreviated, time: .shortened))")
+        }
+
+        return parts.joined(separator: " · ")
     }
 
     private var widthRatio: Double {

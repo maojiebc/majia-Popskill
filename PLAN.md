@@ -118,11 +118,11 @@
 - **已完成**：WebDAV 状态/远端 snapshot 只读纵切（`webdav-status` / `webdav-remote-info`，Settings 显示配置与远端 manifest 状态）
 - **已完成**：自定义 skill repository 管理（`repo-list/add/toggle/remove`），含 URL/owner/name 校验、`.git` 后缀规范化、非法 scheme 拒绝
 - **已完成**：SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译，Discover 已接 install-plan 行内预览
-- **已完成**：行内 Claude/Codex/Gemini toggle、详情页更多 app toggle、Stub / Rehydrate、Idle Candidates 60 天 inactive 筛选 + 批量 Stub、unmanaged import 前扫描
+- **已完成**：行内 Claude/Codex/Gemini toggle、详情页更多 app toggle、Stub / Rehydrate、Idle Candidates 60 天 inactive + transcript attribution 筛选 + 批量 Stub、unmanaged import 前扫描
 - **已完成**：Backups 查看 / 恢复 / 删除，Settings sidecar health 诊断
 - **已完成**：本地 CI、read-only smoke、mutating repo smoke、`.app` development bundle、bundle launch smoke、release artifact smoke、development DMG 打包、release manifest/appcast 生成
 - **已完成**：Discover/Library/Settings/Updates 截图级 polish（Discover 行 CTA 文案、sidebar badge 导航、Library 行布局、Settings 诊断密度、Updates 空态按钮层级）
-- **未完成**：Stub 真实 transcript 使用归因自动建议、WebDAV 配置与手动 upload/download sync、正式 codesign/notarize、Sparkle SDK 接入
+- **未完成**：WebDAV 配置与手动 upload/download sync、正式 codesign/notarize、Sparkle SDK 接入
 
 ### 不做的事（避免范围爆炸）
 
@@ -1015,9 +1015,9 @@ struct CLIResponse<T: Decodable>: Decodable {
 | --- | --- | --- | --- |
 | Week 2 | Discover 页 V1 | ✅ 已完成 | 做视觉 polish，补截图/空态文案；Categories/Top Charts 不做独立路由 |
 | Week 3 | Detail 页 + 安装/卸载流程 | ✅ 已完成 | install-plan 目标 App 缓存和风险解释已打磨；更细的失败态仍可继续补 |
-| Week 4 | Insights + transcript 解析 | ✅ 基础完成 | 已补本地聚合/忽略正文/非 skill 级归因说明；真实 skill 级归因样例仍待验证 |
+| Week 4 | Insights + transcript 解析 | ✅ 已完成 | 已验证真实 `attributionSkill` / `attributionPlugin` 字段；Usage / Token Spend 可展示 skill 级统计，仍忽略正文 |
 | Week 5 | Updates 页 + 自动检查 | ✅ Updates 页面完成，含 Update All 和 last checked 状态 | Sparkle SDK 尚未集成；Popskill 自身更新仍是 appcast 生成 smoke |
-| Week 6 | Stub 状态机 | ✅ 已完成 | 60 天建议已落在 Idle Candidates；后续可补 transcript 归因权重 |
+| Week 6 | Stub 状态机 | ✅ 已完成 | 60 天建议已落在 Idle Candidates，并避开最近 60 天内有 transcript attribution 使用的 skill |
 | Week 7 | WebDAV 同步 UI | 🟡 只读边界已完成 | Settings 已有 status + remote info；配置写入、Keychain、Sync Now 留给 v0.1 收口 |
 | Week 8 | 打磨 + 打包 | 🟡 pipeline 已打通，release doctor 可检查 Developer ID/notary 前置条件 | 需要 Apple Developer Program 通过、真实签名/公证、Sparkle SDK、README/截图和人工验收 |
 
@@ -1036,8 +1036,8 @@ struct CLIResponse<T: Decodable>: Decodable {
 - [ ] 真实签名/公证：接入 Developer ID 后跑 `notarytool`，补 CI/本地验证文档。
 - [ ] Sparkle SDK：把 appcast 从“可生成”推进到 App 内真实更新检查。
 - [ ] WebDAV v0.1：配置表单、Keychain 保存、手动 Sync Now、冲突/失败态。
-- [x] Transcript boundary：UI/文档说明本地聚合、忽略消息内容、尚非 skill 级精确归因。
-- [ ] Transcript attribution：验证真实 skill 调用标记，补 skill 级归因样例。
+- [x] Transcript boundary：UI/文档说明本地聚合并忽略消息正文。
+- [x] Transcript attribution：已验证真实 `attributionSkill` 调用标记，补 skill 级归因统计与 Idle Candidates 最近使用过滤。
 - [ ] README 截图与最终视觉 QA：补真实界面截图，并做一次全局一致性检查。
 
 ---
@@ -1074,18 +1074,18 @@ struct CLIResponse<T: Decodable>: Decodable {
 
 **问题**：怎么把 token 消耗归因到具体 skill？
 
-**当前策略（D12 窗口归因）**：
+**当前策略（真实 attribution marker）**：
 1. 扫 `~/.claude/projects/*/transcript.jsonl`
-2. 找到 `<command-name>skill-name</command-name>` 标签
-3. 该 skill 被调用后，**到下一次 skill 切换之前**的所有 `usage` token 都归它
-4. 如果同时有多个 skill 在用？v1 不处理，按"最近一次调用"算
+2. 对包含 `message.usage` 的记录读取顶层 `attributionSkill`
+3. 若存在 `attributionSkill`，该 usage 事件直接计入对应 skill；若同时有 `attributionPlugin`，用于 UI 来源角标
+4. 没有 attribution marker 的 usage 仍只计入 session/model 汇总，不强行猜测 skill
 
-**风险**：归因不准。**接受**。v1 目标是相对趋势可信，不是绝对值精确。
+**风险**：只有 Claude Code 写入 `attributionSkill` 的事件能做 skill 级统计。**接受**。v1 不解析消息正文、不用启发式猜测，优先保证隐私边界与可信度。
 
-**待验证**：
-- transcript.jsonl 的具体格式（有没有 `<command-name>` 标签）
-- usage 字段在 jsonl 的具体位置
-- 多 Claude Code 会话并行时怎么算
+**已验证**：
+- 真实 transcript 中存在顶层 `attributionSkill`、`attributionPlugin`、`attributionAgent`
+- `message.usage` 字段位置稳定，可解析 token 计数
+- 多 Claude Code 会话并行时按每条 usage 记录自己的 attribution marker 独立计数
 
 ### 11.4 webdav_auto_sync 的 Tauri 耦合
 
@@ -1231,20 +1231,21 @@ struct CLIResponse<T: Decodable>: Decodable {
 | V3 | `SkillService::get_all_installed(&db)` 同步调用可用 | 同上 | 低 |
 | V4 | `SkillService::install()` async 调用在 tokio 下可用 | 跑 `skill-cli install <key>` | 低 |
 | V5 | webdav 模块无需 Tauri 上下文可调 | 跑 `skill-cli webdav sync-now` | 中 |
-| V6 | transcript.jsonl 包含 `<command-name>` 标签或类似归因信息 | grep 真实 transcript | 中（不确认就没法做 Insights） |
-| V7 | transcript.jsonl 的 `usage` 字段位置稳定 | 同上 | 中 |
+| V6 | transcript.jsonl 包含 `<command-name>` 标签或类似归因信息 | grep/jq 真实 transcript | 低（已验证顶层 `attributionSkill`） |
+| V7 | transcript.jsonl 的 `usage` 字段位置稳定 | 同上 | 低（已验证 `message.usage`） |
 | V8 | cc-switch `build.rs` 不强依赖 tauri-build 在 lib 模式下 | `cargo build` | 中（可能踩坑） |
 | V9 | 行内 toggle 调 toggle_app 后 symlink 立刻生效 | Day 5 验收 | 低 |
 
 ### V6/V7 验证小脚本
 
 ```bash
-# 在用户机器上跑：
-ls ~/.claude/projects/*/transcript.jsonl 2>/dev/null | head -3
-head -50 ~/.claude/projects/*/transcript.jsonl | grep -E "command-name|usage"
+# 只抽字段和值的名字，不输出 message.content
+find ~/.claude/projects -name '*.jsonl' -print0 \
+  | xargs -0 jq -r 'select(.message?.usage? and .attributionSkill?) | .attributionSkill' \
+  | sort | uniq -c | sort -nr | head
 ```
 
-如果没看到 `<command-name>` 标签，归因策略要重新设计。
+如果未来 Claude Code 改字段名，归因层降级为 session/model 汇总，不能回退到读取正文猜测。
 
 ---
 
@@ -1315,8 +1316,8 @@ open swift-app/Package.swift
 - ✅ AgentShield sidecar、Library 手动/持久化扫描、安装后 blocked 回滚、unmanaged import 前阻断已落地；下一步补 install-plan/apply，把 Discover 扫描前移
 - ✅ WebDAV 状态与远端 snapshot 只读入口已落地；upload/download 当前受 CC Switch Tauri State/private module 边界阻塞，先不绕实现
 - ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle/release smoke、development DMG 打包、release manifest/appcast 已落地
-- 🟡 Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 已按 60 天 inactive 生命周期筛选并支持单个/批量 stub；尚未完成 transcript 级真实使用归因
+- ✅ Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 已按 60 天 inactive 生命周期 + transcript attribution 最近使用筛选，并支持单个/批量 stub
 - 🔴 WebDAV 配置/手动 sync、正式 notarize、Sparkle SDK 接入尚未落地
 - 🟡 视觉 tokens 与主要页面容器已按 `STYLE.md` 落地；Discover/Library/Settings/Updates 截图级 polish 已完成，仍需 README 截图和最终全局一致性检查
 
-下一个动作：暂停扩新业务面，继续补 README 截图、Stub 60 天真实归因、WebDAV 配置/同步、公证 release 流程和 Sparkle SDK。
+下一个动作：暂停扩新业务面，继续补 README 截图、WebDAV 配置/同步、公证 release 流程和 Sparkle SDK。

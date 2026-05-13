@@ -35,6 +35,16 @@ struct TokenSpendView: View {
                             }
                         }
                     }
+
+                    if !viewModel.summary.skillStats.isEmpty {
+                        DetailSection(title: "By Skill", accent: PopskillSectionAccent.color(for: 3)) {
+                            VStack(spacing: 8) {
+                                ForEach(viewModel.summary.skillStats) { stat in
+                                    SkillUsageRow(stat: stat, maxTokens: maxSkillTokens)
+                                }
+                            }
+                        }
+                    }
                 }
                 .padding(28)
             }
@@ -86,5 +96,9 @@ struct TokenSpendView: View {
 
     private var maxModelTokens: Int64 {
         viewModel.summary.modelStats.map(\.totalTokens).max() ?? 0
+    }
+
+    private var maxSkillTokens: Int64 {
+        viewModel.summary.skillStats.map(\.totalTokens).max() ?? 0
     }
 }

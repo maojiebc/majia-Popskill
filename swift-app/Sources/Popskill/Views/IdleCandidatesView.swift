@@ -2,6 +2,7 @@ import SwiftUI
 
 struct IdleCandidatesView: View {
     @Bindable var viewModel: LibraryViewModel
+    @Bindable var insightsViewModel: InsightsViewModel
     @State private var isConfirmingBulkStub = false
     private let idleThresholdDays = 60
 
@@ -9,6 +10,7 @@ struct IdleCandidatesView: View {
         let referenceDate = Date()
         return viewModel.skills.filter {
             $0.isIdleCandidate(referenceDate: referenceDate, thresholdDays: idleThresholdDays)
+                && !hasRecentAttributedUse($0, referenceDate: referenceDate)
         }
     }
 
@@ -18,7 +20,7 @@ struct IdleCandidatesView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Idle Candidates")
                         .font(.system(.largeTitle, weight: .bold))
-                    Text("\(idleSkills.count) inactive for \(idleThresholdDays)+ days of \(viewModel.skills.count) installed")
+                    Text(subtitle)
                         .foregroundStyle(.secondary)
                 }
 
@@ -39,9 +41,12 @@ struct IdleCandidatesView: View {
                 .help("Make All Idle Skills Stub")
 
                 Button {
-                    Task { await viewModel.load() }
+                    Task {
+                        await viewModel.load()
+                        await insightsViewModel.scan()
+                    }
                 } label: {
-                    if viewModel.isLoading {
+                    if isRefreshing {
                         ProgressView()
                             .controlSize(.small)
                     } else {
@@ -50,7 +55,7 @@ struct IdleCandidatesView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .help("Refresh")
-                .disabled(viewModel.isLoading)
+                .disabled(isRefreshing)
             }
             .padding(.horizontal, 28)
             .padding(.vertical, 20)
@@ -59,7 +64,10 @@ struct IdleCandidatesView: View {
 
             if let errorMessage = viewModel.errorMessage {
                 ErrorBanner(message: errorMessage) {
-                    Task { await viewModel.load() }
+                    Task {
+                        await viewModel.load()
+                        await insightsViewModel.scan()
+                    }
                 }
                 Divider()
             }
@@ -81,6 +89,9 @@ struct IdleCandidatesView: View {
                 if viewModel.isLoading && viewModel.skills.isEmpty {
                     ProgressView()
                         .controlSize(.large)
+                } else if insightsViewModel.isScanning && !insightsViewModel.hasScannedOnce {
+                    ProgressView()
+                        .controlSize(.large)
                 } else if idleSkills.isEmpty {
                     ContentUnavailableView("No Idle Skills", systemImage: "checkmark.seal")
                 }
@@ -90,6 +101,9 @@ struct IdleCandidatesView: View {
         .task {
             if !viewModel.hasLoadedOnce {
                 await viewModel.load()
+            }
+            if !insightsViewModel.hasScannedOnce {
+                await insightsViewModel.scan()
             }
         }
         .confirmationDialog(
@@ -107,6 +121,45 @@ struct IdleCandidatesView: View {
         } message: {
             Text("Popskill will keep recoverable metadata and CC Switch backups for each selected skill.")
         }
+    }
+
+    private var isRefreshing: Bool {
+        viewModel.isLoading || insightsViewModel.isScanning
+    }
+
+    private var subtitle: String {
+        if insightsViewModel.isScanning && !insightsViewModel.hasScannedOnce {
+            return "Checking local transcript attribution..."
+        }
+
+        return "\(idleSkills.count) inactive and unused for \(idleThresholdDays)+ days of \(viewModel.skills.count) installed"
+    }
+
+    private func hasRecentAttributedUse(_ skill: Skill, referenceDate: Date) -> Bool {
+        guard let stat = usageStat(for: skill), let lastUsedAt = stat.lastUsedAt else {
+            return false
+        }
+
+        let threshold = TimeInterval(idleThresholdDays) * 24 * 60 * 60
+        let cutoff = referenceDate.addingTimeInterval(-threshold)
+        return lastUsedAt > cutoff
+    }
+
+    private func usageStat(for skill: Skill) -> SkillUsageStat? {
+        insightsViewModel.summary.skillStats
+            .filter { skill.matchesAttributionSkill($0.skillID) }
+            .max {
+                switch ($0.lastUsedAt, $1.lastUsedAt) {
+                case let (left?, right?):
+                    return left < right
+                case (.none, .some):
+                    return true
+                case (.some, .none):
+                    return false
+                case (.none, .none):
+                    return $0.usageEvents < $1.usageEvents
+                }
+            }
     }
 }
 

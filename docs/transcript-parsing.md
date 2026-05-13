@@ -23,6 +23,9 @@ Useful envelope fields:
 - `type`
 - `message.role`
 - `message.model`
+- `attributionSkill`
+- `attributionPlugin`
+- `attributionAgent`
 
 ## Current MVP Strategy
 
@@ -37,23 +40,25 @@ The Insights MVP computes aggregate usage without storing or displaying message 
 - cache read tokens
 - total tokens
 - model-level usage totals
+- skill-level usage totals when a `message.usage` record includes top-level `attributionSkill`
 - recent session activity sorted by latest `timestamp`
 
 Recent session labels prefer the transcript `cwd` field so names like `projects/skill-creator` preserve meaningful hyphens. If `cwd` is absent, Popskill falls back to a compact suffix derived from the encoded Claude project folder name.
+
+Skill attribution is intentionally conservative: Popskill only attributes token usage to a skill when Claude Code writes `attributionSkill` on the same JSONL record as `message.usage`. Records without that marker remain part of session and model totals, but are not guessed into a skill bucket.
 
 ## Privacy and Interpretation Boundary
 
 Popskill scans transcript files on the local Mac only. The scanner reads JSONL records to extract envelope metadata and `message.usage` counters, but message `content` is ignored and is not stored, displayed, uploaded, or used for ranking.
 
-The current UI intentionally labels these numbers as transcript totals, session activity, and model usage. They should not be presented as exact skill-level spend yet.
+The current UI labels skill numbers as attributed events. They are exact for records that contain `attributionSkill`, but they are not a complete accounting of all usage because many transcript events have no skill marker.
 
 ## Attribution Status
 
-The original plan assumed a stable `<command-name>` marker for skill invocation. The initial scan did not verify that marker, so skill-level token attribution remains pending.
+The original plan assumed a stable `<command-name>` marker for skill invocation. Real local transcripts instead expose a stronger top-level marker:
 
-Likely attribution signals to evaluate next:
+- `attributionSkill`, for example `baoyu-image-gen`
+- `attributionPlugin`, for example `baoyu-skills`
+- `attributionAgent`, for agent-side attribution such as `general-purpose`
 
-- local-agent-mode skill session paths in `cwd`
-- project path segments containing skill names
-- attachment records that list available skills
-- sidechain/session boundaries
+Popskill now uses `attributionSkill` for Usage and Token Spend skill rows. Idle Candidates also consults the same attribution data and excludes skills used within the last 60 days. Message content remains ignored throughout.

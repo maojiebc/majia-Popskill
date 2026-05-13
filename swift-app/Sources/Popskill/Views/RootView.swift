@@ -125,7 +125,7 @@ struct RootView: View {
             case .tokenSpend:
                 TokenSpendView(viewModel: insights)
             case .idleCandidates:
-                IdleCandidatesView(viewModel: library)
+                IdleCandidatesView(viewModel: library, insightsViewModel: insights)
             case .settings:
                 SettingsView(viewModel: settings)
             }

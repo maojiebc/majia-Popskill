@@ -79,6 +79,31 @@ struct Skill: Identifiable, Codable, Equatable {
         let cutoff = Int(referenceDate.addingTimeInterval(-threshold).timeIntervalSince1970)
         return lastLifecycleTimestamp <= cutoff
     }
+
+    func matchesAttributionSkill(_ identifier: String) -> Bool {
+        let normalizedIdentifier = Self.normalizedAttributionIdentifier(identifier)
+        guard !normalizedIdentifier.isEmpty else {
+            return false
+        }
+
+        let identifierSuffix = normalizedIdentifier
+            .split(separator: ":", maxSplits: 1)
+            .last
+            .map(String.init) ?? normalizedIdentifier
+
+        let candidates = [
+            id,
+            name,
+            directory,
+            id.split(separator: ":", maxSplits: 1).last.map(String.init) ?? id
+        ].map(Self.normalizedAttributionIdentifier)
+
+        return candidates.contains(normalizedIdentifier) || candidates.contains(identifierSuffix)
+    }
+
+    private static func normalizedAttributionIdentifier(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
 }
 
 struct CatalogSkill: Identifiable, Codable, Equatable {
