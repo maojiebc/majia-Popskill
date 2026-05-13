@@ -9,7 +9,7 @@
 > - ✅ A 阶段：Sidecar 剥离可行性静态验证（lib.rs 已 pub use SkillService）
 > - ✅ C 阶段：产品形态 V1（5 页 wireframe + 状态机 + 决策表）
 > - ✅ D-prep 阶段：视觉设计语言（STYLE.md）+ Surge.app teardown 验证
-> - 🚧 Day 1 启动：Rust sidecar + SwiftUI Library MVP 已开始落盘
+> - 🚧 MVP 校准：Rust sidecar + SwiftUI Library / Discover / Updates / Backups / Insights 主流程已通，正在补视觉与发布关键路径
 
 ---
 
@@ -62,20 +62,64 @@
 
 ### 跟现有方案比的核心差异
 
-| 现有方案 | 缺点 |
-|---|---|
-| **CC Switch** (6.8 万⭐) | 功能太杂（多 CLI 切换 + 配置 + skill），新用户找不到入口；多 app toggle 必须进详情页改 |
-| **agent-skills-guard** (354⭐) | 只做安全扫描，没有 App Store 发现/统计能力 |
-| **vercel-labs/skills (npx skills)** | CLI 工具，无 GUI |
-| **众多 0-star 的 claude-skill-manager** | 都没做出 App Store 体验 |
+> 更新于 2026-05。按"对 Popskill 的威胁等级"从高到低排，**前两个是真正同赛道的头部对手，必须正面回答**。
+
+| 现有方案 | 体量 / 技术栈 | 强项 | 缺点 / Popskill 对它的差异 |
+|---|---|---|---|
+| **iamzhihuix/skills-manage** | **1814⭐** / Tauri v2 + React 19 + Rust + SQLite(WAL) | 中心仓 `~/.agents/skills/` + symlink 分发；Collections 批量装；GitHub 仓库导入（PAT+retry）；AI 解释生成；双语 UI + Catppuccin 4 主题；覆盖 OpenClaw 全家桶（QClaw/EasyClaw/WorkBuddy） | (1) Tauri 跨平台壳，达不到 Mac 原生质感；(2) **macOS 公开包未 notarize，下载弹"已损坏"**；(3) **没有 Usage Insights**；(4) **没有 Stub 状态**；(5) PAT / API key 明文存 SQLite |
+| **yibie/skills-manager** | **152⭐** / SwiftUI + SwiftData，macOS 14+ | **技术栈跟我们撞车，且已发布**。AgentRegistry 覆盖 40+ Agent；内置 LLM sandbox 试用；中文描述目录 + Ollama/LM Studio fallback；本地 Git 做版本管理；blessed TUI 双形态 | (1) 视觉是标准 SwiftUI 直出，**没有 App Store 设计语言**；(2) **没有 Usage Insights**；(3) **没有 Stub 状态**；(4) 多 app 安装是弹 picker，不是行内 toggle；(5) **没有 WebDAV 同步** |
+| **CC Switch** (farion1231) | 6.8 万⭐ / Tauri | Provider 切换主战场，services 层干净 | 功能太杂（多 CLI 切换 + Provider + skill 全塞）；多 app toggle 必须进详情页。**我们当它的 lib 用，不当对手** |
+| **agent-skills-guard** (bruc3van) | 354⭐ / Tauri | 安全扫描 | 只做安全扫描，能力可被 ECC AgentShield 覆盖 |
+| **vercel-labs/skills** (npx skills) | 1.8 万⭐ / CLI | 官方背书，命令行分发顺手 | CLI 工具，无 GUI |
+| **ECC / everything-claude-code** | 18 万⭐ / npm + 配置包 + Tkinter Dashboard | 208 skills + 55 agents，带 AgentShield 安全扫描 | 不是同赛道 GUI，但可作为上游内容源和安全能力来源 |
+
+### 差异化复核
+
+把 Popskill 计划的差异点跟两个头部对手逐一对照，确认护城河是否成立：
+
+| Popskill 差异点 | iamzhihuix/skills-manage | yibie/skills-manager | 仍独家? |
+|---|---|---|---|
+| Mac App Store 视觉（Surge 风格） | shadcn + Catppuccin（Web 美学） | 标准 SwiftUI 直出 | ✅ 视觉独家，但必须真正落到代码 |
+| Usage Insights（解析 `.jsonl`） | ❌ | ❌ | ✅ **真独家** |
+| Stub 状态（保留卡片清内容） | ❌ | ❌ | ✅ **真独家** |
+| 行内多 app toggle | 进详情才能切 | multi-install picker（弹窗） | 🟡 形式独家 |
+| WebDAV 跨设备同步 | 仅本地 | 仅本地 | ✅ 独家 |
+| 第三方 skill 安全审计（AgentShield） | ❌ | ❌ | ✅ **新独家** |
+
+**结论**：差异化定位成立。真正护城河是 **Usage Insights + Stub + AgentShield + Mac 原生视觉**；视觉、Stub、AgentShield 不能只停留在文档里。
 
 ### Popskill 的差异点（按重要性）
 
-1. **Mac App Store 级别的视觉** —— SwiftUI 原生，对得起 Apple 美学
-2. **使用统计 / Insights 页**（全网独家，没竞品做）—— 解析 `~/.claude/projects/*.jsonl`，能告诉用户"你装了 47 个 skill，哪些值得保留"
+1. **Mac App Store 级别的视觉** —— SwiftUI 原生，对得起 Apple 美学（对 yibie 的回答）
+2. **使用统计 / Insights 页**（两个头部对手都没做）—— 解析 `~/.claude/projects/*.jsonl`，能告诉用户"你装了 47 个 skill，哪些值得保留"
 3. **行内多 app toggle** —— Library 列表每条 skill 直接行内切 Claude/Codex/Gemini，不进详情
 4. **Stub 状态**（看齐 App Store"已购未下载"）—— 60 天没用的 skill 本地清掉内容，留 metadata 卡片，要用一键再装
-5. **WebDAV 跨设备同步** —— 复用 CC Switch 已有能力
+5. **WebDAV 跨设备同步** —— 复用 CC Switch 已有能力（对 iamzhihuix 的回答）
+6. **第三方 skill 安全审计** —— 集成 ECC AgentShield，两个头部对手都没做（详见 §11.8）
+
+### 从对手身上要抄什么 / 要绕什么
+
+- **抄 yibie 的 AgentRegistry 路径表**：扩展 Popskill 支持的 Agent 矩阵（OpenClaw 系、Roo、Continue、Qwen 这些中文圈用户多的）
+- **抄 yibie 的 IPv4 loopback 兜底**：macOS `localhost` 解析到 IPv6 `::1` 的坑，LLM 调用时默认 `127.0.0.1`
+- **抄 iamzhihuix 的 SQLite schema 思路**：Usage Insights 落库时不要从零设计；WAL 模式是 GUI + sidecar 多进程读的标准答案
+- **抄 iamzhihuix 的 GitHub 导入策略**：PAT 认证 + retry fallback 写进 `skill-cli`
+- **抄 iamzhihuix 的项目级目录扫描**：扫 `.skills/`、`.agents/skills/`、`.claude/skills/`，把覆盖率拉满
+- **抄 ECC 的 manifest-driven install**：`skill-cli install` 分 `plan` 和 `apply` 两步，GUI 端能 preview
+- **抄 ECC 的 AgentShield**：第三方 skill 安装前默认做安全审计
+- **绕开 iamzhihuix 的 notarize 坑**：v0.1 就买 Apple Developer Program 做 notarize（详见 §11.7）
+- **绕开 iamzhihuix 的密钥存储坑**：PAT / API key / WebDAV password 进 Keychain，**不进 SQLite**
+
+### 当前实现校准（2026-05-13）
+
+代码已经明显超过最初 Day 1-5 计划，下面这些能力已经落地，后续不要再当成"未来计划"：
+
+- **已完成**：`skill-cli list/detail/toggle/discover/install/update/uninstall/import-unmanaged`
+- **已完成**：自定义 skill repository 管理（`repo-list/add/toggle/remove`），含 URL/owner/name 校验、`.git` 后缀规范化、非法 scheme 拒绝
+- **已完成**：SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译
+- **已完成**：行内 Claude/Codex/Gemini toggle、详情页更多 app toggle、unmanaged import banner
+- **已完成**：Backups 查看 / 恢复 / 删除，Settings sidecar health 诊断
+- **已完成**：本地 CI、read-only smoke、mutating repo smoke、`.app` development bundle、bundle launch smoke
+- **未完成**：完整 Stub 状态机（hibernate/metadata/rehydrate）、WebDAV UI、AgentShield 安全审计、正式 codesign/notarize/Sparkle release
 
 ### 不做的事（避免范围爆炸）
 
@@ -710,6 +754,9 @@ CREATE TABLE settings (
 ### 8.2 子命令清单
 
 ```bash
+skill-cli health --json
+  → sidecar 路径、CC Switch 目录、repository / backup 计数、Keychain 策略等诊断
+
 skill-cli list [--json]
   → 输出所有已装 skill（对应 SkillService::get_all_installed）
 
@@ -734,18 +781,37 @@ skill-cli check-updates [--json]
 skill-cli discover [--query=<text>] [--json]
   → 从所有 registry 拉可发现的 skill
 
+skill-cli repo-list [--json]
+  → 列出 CC Switch skill discovery repositories
+
+skill-cli repo-add --owner=<owner> --name=<repo> --branch=<branch> --enabled=<true|false> [--json]
+  → 添加自定义 skill repository（owner/name 会规范化并校验）
+
+skill-cli repo-toggle --owner=<owner> --name=<repo> --enabled=<true|false> [--json]
+  → 启停一个 discovery repository
+
+skill-cli repo-remove --owner=<owner> --name=<repo> [--json]
+  → 删除一个 discovery repository
+
 skill-cli scan-unmanaged [--json]
   → 扫野生 skill（~/.claude/skills 下没纳入管理的）
 
-skill-cli import-from-app --directory=<name> --apps=<claude,codex>
+skill-cli import-unmanaged <directory> --app=<claude>
   → 把野生 skill 收编
 
-skill-cli backup list [--json]
+skill-cli backup-list [--json]
   → 列备份
 
-skill-cli backup restore <backup-id> --app=<claude>
+skill-cli backup-restore <backup-id> --app=<claude>
   → 从备份恢复
 
+skill-cli backup-delete <backup-id> [--json]
+  → 删除一份 uninstall backup
+```
+
+后续未完成但已确定要补的接口：
+
+```bash
 skill-cli webdav status [--json]
   → WebDAV 同步状态
 
@@ -757,6 +823,12 @@ skill-cli webdav configure --url=<url> --username=<u> --password=<p>
 
 skill-cli search-skills-sh --query=<text> --limit=20 --offset=0 [--json]
   → 搜 skills.sh 公共目录
+
+skill-cli install-plan <skill-key> --app=<claude>
+  → 参考 ECC manifest-driven install，先输出将写入/覆盖/启用的计划
+
+skill-cli security-scan <skill-dir> [--json]
+  → 调 ECC AgentShield，输出 verified / warning / blocked 结果
 
 skill-cli stub <skill-id>
   → Popskill 独有：把 skill 转为 Stub（本地内容清掉，metadata 留）
@@ -1119,6 +1191,36 @@ struct CLIResponse<T: Decodable>: Decodable {
 
 **预案**：v1 不处理，按时间窗口归因。v2 看每个 session ID 单独归因。
 
+### 11.7 macOS 公证 / Gatekeeper（发布前必做）
+
+**问题**：未签名 / 未公证的 `.app` 发给朋友试用，下载后会弹 **"Popskill.app 已损坏，无法打开"** 或 **"无法验证开发者"**。`iamzhihuix/skills-manage` 现状就是这样，README 专门教用户 `xattr -dr com.apple.quarantine` 绕过，这是个真实用户流失点。
+
+**预案**：
+- **时机**：本地开发不需要；**v0.1 发给第一个外部用户之前必须做完**
+- **成本**：Apple Developer Program **$99 / 年**。一个会员覆盖 macOS / iOS / 全平台，notarization 本身免费
+- **身份选择**：先用 **Individual**；Organization 需要 D-U-N-S 编号，周期更长
+- **证书**：使用 **Developer ID Application**，不是 Mac App Distribution
+- **流程**：`package-dev-app.sh` 产出 `.app` → `codesign --options runtime --timestamp` → `ditto` 压 zip → `xcrun notarytool submit --wait` → `xcrun stapler staple` → `stapler validate`
+- **脚本化**：封装成 `scripts/notarize.sh`。每个 Sparkle 更新包都要重新走 codesign + notarize + staple
+- **密钥策略**：Apple app-specific password 走环境变量或 Keychain profile；WebDAV password / PAT / LLM API key 也进 Keychain，**不进 SQLite**
+
+**验收**：拿一台干净的、没装过 Popskill 的 Mac，从 Releases 下 `.dmg` → 拖进 Applications → 双击打开，**全程零警告弹窗**。
+
+### 11.8 第三方 skill 安全审计（AgentShield）
+
+**问题**：Popskill 做 Discover / Install 之后，本质上是在帮用户把陌生仓库里的 `SKILL.md` 和脚本放进本地 agent 运行路径。没有安装前审计，App Store 隐喻会变成信任风险。
+
+**预案 —— 集成 ECC AgentShield**：
+- **来源**：ECC / everything-claude-code 的 AgentShield
+- **能力**：约 102 条规则、1282 个测试，覆盖 prompt injection、命令执行、敏感文件访问、网络 exfiltration 等风险模式
+- **调用方式**：`npx ecc-agentshield <skill-dir>`，先作为 sidecar 子进程调用，不把 Node runtime 嵌进 SwiftUI
+- **安装路径**：download 后、apply 前扫描；默认阻断高危结果，warning 允许用户显式继续
+- **UI 表达**：Library / Detail 卡片显示 `Verified` / `Warning` / `Blocked` 安全角标；Detail 展示规则摘要
+- **落库**：Popskill SQLite 增加 `security_scan_results`，存 skill id、content hash、scanner version、summary、severity、scanned_at
+- **离线策略**：规则和 npm 包可预热缓存；离线时显示 `Not scanned`，但不伪装成安全
+
+**验收**：安装第三方 skill 前能看到扫描状态；构造含危险命令的测试 skill 会被标记为 `Blocked`，且不会写入目标 app 目录。
+
 ---
 
 ## 12. 引用资料
@@ -1154,10 +1256,22 @@ struct CLIResponse<T: Decodable>: Decodable {
 - https://github.com/BehiSecc/awesome-claude-skills (9k⭐)
 - https://github.com/VoltAgent/awesome-agent-skills (2.1万⭐, 1000+ skills)
 - https://github.com/sickn33/antigravity-awesome-skills (3.7万⭐, 1400+ skills)
+- https://github.com/affaan-m/everything-claude-code (ECC, 18万⭐, 208 skills + 55 agents + AgentShield)
 
 ### 12.4 相关项目（友商）
 
-- **agent-skills-guard** (354⭐, Tauri 桌面端，安全扫描) - 最接近的对手 https://github.com/bruc3van/agent-skills-guard
+**真正同赛道头部**（必看）：
+
+- **iamzhihuix/skills-manage** (1814⭐, Tauri v2 + React 19 + Rust + SQLite) - 中心仓 + symlink 范式，覆盖 OpenClaw 全家桶 https://github.com/iamzhihuix/skills-manage
+- **yibie/skills-manager** (152⭐, SwiftUI + SwiftData) - 技术栈撞车，同走 Mac native 路线，AgentRegistry 覆盖 40+ Agent + 内置 LLM sandbox + blessed TUI https://github.com/yibie/skills-manager
+
+**上游内容与安全能力**：
+
+- **affaan-m/everything-claude-code** (18 万⭐) - ECC 内容池 + AgentShield 来源 https://github.com/affaan-m/everything-claude-code
+
+**其他参考**：
+
+- **agent-skills-guard** (354⭐, Tauri 桌面端，安全扫描) - 单一功能对手，能力可被 AgentShield 覆盖 https://github.com/bruc3van/agent-skills-guard
 - **neuDrive** (178⭐, Go 后端) - 备份服务参考 https://github.com/agi-bar/neuDrive
 - **claude-skills-manager**（一堆 0-star 的）- 各种半成品，可看不可抄
 
@@ -1260,17 +1374,22 @@ open swift-app/Popskill.xcodeproj
 # 完事
 ```
 
-## 附录 B：Day 0/1 现状
+## 附录 B：2026-05-13 现状校准
 
-截至 2026-05-13，Day 1 已经启动。已完成的事：
+截至 2026-05-13，最初 Day 1-5 纵切已经完成，代码已推进到 Week 2-5 的主要功能：
 
-- ✅ 调研 GitHub 生态（10+ 项目）
+- ✅ 调研 GitHub 生态（含 `iamzhihuix/skills-manage`、`yibie/skills-manager`、ECC / AgentShield）
 - ✅ 刨 CC Switch 源码（B 阶段）
 - ✅ 静态验证剥离可行性（A 阶段）
-- ✅ 产品形态设计 V1（C 阶段）
+- ✅ 产品形态设计 V1（C 阶段）与 `STYLE.md`
 - ✅ `cc-switch` 作为 git submodule 固定到 v3.14.1
-- ✅ `skill-cli` 最小 sidecar 已落盘，`list --json` 可读本机 61 个 skill
-- ✅ SwiftUI Library shell 已落盘并可通过 `swift build` 编译
-- ✅ `scripts/dev-build.sh` 可一键构建 Rust + Swift 并验证 `list`
+- ✅ `skill-cli` sidecar 已覆盖 list/detail/toggle/discover/install/update/uninstall/import/repo/backup/health
+- ✅ SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译
+- ✅ 行内 Claude/Codex/Gemini toggle 与详情页多 app toggle 已接 sidecar
+- ✅ 自定义 skill repository 管理、sidecar health、backup 管理已倒灌进计划
+- ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle smoke 已落地
+- 🟡 Stub 状态机只完成 idle candidates 识别，尚未完成 hibernate/rehydrate
+- 🔴 WebDAV UI、AgentShield 安全审计、正式 notarize/Sparkle release 尚未落地
+- 🔴 视觉系统仍需按 `STYLE.md` 深度落地，不能停留在默认 SwiftUI 质感
 
-下一个动作：继续 Day 2/Day 4 的纵切，把更多 sidecar 命令和 Library 交互补齐。
+下一个动作：暂停扩新业务面，先补视觉系统、Stub 状态机、公证脚本和 AgentShield 骨架。

@@ -18,10 +18,11 @@ Popskill aims to be the App Store experience that Claude Code skills deserve on 
 - **Usage Insights** — token spend, top skills, hibernate candidates (parses `~/.claude/projects/*.jsonl`). No other tool does this.
 - **Stub state** — like App Store's "purchased but not downloaded"; reclaim disk without losing the card
 - **WebDAV sync** across devices (reuses [CC Switch](https://github.com/farion1231/cc-switch)'s implementation — zero re-implementation)
+- **AgentShield security scan** before third-party skill installs (planned v0.1 path; see [PLAN.md §11.8](./PLAN.md#118-第三方-skill-安全审计agentshield))
 
 **Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
 
-**Current stage**: design + planning complete; MVP scaffolding is underway. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install/update/uninstall/import/backup flows, SwiftUI Library + Discover + Updates + Backups + Insights compile locally, and `scripts/dev-build.sh` verifies Rust build/tests + read-only sidecar smoke + Swift tests. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
+**Current stage**: design + planning complete; MVP scaffolding is underway. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install/update/uninstall/import/repository/backup flows, SwiftUI Library + Discover + Updates + Backups + Insights compile locally, `scripts/dev-build.sh` verifies Rust build/tests + read-only sidecar smoke + Swift tests, and `scripts/notarize.sh` now sketches the v0.1 release signing path. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
 
 ---
 
@@ -38,6 +39,8 @@ Popskill 就是来填这个坑的。
 | 工具 | 缺点 |
 |---|---|
 | **[CC Switch](https://github.com/farion1231/cc-switch)** (6.8万⭐) | 功能太杂（6 种 CLI + Provider + Skill 全塞一起），新手找不到入口；多 app toggle 必须进详情页 |
+| **[skills-manage](https://github.com/iamzhihuix/skills-manage)** (1814⭐) | 同赛道头部，但不是 Mac 原生质感，公开包未 notarize，且没有 Usage Insights / Stub |
+| **[skills-manager](https://github.com/yibie/skills-manager)** (152⭐) | SwiftUI 技术栈撞车，但视觉偏标准控件，没有 Usage Insights / Stub / WebDAV |
 | **[agent-skills-guard](https://github.com/bruc3van/agent-skills-guard)** (354⭐) | 只做安全扫描，没有 App Store 发现/统计 |
 | **[vercel-labs/skills](https://github.com/vercel-labs/skills)** (1.8万⭐) | CLI 工具，无 GUI |
 | 一众 0-star `claude-skill-manager` | 没人做出 App Store 体验 |
@@ -49,6 +52,7 @@ Popskill 就是来填这个坑的。
 3. **多 app toggle**——Library 列表行内切 Claude/Codex/Gemini，详情页支持 OpenCode/Hermes
 4. **Stub 状态**——60 天没用的 skill 本地清掉内容、留 metadata 卡片，要用一键再装
 5. **WebDAV 跨设备同步**——白嫖 CC Switch 已有能力，不重做
+6. **AgentShield 安全审计**——第三方 skill 安装前扫描，安全状态显示到卡片和详情页
 
 ### 技术架构（一句话）
 
@@ -72,7 +76,7 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 | D-prep. 视觉设计语言 | ✅ Surge.app 拆解 + 22 个 design token |
 | **D. 脚手架 init + Day 1** | 🚧 **已启动：sidecar + SwiftUI Library/Discover/Updates/Backups/Insights MVP 可编译** |
 
-**这个仓库目前是 pre-alpha**：已有 Rust sidecar、SwiftUI Library/Discover/Updates/Backups/Insights 页面、transcript scanner 单测和本地开发脚本。Stub/WebDAV、正式打包签名和 App Store 分发还没完成。
+**这个仓库目前是 pre-alpha**：已有 Rust sidecar、SwiftUI Library/Discover/Updates/Backups/Insights 页面、transcript scanner 单测和本地开发脚本。Stub/WebDAV、AgentShield、正式打包签名和 App Store 分发还没完成；notarize 脚本骨架已先落位。
 
 ### 已落地的 MVP 能力
 
@@ -153,6 +157,13 @@ cd ~/projects/popskill
 
 # 验证 .app bundle 能使用内置 skill-cli 启动
 ./scripts/smoke-bundle.sh
+
+# v0.1 发布前的签名/公证骨架（需要 Apple Developer ID 凭据）
+POPSKILL_DEVELOPER_ID_APPLICATION="Developer ID Application: Name (TEAMID)" \
+POPSKILL_APPLE_ID="you@example.com" \
+POPSKILL_TEAM_ID="TEAMID" \
+POPSKILL_NOTARY_PASSWORD="app-specific-password" \
+./scripts/notarize.sh
 
 # 本地启动 SwiftUI app
 ./scripts/run-app.sh
