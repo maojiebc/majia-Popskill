@@ -191,6 +191,107 @@ struct AgentInstallConflict: Codable, Equatable {
     let paths: [String]
 }
 
+enum CapabilityPackageType: String, Codable, Equatable {
+    case composite
+    case standalone
+
+    var title: String {
+        switch self {
+        case .composite: "Composite"
+        case .standalone: "Standalone"
+        }
+    }
+}
+
+struct CapabilityPackage: Identifiable, Codable, Equatable {
+    let id: String
+    let type: CapabilityPackageType
+    let name: String
+    let vendor: String?
+    let summary: String
+    let source: PackageSource
+    let components: PackageComponents
+    let configSchema: [PackageConfigField]
+    let installed: Bool
+
+    var componentCount: Int {
+        components.all.count
+    }
+
+    var installedComponentCount: Int {
+        components.all.filter(\.installed).count
+    }
+
+    var requiredComponentCount: Int {
+        components.all.filter(\.required).count
+    }
+
+    var typeLabel: String {
+        type.title
+    }
+
+    var sourceLabel: String {
+        if let vendor, !vendor.isEmpty {
+            return vendor
+        }
+        return source.location
+    }
+}
+
+struct PackageSource: Codable, Equatable {
+    let kind: String
+    let location: String
+    let updateStrategy: String
+}
+
+struct PackageComponents: Codable, Equatable {
+    let cli: [PackageComponent]
+    let skills: [PackageComponent]
+    let mcp: [PackageComponent]
+    let agents: [PackageComponent]
+
+    var all: [PackageComponent] {
+        cli + skills + mcp + agents
+    }
+}
+
+struct PackageComponent: Codable, Equatable {
+    let id: String
+    let name: String
+    let kind: String
+    let required: Bool
+    let installed: Bool
+    let status: String
+    let location: String?
+
+    var displayKey: String {
+        "\(kind):\(id)"
+    }
+}
+
+struct PackageConfigField: Identifiable, Codable, Equatable {
+    let id: String
+    let label: String
+    let required: Bool
+    let secret: Bool
+    let storage: String
+}
+
+struct PackageInstallResult: Codable, Equatable {
+    let packageId: String
+    let status: String
+    let summary: String
+    let steps: [String]
+}
+
+struct PackageConfigResult: Codable, Equatable {
+    let packageId: String
+    let key: String
+    let storage: String
+    let status: String
+    let message: String
+}
+
 struct CatalogSkill: Identifiable, Codable, Equatable {
     var id: String { key }
 

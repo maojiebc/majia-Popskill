@@ -77,6 +77,37 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// List capability packages, including composite built-ins and standalone skill wrappers.
+    PackageList {
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Return one capability package by id.
+    PackageDetail {
+        package_id: String,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Preview installing one capability package. This v0.3 self-use path is read-only.
+    PackageInstall {
+        package_id: String,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Preview configuring one capability package without writing secrets.
+    PackageConfig {
+        package_id: String,
+        #[arg(long)]
+        key: String,
+        #[arg(long)]
+        value_env: Option<String>,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// List local Claude Code agents from ~/.claude/agents.
     AgentList {
         /// Optional agents directory override for tests or alternate Claude homes.
@@ -413,6 +444,35 @@ async fn run() -> Result<()> {
             let skills =
                 SkillService::get_all_installed(&db).context("failed to list installed skills")?;
             print_json(&ApiResponse::ok(skills))
+        }
+        Commands::PackageList { json: _ } => {
+            let packages = list_capability_packages(&db)?;
+            print_json(&ApiResponse::ok(packages))
+        }
+        Commands::PackageDetail {
+            package_id,
+            json: _,
+        } => {
+            let package = find_capability_package(&db, &package_id)?;
+            print_json(&ApiResponse::ok(package))
+        }
+        Commands::PackageInstall {
+            package_id,
+            json: _,
+        } => {
+            let package = find_capability_package(&db, &package_id)?;
+            let result = build_package_install_result(&package);
+            print_json(&ApiResponse::ok(result))
+        }
+        Commands::PackageConfig {
+            package_id,
+            key,
+            value_env,
+            json: _,
+        } => {
+            let package = find_capability_package(&db, &package_id)?;
+            let result = build_package_config_result(&package, &key, value_env)?;
+            print_json(&ApiResponse::ok(result))
         }
         Commands::AgentList { root, json: _ } => {
             let root = match root {
@@ -1405,6 +1465,314 @@ fn planned_install_directory(directory: &str) -> String {
         .unwrap_or_else(|| directory.trim_matches('/').to_string())
 }
 
+fn list_capability_packages(db: &Arc<Database>) -> Result<Vec<CapabilityPackage>> {
+    let skills = SkillService::get_all_installed(db).context("failed to list installed skills")?;
+    let agents = list_local_agents(&claude_agents_dir()?).unwrap_or_default();
+    let mut packages = vec![
+        lark_capability_package(&skills, &agents),
+        pdf_capability_package(&skills),
+    ];
+
+    packages.extend(skills.iter().map(standalone_skill_package));
+    packages.sort_by(|left, right| {
+        package_sort_rank(left)
+            .cmp(&package_sort_rank(right))
+            .then_with(|| left.name.to_lowercase().cmp(&right.name.to_lowercase()))
+            .then_with(|| left.id.cmp(&right.id))
+    });
+    Ok(packages)
+}
+
+fn find_capability_package(db: &Arc<Database>, package_id: &str) -> Result<CapabilityPackage> {
+    let normalized_id = package_id.trim();
+    list_capability_packages(db)?
+        .into_iter()
+        .find(|package| package.id.eq_ignore_ascii_case(normalized_id))
+        .with_context(|| format!("capability package not found: {package_id}"))
+}
+
+fn package_sort_rank(package: &CapabilityPackage) -> u8 {
+    match package.package_type {
+        CapabilityPackageType::Composite => 0,
+        CapabilityPackageType::Standalone => {
+            if package.source.kind == "builtin" {
+                1
+            } else {
+                2
+            }
+        }
+    }
+}
+
+fn standalone_skill_package(skill: &InstalledSkill) -> CapabilityPackage {
+    CapabilityPackage {
+        id: format!("skill:{}", skill.id),
+        package_type: CapabilityPackageType::Standalone,
+        name: skill.name.clone(),
+        vendor: skill.repo_owner.clone(),
+        summary: skill
+            .description
+            .clone()
+            .unwrap_or_else(|| "Standalone Skill".to_string()),
+        source: PackageSource {
+            kind: "installed-skill".to_string(),
+            location: skill
+                .repo_owner
+                .as_ref()
+                .zip(skill.repo_name.as_ref())
+                .map(|(owner, name)| format!("{owner}/{name}"))
+                .unwrap_or_else(|| skill.directory.clone()),
+            update_strategy: skill
+                .repo_owner
+                .as_ref()
+                .map(|_| "github".to_string())
+                .unwrap_or_else(|| "manual".to_string()),
+        },
+        components: PackageComponents {
+            cli: Vec::new(),
+            skills: vec![package_component(
+                "skill",
+                &skill.id,
+                &skill.name,
+                true,
+                true,
+                "installed",
+                Some(&skill.directory),
+            )],
+            mcp: Vec::new(),
+            agents: Vec::new(),
+        },
+        config_schema: Vec::new(),
+        installed: true,
+    }
+}
+
+fn lark_capability_package(skills: &[InstalledSkill], agents: &[LocalAgent]) -> CapabilityPackage {
+    let skill_ids = [
+        "lark-doc",
+        "lark-base",
+        "lark-sheets",
+        "lark-wiki",
+        "lark-markdown",
+        "lark-shared",
+    ];
+    let skill_components = skill_ids
+        .iter()
+        .map(|id| {
+            let installed = skills
+                .iter()
+                .find(|skill| skill_matches_component(skill, id));
+            package_component(
+                "skill",
+                id,
+                &title_from_slug(id),
+                true,
+                installed.is_some(),
+                if installed.is_some() {
+                    "installed"
+                } else {
+                    "available"
+                },
+                installed.map(|skill| skill.directory.as_str()),
+            )
+        })
+        .collect::<Vec<_>>();
+    let agent_id = "lark-office-assistant";
+    let agent_installed = agents.iter().any(|agent| {
+        agent.id.eq_ignore_ascii_case(agent_id) || agent.name.eq_ignore_ascii_case(agent_id)
+    });
+    let lark_cli_installed = command_exists("lark-cli") || command_exists("lark");
+    let package_installed = lark_cli_installed
+        || agent_installed
+        || skill_components.iter().any(|skill| skill.installed);
+
+    CapabilityPackage {
+        id: "pkg:lark".to_string(),
+        package_type: CapabilityPackageType::Composite,
+        name: "Feishu / Lark".to_string(),
+        vendor: Some("ByteDance".to_string()),
+        summary: "Composite office package: CLI + Skills + Agent + Keychain config.".to_string(),
+        source: PackageSource {
+            kind: "builtin".to_string(),
+            location: "popskill/builtin/lark".to_string(),
+            update_strategy: "manual".to_string(),
+        },
+        components: PackageComponents {
+            cli: vec![package_component(
+                "cli",
+                "lark-cli",
+                "lark-cli",
+                true,
+                lark_cli_installed,
+                if lark_cli_installed {
+                    "detected"
+                } else {
+                    "declared"
+                },
+                None,
+            )],
+            skills: skill_components,
+            mcp: vec![package_component(
+                "mcp",
+                "lark-openapi-mcp",
+                "Lark OpenAPI MCP",
+                false,
+                false,
+                "registry-reference",
+                Some("anthropic-mcp-registry/bytedance/lark-openapi-mcp"),
+            )],
+            agents: vec![package_component(
+                "agent",
+                agent_id,
+                "Lark Office Assistant",
+                false,
+                agent_installed,
+                if agent_installed { "installed" } else { "stub" },
+                Some("~/.claude/agents/lark-office-assistant.md"),
+            )],
+        },
+        config_schema: vec![
+            config_field("lark.app_id", "App ID", true, true),
+            config_field("lark.app_secret", "App Secret", true, true),
+        ],
+        installed: package_installed,
+    }
+}
+
+fn pdf_capability_package(skills: &[InstalledSkill]) -> CapabilityPackage {
+    let skill_id = "pdf-merge-split";
+    let installed = skills
+        .iter()
+        .find(|skill| skill_matches_component(skill, skill_id));
+    CapabilityPackage {
+        id: "pkg:pdf".to_string(),
+        package_type: CapabilityPackageType::Standalone,
+        name: "PDF".to_string(),
+        vendor: None,
+        summary: "Standalone PDF skill package for merge, split, and document cleanup flows."
+            .to_string(),
+        source: PackageSource {
+            kind: "builtin".to_string(),
+            location: "popskill/builtin/pdf".to_string(),
+            update_strategy: "manual".to_string(),
+        },
+        components: PackageComponents {
+            cli: Vec::new(),
+            skills: vec![package_component(
+                "skill",
+                skill_id,
+                "PDF Merge Split",
+                true,
+                installed.is_some(),
+                if installed.is_some() {
+                    "installed"
+                } else {
+                    "available"
+                },
+                installed.map(|skill| skill.directory.as_str()),
+            )],
+            mcp: Vec::new(),
+            agents: Vec::new(),
+        },
+        config_schema: Vec::new(),
+        installed: installed.is_some(),
+    }
+}
+
+fn skill_matches_component(skill: &InstalledSkill, component_id: &str) -> bool {
+    [
+        skill.id.as_str(),
+        skill.name.as_str(),
+        skill.directory.as_str(),
+    ]
+    .iter()
+    .any(|candidate| candidate.eq_ignore_ascii_case(component_id))
+}
+
+fn package_component(
+    kind: &str,
+    id: &str,
+    name: &str,
+    required: bool,
+    installed: bool,
+    status: &str,
+    location: Option<&str>,
+) -> PackageComponent {
+    PackageComponent {
+        id: id.to_string(),
+        name: name.to_string(),
+        kind: kind.to_string(),
+        required,
+        installed,
+        status: status.to_string(),
+        location: location.map(str::to_string),
+    }
+}
+
+fn config_field(id: &str, label: &str, required: bool, secret: bool) -> ConfigField {
+    ConfigField {
+        id: id.to_string(),
+        label: label.to_string(),
+        required,
+        secret,
+        storage: if secret { "keychain" } else { "local" }.to_string(),
+    }
+}
+
+fn build_package_install_result(package: &CapabilityPackage) -> PackageInstallResult {
+    let steps = match package.package_type {
+        CapabilityPackageType::Composite => vec![
+            "inspectDeclaredComponents".to_string(),
+            "verifyRequiredConfig".to_string(),
+            "installMissingSkillsWithExistingInstallPlan".to_string(),
+            "runAgentShieldForSkillComponents".to_string(),
+            "leaveCliAndMcpAsExplicitUserDependencies".to_string(),
+        ],
+        CapabilityPackageType::Standalone => vec![
+            "resolveStandaloneSkill".to_string(),
+            "installWithExistingSkillInstallFlow".to_string(),
+            "runAgentShield".to_string(),
+        ],
+    };
+
+    PackageInstallResult {
+        package_id: package.id.clone(),
+        status: "preview".to_string(),
+        summary: "Package install is modeled and read-only in this v0.3 self-use build."
+            .to_string(),
+        steps,
+    }
+}
+
+fn build_package_config_result(
+    package: &CapabilityPackage,
+    key: &str,
+    value_env: Option<String>,
+) -> Result<PackageConfigResult> {
+    let key = normalize_required("package config key", key)?;
+    let field = package
+        .config_schema
+        .iter()
+        .find(|field| field.id == key)
+        .with_context(|| format!("config key '{key}' is not declared by {}", package.id))?;
+
+    if field.secret {
+        let value_env = value_env
+            .as_deref()
+            .context("secret package config values must be passed with --value-env")?;
+        let _ = read_optional_env_secret("package config value env", Some(value_env.to_string()))?;
+    }
+
+    Ok(PackageConfigResult {
+        package_id: package.id.clone(),
+        key,
+        storage: field.storage.clone(),
+        status: "planned".to_string(),
+        message: "Package config preview succeeded; no secret was written in this build."
+            .to_string(),
+    })
+}
+
 fn list_stubbed_skills(db: &Arc<Database>) -> Result<Vec<StubbedSkill>> {
     let mut store = load_stub_store()?;
     let original_count = store.stubs.len();
@@ -2159,6 +2527,87 @@ struct AgentInstallConflict {
     paths: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+enum CapabilityPackageType {
+    Composite,
+    Standalone,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CapabilityPackage {
+    id: String,
+    #[serde(rename = "type")]
+    package_type: CapabilityPackageType,
+    name: String,
+    vendor: Option<String>,
+    summary: String,
+    source: PackageSource,
+    components: PackageComponents,
+    config_schema: Vec<ConfigField>,
+    installed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PackageSource {
+    kind: String,
+    location: String,
+    update_strategy: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PackageComponents {
+    cli: Vec<PackageComponent>,
+    skills: Vec<PackageComponent>,
+    mcp: Vec<PackageComponent>,
+    agents: Vec<PackageComponent>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PackageComponent {
+    id: String,
+    name: String,
+    kind: String,
+    required: bool,
+    installed: bool,
+    status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    location: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ConfigField {
+    id: String,
+    label: String,
+    required: bool,
+    secret: bool,
+    storage: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PackageInstallResult {
+    package_id: String,
+    status: String,
+    summary: String,
+    steps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PackageConfigResult {
+    package_id: String,
+    key: String,
+    storage: String,
+    status: String,
+    message: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct StubbedSkill {
@@ -2751,25 +3200,84 @@ Turns fuzzy product ideas into crisp release plans.
         assert_eq!(writes, vec!["/Users/example/project/CONVENTIONS.md"]);
     }
 
+    #[test]
+    fn standalone_skill_package_wraps_installed_skill() {
+        let skill = installed_skill_fixture("owner/repo:demo-skill");
+        let package = standalone_skill_package(&skill);
+
+        assert_eq!(package.id, "skill:owner/repo:demo-skill");
+        assert_eq!(package.package_type, CapabilityPackageType::Standalone);
+        assert_eq!(package.components.skills.len(), 1);
+        assert_eq!(package.components.skills[0].kind, "skill");
+        assert!(package.installed);
+    }
+
+    #[test]
+    fn lark_capability_package_contains_composite_tree_and_keychain_config() {
+        let skills = vec![installed_skill_fixture("lark-doc")];
+        let agents = vec![LocalAgent {
+            id: "lark-office-assistant".to_string(),
+            name: "Lark Office Assistant".to_string(),
+            description: "Demo agent".to_string(),
+            file_name: "lark-office-assistant.md".to_string(),
+            path: "/Users/example/.claude/agents/lark-office-assistant.md".to_string(),
+            category: "office".to_string(),
+            tools: vec!["Read".to_string(), "Write".to_string()],
+            model: None,
+            last_modified_at: Some(1),
+            size_bytes: 128,
+        }];
+
+        let package = lark_capability_package(&skills, &agents);
+
+        assert_eq!(package.id, "pkg:lark");
+        assert_eq!(package.package_type, CapabilityPackageType::Composite);
+        assert_eq!(package.components.skills.len(), 6);
+        assert!(package.components.skills[0].installed);
+        assert_eq!(package.components.agents[0].status, "installed");
+        assert_eq!(package.config_schema.len(), 2);
+        assert!(
+            package
+                .config_schema
+                .iter()
+                .all(|field| field.storage == "keychain")
+        );
+    }
+
+    #[test]
+    fn pdf_capability_package_is_builtin_standalone() {
+        let package = pdf_capability_package(&[]);
+
+        assert_eq!(package.id, "pkg:pdf");
+        assert_eq!(package.package_type, CapabilityPackageType::Standalone);
+        assert_eq!(package.source.kind, "builtin");
+        assert_eq!(package.components.skills[0].id, "pdf-merge-split");
+        assert!(!package.installed);
+    }
+
     fn stub_fixture(id: &str, stubbed_at: i64) -> StubbedSkill {
         StubbedSkill {
-            skill: InstalledSkill {
-                id: id.to_string(),
-                name: id.to_string(),
-                description: Some("demo".to_string()),
-                directory: id.to_string(),
-                repo_owner: Some("owner".to_string()),
-                repo_name: Some("repo".to_string()),
-                repo_branch: Some("main".to_string()),
-                readme_url: None,
-                apps: SkillApps::default(),
-                installed_at: 1,
-                content_hash: Some("hash".to_string()),
-                updated_at: 0,
-            },
+            skill: installed_skill_fixture(id),
             backup_id: format!("backup-{id}"),
             backup_path: format!("/tmp/backup-{id}"),
             stubbed_at,
+        }
+    }
+
+    fn installed_skill_fixture(id: &str) -> InstalledSkill {
+        InstalledSkill {
+            id: id.to_string(),
+            name: id.to_string(),
+            description: Some("demo".to_string()),
+            directory: id.to_string(),
+            repo_owner: Some("owner".to_string()),
+            repo_name: Some("repo".to_string()),
+            repo_branch: Some("main".to_string()),
+            readme_url: None,
+            apps: SkillApps::default(),
+            installed_at: 1,
+            content_hash: Some("hash".to_string()),
+            updated_at: 0,
         }
     }
 

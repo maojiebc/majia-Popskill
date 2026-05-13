@@ -192,6 +192,58 @@ Returns all skills currently managed by CC Switch.
 }
 ```
 
+### `skill-cli package-list --json`
+
+Returns v0.3 capability packages. Built-ins can be composite packages such as Feishu / Lark, standalone built-ins such as PDF, or one-to-one wrappers around already installed skills.
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "pkg:lark",
+      "type": "composite",
+      "name": "Feishu / Lark",
+      "vendor": "ByteDance",
+      "summary": "Composite office package: CLI + Skills + Agent + Keychain config.",
+      "source": {
+        "kind": "builtin",
+        "location": "popskill/builtin/lark",
+        "updateStrategy": "manual"
+      },
+      "components": {
+        "cli": [],
+        "skills": [],
+        "mcp": [],
+        "agents": []
+      },
+      "configSchema": [
+        {
+          "id": "lark.app_secret",
+          "label": "App Secret",
+          "required": true,
+          "secret": true,
+          "storage": "keychain"
+        }
+      ],
+      "installed": true
+    }
+  ]
+}
+```
+
+### `skill-cli package-detail <package-id> --json`
+
+Returns a single capability package by id. Built-in package ids currently include `pkg:lark` and `pkg:pdf`; installed skills are exposed as `skill:<installed-skill-id>`.
+
+### `skill-cli package-install <package-id> --json`
+
+Returns a read-only v0.3 install preview. It does not mutate skill stores yet; existing `install-plan` / `install` remain the write path for standalone skills.
+
+### `skill-cli package-config <package-id> --key <key> --value-env <env> --json`
+
+Returns a read-only config preview for declared package config fields. Secret values must be passed through `--value-env`; Popskill does not accept secrets directly in argv.
+
 ### `skill-cli agent-list [--root <agents-dir>] --json`
 
 Returns local Claude Code agents from `~/.claude/agents`. This command is read-only and is not backed by CC Switch. Popskill treats Agent files as role/persona definitions, separate from Skill packages.

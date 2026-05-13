@@ -436,6 +436,72 @@ struct SkillModelsTests {
         #expect(plan.requiresConversion == false)
     }
 
+    @Test
+    func capabilityPackageDecodesCompositePayload() throws {
+        let data = """
+        {
+          "id": "pkg:lark",
+          "type": "composite",
+          "name": "Feishu / Lark",
+          "vendor": "ByteDance",
+          "summary": "Composite office package.",
+          "source": {
+            "kind": "builtin",
+            "location": "popskill/builtin/lark",
+            "updateStrategy": "manual"
+          },
+          "components": {
+            "cli": [
+              {
+                "id": "lark-cli",
+                "name": "lark-cli",
+                "kind": "cli",
+                "required": true,
+                "installed": false,
+                "status": "declared"
+              }
+            ],
+            "skills": [
+              {
+                "id": "lark-doc",
+                "name": "Lark Doc",
+                "kind": "skill",
+                "required": true,
+                "installed": true,
+                "status": "installed",
+                "location": "lark-doc"
+              }
+            ],
+            "mcp": [],
+            "agents": []
+          },
+          "configSchema": [
+            {
+              "id": "lark.app_secret",
+              "label": "App Secret",
+              "required": true,
+              "secret": true,
+              "storage": "keychain"
+            }
+          ],
+          "installed": true
+        }
+        """.data(using: .utf8)!
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let package = try decoder.decode(CapabilityPackage.self, from: data)
+
+        #expect(package.id == "pkg:lark")
+        #expect(package.type == .composite)
+        #expect(package.typeLabel == "Composite")
+        #expect(package.componentCount == 2)
+        #expect(package.installedComponentCount == 1)
+        #expect(package.requiredComponentCount == 2)
+        #expect(package.configSchema.first?.storage == "keychain")
+        #expect(package.components.all.map(\.displayKey) == ["cli:lark-cli", "skill:lark-doc"])
+    }
+
     private func catalogSkill(repoBranch: String?) -> CatalogSkill {
         CatalogSkill(
             key: "maojiebc/majia-skills/demo",

@@ -5,7 +5,9 @@ import SwiftUI
 @Observable
 final class DiscoverViewModel {
     var skills: [CatalogSkill] = []
+    var packages: [CapabilityPackage] = []
     var query = ""
+    var selectedContent: DiscoverContentFilter = .packages
     var selectedInstallApp: TargetApp = .claude {
         didSet {
             if selectedInstallApp != oldValue {
@@ -15,6 +17,7 @@ final class DiscoverViewModel {
     }
     var isLoading = false
     var hasLoadedOnce = false
+    var hasLoadedPackagesOnce = false
     var errorMessage: String?
 
     private let client = SkillCLIClient()
@@ -22,6 +25,51 @@ final class DiscoverViewModel {
     private var planningKeys: Set<String> = []
     private var installingKeys: Set<String> = []
     private var shouldSearchAgain = false
+
+    var filteredPackages: [CapabilityPackage] {
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        return packages.filter { package in
+            normalizedQuery.isEmpty
+                || package.name.lowercased().contains(normalizedQuery)
+                || package.summary.lowercased().contains(normalizedQuery)
+                || package.sourceLabel.lowercased().contains(normalizedQuery)
+                || package.components.all.contains { component in
+                    component.id.lowercased().contains(normalizedQuery)
+                        || component.name.lowercased().contains(normalizedQuery)
+                        || component.kind.lowercased().contains(normalizedQuery)
+                }
+        }
+    }
+
+    func refreshSelectedContent() async {
+        switch selectedContent {
+        case .packages:
+            await loadPackages()
+        case .standaloneSkills:
+            await search()
+        }
+    }
+
+    func loadPackages() async {
+        guard !isLoading else {
+            return
+        }
+
+        isLoading = true
+        errorMessage = nil
+        defer {
+            isLoading = false
+            hasLoadedPackagesOnce = true
+        }
+
+        do {
+            packages = try await client.listPackages()
+                .sorted(by: packageSort)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
 
     func search() async {
         if isLoading {
@@ -110,6 +158,42 @@ final class DiscoverViewModel {
         }
         return plan
     }
+
+    private func packageSort(_ left: CapabilityPackage, _ right: CapabilityPackage) -> Bool {
+        let leftRank = packageSortRank(left)
+        let rightRank = packageSortRank(right)
+        if leftRank != rightRank {
+            return leftRank < rightRank
+        }
+        let nameOrder = left.name.localizedCaseInsensitiveCompare(right.name)
+        if nameOrder != .orderedSame {
+            return nameOrder == .orderedAscending
+        }
+        return left.id < right.id
+    }
+
+    private func packageSortRank(_ package: CapabilityPackage) -> Int {
+        switch package.type {
+        case .composite:
+            return 0
+        case .standalone:
+            return package.source.kind == "builtin" ? 1 : 2
+        }
+    }
+}
+
+enum DiscoverContentFilter: String, CaseIterable, Identifiable {
+    case packages
+    case standaloneSkills
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .packages: "Capability Packages"
+        case .standaloneSkills: "Standalone Skills"
+        }
+    }
 }
 
 struct DiscoverView: View {
@@ -126,51 +210,79 @@ struct DiscoverView: View {
 
             if let errorMessage = viewModel.errorMessage {
                 ErrorBanner(message: errorMessage) {
-                    Task { await viewModel.search() }
+                    Task { await viewModel.refreshSelectedContent() }
                 }
                 Divider()
             }
 
-            List(viewModel.skills) { skill in
-                CatalogSkillRow(
-                    skill: skill,
-                    installPlan: viewModel.installPlan(for: skill.key),
-                    isPlanning: viewModel.isPlanning(skill.key),
-                    isInstalling: viewModel.isInstalling(skill.key),
-                    onPlan: {
-                        Task {
-                            await viewModel.planInstall(skill)
-                        }
-                    },
-                    onInstall: {
-                        Task {
-                            await viewModel.install(skill, onInstalled: onInstalled)
-                        }
+            if viewModel.selectedContent == .packages {
+                List(viewModel.filteredPackages) { package in
+                    PackageRow(package: package)
+                        .listRowSeparator(.visible)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                }
+                .listStyle(.plain)
+                .overlay {
+                    if viewModel.isLoading && viewModel.packages.isEmpty {
+                        ProgressView()
+                            .controlSize(.large)
+                    } else if viewModel.filteredPackages.isEmpty {
+                        DiscoverEmptyState(
+                            title: emptyStateTitle,
+                            hasLoadedOnce: viewModel.hasLoadedPackagesOnce,
+                            query: viewModel.query,
+                            onSearch: {
+                                Task { await viewModel.loadPackages() }
+                            },
+                            onManageRepositories: onManageRepositories
+                        )
                     }
-                )
-                .listRowSeparator(.visible)
-                .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
-            }
-            .listStyle(.plain)
-            .overlay {
-                if viewModel.isLoading && viewModel.skills.isEmpty {
-                    ProgressView()
-                        .controlSize(.large)
-                } else if viewModel.skills.isEmpty {
-                    DiscoverEmptyState(
-                        title: emptyStateTitle,
-                        hasLoadedOnce: viewModel.hasLoadedOnce,
-                        query: viewModel.query,
-                        onSearch: {
-                            Task { await viewModel.search() }
+                }
+            } else {
+                List(viewModel.skills) { skill in
+                    CatalogSkillRow(
+                        skill: skill,
+                        installPlan: viewModel.installPlan(for: skill.key),
+                        isPlanning: viewModel.isPlanning(skill.key),
+                        isInstalling: viewModel.isInstalling(skill.key),
+                        onPlan: {
+                            Task {
+                                await viewModel.planInstall(skill)
+                            }
                         },
-                        onManageRepositories: onManageRepositories
+                        onInstall: {
+                            Task {
+                                await viewModel.install(skill, onInstalled: onInstalled)
+                            }
+                        }
                     )
+                    .listRowSeparator(.visible)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                }
+                .listStyle(.plain)
+                .overlay {
+                    if viewModel.isLoading && viewModel.skills.isEmpty {
+                        ProgressView()
+                            .controlSize(.large)
+                    } else if viewModel.skills.isEmpty {
+                        DiscoverEmptyState(
+                            title: emptyStateTitle,
+                            hasLoadedOnce: viewModel.hasLoadedOnce,
+                            query: viewModel.query,
+                            onSearch: {
+                                Task { await viewModel.search() }
+                            },
+                            onManageRepositories: onManageRepositories
+                        )
+                    }
                 }
             }
         }
         .popPageBackground()
         .task {
+            if !viewModel.hasLoadedPackagesOnce {
+                await viewModel.loadPackages()
+            }
             if !viewModel.hasLoadedOnce {
                 await viewModel.search()
             }
@@ -197,24 +309,34 @@ struct DiscoverView: View {
                 .buttonStyle(.bordered)
                 .help("Manage Repositories")
 
-                Picker("Install In", selection: $viewModel.selectedInstallApp) {
-                    ForEach(TargetApp.allCases, id: \.id) { app in
-                        Text(app.title).tag(app)
+                if viewModel.selectedContent == .standaloneSkills {
+                    Picker("Install In", selection: $viewModel.selectedInstallApp) {
+                        ForEach(TargetApp.allCases, id: \.id) { app in
+                            Text(app.title).tag(app)
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .frame(width: 160)
                 }
-                .pickerStyle(.menu)
-                .frame(width: 160)
             }
+
+            Picker("Catalog", selection: $viewModel.selectedContent) {
+                ForEach(DiscoverContentFilter.allCases) { filter in
+                    Text(filter.title).tag(filter)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 340)
 
             HStack(spacing: 10) {
                 TextField("Search by name, repo, or description", text: $viewModel.query)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit {
-                        Task { await viewModel.search() }
+                        Task { await viewModel.refreshSelectedContent() }
                     }
 
                 Button {
-                    Task { await viewModel.search() }
+                    Task { await viewModel.refreshSelectedContent() }
                 } label: {
                     if viewModel.isLoading {
                         ProgressView()
@@ -233,6 +355,18 @@ struct DiscoverView: View {
     }
 
     private var emptyStateTitle: String {
+        if viewModel.selectedContent == .packages {
+            if !viewModel.hasLoadedPackagesOnce {
+                return "Load Packages"
+            }
+
+            if viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return "No Packages"
+            }
+
+            return "No Matching Packages"
+        }
+
         if !viewModel.hasLoadedOnce {
             return "Search Skills"
         }

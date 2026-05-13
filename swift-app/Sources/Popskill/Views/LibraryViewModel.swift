@@ -5,11 +5,13 @@ import Observation
 @Observable
 final class LibraryViewModel {
     var skills: [Skill] = []
+    var packages: [CapabilityPackage] = []
     var stubs: [StubbedSkill] = []
     var unmanagedSkills: [UnmanagedSkill] = []
     var securityScanResults: [Skill.ID: SecurityScanResult] = [:]
     var searchText = ""
     var selectedFilter: LibraryFilter = .all
+    var selectedPackageFilter: PackageFilter = .all
     var selectedRehydrateApp: TargetApp = .codex
     var isLoading = false
     var isBulkStubbing = false
@@ -47,6 +49,25 @@ final class LibraryViewModel {
                 || stub.skill.description.lowercased().contains(query)
                 || stub.skill.sourceLabel.lowercased().contains(query)
                 || stub.skill.directory.lowercased().contains(query)
+        }
+    }
+
+    var filteredPackages: [CapabilityPackage] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        return packages.filter { package in
+            selectedPackageFilter.includes(package)
+        }.filter { package in
+            query.isEmpty
+                || package.name.lowercased().contains(query)
+                || package.summary.lowercased().contains(query)
+                || package.sourceLabel.lowercased().contains(query)
+                || package.source.location.lowercased().contains(query)
+                || package.components.all.contains { component in
+                    component.name.lowercased().contains(query)
+                        || component.id.lowercased().contains(query)
+                        || component.kind.lowercased().contains(query)
+                }
         }
     }
 
@@ -109,6 +130,8 @@ final class LibraryViewModel {
         do {
             skills = try await client.list()
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            packages = try await client.listPackages()
+                .sorted(by: packageSort)
             stubs = try await client.listStubs()
                 .sorted { $0.stubbedAt > $1.stubbedAt }
             unmanagedSkills = try await client.scanUnmanaged()
@@ -302,6 +325,28 @@ final class LibraryViewModel {
         stubs.append(stub)
         stubs.sort { $0.stubbedAt > $1.stubbedAt }
     }
+
+    private func packageSort(_ left: CapabilityPackage, _ right: CapabilityPackage) -> Bool {
+        let leftRank = packageSortRank(left)
+        let rightRank = packageSortRank(right)
+        if leftRank != rightRank {
+            return leftRank < rightRank
+        }
+        let nameOrder = left.name.localizedCaseInsensitiveCompare(right.name)
+        if nameOrder != .orderedSame {
+            return nameOrder == .orderedAscending
+        }
+        return left.id < right.id
+    }
+
+    private func packageSortRank(_ package: CapabilityPackage) -> Int {
+        switch package.type {
+        case .composite:
+            return 0
+        case .standalone:
+            return package.source.kind == "builtin" ? 1 : 2
+        }
+    }
 }
 
 enum LibraryFilter: String, CaseIterable, Identifiable {
@@ -327,6 +372,33 @@ enum LibraryFilter: String, CaseIterable, Identifiable {
         case .active: skill.enabledAppCount > 0
         case .inactive: skill.enabledAppCount == 0
         case .stub: false
+        }
+    }
+}
+
+enum PackageFilter: String, CaseIterable, Identifiable {
+    case all
+    case composite
+    case standalone
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all: "All"
+        case .composite: "Composite"
+        case .standalone: "Standalone"
+        }
+    }
+
+    func includes(_ package: CapabilityPackage) -> Bool {
+        switch self {
+        case .all:
+            return true
+        case .composite:
+            return package.type == .composite
+        case .standalone:
+            return package.type == .standalone
         }
     }
 }

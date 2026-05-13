@@ -26,6 +26,19 @@ struct LibraryFilterTests {
         #expect(!LibraryFilter.stub.includes(skill(enabledInClaude: false)))
     }
 
+    @Test
+    func packageFiltersSeparateCompositeAndStandalone() {
+        let composite = package(type: .composite)
+        let standalone = package(type: .standalone)
+
+        #expect(PackageFilter.all.includes(composite))
+        #expect(PackageFilter.all.includes(standalone))
+        #expect(PackageFilter.composite.includes(composite))
+        #expect(!PackageFilter.composite.includes(standalone))
+        #expect(!PackageFilter.standalone.includes(composite))
+        #expect(PackageFilter.standalone.includes(standalone))
+    }
+
     private func skill(enabledInClaude: Bool) -> Skill {
         Skill(
             id: enabledInClaude ? "active" : "inactive",
@@ -45,6 +58,20 @@ struct LibraryFilterTests {
             installedAt: nil,
             updatedAt: nil,
             contentHash: nil
+        )
+    }
+
+    private func package(type: CapabilityPackageType) -> CapabilityPackage {
+        CapabilityPackage(
+            id: "pkg:\(type.rawValue)",
+            type: type,
+            name: type.title,
+            vendor: nil,
+            summary: "Demo package",
+            source: PackageSource(kind: "builtin", location: "popskill/demo", updateStrategy: "manual"),
+            components: PackageComponents(cli: [], skills: [], mcp: [], agents: []),
+            configSchema: [],
+            installed: false
         )
     }
 }

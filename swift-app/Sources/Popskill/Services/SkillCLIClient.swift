@@ -55,6 +55,30 @@ actor SkillCLIClient {
         return try Self.decodeResponse([Skill].self, from: data)
     }
 
+    func listPackages() async throws -> [CapabilityPackage] {
+        let data = try run(arguments: ["package-list", "--json"])
+        return try Self.decodeResponse([CapabilityPackage].self, from: data)
+    }
+
+    func packageDetail(packageID: String) async throws -> CapabilityPackage {
+        let data = try run(arguments: ["package-detail", packageID, "--json"])
+        return try Self.decodeResponse(CapabilityPackage.self, from: data)
+    }
+
+    func packageInstall(packageID: String) async throws -> PackageInstallResult {
+        let data = try run(arguments: ["package-install", packageID, "--json"])
+        return try Self.decodeResponse(PackageInstallResult.self, from: data)
+    }
+
+    func packageConfig(packageID: String, key: String, valueEnvironmentKey: String? = nil) async throws -> PackageConfigResult {
+        var arguments = ["package-config", packageID, "--key", key, "--json"]
+        if let valueEnvironmentKey, !valueEnvironmentKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            arguments.append(contentsOf: ["--value-env", valueEnvironmentKey])
+        }
+        let data = try run(arguments: arguments)
+        return try Self.decodeResponse(PackageConfigResult.self, from: data)
+    }
+
     func listAgents() async throws -> [LocalAgent] {
         let data = try run(arguments: ["agent-list", "--json"])
         return try Self.decodeResponse([LocalAgent].self, from: data)

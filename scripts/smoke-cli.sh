@@ -45,6 +45,34 @@ else
   echo "detail skipped: no installed skills"
 fi
 
+package_output="$TMP_DIR/package-list.json"
+"$CLI" package-list --json > "$package_output"
+jq -e '
+  .ok == true
+  and (.data | type) == "array"
+  and any(.data[]; .id == "pkg:lark" and .type == "composite")
+  and any(.data[]; .id == "pkg:pdf" and .type == "standalone")
+' "$package_output" > /dev/null
+printf "package-list "
+jq -c '{ok, count: (.data | length)}' "$package_output"
+
+package_detail_output="$TMP_DIR/package-detail.json"
+"$CLI" package-detail pkg:lark --json > "$package_detail_output"
+jq -e '
+  .ok == true
+  and .data.id == "pkg:lark"
+  and .data.type == "composite"
+  and (.data.components.skills | length) >= 6
+  and (.data.configSchema | length) >= 2
+' "$package_detail_output" > /dev/null
+echo "package-detail ok"
+
+package_install_output="$TMP_DIR/package-install.json"
+"$CLI" package-install pkg:lark --json > "$package_install_output"
+jq -e '.ok == true and .data.packageId == "pkg:lark" and .data.status == "preview"' \
+  "$package_install_output" > /dev/null
+echo "package-install preview ok"
+
 require_ok scan-unmanaged scan-unmanaged --json
 require_ok backup-list backup-list --json
 require_ok stub-list stub-list --json

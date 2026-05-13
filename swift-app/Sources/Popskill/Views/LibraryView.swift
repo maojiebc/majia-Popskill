@@ -4,7 +4,7 @@ import SwiftUI
 struct LibraryView: View {
     @Bindable var viewModel: LibraryViewModel
     let onLibraryMutation: () async -> Void
-    @State private var selectedSkillID: Skill.ID?
+    @State private var selectedItemID: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,7 +28,7 @@ struct LibraryView: View {
                 if viewModel.selectedFilter == .stub {
                     stubList
                 } else {
-                    installedList
+                    packageAndSkillList
                 }
 
                 Divider()
@@ -41,13 +41,16 @@ struct LibraryView: View {
                     ) { stub in
                         Task {
                             if await viewModel.rehydrate(stub) {
-                                selectedSkillID = viewModel.filteredSkills.first?.id
+                                selectedItemID = defaultSelectionID()
                                 viewModel.selectedFilter = .all
                                 await onLibraryMutation()
                             }
                         }
                     }
                     .frame(width: 320)
+                } else if let selectedPackage {
+                    PackageDetailPane(package: selectedPackage)
+                        .frame(width: 360)
                 } else {
                     SkillDetailPane(
                         skill: selectedSkill,
@@ -71,7 +74,7 @@ struct LibraryView: View {
                         onStub: { skill in
                             Task {
                                 if await viewModel.stub(skill) {
-                                    selectedSkillID = viewModel.filteredSkills.first?.id ?? viewModel.filteredStubs.first?.id
+                                    selectedItemID = defaultSelectionID()
                                     if viewModel.filteredSkills.isEmpty {
                                         viewModel.selectedFilter = .stub
                                     }
@@ -82,7 +85,7 @@ struct LibraryView: View {
                     ) { skill in
                         Task {
                             if await viewModel.uninstall(skill) {
-                                selectedSkillID = viewModel.filteredSkills.first?.id
+                                selectedItemID = defaultSelectionID()
                                 await onLibraryMutation()
                             }
                         }
@@ -91,78 +94,94 @@ struct LibraryView: View {
                 }
             }
             .onChange(of: viewModel.skills) { _, skills in
-                if selectedSkillID == nil, viewModel.selectedFilter != .stub {
-                    selectedSkillID = skills.first?.id
-                }
+                ensureSelectionIsValid()
+            }
+            .onChange(of: viewModel.packages) { _, _ in
+                ensureSelectionIsValid()
             }
             .onChange(of: viewModel.filteredSkills) { _, skills in
-                guard viewModel.selectedFilter != .stub else {
-                    return
-                }
-                if let selectedSkillID, skills.contains(where: { $0.id == selectedSkillID }) {
-                    return
-                }
-                selectedSkillID = skills.first?.id
+                ensureSelectionIsValid()
             }
             .onChange(of: viewModel.filteredStubs) { _, stubs in
-                guard viewModel.selectedFilter == .stub else {
-                    return
-                }
-                if let selectedSkillID, stubs.contains(where: { $0.id == selectedSkillID }) {
-                    return
-                }
-                selectedSkillID = stubs.first?.id
+                ensureSelectionIsValid()
+            }
+            .onChange(of: viewModel.filteredPackages) { _, _ in
+                ensureSelectionIsValid()
             }
             .onChange(of: viewModel.selectedFilter) { _, filter in
-                selectedSkillID = filter == .stub ? viewModel.filteredStubs.first?.id : viewModel.filteredSkills.first?.id
+                selectedItemID = defaultSelectionID()
+            }
+            .onChange(of: viewModel.selectedPackageFilter) { _, _ in
+                selectedItemID = defaultSelectionID()
             }
         }
         .popPageBackground()
         .searchable(text: $viewModel.searchText, placement: .toolbar, prompt: "Search Library")
     }
 
-    private var installedList: some View {
-        List(viewModel.filteredSkills, selection: $selectedSkillID) { skill in
-            SkillRow(
-                skill: skill,
-                securityScanResult: viewModel.securityScanResult(skillID: skill.id),
-                isToggling: { app in
-                    viewModel.isToggling(skillID: skill.id, app: app)
-                }
-            ) { app, enabled in
-                Task {
-                    await viewModel.setEnabled(enabled, for: skill, app: app)
+    private var packageAndSkillList: some View {
+        List(selection: $selectedItemID) {
+            if !viewModel.filteredPackages.isEmpty {
+                Section {
+                    ForEach(viewModel.filteredPackages) { package in
+                        PackageRow(package: package)
+                            .tag(selectionID(forPackage: package.id))
+                            .listRowSeparator(.visible)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    }
+                } header: {
+                    Text("Capability Packages")
                 }
             }
-            .tag(skill.id)
-            .listRowSeparator(.visible)
-            .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+
+            if viewModel.selectedPackageFilter == .all {
+                Section {
+                    ForEach(viewModel.filteredSkills) { skill in
+                        SkillRow(
+                            skill: skill,
+                            securityScanResult: viewModel.securityScanResult(skillID: skill.id),
+                            isToggling: { app in
+                                viewModel.isToggling(skillID: skill.id, app: app)
+                            }
+                        ) { app, enabled in
+                            Task {
+                                await viewModel.setEnabled(enabled, for: skill, app: app)
+                            }
+                        }
+                        .tag(selectionID(forSkill: skill.id))
+                        .listRowSeparator(.visible)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    }
+                } header: {
+                    Text("Installed Skills")
+                }
+            }
         }
         .listStyle(.plain)
         .overlay {
-            if viewModel.isLoading && viewModel.skills.isEmpty {
+            if viewModel.isLoading && viewModel.packages.isEmpty && viewModel.skills.isEmpty {
                 ProgressView()
                     .controlSize(.large)
-            } else if viewModel.filteredSkills.isEmpty {
+            } else if viewModel.filteredPackages.isEmpty && visibleSkillRowsAreEmpty {
                 ContentUnavailableView(emptyStateTitle, systemImage: "shippingbox")
             }
         }
     }
 
     private var stubList: some View {
-        List(viewModel.filteredStubs, selection: $selectedSkillID) { stub in
+        List(viewModel.filteredStubs, selection: $selectedItemID) { stub in
             StubRow(
                 stub: stub,
                 isRehydrating: viewModel.isRehydrating(skillID: stub.id)
             ) {
                 Task {
                     if await viewModel.rehydrate(stub) {
-                        selectedSkillID = viewModel.filteredStubs.first?.id
+                        selectedItemID = defaultSelectionID()
                         await onLibraryMutation()
                     }
                 }
             }
-            .tag(stub.id)
+            .tag(selectionID(forStub: stub.id))
             .listRowSeparator(.visible)
             .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
         }
@@ -178,22 +197,41 @@ struct LibraryView: View {
     }
 
     private var selectedSkill: Skill? {
-        guard let selectedSkillID else {
-            return viewModel.filteredSkills.first
+        guard let skillID = skillID(from: selectedItemID) else {
+            return selectedPackage == nil ? viewModel.filteredSkills.first : nil
         }
-        return viewModel.filteredSkills.first { $0.id == selectedSkillID } ?? viewModel.filteredSkills.first
+        return viewModel.filteredSkills.first { $0.id == skillID } ?? viewModel.filteredSkills.first
     }
 
     private var selectedStub: StubbedSkill? {
-        guard let selectedSkillID else {
+        guard let stubID = stubID(from: selectedItemID) else {
             return viewModel.filteredStubs.first
         }
-        return viewModel.filteredStubs.first { $0.id == selectedSkillID } ?? viewModel.filteredStubs.first
+        return viewModel.filteredStubs.first { $0.id == stubID } ?? viewModel.filteredStubs.first
+    }
+
+    private var selectedPackage: CapabilityPackage? {
+        guard viewModel.selectedFilter != .stub else {
+            return nil
+        }
+
+        guard let packageID = packageID(from: selectedItemID) else {
+            return viewModel.filteredPackages.first
+        }
+        return viewModel.filteredPackages.first { $0.id == packageID } ?? viewModel.filteredPackages.first
+    }
+
+    private var visibleSkillRowsAreEmpty: Bool {
+        viewModel.selectedPackageFilter != .all || viewModel.filteredSkills.isEmpty
     }
 
     private var emptyStateTitle: String {
         if viewModel.selectedFilter == .stub {
             return viewModel.stubs.isEmpty ? "No Stubs" : "No Matching Stubs"
+        }
+
+        if viewModel.selectedPackageFilter != .all {
+            return viewModel.packages.isEmpty ? "No Packages" : "No Matching Packages"
         }
 
         if viewModel.skills.isEmpty {
@@ -216,13 +254,89 @@ struct LibraryView: View {
         }
     }
 
+    private func selectionID(forPackage packageID: String) -> String {
+        "package|\(packageID)"
+    }
+
+    private func selectionID(forSkill skillID: String) -> String {
+        "skill|\(skillID)"
+    }
+
+    private func selectionID(forStub stubID: String) -> String {
+        "stub|\(stubID)"
+    }
+
+    private func packageID(from selectionID: String?) -> String? {
+        id(from: selectionID, prefix: "package|")
+    }
+
+    private func skillID(from selectionID: String?) -> String? {
+        id(from: selectionID, prefix: "skill|")
+    }
+
+    private func stubID(from selectionID: String?) -> String? {
+        id(from: selectionID, prefix: "stub|")
+    }
+
+    private func id(from selectionID: String?, prefix: String) -> String? {
+        guard let selectionID, selectionID.hasPrefix(prefix) else {
+            return nil
+        }
+        return String(selectionID.dropFirst(prefix.count))
+    }
+
+    private func defaultSelectionID() -> String? {
+        if viewModel.selectedFilter == .stub {
+            return viewModel.filteredStubs.first.map { selectionID(forStub: $0.id) }
+        }
+
+        if let package = viewModel.filteredPackages.first {
+            return selectionID(forPackage: package.id)
+        }
+
+        if viewModel.selectedPackageFilter == .all {
+            return viewModel.filteredSkills.first.map { selectionID(forSkill: $0.id) }
+        }
+
+        return nil
+    }
+
+    private func ensureSelectionIsValid() {
+        guard let selectedItemID else {
+            self.selectedItemID = defaultSelectionID()
+            return
+        }
+
+        if viewModel.selectedFilter == .stub {
+            if let stubID = stubID(from: selectedItemID),
+               viewModel.filteredStubs.contains(where: { $0.id == stubID }) {
+                return
+            }
+            self.selectedItemID = defaultSelectionID()
+            return
+        }
+
+        if let packageID = packageID(from: selectedItemID),
+           viewModel.filteredPackages.contains(where: { $0.id == packageID }) {
+            return
+        }
+
+        if viewModel.selectedPackageFilter == .all,
+           let skillID = skillID(from: selectedItemID),
+           viewModel.filteredSkills.contains(where: { $0.id == skillID }) {
+            return
+        }
+
+        self.selectedItemID = defaultSelectionID()
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Installed")
                         .font(.system(.largeTitle, weight: .bold))
-                    Text("\(viewModel.skills.count) skills · \(viewModel.enabledCount) enabled")
+                    Text("\(viewModel.packages.count) packages · \(viewModel.skills.count) skills · \(viewModel.enabledCount) enabled")
                         .foregroundStyle(.secondary)
                 }
 
@@ -258,14 +372,25 @@ struct LibraryView: View {
                 .disabled(viewModel.isLoading)
             }
 
-            Picker("Filter", selection: $viewModel.selectedFilter) {
-                ForEach(LibraryFilter.allCases) { filter in
-                    Text(filter.title).tag(filter)
+            HStack(spacing: 12) {
+                Picker("Package Type", selection: $viewModel.selectedPackageFilter) {
+                    ForEach(PackageFilter.allCases) { filter in
+                        Text(filter.title).tag(filter)
+                    }
                 }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 300)
+
+                Picker("Filter", selection: $viewModel.selectedFilter) {
+                    ForEach(LibraryFilter.allCases) { filter in
+                        Text(filter.title).tag(filter)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 340)
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(width: 340)
 
             if viewModel.selectedFilter == .stub {
                 Picker("Restore In", selection: $viewModel.selectedRehydrateApp) {
@@ -340,6 +465,200 @@ struct UnmanagedSkillsBanner: View {
         .padding(.horizontal, 28)
         .padding(.vertical, 12)
         .background(Color.popStatusWarning.opacity(0.08))
+    }
+}
+
+struct PackageDetailPane: View {
+    let package: CapabilityPackage?
+
+    var body: some View {
+        Group {
+            if let package {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        HStack(spacing: 12) {
+                            PackageIcon(type: package.type)
+                                .frame(width: 52, height: 52)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(package.name)
+                                    .font(.title2.weight(.bold))
+                                    .lineLimit(2)
+                                Text(package.sourceLabel)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+
+                        Text(package.summary)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        HStack(spacing: 8) {
+                            StatusPill(title: package.typeLabel, color: packageColor(package.type))
+                            StatusPill(
+                                title: package.installed ? "Installed" : "Available",
+                                color: package.installed ? .popStatusOK : .popStatusWarning
+                            )
+                        }
+
+                        DetailSection(title: "Components", accent: PopskillSectionAccent.color(for: 0)) {
+                            PackageComponentTree(components: package.components)
+                        }
+
+                        DetailSection(title: "Config", accent: PopskillSectionAccent.color(for: 1)) {
+                            if package.configSchema.isEmpty {
+                                Text("No config required")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(package.configSchema) { field in
+                                    HStack(spacing: 8) {
+                                        Image(systemName: field.secret ? "key.fill" : "slider.horizontal.3")
+                                            .foregroundStyle(field.secret ? Color.popStatusWarning : Color.secondary)
+                                            .frame(width: 16)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(field.label)
+                                                .font(.caption.weight(.semibold))
+                                            Text("\(field.storage) · \(field.required ? "Required" : "Optional")")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        DetailSection(title: "Source", accent: PopskillSectionAccent.color(for: 2)) {
+                            DetailField(title: "Type", value: package.typeLabel)
+                            DetailField(title: "Location", value: package.source.location)
+                            DetailField(title: "Update Strategy", value: package.source.updateStrategy)
+                        }
+                    }
+                    .padding(22)
+                }
+            } else {
+                ContentUnavailableView("No Package Selected", systemImage: "square.stack.3d.up")
+            }
+        }
+        .background(Color.popHeaderBackground.opacity(0.45))
+    }
+}
+
+struct PackageRow: View {
+    let package: CapabilityPackage
+    @State private var isExpanded: Bool
+
+    init(package: CapabilityPackage) {
+        self.package = package
+        _isExpanded = State(initialValue: package.type == .composite)
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            PackageIcon(type: package.type)
+
+            VStack(alignment: .leading, spacing: 9) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 8) {
+                        Text(package.name)
+                            .font(.system(.headline, weight: .semibold))
+                            .foregroundStyle(Color.popLabel)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+
+                        StatusPill(title: package.typeLabel, color: packageColor(package.type))
+                        StatusPill(
+                            title: package.installed ? "Installed" : "Available",
+                            color: package.installed ? .popStatusOK : .popStatusWarning
+                        )
+                    }
+
+                    Text(package.summary)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+
+                    Text("\(package.componentCount) components · \(package.installedComponentCount) installed · \(package.requiredComponentCount) required")
+                        .font(.caption)
+                        .foregroundStyle(Color.popTertiaryLabel)
+                        .lineLimit(1)
+                }
+
+                if package.type == .composite {
+                    DisclosureGroup(isExpanded: $isExpanded) {
+                        PackageComponentTree(components: package.components)
+                            .padding(.top, 4)
+                    } label: {
+                        Text("Component Tree")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .disclosureGroupStyle(.automatic)
+                } else if let component = package.components.all.first {
+                    PackageComponentLine(component: component)
+                }
+            }
+        }
+        .frame(minHeight: package.type == .composite ? 130 : 86)
+    }
+}
+
+struct PackageIcon: View {
+    let type: CapabilityPackageType
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: PopskillRadius.smallCard)
+                .fill(packageColor(type).opacity(0.16))
+            Image(systemName: type == .composite ? "square.stack.3d.up.fill" : "doc.badge.gearshape.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(packageColor(type))
+        }
+        .frame(width: 44, height: 44)
+    }
+}
+
+struct PackageComponentTree: View {
+    let components: PackageComponents
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(components.all, id: \.displayKey) { component in
+                PackageComponentLine(component: component)
+            }
+        }
+    }
+}
+
+struct PackageComponentLine: View {
+    let component: PackageComponent
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: componentIcon(component.kind))
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(componentStatusColor(component))
+                .frame(width: 16)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(component.name)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                if let location = component.location, !location.isEmpty {
+                    Text(location)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            StatusPill(title: component.status.capitalized, color: componentStatusColor(component))
+        }
     }
 }
 
@@ -726,6 +1045,43 @@ private func securityScanColor(_ result: SecurityScanResult?) -> Color {
     case .blocked:
         return .popStatusError
     case .unavailable:
+        return .popStatusNeutral
+    }
+}
+
+private func packageColor(_ type: CapabilityPackageType) -> Color {
+    switch type {
+    case .composite:
+        return .popSectionPurple
+    case .standalone:
+        return .popSectionBlue
+    }
+}
+
+private func componentIcon(_ kind: String) -> String {
+    switch kind.lowercased() {
+    case "cli":
+        return "terminal"
+    case "skill":
+        return "shippingbox"
+    case "mcp":
+        return "point.3.connected.trianglepath.dotted"
+    case "agent":
+        return "person.crop.circle"
+    default:
+        return "puzzlepiece.extension"
+    }
+}
+
+private func componentStatusColor(_ component: PackageComponent) -> Color {
+    if component.installed {
+        return .popStatusOK
+    }
+
+    switch component.status.lowercased() {
+    case "available", "declared", "stub", "registry-reference":
+        return component.required ? .popStatusWarning : .popStatusNeutral
+    default:
         return .popStatusNeutral
     }
 }
