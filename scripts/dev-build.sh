@@ -8,6 +8,9 @@ source "$HOME/.cargo/env"
 echo "==> Building skill-cli"
 cargo build --manifest-path "$ROOT_DIR/skill-cli/Cargo.toml"
 
+echo "==> Running skill-cli tests"
+cargo test --manifest-path "$ROOT_DIR/skill-cli/Cargo.toml"
+
 "$ROOT_DIR/scripts/smoke-cli.sh" "$ROOT_DIR/skill-cli/target/debug/skill-cli"
 
 echo "==> Building SwiftUI app"

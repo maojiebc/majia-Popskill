@@ -499,3 +499,46 @@ struct ApiError {
     code: &'static str,
     message: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_target_app_accepts_supported_skill_apps() {
+        assert_eq!(parse_target_app(" codex ").unwrap(), AppType::Codex);
+        assert_eq!(parse_target_app("HERMES").unwrap(), AppType::Hermes);
+    }
+
+    #[test]
+    fn parse_target_app_rejects_openclaw_for_skills() {
+        let message = parse_target_app("openclaw").unwrap_err().to_string();
+        assert!(message.contains("OpenClaw does not support skills"));
+    }
+
+    #[test]
+    fn parse_skill_apps_defaults_to_claude() {
+        let apps = parse_skill_apps(&[]).unwrap();
+        assert!(apps.claude);
+        assert!(!apps.codex);
+        assert!(!apps.gemini);
+        assert!(!apps.opencode);
+        assert!(!apps.hermes);
+    }
+
+    #[test]
+    fn parse_skill_apps_accumulates_requested_targets() {
+        let apps = parse_skill_apps(&["codex".to_string(), "gemini".to_string()]).unwrap();
+        assert!(!apps.claude);
+        assert!(apps.codex);
+        assert!(apps.gemini);
+        assert!(!apps.opencode);
+        assert!(!apps.hermes);
+    }
+
+    #[test]
+    fn format_error_includes_context_chain() {
+        let error = anyhow::anyhow!("root cause").context("outer context");
+        assert_eq!(format_error(&error), "outer context: root cause");
+    }
+}
