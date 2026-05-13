@@ -119,11 +119,12 @@ struct SettingsView: View {
                     }
 
                     DetailSection(title: "Secrets", accent: PopskillSectionAccent.color(for: 2)) {
-                        DetailField(title: "Storage", value: "macOS Keychain")
-                        DetailField(title: "Plaintext Policy", value: "Secrets are not stored in SQLite or app settings.")
+                        DetailField(title: "Local Secrets", value: "Popskill stores its own secrets in macOS Keychain.")
+                        DetailField(title: "WebDAV Credentials", value: "Owned by CC Switch settings. Popskill only reads sanitized status output here.")
                     }
 
                     DetailSection(title: "WebDAV", accent: PopskillSectionAccent.color(for: 3)) {
+                        WebDAVReadinessNote(status: viewModel.webdavStatus)
                         DetailField(title: "Configured", value: boolText(viewModel.webdavStatus?.configured))
                         DetailField(title: "Enabled", value: boolText(viewModel.webdavStatus?.enabled))
                         DetailField(title: "Auto Sync", value: boolText(viewModel.webdavStatus?.autoSync))
@@ -146,7 +147,7 @@ struct SettingsView: View {
                             }
                             .buttonStyle(.bordered)
                             .disabled(!canFetchWebDAVRemote || viewModel.isCheckingWebDAVRemote)
-                            .help("Fetch WebDAV Remote Info")
+                            .help(webDAVRemoteInfoHelp)
 
                             if let webdavRemoteError = viewModel.webdavRemoteError {
                                 Text(webdavRemoteError)
@@ -206,6 +207,22 @@ struct SettingsView: View {
         viewModel.webdavStatus?.configured == true && viewModel.webdavStatus?.enabled == true
     }
 
+    private var webDAVRemoteInfoHelp: String {
+        guard let status = viewModel.webdavStatus else {
+            return "Refresh settings before fetching WebDAV remote info"
+        }
+
+        guard status.configured else {
+            return "Configure WebDAV in CC Switch before fetching remote info"
+        }
+
+        guard status.enabled == true else {
+            return "Enable WebDAV sync before fetching remote info"
+        }
+
+        return "Fetch WebDAV Remote Info"
+    }
+
     private func remoteSnapshotText(_ remoteInfo: WebDAVRemoteInfo) -> String {
         if remoteInfo.empty == true {
             return "Empty"
@@ -242,5 +259,94 @@ struct SettingsView: View {
             .appendingPathComponent("docs")
             .appendingPathComponent("ipc.md")
         return FileManager.default.fileExists(atPath: docsURL.path) ? docsURL : nil
+    }
+}
+
+struct WebDAVReadinessNote: View {
+    let status: WebDAVStatus?
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: symbolName)
+                .font(.title3)
+                .foregroundStyle(color)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: PopskillRadius.smallCard))
+        .overlay(
+            RoundedRectangle(cornerRadius: PopskillRadius.smallCard)
+                .stroke(color.opacity(0.16), lineWidth: 1)
+        )
+    }
+
+    private var title: String {
+        guard let status else {
+            return "WebDAV status unknown"
+        }
+
+        guard status.configured else {
+            return "WebDAV not configured"
+        }
+
+        guard status.enabled == true else {
+            return "WebDAV configured but disabled"
+        }
+
+        return "WebDAV read-only bridge"
+    }
+
+    private var message: String {
+        guard let status else {
+            return "Refresh settings to load the saved CC Switch WebDAV configuration."
+        }
+
+        guard status.configured else {
+            return "Popskill can inspect CC Switch WebDAV settings once they exist; configuration and Sync Now are still v0.1 work."
+        }
+
+        guard status.enabled == true else {
+            return "Remote snapshot lookup is disabled until CC Switch WebDAV sync is enabled."
+        }
+
+        return "Remote snapshot lookup is available. Upload/download sync is intentionally not exposed from the sidecar yet."
+    }
+
+    private var symbolName: String {
+        guard let status else {
+            return "questionmark.circle"
+        }
+
+        if !status.configured {
+            return "cloud.slash"
+        }
+
+        if status.enabled != true {
+            return "pause.circle"
+        }
+
+        return "cloud"
+    }
+
+    private var color: Color {
+        guard let status else {
+            return .popStatusNeutral
+        }
+
+        if !status.configured || status.enabled != true {
+            return .popStatusWarning
+        }
+
+        return .popSectionBlue
     }
 }
