@@ -11,28 +11,26 @@ struct LibraryView: View {
         VStack(spacing: 0) {
             header
 
-            Divider()
-
             if let errorMessage = viewModel.errorMessage {
                 ErrorBanner(message: errorMessage) {
                     Task { await viewModel.load() }
                 }
-                Divider()
+                .padding(.horizontal, 28)
+                .padding(.bottom, 12)
             }
 
             if !viewModel.unmanagedSkills.isEmpty {
                 UnmanagedSkillsBanner(viewModel: viewModel, onImported: onLibraryMutation)
-                Divider()
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 12)
             }
 
-            HStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 20) {
                 if viewModel.selectedFilter == .stub {
                     stubList
                 } else {
                     packageAndSkillList
                 }
-
-                Divider()
 
                 if viewModel.selectedFilter == .stub {
                     StubDetailPane(
@@ -48,10 +46,12 @@ struct LibraryView: View {
                             }
                         }
                     }
-                    .frame(width: 320)
+                    .frame(width: 340)
+                    .popMaterialCard()
                 } else if let selectedPackage {
                     PackageDetailPane(package: selectedPackage)
-                        .frame(width: 360)
+                        .frame(width: 380)
+                        .popMaterialCard()
                 } else {
                     SkillDetailPane(
                         skill: selectedSkill,
@@ -91,9 +91,13 @@ struct LibraryView: View {
                             }
                         }
                     }
-                    .frame(width: 320)
+                    .frame(width: 340)
+                    .popMaterialCard()
                 }
             }
+            .padding(.horizontal, 28)
+            .padding(.bottom, 24)
+            .frame(maxHeight: .infinity, alignment: .top)
             .onChange(of: viewModel.skills) { _, skills in
                 ensureSelectionIsValid()
             }
@@ -121,44 +125,63 @@ struct LibraryView: View {
     }
 
     private var packageAndSkillList: some View {
-        List(selection: $selectedItemID) {
-            if !viewModel.filteredPackages.isEmpty {
-                Section {
-                    ForEach(viewModel.filteredPackages) { package in
-                        PackageRow(package: package)
-                            .tag(selectionID(forPackage: package.id))
-                            .listRowSeparator(.visible)
-                            .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
-                    }
-                } header: {
-                    LocalizedText("Capability Packages")
-                }
-            }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 18) {
+                if !viewModel.filteredPackages.isEmpty {
+                    PopskillSectionTitle(
+                        title: "Capability Packages",
+                        subtitle: localization.string(
+                            "package.componentSummary",
+                            viewModel.filteredPackages.reduce(0) { $0 + $1.componentCount },
+                            viewModel.filteredPackages.reduce(0) { $0 + $1.installedComponentCount },
+                            viewModel.filteredPackages.reduce(0) { $0 + $1.requiredComponentCount }
+                        )
+                    )
 
-            if viewModel.selectedPackageFilter == .all {
-                Section {
-                    ForEach(viewModel.filteredSkills) { skill in
-                        SkillRow(
-                            skill: skill,
-                            securityScanResult: viewModel.securityScanResult(skillID: skill.id),
-                            isToggling: { app in
-                                viewModel.isToggling(skillID: skill.id, app: app)
-                            }
-                        ) { app, enabled in
-                            Task {
-                                await viewModel.setEnabled(enabled, for: skill, app: app)
+                    ForEach(viewModel.filteredPackages) { package in
+                        let selectionID = selectionID(forPackage: package.id)
+                        PopskillSelectableCard(isSelected: selectedItemID == selectionID) {
+                            selectedItemID = selectionID
+                        } content: {
+                            PackageRow(package: package)
+                        }
+                    }
+                }
+
+                if viewModel.selectedPackageFilter == .all {
+                    PopskillSectionTitle(
+                        title: "Installed Skills",
+                        subtitle: "\(viewModel.filteredSkills.count) skills"
+                    )
+                    .padding(.top, viewModel.filteredPackages.isEmpty ? 0 : 6)
+
+                    LazyVGrid(columns: skillGridColumns, alignment: .leading, spacing: 16) {
+                        ForEach(viewModel.filteredSkills) { skill in
+                            let selectionID = selectionID(forSkill: skill.id)
+                            PopskillSelectableCard(isSelected: selectedItemID == selectionID) {
+                                selectedItemID = selectionID
+                            } content: {
+                                SkillRow(
+                                    skill: skill,
+                                    securityScanResult: viewModel.securityScanResult(skillID: skill.id),
+                                    isToggling: { app in
+                                        viewModel.isToggling(skillID: skill.id, app: app)
+                                    }
+                                ) { app, enabled in
+                                    Task {
+                                        await viewModel.setEnabled(enabled, for: skill, app: app)
+                                    }
+                                }
                             }
                         }
-                        .tag(selectionID(forSkill: skill.id))
-                        .listRowSeparator(.visible)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
                     }
-                } header: {
-                    LocalizedText("Installed Skills")
                 }
             }
+            .padding(2)
+            .padding(.bottom, 8)
         }
-        .listStyle(.plain)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .scrollContentBackground(.hidden)
         .overlay {
             if viewModel.isLoading && viewModel.packages.isEmpty && viewModel.skills.isEmpty {
                 ProgressView()
@@ -170,23 +193,37 @@ struct LibraryView: View {
     }
 
     private var stubList: some View {
-        List(viewModel.filteredStubs, selection: $selectedItemID) { stub in
-            StubRow(
-                stub: stub,
-                isRehydrating: viewModel.isRehydrating(skillID: stub.id)
-            ) {
-                Task {
-                    if await viewModel.rehydrate(stub) {
-                        selectedItemID = defaultSelectionID()
-                        await onLibraryMutation()
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 16) {
+                PopskillSectionTitle(
+                    title: "Stubs",
+                    subtitle: "\(viewModel.filteredStubs.count) recoverable cards"
+                )
+
+                ForEach(viewModel.filteredStubs) { stub in
+                    let selectionID = selectionID(forStub: stub.id)
+                    PopskillSelectableCard(isSelected: selectedItemID == selectionID) {
+                        selectedItemID = selectionID
+                    } content: {
+                        StubRow(
+                            stub: stub,
+                            isRehydrating: viewModel.isRehydrating(skillID: stub.id)
+                        ) {
+                            Task {
+                                if await viewModel.rehydrate(stub) {
+                                    selectedItemID = defaultSelectionID()
+                                    await onLibraryMutation()
+                                }
+                            }
+                        }
                     }
                 }
             }
-            .tag(selectionID(forStub: stub.id))
-            .listRowSeparator(.visible)
-            .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+            .padding(2)
+            .padding(.bottom, 8)
         }
-        .listStyle(.plain)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .scrollContentBackground(.hidden)
         .overlay {
             if viewModel.isLoading && viewModel.stubs.isEmpty {
                 ProgressView()
@@ -259,6 +296,10 @@ struct LibraryView: View {
         case .stub:
             return "No Stubs"
         }
+    }
+
+    private var skillGridColumns: [GridItem] {
+        [GridItem(.adaptive(minimum: 330), spacing: 16, alignment: .top)]
     }
 
     private func selectionID(forPackage packageID: String) -> String {
@@ -342,7 +383,7 @@ struct LibraryView: View {
             HStack(alignment: .center, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     LocalizedText("Installed")
-                        .font(.system(.largeTitle, weight: .bold))
+                        .font(.popLargeTitle)
                     Text(localization.string(
                         "library.summary",
                         viewModel.packages.count,
@@ -415,8 +456,8 @@ struct LibraryView: View {
             }
         }
         .padding(.horizontal, 28)
-        .padding(.vertical, 18)
-        .popPageBackground()
+        .padding(.top, 24)
+        .padding(.bottom, 18)
     }
 }
 
@@ -474,9 +515,8 @@ struct UnmanagedSkillsBanner: View {
                 }
             }
         }
-        .padding(.horizontal, 28)
-        .padding(.vertical, 12)
-        .background(Color.popStatusWarning.opacity(0.08))
+        .padding(16)
+        .popMaterialCard(cornerRadius: PopskillRadius.card)
     }
 }
 
@@ -556,7 +596,7 @@ struct PackageDetailPane: View {
                 ContentUnavailableView("No Package Selected", systemImage: "square.stack.3d.up")
             }
         }
-        .background(Color.popHeaderBackground.opacity(0.45))
+        .clipShape(RoundedRectangle(cornerRadius: PopskillRadius.largeCard, style: .continuous))
     }
 }
 
@@ -621,7 +661,7 @@ struct PackageRow: View {
                 }
             }
         }
-        .frame(minHeight: package.type == .composite ? 130 : 86)
+        .frame(minHeight: package.type == .composite ? 128 : 82)
     }
 }
 
@@ -853,7 +893,7 @@ struct SkillDetailPane: View {
                 ContentUnavailableView("No Selection", systemImage: "sidebar.right")
             }
         }
-        .background(Color.popHeaderBackground.opacity(0.45))
+        .clipShape(RoundedRectangle(cornerRadius: PopskillRadius.largeCard, style: .continuous))
     }
 }
 
@@ -921,7 +961,7 @@ struct StubDetailPane: View {
                 ContentUnavailableView("No Stub Selected", systemImage: "icloud")
             }
         }
-        .background(Color.popHeaderBackground.opacity(0.45))
+        .clipShape(RoundedRectangle(cornerRadius: PopskillRadius.largeCard, style: .continuous))
     }
 }
 
@@ -967,8 +1007,8 @@ struct SkillRow: View {
                         .lineLimit(1)
                 }
 
-                HStack(spacing: 8) {
-                    ForEach([TargetApp.claude, .codex, .gemini], id: \.id) { app in
+                LazyVGrid(columns: appToggleColumns, alignment: .leading, spacing: 8) {
+                    ForEach(TargetApp.allCases, id: \.id) { app in
                         AppToggle(
                             title: app.title,
                             isOn: skill.apps.isEnabled(app),
@@ -978,10 +1018,13 @@ struct SkillRow: View {
                         }
                     }
                 }
-                .fixedSize(horizontal: true, vertical: false)
             }
         }
-        .frame(minHeight: 94)
+        .frame(minHeight: 148)
+    }
+
+    private var appToggleColumns: [GridItem] {
+        [GridItem(.adaptive(minimum: 78), spacing: 8, alignment: .leading)]
     }
 }
 

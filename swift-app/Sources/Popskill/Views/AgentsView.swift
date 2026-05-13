@@ -84,23 +84,24 @@ struct AgentsView: View {
         VStack(spacing: 0) {
             header
 
-            Divider()
-
             if let errorMessage = viewModel.errorMessage {
                 ErrorBanner(message: errorMessage) {
                     Task { await viewModel.load() }
                 }
-                Divider()
+                .padding(.horizontal, 28)
+                .padding(.bottom, 12)
             }
 
-            HStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 20) {
                 agentList
 
-                Divider()
-
                 AgentDetailPane(agent: selectedAgent, targets: viewModel.targets)
-                    .frame(width: 320)
+                    .frame(width: 340)
+                    .popMaterialCard()
             }
+            .padding(.horizontal, 28)
+            .padding(.bottom, 24)
+            .frame(maxHeight: .infinity, alignment: .top)
             .onChange(of: viewModel.agents) { _, agents in
                 if selectedAgentID == nil {
                     selectedAgentID = agents.first?.id
@@ -127,7 +128,7 @@ struct AgentsView: View {
             HStack(alignment: .center, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Agents")
-                        .font(.system(.largeTitle, weight: .bold))
+                        .font(.popLargeTitle)
                     Text("\(viewModel.agents.count) Claude Code agents · \(viewModel.detectedTargetCount)/\(viewModel.targets.count) targets")
                         .foregroundStyle(.secondary)
                 }
@@ -164,18 +165,31 @@ struct AgentsView: View {
             .frame(width: 220, alignment: .leading)
         }
         .padding(.horizontal, 28)
-        .padding(.vertical, 18)
-        .popPageBackground()
+        .padding(.top, 24)
+        .padding(.bottom, 18)
     }
 
     private var agentList: some View {
-        List(viewModel.filteredAgents, selection: $selectedAgentID) { agent in
-            AgentRow(agent: agent)
-                .tag(agent.id)
-                .listRowSeparator(.visible)
-                .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 16) {
+                PopskillSectionTitle(
+                    title: "Agents",
+                    subtitle: "\(viewModel.filteredAgents.count) local agents"
+                )
+
+                ForEach(viewModel.filteredAgents) { agent in
+                    PopskillSelectableCard(isSelected: selectedAgentID == agent.id) {
+                        selectedAgentID = agent.id
+                    } content: {
+                        AgentRow(agent: agent)
+                    }
+                }
+            }
+            .padding(2)
+            .padding(.bottom, 8)
         }
-        .listStyle(.plain)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .scrollContentBackground(.hidden)
         .overlay {
             if viewModel.isLoading && viewModel.agents.isEmpty {
                 ProgressView()
@@ -292,7 +306,7 @@ struct AgentDetailPane: View {
                 ContentUnavailableView("No Agent Selected", systemImage: "person.crop.circle")
             }
         }
-        .background(Color.popHeaderBackground.opacity(0.45))
+        .clipShape(RoundedRectangle(cornerRadius: PopskillRadius.largeCard, style: .continuous))
     }
 
     private func timestampText(_ value: Int?) -> String {

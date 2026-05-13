@@ -152,15 +152,12 @@ struct DetailSection<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        PopskillCard(padding: 16, cornerRadius: PopskillRadius.card) {
             SectionHeading(title: title, accent: accent)
             VStack(alignment: .leading, spacing: 8) {
                 content
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(PopskillSpacing.md)
-        .popCard(cornerRadius: PopskillRadius.smallCard, shadowOpacity: 0.02)
     }
 }
 

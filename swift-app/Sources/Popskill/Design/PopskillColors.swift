@@ -47,7 +47,7 @@ enum PopskillSpacing {
 enum PopskillRadius {
     static let button: CGFloat = 8
     static let smallCard: CGFloat = 12
-    static let card: CGFloat = 16
+    static let card: CGFloat = 18
     static let largeCard: CGFloat = 20
 }
 
@@ -77,9 +77,9 @@ struct PopskillCanvasBackground: View {
             Color.popMainBackground
             LinearGradient(
                 colors: [
-                    Color.popHeaderBackground.opacity(0.34),
-                    Color.popSectionBlue.opacity(0.05),
-                    Color.popSectionOrange.opacity(0.035)
+                    Color.popHeaderBackground.opacity(0.30),
+                    Color.popSectionBlue.opacity(0.045),
+                    Color.popSectionOrange.opacity(0.030)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -104,10 +104,10 @@ private struct PopCardModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .background(Color.popCardBackground, in: RoundedRectangle(cornerRadius: cornerRadius))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(Color.popBorder.opacity(borderOpacity), lineWidth: 1)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(Color.white.opacity(0.08 * borderOpacity), lineWidth: 0.7)
             )
             .shadow(color: .black.opacity(shadowOpacity), radius: 8, x: 0, y: 2)
     }
