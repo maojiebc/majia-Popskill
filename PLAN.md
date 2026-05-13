@@ -1012,7 +1012,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 | 原阶段 | 原计划 | 当前状态 | 发布前剩余 |
 | --- | --- | --- | --- |
 | Week 2 | Discover 页 V1 | ✅ 已完成 | 做视觉 polish，补截图/空态文案；Categories/Top Charts 不做独立路由 |
-| Week 3 | Detail 页 + 安装/卸载流程 | ✅ 已完成 | 继续打磨 install-plan 的风险解释和失败态 |
+| Week 3 | Detail 页 + 安装/卸载流程 | ✅ 已完成 | install-plan 目标 App 缓存和风险解释已打磨；更细的失败态仍可继续补 |
 | Week 4 | Insights + transcript 解析 | ✅ 基础完成 | 已补本地聚合/忽略正文/非 skill 级归因说明；真实 skill 级归因样例仍待验证 |
 | Week 5 | Updates 页 + 自动检查 | ✅ Updates 页面完成 | Sparkle SDK 尚未集成；Popskill 自身更新仍是 appcast 生成 smoke |
 | Week 6 | Stub 状态机 | ✅ 已完成 | 60 天建议已落在 Idle Candidates；后续可补 transcript 归因权重 |
@@ -1022,7 +1022,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 ### v0.1 收口清单
 
 - [x] sidecar/library 主链路：本机 list/detail/toggle/import/update/uninstall/backups/repositories。
-- [x] Discover 安装计划：安装前可预览目标路径、动作和 AgentShield 结果。
+- [x] Discover 安装计划：安装前可预览目标路径、动作、目标 App 和 AgentShield rollback；切换目标 App 会清掉旧计划。
 - [x] AgentShield gate：unmanaged import 和 discover install 均能阻断高风险 skill。
 - [x] Stub MVP：stub/rehydrate、Idle Candidates、bulk stub dry-run/执行。
 - [x] WebDAV sidecar 边界：只读 status / remote info / local backup summary。
