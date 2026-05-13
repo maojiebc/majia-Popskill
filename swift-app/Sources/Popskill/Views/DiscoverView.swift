@@ -8,6 +8,7 @@ final class DiscoverViewModel {
     var query = ""
     var selectedInstallApp: TargetApp = .claude
     var isLoading = false
+    var hasLoadedOnce = false
     var errorMessage: String?
 
     private let client = SkillCLIClient()
@@ -19,6 +20,7 @@ final class DiscoverViewModel {
 
         do {
             skills = try await client.discover(query: query, limit: 80)
+            hasLoadedOnce = true
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -103,6 +105,11 @@ struct DiscoverView: View {
             }
         }
         .background(Color.popMainBackground)
+        .task {
+            if !viewModel.hasLoadedOnce {
+                await viewModel.search()
+            }
+        }
     }
 
     private var header: some View {
