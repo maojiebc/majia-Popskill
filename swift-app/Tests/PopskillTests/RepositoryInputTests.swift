@@ -36,6 +36,17 @@ struct RepositoryInputTests {
     }
 
     @Test
+    func stripsOnlyGitSuffix() {
+        let parts = RepositoriesViewModel.normalizedRepositoryParts(
+            ownerInput: "maojiebc/widget.git-tools.git",
+            nameInput: ""
+        )
+
+        #expect(parts?.owner == "maojiebc")
+        #expect(parts?.name == "widget.git-tools")
+    }
+
+    @Test
     func rejectsIncompleteInput() {
         let parts = RepositoriesViewModel.normalizedRepositoryParts(
             ownerInput: "maojiebc",

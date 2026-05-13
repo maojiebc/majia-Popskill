@@ -91,7 +91,6 @@ final class RepositoriesViewModel {
             .replacingOccurrences(of: "https://github.com/", with: "")
             .replacingOccurrences(of: "http://github.com/", with: "")
             .replacingOccurrences(of: "git@github.com:", with: "")
-            .replacingOccurrences(of: ".git", with: "")
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
 
         let parts = normalized.split(separator: "/", omittingEmptySubsequences: true)
@@ -99,7 +98,12 @@ final class RepositoriesViewModel {
             return nil
         }
 
-        return (String(parts[0]), String(parts[1]))
+        var name = String(parts[1])
+        if name.hasSuffix(".git") {
+            name.removeLast(4)
+        }
+
+        return (String(parts[0]), name)
     }
 
     func setEnabled(_ enabled: Bool, for repository: SkillRepository) async {
