@@ -44,21 +44,20 @@ final class RepositoriesViewModel {
             return false
         }
 
-        let owner = owner.trimmingCharacters(in: .whitespacesAndNewlines)
-        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let branch = branch.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !owner.isEmpty, !name.isEmpty else {
+        guard let repositoryParts = Self.normalizedRepositoryParts(ownerInput: owner, nameInput: name) else {
             errorMessage = "Repository owner and name are required"
             return false
         }
+
+        let branch = branch.trimmingCharacters(in: .whitespacesAndNewlines)
 
         isAdding = true
         errorMessage = nil
 
         do {
             let repository = try await client.addRepository(
-                owner: owner,
-                name: name,
+                owner: repositoryParts.owner,
+                name: repositoryParts.name,
                 branch: branch.isEmpty ? "main" : branch,
                 enabled: enabled
             )
@@ -72,6 +71,32 @@ final class RepositoriesViewModel {
             isAdding = false
             return false
         }
+    }
+
+    nonisolated static func normalizedRepositoryParts(
+        ownerInput: String,
+        nameInput: String
+    ) -> (owner: String, name: String)? {
+        let ownerInput = ownerInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        let nameInput = nameInput.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if !nameInput.isEmpty {
+            return ownerInput.isEmpty ? nil : (ownerInput, nameInput)
+        }
+
+        let normalized = ownerInput
+            .replacingOccurrences(of: "https://github.com/", with: "")
+            .replacingOccurrences(of: "http://github.com/", with: "")
+            .replacingOccurrences(of: "git@github.com:", with: "")
+            .replacingOccurrences(of: ".git", with: "")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+
+        let parts = normalized.split(separator: "/", omittingEmptySubsequences: true)
+        guard parts.count >= 2 else {
+            return nil
+        }
+
+        return (String(parts[0]), String(parts[1]))
     }
 
     func setEnabled(_ enabled: Bool, for repository: SkillRepository) async {
@@ -246,7 +271,7 @@ struct AddRepositorySheet: View {
                 .font(.title2.weight(.bold))
 
             VStack(alignment: .leading, spacing: 10) {
-                TextField("Owner or organization", text: $owner)
+                TextField("Owner, owner/repo, or GitHub URL", text: $owner)
                 TextField("Repository name", text: $name)
                 TextField("Branch", text: $branch)
                 Toggle("Enabled", isOn: $enabled)
@@ -269,7 +294,7 @@ struct AddRepositorySheet: View {
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
-                .disabled(isAdding || owner.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(isAdding || RepositoriesViewModel.normalizedRepositoryParts(ownerInput: owner, nameInput: name) == nil)
             }
         }
         .padding(24)
