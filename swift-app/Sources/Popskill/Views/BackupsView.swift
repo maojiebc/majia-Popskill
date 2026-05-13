@@ -150,7 +150,7 @@ struct BackupsView: View {
             Spacer()
 
             Picker("Restore In", selection: $viewModel.selectedRestoreApp) {
-                ForEach(TargetApp.allCases, id: \.id) { app in
+                ForEach(TargetApp.supported, id: \.id) { app in
                     Text(app.title).tag(app)
                 }
             }

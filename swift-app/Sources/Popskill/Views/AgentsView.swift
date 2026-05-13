@@ -45,15 +45,19 @@ final class AgentsViewModel {
     }
 
     var detectedTargetCount: Int {
-        targets.filter(\.detected).count
+        knownTargets.filter(\.detected).count
     }
 
-    var detectedTargets: [AgentTarget] {
-        targets.filter(\.detected)
+    var knownTargets: [AgentTarget] {
+        targets.filter(\.isRegistryTarget)
+    }
+
+    var importedTargets: [AgentTarget] {
+        targets.filter(\.isImportedTarget)
     }
 
     var missingTargets: [AgentTarget] {
-        targets.filter { !$0.detected }
+        knownTargets.filter { !$0.detected }
     }
 
     func load() async {
@@ -74,7 +78,7 @@ final class AgentsViewModel {
             let loadedTargets = try await client.listAgentTargets()
 
             agents = loadedAgents
-            targets = loadedTargets
+            targets = TargetAgentRegistry.sort(loadedTargets)
             if !categories.contains(selectedCategory) {
                 selectedCategory = "All"
             }
@@ -137,7 +141,7 @@ struct AgentsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Agents")
                         .font(.popLargeTitle)
-                    Text("\(viewModel.agents.count) Claude Code agents · \(viewModel.detectedTargetCount)/\(viewModel.targets.count) targets")
+                    Text("\(viewModel.agents.count) Claude Code agents · \(viewModel.detectedTargetCount)/\(viewModel.knownTargets.count) detected")
                         .foregroundStyle(.secondary)
                 }
 
@@ -147,6 +151,7 @@ struct AgentsView: View {
                     SummaryMetric(title: "Installed", value: viewModel.agents.count)
                     SummaryMetric(title: "Categories", value: viewModel.categoryCount)
                     SummaryMetric(title: "Targets", value: viewModel.detectedTargetCount)
+                    SummaryMetric(title: "Imported", value: viewModel.importedTargets.count)
                 }
 
                 Button {
@@ -330,23 +335,32 @@ struct AgentDetailPane: View {
 struct AgentTargetOverview: View {
     let targets: [AgentTarget]
 
+    private var knownTargets: [AgentTarget] {
+        targets.filter(\.isRegistryTarget)
+    }
+
+    private var importedTargets: [AgentTarget] {
+        targets.filter(\.isImportedTarget)
+    }
+
     private var detectedTargets: [AgentTarget] {
-        targets.filter(\.detected)
+        knownTargets.filter(\.detected)
     }
 
     private var missingTargets: [AgentTarget] {
-        targets.filter { !$0.detected }
+        knownTargets.filter { !$0.detected }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if detectedTargets.isEmpty && missingTargets.isEmpty {
+            if detectedTargets.isEmpty && missingTargets.isEmpty && importedTargets.isEmpty {
                 LocalizedText("No targets reported")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
                 targetGroup(title: "Detected", targets: detectedTargets, color: .popStatusOK)
                 targetGroup(title: "Missing", targets: missingTargets, color: .popStatusNeutral)
+                targetGroup(title: "Imported", targets: importedTargets, color: .popSectionBlue)
             }
         }
     }

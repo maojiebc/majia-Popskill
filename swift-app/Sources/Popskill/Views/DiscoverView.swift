@@ -312,7 +312,7 @@ struct DiscoverView: View {
 
                 if viewModel.selectedContent == .standaloneSkills {
                     Picker("Install In", selection: $viewModel.selectedInstallApp) {
-                        ForEach(TargetApp.allCases, id: \.id) { app in
+                        ForEach(TargetApp.supported, id: \.id) { app in
                             Text(app.title).tag(app)
                         }
                     }
