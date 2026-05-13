@@ -213,6 +213,7 @@ struct RepositoriesView: View {
         .sheet(isPresented: $isShowingAddSheet) {
             AddRepositorySheet(
                 isAdding: viewModel.isAdding,
+                errorMessage: viewModel.errorMessage,
                 onCancel: {
                     isShowingAddSheet = false
                 },
@@ -245,6 +246,7 @@ struct RepositoriesView: View {
             Spacer()
 
             Button {
+                viewModel.errorMessage = nil
                 isShowingAddSheet = true
             } label: {
                 Image(systemName: "plus")
@@ -273,6 +275,7 @@ struct RepositoriesView: View {
 
 struct AddRepositorySheet: View {
     let isAdding: Bool
+    let errorMessage: String?
     let onCancel: () -> Void
     let onAdd: (String, String, String, Bool) -> Void
 
@@ -285,6 +288,13 @@ struct AddRepositorySheet: View {
         VStack(alignment: .leading, spacing: 18) {
             Text("Add Repository")
                 .font(.title2.weight(.bold))
+
+            if let errorMessage, !errorMessage.isEmpty {
+                Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(Color.popStatusWarning)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             VStack(alignment: .leading, spacing: 10) {
                 TextField("Owner, owner/repo, or GitHub URL", text: $owner)
