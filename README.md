@@ -152,7 +152,7 @@ SwiftUI 端已接入：
 - ✅ Transcript attribution：Insights 本地聚合且忽略正文；真实 transcript 已验证 `attributionSkill` / `attributionPlugin` 字段，Usage / Token Spend 已展示 skill 级统计，Idle Candidates 已接入最近使用归因。
 - ✅ Discover/Library visual pass：Discover 行内 `Plan` / `Install` CTA 可读；带计数的 sidebar 导航可点；Library 行内 app toggle 不再挤压技能标题。
 - ✅ Settings/Updates visual pass：Settings 诊断字段更紧凑；Updates 空态不再显示不可点的主按钮。
-- ✅ Screenshot asset smoke：本地 CI 校验 README 截图存在、PNG 格式、尺寸和文件大小。
+- ✅ Screenshot asset smoke：本地 CI 校验 README 截图存在、PNG 格式、尺寸、文件大小和基础像素方差。
 - ⏳ Apple Developer Program：确认 Developer ID 证书；不加入则需要明确 unsigned/ad-hoc 分发说明。
 - ⏳ Notarization：拿到证书后跑 `scripts/notarize.sh`，验证 `stapler validate` 和 Gatekeeper 打开路径。
 - ✅ Sparkle SDK link：App 已正式链接 Sparkle 2.9.1，`Check for Updates...` 配置守卫、bundle `Sparkle.framework` copy、`SUFeedURL` / `SUPublicEDKey` 注入与 appcast 生成路径可用；公开更新仍需真实 feed、public EdDSA key 和 signed notarized payload 验证。

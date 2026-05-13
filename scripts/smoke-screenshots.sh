@@ -19,6 +19,12 @@ if ! command -v sips >/dev/null 2>&1; then
   exit 127
 fi
 
+HAS_PILLOW=false
+if command -v python3 >/dev/null 2>&1 \
+  && python3 -c 'from PIL import Image, ImageStat' >/dev/null 2>&1; then
+  HAS_PILLOW=true
+fi
+
 for name in "${required[@]}"; do
   path="$SCREENSHOT_DIR/$name"
   if [[ ! -f "$path" ]]; then
@@ -45,6 +51,26 @@ for name in "${required[@]}"; do
   if (( width < MIN_WIDTH || height < MIN_HEIGHT )); then
     echo "screenshot is too small: $path (${width}x${height})" >&2
     exit 1
+  fi
+
+  if [[ "$HAS_PILLOW" == true ]]; then
+    python3 - "$path" <<'PY'
+import sys
+from PIL import Image, ImageStat
+
+path = sys.argv[1]
+image = Image.open(path).convert("RGB")
+image.thumbnail((320, 200))
+stats = ImageStat.Stat(image)
+channel_span = max(high for _, high in stats.extrema) - min(low for low, _ in stats.extrema)
+average_stddev = sum(stats.stddev) / len(stats.stddev)
+
+if channel_span < 64 or average_stddev < 10:
+    raise SystemExit(
+        f"screenshot appears blank or too low-variance: {path} "
+        f"(span={channel_span:.1f}, stddev={average_stddev:.1f})"
+    )
+PY
   fi
 done
 

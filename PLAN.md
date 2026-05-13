@@ -1494,6 +1494,6 @@ open swift-app/Package.swift
 - ✅ Stub 状态机已完成手动 hibernate/metadata/rehydrate，Idle Candidates 已按 60 天 inactive 生命周期 + transcript attribution 最近使用筛选，并支持单个/批量 stub
 - 🔴 WebDAV 手动 sync、正式 notarize、Sparkle 公开更新实测尚未落地
 - ✅ Sparkle SDK 正式 link 已落地：依赖固定为 Sparkle 2.9.1，App 二进制链接 `Sparkle.framework`，菜单入口、feed/key 配置守卫、framework copy hook、release doctor 检查已落地；SwiftPM 下载 Keychain 卡顿通过 `scripts/swiftpm.sh` 临时 HOME 构建 wrapper 固化规避
-- 🟡 视觉 tokens 与主要页面容器已按 `STYLE.md` 落地；Discover/Library/Settings/Updates 截图级 polish 与 README 截图已完成，仍需最终全局一致性检查
+- 🟡 视觉 tokens 与主要页面容器已按 `STYLE.md` 落地；Discover/Library/Settings/Updates 截图级 polish 与 README 截图已完成，screenshot smoke 已校验尺寸/字节/基础像素方差，仍需最终全局一致性检查
 
 下一个动作：v0.1 继续保持 Skill 中心化范围，优先做最终截图 QA、真实签名/公证与 Sparkle 公开 feed/key/signature 实测；Package 能力包重构等 v0.1 发布后进入 v0.2。
