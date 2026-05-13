@@ -10,10 +10,11 @@ Before Apple Developer Program credentials are available, this is expected:
 ./scripts/release-doctor.sh
 ```
 
-- Tools should be present: `codesign`, `security`, `ditto`, `hdiutil`, `install_name_tool`, `otool`, `shasum`, `jq`, `notarytool`, `stapler`.
+- Tools should be present: `codesign`, `security`, `ditto`, `hdiutil`, `install_name_tool`, `otool`, `shasum`, `jq`, `stat`, `/usr/libexec/PlistBuddy`, `notarytool`, `stapler`.
 - Artifacts should exist after local CI: `build/Popskill.app`, `build/Popskill.dmg`.
 - The app bundle should contain `Sparkle.framework`, and the app executable should have an `@executable_path/../Frameworks` rpath.
 - For public releases, the app bundle version and bundle identifier should match `POPSKILL_APP_VERSION` and `POPSKILL_BUNDLE_IDENTIFIER`.
+- If `build/release-manifest.json` exists, release doctor should confirm its version/build, artifact path/name, SHA-256, and byte size match the current app bundle and DMG.
 - Release doctor should fail on missing Developer ID identity and missing notary credentials.
 - Release doctor should fail if the Sparkle feed, download URL, app bundle metadata, or existing appcast still contains a placeholder `example.com` URL.
 - When Sparkle env vars are set, release doctor should confirm the `.app` bundle's `SUFeedURL` and `SUPublicEDKey` match those env vars. If they mismatch, rebuild with `scripts/package-dev-app.sh`.
@@ -93,10 +94,12 @@ Then check release readiness:
 
 With Developer ID and notary credentials present, release doctor should have zero failures. Sparkle warnings are allowed only for unsigned/manual distribution builds.
 
-If you change `POPSKILL_SPARKLE_FEED_URL`, `POPSKILL_SPARKLE_PUBLIC_ED_KEY`, `POPSKILL_APP_VERSION`, or `POPSKILL_BUNDLE_IDENTIFIER`, rebuild the app bundle before trusting release doctor:
+If you change `POPSKILL_SPARKLE_FEED_URL`, `POPSKILL_SPARKLE_PUBLIC_ED_KEY`, `POPSKILL_APP_VERSION`, `POPSKILL_APP_BUILD`, or `POPSKILL_BUNDLE_IDENTIFIER`, rebuild the app bundle and regenerate release artifacts before trusting release doctor:
 
 ```bash
 ./scripts/package-dev-app.sh
+./scripts/package-dmg.sh
+./scripts/release-manifest.sh
 ```
 
 ## Notarize

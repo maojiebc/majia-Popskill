@@ -5,12 +5,14 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_PATH="${1:-${POPSKILL_APP_PATH:-$ROOT_DIR/build/Popskill.app}}"
 DMG_PATH="${POPSKILL_DMG_PATH:-$ROOT_DIR/build/Popskill.dmg}"
 APPCAST_PATH="${POPSKILL_APPCAST_PATH:-$ROOT_DIR/build/appcast.xml}"
+MANIFEST_PATH="${POPSKILL_RELEASE_MANIFEST_PATH:-$ROOT_DIR/build/release-manifest.json}"
 SIGN_IDENTITY="${POPSKILL_DEVELOPER_ID_APPLICATION:-${POPSKILL_DEVELOPER_ID:-}}"
 KEYCHAIN_PROFILE="${POPSKILL_NOTARY_KEYCHAIN_PROFILE:-}"
 APPLE_ID="${POPSKILL_APPLE_ID:-}"
 TEAM_ID="${POPSKILL_TEAM_ID:-}"
 NOTARY_PASSWORD="${POPSKILL_NOTARY_PASSWORD:-}"
 EXPECTED_APP_VERSION="${POPSKILL_APP_VERSION:-}"
+EXPECTED_APP_BUILD="${POPSKILL_APP_BUILD:-}"
 EXPECTED_BUNDLE_IDENTIFIER="${POPSKILL_BUNDLE_IDENTIFIER:-}"
 SPARKLE_FEED_URL="${POPSKILL_SPARKLE_FEED_URL:-}"
 SPARKLE_PUBLIC_ED_KEY="${POPSKILL_SPARKLE_PUBLIC_ED_KEY:-}"
@@ -71,6 +73,7 @@ check_tool install_name_tool
 check_tool shasum
 check_tool jq
 check_tool otool
+check_tool stat
 [[ -x "$PLIST_BUDDY" ]] && ok "tool found: $PLIST_BUDDY" || fail "missing required tool: $PLIST_BUDDY"
 check_xcrun_tool notarytool
 check_xcrun_tool stapler
@@ -111,6 +114,7 @@ if [[ -d "$APP_PATH" ]]; then
   info_plist="$APP_PATH/Contents/Info.plist"
   if [[ -f "$info_plist" && -x "$PLIST_BUDDY" ]]; then
     app_version="$("$PLIST_BUDDY" -c 'Print :CFBundleShortVersionString' "$info_plist" 2>/dev/null || true)"
+    app_build="$("$PLIST_BUDDY" -c 'Print :CFBundleVersion' "$info_plist" 2>/dev/null || true)"
     bundle_identifier="$("$PLIST_BUDDY" -c 'Print :CFBundleIdentifier' "$info_plist" 2>/dev/null || true)"
     bundle_feed_url="$("$PLIST_BUDDY" -c 'Print :SUFeedURL' "$info_plist" 2>/dev/null || true)"
     bundle_public_ed_key="$("$PLIST_BUDDY" -c 'Print :SUPublicEDKey' "$info_plist" 2>/dev/null || true)"
@@ -123,6 +127,14 @@ if [[ -d "$APP_PATH" ]]; then
       fi
     elif [[ "$app_version" == *"-dev"* ]]; then
       warn "app version is a development version: $app_version"
+    fi
+
+    if [[ -n "$EXPECTED_APP_BUILD" ]]; then
+      if [[ "$app_build" == "$EXPECTED_APP_BUILD" ]]; then
+        ok "app build matches POPSKILL_APP_BUILD: $app_build"
+      else
+        fail "app build mismatch: expected $EXPECTED_APP_BUILD, found ${app_build:-unknown}"
+      fi
     fi
 
     if [[ -n "$EXPECTED_BUNDLE_IDENTIFIER" ]]; then
@@ -167,6 +179,76 @@ if [[ -f "$DMG_PATH" ]]; then
   ok "DMG exists: $DMG_PATH"
 else
   warn "DMG not found: $DMG_PATH (run scripts/package-dmg.sh)"
+fi
+
+if [[ -f "$MANIFEST_PATH" ]]; then
+  ok "release manifest exists: $MANIFEST_PATH"
+
+  if jq -e type "$MANIFEST_PATH" >/dev/null 2>&1; then
+    manifest_version="$(jq -r '.version // ""' "$MANIFEST_PATH")"
+    manifest_build="$(jq -r '.build // ""' "$MANIFEST_PATH")"
+    manifest_artifact_name="$(jq -r '.artifactName // ""' "$MANIFEST_PATH")"
+    manifest_artifact_path="$(jq -r '.artifactPath // ""' "$MANIFEST_PATH")"
+    manifest_download_url="$(jq -r '.downloadUrl // ""' "$MANIFEST_PATH")"
+    manifest_sha="$(jq -r '.sha256 // ""' "$MANIFEST_PATH")"
+    manifest_bytes="$(jq -r '.bytes // ""' "$MANIFEST_PATH")"
+
+    check_placeholder_url "release manifest downloadUrl" "$manifest_download_url"
+
+    if [[ -n "${app_version:-}" && "$manifest_version" == "$app_version" ]]; then
+      ok "release manifest version matches app bundle: $manifest_version"
+    elif [[ -n "${app_version:-}" ]]; then
+      fail "release manifest version mismatch: expected app bundle version ${app_version:-unknown}, found ${manifest_version:-unknown}"
+    fi
+
+    if [[ -n "${app_build:-}" && "$manifest_build" == "$app_build" ]]; then
+      ok "release manifest build matches app bundle: $manifest_build"
+    elif [[ -n "${app_build:-}" ]]; then
+      fail "release manifest build mismatch: expected app bundle build ${app_build:-unknown}, found ${manifest_build:-unknown}"
+    fi
+
+    if [[ -n "$EXPECTED_APP_VERSION" && "$manifest_version" != "$EXPECTED_APP_VERSION" ]]; then
+      fail "release manifest version mismatch: expected POPSKILL_APP_VERSION $EXPECTED_APP_VERSION, found ${manifest_version:-unknown}"
+    fi
+
+    if [[ -n "$EXPECTED_APP_BUILD" && "$manifest_build" != "$EXPECTED_APP_BUILD" ]]; then
+      fail "release manifest build mismatch: expected POPSKILL_APP_BUILD $EXPECTED_APP_BUILD, found ${manifest_build:-unknown}"
+    fi
+
+    if [[ -f "$DMG_PATH" ]]; then
+      expected_artifact_name="$(basename "$DMG_PATH")"
+      if [[ "$manifest_artifact_name" == "$expected_artifact_name" ]]; then
+        ok "release manifest artifactName matches DMG: $manifest_artifact_name"
+      else
+        fail "release manifest artifactName mismatch: expected $expected_artifact_name, found ${manifest_artifact_name:-unknown}"
+      fi
+
+      if [[ "$manifest_artifact_path" == "$DMG_PATH" ]]; then
+        ok "release manifest artifactPath matches DMG path"
+      else
+        fail "release manifest artifactPath mismatch: expected $DMG_PATH, found ${manifest_artifact_path:-unknown}"
+      fi
+
+      actual_sha="$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')"
+      actual_bytes="$(stat -f '%z' "$DMG_PATH")"
+
+      if [[ "$manifest_sha" == "$actual_sha" ]]; then
+        ok "release manifest sha256 matches DMG"
+      else
+        fail "release manifest sha256 mismatch; rerun scripts/release-manifest.sh"
+      fi
+
+      if [[ "$manifest_bytes" == "$actual_bytes" ]]; then
+        ok "release manifest byte size matches DMG"
+      else
+        fail "release manifest byte size mismatch; rerun scripts/release-manifest.sh"
+      fi
+    fi
+  else
+    fail "release manifest is not valid JSON: $MANIFEST_PATH"
+  fi
+else
+  warn "release manifest not found: $MANIFEST_PATH (run scripts/release-manifest.sh)"
 fi
 
 echo
