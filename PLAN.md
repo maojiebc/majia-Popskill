@@ -1050,6 +1050,7 @@ struct CLIResponse<T: Decodable>: Decodable {
 - [x] release smoke：DMG、release manifest、Sparkle appcast 生成脚本。
 - [x] release doctor：检查 Developer ID、notarytool/stapler、notary 凭据、app/dmg/appcast 前置条件。
 - [x] release runbook：`docs/release-runbook.md` 写明 Developer ID、notary keychain profile、Sparkle env、notarize、DMG、appcast 和 Gatekeeper 验证步骤。
+- [x] release notes draft：`docs/release-notes-v0.1.md` 写明 highlights、隐私边界、已知限制和验证入口。
 - [x] 视觉 polish 第一轮：Discover 行内 `Plan` / `Install` 可读，带 badge 的 sidebar 项可导航，Library 行内 app toggle 不挤压标题。
 - [x] 视觉 polish 收尾：Settings 诊断字段紧凑化，Updates 空态隐藏不可用批量操作。
 - [ ] Apple Developer Program：确认是否加入；不加入则只能走 ad-hoc/unsigned 分发说明。
