@@ -1,5 +1,7 @@
 # Popskill —— 视觉设计语言
 
+> 给 AI agent 用的标准版请先看 [DESIGN.md](./DESIGN.md)（9 section + YAML frontmatter）。本文件保留为详细版：Surge.app teardown、token 解释、页面拆解和历史设计依据都在这里。
+>
 > 这是 Popskill 的 UI 设计参考。**主要灵感来源：[Surge for Mac](https://nssurge.com/)**，这是目前 Mac 上设计语言最像 App Store / 系统设置又有自己个性的第三方桌面应用。
 >
 > 工程师/设计师拿到这份文档应该：

@@ -4,7 +4,7 @@
 > Mac 上的 AI 能力 App Store，从 Claude Code Agent Skills 开始。
 
 <p align="center">
-  <strong>Status: Pre-alpha — MVP feature verticals compile and pass local CI; v0.1 release hardening is in progress.</strong>
+  <strong>Status: Pre-alpha — v0.3 self-use iteration is active; MVP verticals compile and pass local CI.</strong>
 </p>
 
 ---
@@ -23,7 +23,7 @@ Popskill aims to be the Mac App Store for AI capabilities, starting with the App
 
 **Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
 
-**Current stage**: MVP feature verticals are implemented locally. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install-plan/install/update/uninstall/import/repository/backup/WebDAV status/config/remote-info/sync-plan flows, plus read-only `agent-list`, `agent-targets`, `agent-catalog`, and `agent-install-plan` flows for local Claude Code agents, Agent-capable tools, and AgencyAgents content; SwiftUI Library + Agents + Discover + Repositories + Updates + Backups + Insights + Settings compile and pass tests; `scripts/ci-local.sh` verifies Rust/Swift builds, read-only sidecar/Agent smoke, native launch smoke, bundle smoke, screenshot asset smoke, and release artifact smoke. Remaining v0.1 work is release hardening: Developer ID signing/notarization, Sparkle public feed/key/signature verification, WebDAV manual sync, and final screenshot QA. See [PLAN.md](./PLAN.md) and [STYLE.md](./STYLE.md) for the full picture.
+**Current stage**: MVP feature verticals are implemented locally. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install-plan/install/update/uninstall/import/repository/backup/WebDAV status/config/remote-info/sync-plan flows, package-list/detail/install/config previews, plus read-only `agent-list`, `agent-targets`, `agent-catalog`, and `agent-install-plan` flows for local Claude Code agents, Agent-capable tools, and AgencyAgents content; SwiftUI Library + Discover now expose capability packages (composite + standalone) alongside the existing skill workflows; Agents + Repositories + Updates + Backups + Insights + Settings compile and pass tests. `scripts/ci-local.sh` verifies Rust/Swift builds, read-only sidecar/Agent/package smoke, native launch smoke, bundle smoke, screenshot asset smoke, and release artifact smoke. Release hardening remains available but paused for v0.3 self-use. See [PLAN.md](./PLAN.md), [DESIGN.md](./DESIGN.md), and [STYLE.md](./STYLE.md) for the full picture.
 
 ## Where Popskill Fits
 
@@ -43,6 +43,10 @@ The planned v0.2 Package model is therefore not "first ever"; it is Popskill's a
 Popskill is a local asset manager, so it should feel like a Mac utility instead of a web app in a desktop shell. We chose Swift + SwiftUI for instant launch, lower memory overhead, native sidebar/window behavior, and a design language that can follow macOS conventions closely.
 
 If you need a cross-platform LLM chat client, [Cherry Studio](https://github.com/CherryHQ/cherry-studio) is excellent. Popskill is for Mac users who want native polish around the AI capabilities installed on their machine.
+
+## Design System
+
+Popskill follows the Google Stitch-style [DESIGN.md](./DESIGN.md) structure for agent-readable product design rules. [STYLE.md](./STYLE.md) stays as the detailed Surge teardown and implementation reference.
 
 ## Screenshots
 
@@ -124,6 +128,10 @@ POPSKILL_WEBDAV_PASSWORD='<password>' ./skill-cli/target/debug/skill-cli webdav-
 ./skill-cli/target/debug/skill-cli webdav-remote-info --json
 ./skill-cli/target/debug/skill-cli webdav-sync-plan --json
 ./skill-cli/target/debug/skill-cli list --json
+./skill-cli/target/debug/skill-cli package-list --json
+./skill-cli/target/debug/skill-cli package-detail pkg:lark --json
+./skill-cli/target/debug/skill-cli package-install pkg:lark --json
+POPSKILL_LARK_APP_SECRET='<secret>' ./skill-cli/target/debug/skill-cli package-config pkg:lark --key lark.app_secret --value-env POPSKILL_LARK_APP_SECRET --json
 ./skill-cli/target/debug/skill-cli agent-list --json
 ./skill-cli/target/debug/skill-cli agent-targets --json
 ./skill-cli/target/debug/skill-cli agent-catalog --query xiaohongshu --limit 10 --json

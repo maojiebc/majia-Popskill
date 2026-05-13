@@ -9,7 +9,7 @@
 > - ✅ A 阶段：Sidecar 剥离可行性静态验证（lib.rs 已 pub use SkillService）
 > - ✅ C 阶段：产品形态 V1（5 页 wireframe + 状态机 + 决策表）
 > - ✅ D-prep 阶段：视觉设计语言（STYLE.md）+ Surge.app teardown 验证
-> - 🚧 MVP 校准：Rust sidecar + SwiftUI Library / Agents / Discover / Updates / Backups / Insights 主流程已通，Discover/Library/Settings/Updates 截图级 polish 已完成，正在补发布关键路径
+> - 🚧 v0.3 自用版收尾：Rust sidecar + SwiftUI Library / Discover / Agents / Updates / Backups / Insights 主流程已通；Package 二元模型、i18n、DESIGN.md 标准化正在落地；release/notarize 链路保留但暂缓
 
 ---
 
@@ -30,7 +30,7 @@
 12. [引用资料](#12-引用资料)
 13. [验证清单](#13-验证清单)
 14. [词汇表](#14-词汇表)
-15. [v0.2 战略储备：Package 能力包重构](#15-v02-战略储备package-能力包重构)
+15. [v0.2/v0.3 实现状态：Package 能力包重构](#15-v02v03-实现状态package-能力包重构)
 
 ---
 
@@ -418,7 +418,10 @@
 
 ### 3.4 视觉设计语言
 
-**详见独立文档 [STYLE.md](./STYLE.md)**。
+设计系统分两层维护：
+
+- [DESIGN.md](./DESIGN.md)：Google Stitch 风格的标准版（9 section + YAML frontmatter），给 AI agent 和外部设计工具优先读取。
+- [STYLE.md](./STYLE.md)：详细版，保留 Surge.app teardown、设计 token 来历、页面拆解和历史说明。
 
 灵感来源：**Surge for Mac**（用户审美 anchor）。核心要素：
 - 浅紫白渐变背景 + 大量白色圆角卡片
@@ -1328,9 +1331,9 @@ find ~/.claude/projects -name '*.jsonl' -print0 \
 
 ---
 
-## 15. v0.2 战略储备：Package 能力包重构
+## 15. v0.2/v0.3 实现状态：Package 能力包重构
 
-> 重要边界：v0.1 **不做 Package 代码重构**。本节只作为 v0.2 战略储备，等 v0.1 发布后再启动实现。
+> 2026-05-13 v0.3 校准：Package 不再只是战略储备，已进入自用版实现。v0.3 先做只读/preview 闭环和 UI 证明，不拆现有 Skill / Agent / Repo / Backup / WebDAV / Sparkle 等模块。
 
 ### 15.1 原点校准
 
@@ -1449,19 +1452,18 @@ skill-cli install-plan <skill-key>
 skill-cli install <skill-key>
 ```
 
-v0.2 新增 Package 级命令：
+v0.3 新增 Package 级命令：
 
 ```bash
 skill-cli package-list
 skill-cli package-detail <package-id>
-skill-cli package-install-plan <package-id>
-skill-cli package-install <package-id>
+skill-cli package-install <package-id>           # read-only preview in v0.3
 skill-cli package-config <package-id> --key <key> --value-env <env>
 ```
 
 实现原则：
 
-- 先做 `package-install-plan`，延续 v0.1 已验证的 read-only preview 模式。
+- `package-install` 在 v0.3 先返回 read-only preview，延续 v0.1 已验证的 preview 模式。
 - 所有 secret 只通过 env / Keychain，不能进入 argv、SQLite 明文字段或日志。
 - Package 安装器必须能解释依赖图、缺失组件、冲突路径和回滚策略。
 - AgentShield 从 Skill 级 gate 升级为 Package 级 component gate。
@@ -1536,8 +1538,10 @@ open swift-app/Package.swift
 - ✅ 静态验证剥离可行性（A 阶段）
 - ✅ 产品形态设计 V1（C 阶段）与 `STYLE.md`
 - ✅ `cc-switch` 作为 git submodule 固定到 v3.14.1
-- ✅ `skill-cli` sidecar 已覆盖 list/detail/toggle/discover/install-plan/install/update/uninstall/import/repo/backup/agent-list/agent-targets/agent-catalog/agent-install-plan/health
+- ✅ `skill-cli` sidecar 已覆盖 list/detail/toggle/discover/install-plan/install/update/uninstall/import/repo/backup/agent-list/agent-targets/agent-catalog/agent-install-plan/package-list/package-detail/package-install/package-config/health
 - ✅ SwiftUI Library / Agents / Discover / Updates / Backups / Insights / Settings 主页面可编译
+- ✅ v0.3 Package 二元模型已启动：内置 Feishu / Lark 复合包、PDF 独立包，现有 Skill 自动包装为 standalone package，Library / Discover 可按能力包与独立 Skill 浏览
+- ✅ i18n 基础已落地：Settings 可切 System / English / 简体中文，核心导航、标题、按钮和状态标签走 Localizable.strings
 - ✅ 行内 Claude/Codex/Gemini toggle、Stub / Rehydrate 与详情页多 app toggle 已接 sidecar
 - ✅ 自定义 skill repository 管理、sidecar health、backup 管理已倒灌进计划
 - ✅ AgentShield sidecar、Library 手动/持久化扫描、install-plan 安全预览、安装后 blocked 回滚、unmanaged import 前阻断已落地
@@ -1549,4 +1553,4 @@ open swift-app/Package.swift
 - ✅ Sparkle SDK 正式 link 已落地：依赖固定为 Sparkle 2.9.1，App 二进制链接 `Sparkle.framework`，菜单入口、feed/key 配置守卫、framework copy hook、release doctor metadata/strict gate 检查已落地；SwiftPM 下载 Keychain 卡顿通过 `scripts/swiftpm.sh` 临时 HOME 构建 wrapper 固化规避
 - 🟡 视觉 tokens 与主要页面容器已按 `STYLE.md` 落地；Discover/Library/Settings/Updates 截图级 polish 与 README 截图已完成，screenshot smoke 已校验尺寸/字节/基础像素方差，仍需最终全局一致性检查
 
-下一个动作：v0.1 继续保持 Skill 中心化范围，优先做最终截图 QA、真实签名/公证与 Sparkle 公开 feed/key/signature 实测；Package 能力包重构等 v0.1 发布后进入 v0.2。
+下一个动作：v0.3 继续补齐截图级验证与小范围 bug 修复；真实签名/公证与 Sparkle 公开 feed/key/signature 实测等待 majia 决定恢复 release 线路。
