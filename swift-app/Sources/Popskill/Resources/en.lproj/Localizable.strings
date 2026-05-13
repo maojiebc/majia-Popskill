@@ -62,6 +62,8 @@
 "Artifacts" = "Artifacts";
 "Remote Path" = "Remote Path";
 "Open IPC Docs" = "Open IPC Docs";
+"Save WebDAV" = "Save WebDAV";
+"Save WebDAV settings" = "Save WebDAV settings";
 "Refresh" = "Refresh";
 "Retry" = "Retry";
 
@@ -76,6 +78,8 @@
 "Capability Packages" = "Capability Packages";
 "Standalone Skills" = "Standalone Skills";
 "Installed Skills" = "Installed Skills";
+"Search Library" = "Search Library";
+"library.summary" = "%d packages · %d skills · %d enabled";
 "Restore In" = "Restore In";
 "Import In" = "Import In";
 "Enabled In" = "Enabled In";
@@ -90,6 +94,7 @@
 "Update Strategy" = "Update Strategy";
 "Available" = "Available";
 "Component Tree" = "Component Tree";
+"package.componentSummary" = "%d components · %d installed · %d required";
 "Directory" = "Directory";
 "Identifier" = "Identifier";
 "Hash" = "Hash";
@@ -142,6 +147,10 @@
 "Search Again" = "Search Again";
 "Catalog" = "Catalog";
 "Load Packages" = "Load Packages";
+"Search by name, repo, or description" = "Search by name, repo, or description";
+"discover.empty.notLoaded" = "Search enabled skill repositories for installable skills.";
+"discover.empty.noMatch" = "No enabled repository returned a skill matching \"%@\".";
+"discover.empty.noSkills" = "No installable skills were returned from the enabled repositories.";
 "Install In" = "Install In";
 "Manage Repositories" = "Manage Repositories";
 "Plan" = "Plan";

@@ -201,6 +201,7 @@ struct DiscoverView: View {
     let repositorySummary: String
     let onManageRepositories: () -> Void
     let onInstalled: () async -> Void
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         VStack(spacing: 0) {
@@ -293,7 +294,7 @@ struct DiscoverView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Featured")
+                    LocalizedText("Featured")
                         .font(.system(.largeTitle, weight: .bold))
                     Text(repositorySummary)
                         .foregroundStyle(.secondary)
@@ -322,14 +323,14 @@ struct DiscoverView: View {
 
             Picker("Catalog", selection: $viewModel.selectedContent) {
                 ForEach(DiscoverContentFilter.allCases) { filter in
-                    Text(filter.title).tag(filter)
+                    Text(localization.string(filter.title)).tag(filter)
                 }
             }
             .pickerStyle(.segmented)
             .frame(width: 340)
 
             HStack(spacing: 10) {
-                TextField("Search by name, repo, or description", text: $viewModel.query)
+                TextField(localization.string("Search by name, repo, or description"), text: $viewModel.query)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit {
                         Task { await viewModel.refreshSelectedContent() }
@@ -385,21 +386,28 @@ struct DiscoverEmptyState: View {
     let query: String
     let onSearch: () -> Void
     let onManageRepositories: () -> Void
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         ContentUnavailableView {
-            Label(title, systemImage: "sparkles")
+            Label {
+                Text(localization.string(title))
+            } icon: {
+                Image(systemName: "sparkles")
+            }
         } description: {
             Text(description)
         } actions: {
             HStack(spacing: 10) {
-                Button(actionTitle, action: onSearch)
-                    .buttonStyle(.borderedProminent)
+                Button(action: onSearch) {
+                    Text(localization.string(actionTitle))
+                }
+                .buttonStyle(.borderedProminent)
 
                 Button {
                     onManageRepositories()
                 } label: {
-                    Label("Repositories", systemImage: "folder.badge.gearshape")
+                    LocalizedLabel(title: "Repositories", systemImage: "folder.badge.gearshape")
                 }
                 .buttonStyle(.bordered)
             }
@@ -410,14 +418,14 @@ struct DiscoverEmptyState: View {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if !hasLoadedOnce {
-            return "Search enabled skill repositories for installable skills."
+            return localization.string("discover.empty.notLoaded")
         }
 
         if !trimmedQuery.isEmpty {
-            return "No enabled repository returned a skill matching \"\(trimmedQuery)\"."
+            return localization.string("discover.empty.noMatch", trimmedQuery)
         }
 
-        return "No installable skills were returned from the enabled repositories."
+        return localization.string("discover.empty.noSkills")
     }
 
     private var actionTitle: String {
@@ -523,7 +531,7 @@ private struct CatalogActionLabel: View {
     var body: some View {
         HStack(spacing: 5) {
             Image(systemName: systemImage)
-            Text(title)
+            LocalizedText(title)
         }
         .font(.caption.weight(.semibold))
         .frame(minWidth: minWidth)

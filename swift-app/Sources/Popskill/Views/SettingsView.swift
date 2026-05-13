@@ -120,6 +120,7 @@ final class SettingsViewModel {
 struct SettingsView: View {
     @Bindable var viewModel: SettingsViewModel
     @AppStorage("preferredLanguage") private var preferredLanguage = AppLanguage.system.rawValue
+    @Environment(\.popskillLocalization) private var localization
 
     private let cliPath = SkillCLIClient.resolvedExecutablePath
     private let overridePath = SkillCLIClient.executableOverridePath
@@ -130,9 +131,9 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Settings")
+                    LocalizedText("Settings")
                         .font(.system(.largeTitle, weight: .bold))
-                    Text("Local diagnostics")
+                    LocalizedText("Local diagnostics")
                         .foregroundStyle(.secondary)
                 }
 
@@ -149,7 +150,7 @@ struct SettingsView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .help("Refresh")
+                .help(localization.string("Refresh"))
                 .disabled(viewModel.isLoading)
             }
             .padding(.horizontal, 28)
@@ -166,19 +167,7 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    DetailSection(title: "Language", accent: PopskillSectionAccent.color(for: 0)) {
-                        Picker("Language", selection: $preferredLanguage) {
-                            ForEach(AppLanguage.allCases) { language in
-                                Text(LocalizedStringKey(language.titleKey)).tag(language.rawValue)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 360)
-
-                        Text("Language changes apply immediately to core navigation and primary controls.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    LanguagePreferenceSection(selectedLanguage: $preferredLanguage)
 
                     DetailSection(title: "Sidecar", accent: PopskillSectionAccent.color(for: 0)) {
                         DetailField(title: "Executable", value: cliPath)
@@ -229,7 +218,7 @@ struct SettingsView: View {
                                     ProgressView()
                                         .controlSize(.small)
                                 } else {
-                                    Label("Fetch Remote Info", systemImage: "cloud")
+                                    LocalizedLabel(title: "Fetch Remote Info", systemImage: "cloud")
                                 }
                             }
                             .buttonStyle(.bordered)
@@ -259,7 +248,7 @@ struct SettingsView: View {
 
                     if let docsURL = ipcDocsURL {
                         Link(destination: docsURL) {
-                            Label("Open IPC Docs", systemImage: "doc.text")
+                            LocalizedLabel(title: "Open IPC Docs", systemImage: "doc.text")
                         }
                         .buttonStyle(.bordered)
                     }
@@ -351,6 +340,56 @@ struct SettingsView: View {
     }
 }
 
+struct LanguagePreferenceSection: View {
+    @Binding var selectedLanguage: String
+    @Environment(\.popskillLocalization) private var localization
+
+    private let options: [AppLanguage] = [.simplifiedChinese, .english, .system]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                LocalizedText("Language")
+                    .font(.subheadline.weight(.semibold))
+                LocalizedText("Language changes apply immediately to core navigation and primary controls.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 4) {
+                ForEach(options) { option in
+                    Button {
+                        selectedLanguage = option.rawValue
+                    } label: {
+                        Text(localization.string(option.titleKey))
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(1)
+                            .frame(minWidth: 92)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .foregroundStyle(selectedLanguage == option.rawValue ? Color.white : Color.secondary)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(selectedLanguage == option.rawValue ? Color.accentColor : Color.clear)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .help(localization.string(option.titleKey))
+                }
+            }
+            .padding(4)
+            .background(Color.popCardBackground, in: RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.popBorder, lineWidth: 1)
+            )
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(PopskillSpacing.md)
+        .popCard(cornerRadius: PopskillRadius.smallCard, shadowOpacity: 0.02)
+    }
+}
+
 private struct SettingsFieldGrid<Content: View>: View {
     @ViewBuilder var content: Content
 
@@ -367,6 +406,7 @@ private struct SettingsFieldGrid<Content: View>: View {
 
 private struct WebDAVConfigForm: View {
     @Bindable var viewModel: SettingsViewModel
+    @Environment(\.popskillLocalization) private var localization
 
     private let columns = [
         GridItem(.adaptive(minimum: 214), spacing: 12, alignment: .topLeading)
@@ -398,9 +438,9 @@ private struct WebDAVConfigForm: View {
             .textFieldStyle(.roundedBorder)
 
             HStack(spacing: 16) {
-                Toggle("Enabled", isOn: $viewModel.webdavEnabled)
+                Toggle(localization.string("Enabled"), isOn: $viewModel.webdavEnabled)
                     .toggleStyle(.switch)
-                Toggle("Auto Sync", isOn: $viewModel.webdavAutoSync)
+                Toggle(localization.string("Auto Sync"), isOn: $viewModel.webdavAutoSync)
                     .toggleStyle(.switch)
 
                 Spacer()
@@ -412,12 +452,12 @@ private struct WebDAVConfigForm: View {
                         ProgressView()
                             .controlSize(.small)
                     } else {
-                        Label("Save WebDAV", systemImage: "checkmark.circle")
+                        LocalizedLabel(title: "Save WebDAV", systemImage: "checkmark.circle")
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!viewModel.canSaveWebDAVConfiguration)
-                .help("Save WebDAV settings")
+                .help(localization.string("Save WebDAV settings"))
             }
 
             if let message = viewModel.webdavSaveMessage {

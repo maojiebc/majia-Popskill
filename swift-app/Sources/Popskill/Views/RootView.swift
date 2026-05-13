@@ -61,8 +61,11 @@ struct RootView: View {
     @State private var settings = SettingsViewModel()
 
     var body: some View {
+        let language = AppLanguage.fromStoredValue(preferredLanguage)
+
         content
-            .environment(\.locale, AppLanguage.fromStoredValue(preferredLanguage).locale)
+            .environment(\.locale, language.locale)
+            .environment(\.popskillLocalization, PopskillLocalization(language: language))
     }
 
     private var content: some View {
@@ -72,7 +75,7 @@ struct RootView: View {
                     sidebarLink(.featured)
                     sidebarLink(.repositories, badge: repositories.repositories.isEmpty ? nil : repositories.enabledCount)
                 } header: {
-                    Text("section.discover")
+                    LocalizedText("section.discover")
                 }
 
                 Section {
@@ -82,7 +85,7 @@ struct RootView: View {
                     sidebarLink(.backups, badge: backups.backups.isEmpty ? nil : backups.backups.count)
                     sidebarLink(.recentlyUsed)
                 } header: {
-                    Text("section.myLibrary")
+                    LocalizedText("section.myLibrary")
                 }
 
                 Section {
@@ -90,7 +93,7 @@ struct RootView: View {
                     sidebarLink(.tokenSpend)
                     sidebarLink(.idleCandidates)
                 } header: {
-                    Text("section.insights")
+                    LocalizedText("section.insights")
                 }
 
                 Section {
@@ -185,7 +188,7 @@ struct RootView: View {
                     .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
                     .frame(width: 18)
 
-                Text(LocalizedStringKey(item.titleKey))
+                LocalizedText(item.titleKey)
                     .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
                     .foregroundStyle(isSelected ? Color.primary : Color.secondary)
                     .lineLimit(1)

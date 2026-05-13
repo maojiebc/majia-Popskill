@@ -51,7 +51,7 @@ struct SummaryMetric: View {
                 .font(.system(size: 26, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(color)
-            Text(LocalizedStringKey(title))
+            LocalizedText(title)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -101,7 +101,7 @@ struct StatusPill: View {
     let color: Color
 
     var body: some View {
-        Text(LocalizedStringKey(title))
+        LocalizedText(title)
             .font(.caption2.weight(.semibold))
             .foregroundStyle(color)
             .padding(.horizontal, 6)
@@ -122,12 +122,27 @@ struct ErrorBanner: View {
                 .font(.subheadline)
                 .lineLimit(2)
             Spacer()
-            Button("Retry", action: onRetry)
-                .buttonStyle(.bordered)
+            Button(action: onRetry) {
+                LocalizedText("Retry")
+            }
+            .buttonStyle(.bordered)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
         .background(Color.popStatusWarning.opacity(0.08))
+    }
+}
+
+struct LocalizedLabel: View {
+    let title: String
+    let systemImage: String
+
+    var body: some View {
+        Label {
+            LocalizedText(title)
+        } icon: {
+            Image(systemName: systemImage)
+        }
     }
 }
 
@@ -155,7 +170,7 @@ struct DetailField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(LocalizedStringKey(title))
+            LocalizedText(title)
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text(value)
@@ -175,7 +190,7 @@ struct SectionHeading: View {
             RoundedRectangle(cornerRadius: 2)
                 .fill(accent)
                 .frame(width: 4, height: 13)
-            Text(LocalizedStringKey(title))
+            LocalizedText(title)
                 .font(.caption.weight(.semibold))
                 .textCase(.uppercase)
                 .foregroundStyle(accent)

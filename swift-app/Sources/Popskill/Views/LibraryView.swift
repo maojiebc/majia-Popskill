@@ -5,6 +5,7 @@ struct LibraryView: View {
     @Bindable var viewModel: LibraryViewModel
     let onLibraryMutation: () async -> Void
     @State private var selectedItemID: String?
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         VStack(spacing: 0) {
@@ -116,7 +117,7 @@ struct LibraryView: View {
             }
         }
         .popPageBackground()
-        .searchable(text: $viewModel.searchText, placement: .toolbar, prompt: "Search Library")
+        .searchable(text: $viewModel.searchText, placement: .toolbar, prompt: Text(localization.string("Search Library")))
     }
 
     private var packageAndSkillList: some View {
@@ -130,7 +131,7 @@ struct LibraryView: View {
                             .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
                     }
                 } header: {
-                    Text("Capability Packages")
+                    LocalizedText("Capability Packages")
                 }
             }
 
@@ -153,7 +154,7 @@ struct LibraryView: View {
                         .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
                     }
                 } header: {
-                    Text("Installed Skills")
+                    LocalizedText("Installed Skills")
                 }
             }
         }
@@ -340,9 +341,14 @@ struct LibraryView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Installed")
+                    LocalizedText("Installed")
                         .font(.system(.largeTitle, weight: .bold))
-                    Text("\(viewModel.packages.count) packages · \(viewModel.skills.count) skills · \(viewModel.enabledCount) enabled")
+                    Text(localization.string(
+                        "library.summary",
+                        viewModel.packages.count,
+                        viewModel.skills.count,
+                        viewModel.enabledCount
+                    ))
                         .foregroundStyle(.secondary)
                 }
 
@@ -381,7 +387,7 @@ struct LibraryView: View {
             HStack(spacing: 12) {
                 Picker("Package Type", selection: $viewModel.selectedPackageFilter) {
                     ForEach(PackageFilter.allCases) { filter in
-                        Text(filter.title).tag(filter)
+                        Text(localization.string(filter.title)).tag(filter)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -390,7 +396,7 @@ struct LibraryView: View {
 
                 Picker("Filter", selection: $viewModel.selectedFilter) {
                     ForEach(LibraryFilter.allCases) { filter in
-                        Text(filter.title).tag(filter)
+                        Text(localization.string(filter.title)).tag(filter)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -476,6 +482,7 @@ struct UnmanagedSkillsBanner: View {
 
 struct PackageDetailPane: View {
     let package: CapabilityPackage?
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         Group {
@@ -516,7 +523,7 @@ struct PackageDetailPane: View {
 
                         DetailSection(title: "Config", accent: PopskillSectionAccent.color(for: 1)) {
                             if package.configSchema.isEmpty {
-                                Text("No config required")
+                                LocalizedText("No config required")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             } else {
@@ -528,7 +535,7 @@ struct PackageDetailPane: View {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(field.label)
                                                 .font(.caption.weight(.semibold))
-                                            Text("\(field.storage) · \(field.required ? "Required" : "Optional")")
+                                            Text("\(field.storage) · \(localization.string(field.required ? "Required" : "Optional"))")
                                                 .font(.caption2)
                                                 .foregroundStyle(.secondary)
                                         }
@@ -556,6 +563,7 @@ struct PackageDetailPane: View {
 struct PackageRow: View {
     let package: CapabilityPackage
     @State private var isExpanded: Bool
+    @Environment(\.popskillLocalization) private var localization
 
     init(package: CapabilityPackage) {
         self.package = package
@@ -587,7 +595,12 @@ struct PackageRow: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
 
-                    Text("\(package.componentCount) components · \(package.installedComponentCount) installed · \(package.requiredComponentCount) required")
+                    Text(localization.string(
+                        "package.componentSummary",
+                        package.componentCount,
+                        package.installedComponentCount,
+                        package.requiredComponentCount
+                    ))
                         .font(.caption)
                         .foregroundStyle(Color.popTertiaryLabel)
                         .lineLimit(1)
@@ -598,7 +611,7 @@ struct PackageRow: View {
                         PackageComponentTree(components: package.components)
                             .padding(.top, 4)
                     } label: {
-                        Text("Component Tree")
+                        LocalizedText("Component Tree")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
@@ -751,7 +764,7 @@ struct SkillDetailPane: View {
                                     ProgressView()
                                         .controlSize(.small)
                                 } else {
-                                    Label("Scan with AgentShield", systemImage: "shield.lefthalf.filled")
+                                    LocalizedLabel(title: "Scan with AgentShield", systemImage: "shield.lefthalf.filled")
                                 }
                             }
                             .buttonStyle(.bordered)
@@ -761,14 +774,14 @@ struct SkillDetailPane: View {
                         HStack(spacing: 10) {
                             if FileManager.default.fileExists(atPath: skill.localStoreURL.path) {
                                 Link(destination: skill.localStoreURL) {
-                                    Label("Open Folder", systemImage: "folder")
+                                    LocalizedLabel(title: "Open Folder", systemImage: "folder")
                                 }
                                 .buttonStyle(.bordered)
                             }
 
                             if let url = skill.sourceURL {
                                 Link(destination: url) {
-                                    Label("Open Source", systemImage: "arrow.up.right.square")
+                                    LocalizedLabel(title: "Open Source", systemImage: "arrow.up.right.square")
                                 }
                                 .buttonStyle(.bordered)
                             }
@@ -782,7 +795,7 @@ struct SkillDetailPane: View {
                                     ProgressView()
                                         .controlSize(.small)
                                 } else {
-                                    Label("Make Stub", systemImage: "icloud.and.arrow.down")
+                                    LocalizedLabel(title: "Make Stub", systemImage: "icloud.and.arrow.down")
                                 }
                             }
                             .buttonStyle(.bordered)
@@ -792,10 +805,14 @@ struct SkillDetailPane: View {
                                 isPresented: $isConfirmingStub,
                                 titleVisibility: .visible
                             ) {
-                                Button("Make Stub") {
+                                Button {
                                     onStub(skill)
+                                } label: {
+                                    LocalizedText("Make Stub")
                                 }
-                                Button("Cancel", role: .cancel) {}
+                                Button(role: .cancel) {} label: {
+                                    LocalizedText("Cancel")
+                                }
                             } message: {
                                 Text("Popskill will remove the local skill content through CC Switch, keep a backup, and leave a recoverable card in Stubs.")
                             }
@@ -807,7 +824,7 @@ struct SkillDetailPane: View {
                                     ProgressView()
                                         .controlSize(.small)
                                 } else {
-                                    Label("Uninstall", systemImage: "trash")
+                                    LocalizedLabel(title: "Uninstall", systemImage: "trash")
                                 }
                             }
                             .buttonStyle(.bordered)
@@ -817,10 +834,14 @@ struct SkillDetailPane: View {
                                 isPresented: $isConfirmingUninstall,
                                 titleVisibility: .visible
                             ) {
-                                Button("Uninstall", role: .destructive) {
+                                Button(role: .destructive) {
                                     onUninstall(skill)
+                                } label: {
+                                    LocalizedText("Uninstall")
                                 }
-                                Button("Cancel", role: .cancel) {}
+                                Button(role: .cancel) {} label: {
+                                    LocalizedText("Cancel")
+                                }
                             } message: {
                                 Text("Popskill will ask CC Switch to remove this skill from all app skill folders and keep CC Switch's uninstall backup.")
                             }
@@ -882,7 +903,7 @@ struct StubDetailPane: View {
                                     ProgressView()
                                         .controlSize(.small)
                                 } else {
-                                    Label("Rehydrate", systemImage: "icloud.and.arrow.down")
+                                    LocalizedLabel(title: "Rehydrate", systemImage: "icloud.and.arrow.down")
                                 }
                             }
                             .buttonStyle(.borderedProminent)
