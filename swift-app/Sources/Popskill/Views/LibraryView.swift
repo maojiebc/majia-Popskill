@@ -45,7 +45,7 @@ struct LibraryView: View {
                         ProgressView()
                             .controlSize(.large)
                     } else if viewModel.filteredSkills.isEmpty {
-                        ContentUnavailableView("No Skills", systemImage: "shippingbox")
+                        ContentUnavailableView(emptyStateTitle, systemImage: "shippingbox")
                     }
                 }
 
@@ -87,6 +87,25 @@ struct LibraryView: View {
             return viewModel.filteredSkills.first
         }
         return viewModel.skills.first { $0.id == selectedSkillID }
+    }
+
+    private var emptyStateTitle: String {
+        if viewModel.skills.isEmpty {
+            return "No Skills"
+        }
+
+        if !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "No Matching Skills"
+        }
+
+        switch viewModel.selectedFilter {
+        case .all:
+            return "No Skills"
+        case .active:
+            return "No Active Skills"
+        case .inactive:
+            return "No Inactive Skills"
+        }
     }
 
     private var header: some View {
