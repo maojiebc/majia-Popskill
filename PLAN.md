@@ -116,10 +116,10 @@
 - **已完成**：`skill-cli list/detail/toggle/discover/install/update/uninstall/import-unmanaged`
 - **已完成**：自定义 skill repository 管理（`repo-list/add/toggle/remove`），含 URL/owner/name 校验、`.git` 后缀规范化、非法 scheme 拒绝
 - **已完成**：SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译
-- **已完成**：行内 Claude/Codex/Gemini toggle、详情页更多 app toggle、unmanaged import banner
+- **已完成**：行内 Claude/Codex/Gemini toggle、详情页更多 app toggle、Stub / Rehydrate、unmanaged import banner
 - **已完成**：Backups 查看 / 恢复 / 删除，Settings sidecar health 诊断
 - **已完成**：本地 CI、read-only smoke、mutating repo smoke、`.app` development bundle、bundle launch smoke
-- **未完成**：完整 Stub 状态机（hibernate/metadata/rehydrate）、WebDAV UI、AgentShield 安全审计、正式 codesign/notarize/Sparkle release
+- **未完成**：Stub 自动建议 / 批量 stub、WebDAV UI、AgentShield 安全审计、正式 codesign/notarize/Sparkle release
 
 ### 不做的事（避免范围爆炸）
 
@@ -772,6 +772,15 @@ skill-cli install <skill-key> --app=<claude>
 skill-cli uninstall <skill-id> [--keep-backup]
   → 卸载
 
+skill-cli stub-list [--json]
+  → 列出 Popskill stub metadata（存于 ~/.popskill/stubs.json，指向 CC Switch backup）
+
+skill-cli stub <skill-id>
+  → Popskill 独有：把 skill 转为 Stub（CC Switch 负责卸载与备份，Popskill 留 metadata）
+
+skill-cli rehydrate <skill-id> --app=<claude>
+  → 从 Stub 状态恢复（从保存的 backup id 还原，并启用目标 app）
+
 skill-cli update <skill-id>
   → 更新单个 skill
 
@@ -829,12 +838,6 @@ skill-cli install-plan <skill-key> --app=<claude>
 
 skill-cli security-scan <skill-dir> [--json]
   → 调 ECC AgentShield，输出 verified / warning / blocked 结果
-
-skill-cli stub <skill-id>
-  → Popskill 独有：把 skill 转为 Stub（本地内容清掉，metadata 留）
-
-skill-cli rehydrate <skill-id>
-  → 从 Stub 状态恢复（重新从 source 下载）
 ```
 
 ### 8.3 JSON 输出示例
@@ -1385,11 +1388,11 @@ open swift-app/Popskill.xcodeproj
 - ✅ `cc-switch` 作为 git submodule 固定到 v3.14.1
 - ✅ `skill-cli` sidecar 已覆盖 list/detail/toggle/discover/install/update/uninstall/import/repo/backup/health
 - ✅ SwiftUI Library / Discover / Updates / Backups / Insights / Settings 主页面可编译
-- ✅ 行内 Claude/Codex/Gemini toggle 与详情页多 app toggle 已接 sidecar
+- ✅ 行内 Claude/Codex/Gemini toggle、Stub / Rehydrate 与详情页多 app toggle 已接 sidecar
 - ✅ 自定义 skill repository 管理、sidecar health、backup 管理已倒灌进计划
 - ✅ `scripts/dev-build.sh`、`scripts/ci-local.sh`、read-only smoke、mutating smoke、bundle smoke 已落地
-- 🟡 Stub 状态机只完成 idle candidates 识别，尚未完成 hibernate/rehydrate
+- 🟡 Stub 状态机已完成手动 hibernate/metadata/rehydrate，尚未完成自动建议和批量 stub
 - 🔴 WebDAV UI、AgentShield 安全审计、正式 notarize/Sparkle release 尚未落地
 - 🔴 视觉系统仍需按 `STYLE.md` 深度落地，不能停留在默认 SwiftUI 质感
 
-下一个动作：暂停扩新业务面，先补视觉系统、Stub 状态机、公证脚本和 AgentShield 骨架。
+下一个动作：暂停扩新业务面，继续补视觉细节、Stub 自动建议、公证 release 流程和 AgentShield 骨架。

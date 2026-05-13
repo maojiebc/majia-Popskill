@@ -20,6 +20,12 @@ struct LibraryFilterTests {
         #expect(LibraryFilter.inactive.includes(skill(enabledInClaude: false)))
     }
 
+    @Test
+    func stubFilterDoesNotIncludeInstalledSkills() {
+        #expect(!LibraryFilter.stub.includes(skill(enabledInClaude: true)))
+        #expect(!LibraryFilter.stub.includes(skill(enabledInClaude: false)))
+    }
+
     private func skill(enabledInClaude: Bool) -> Skill {
         Skill(
             id: enabledInClaude ? "active" : "inactive",

@@ -265,6 +265,63 @@ Uninstalls one managed skill through CC Switch. CC Switch removes app-folder cop
 }
 ```
 
+### `skill-cli stub-list --json`
+
+Returns Popskill stubs. Stubs are local metadata records in `~/.popskill/stubs.json` that point at CC Switch uninstall backups.
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "skill": {
+        "id": "owner/repo:directory",
+        "name": "skill-name",
+        "directory": "directory"
+      },
+      "backupId": "20260512_162451_skill-name",
+      "backupPath": "/Users/example/.cc-switch/skill-backups/20260512_162451_skill-name",
+      "stubbedAt": 1778603190
+    }
+  ]
+}
+```
+
+### `skill-cli stub <skill-id> --json`
+
+Converts one installed skill into a Popskill stub. The command reads the installed metadata, delegates uninstall + backup creation to CC Switch, then stores the recoverable metadata in `~/.popskill/stubs.json`.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "skill": {
+      "id": "owner/repo:directory",
+      "name": "skill-name",
+      "directory": "directory"
+    },
+    "backupId": "20260512_162451_skill-name",
+    "backupPath": "/Users/example/.cc-switch/skill-backups/20260512_162451_skill-name",
+    "stubbedAt": 1778603190
+  }
+}
+```
+
+### `skill-cli rehydrate <skill-id> --app <app> --json`
+
+Restores one Popskill stub from its stored CC Switch backup and enables it for the requested app. On success, the stub metadata is removed.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "owner/repo:directory",
+    "name": "skill-name",
+    "directory": "directory"
+  }
+}
+```
+
 ### `skill-cli backup-list --json`
 
 Returns uninstall backups created by CC Switch.

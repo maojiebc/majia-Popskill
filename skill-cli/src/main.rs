@@ -1,11 +1,16 @@
 use anyhow::{Context, Result, bail};
-use cc_switch_lib::{AppType, Database, ImportSkillSelection, SkillApps, SkillService};
+use cc_switch_lib::{
+    AppType, Database, ImportSkillSelection, InstalledSkill, SkillApps, SkillService,
+};
 use clap::{Parser, Subcommand};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -122,6 +127,28 @@ enum Commands {
     /// Uninstall one installed skill.
     Uninstall {
         skill_id: String,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// List Popskill stubs.
+    StubList {
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Convert one installed skill into a Popskill stub.
+    Stub {
+        skill_id: String,
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Restore one Popskill stub from its uninstall backup.
+    Rehydrate {
+        skill_id: String,
+        #[arg(long, default_value = "claude")]
+        app: String,
         /// Kept for the Swift client contract; output is JSON either way.
         #[arg(long)]
         json: bool,
@@ -390,6 +417,25 @@ async fn run() -> Result<()> {
                 .with_context(|| format!("failed to uninstall skill '{skill_id}'"))?;
             print_json(&ApiResponse::ok(result))
         }
+        Commands::StubList { json: _ } => {
+            let stubs = list_stubbed_skills(&db).context("failed to list Popskill stubs")?;
+            print_json(&ApiResponse::ok(stubs))
+        }
+        Commands::Stub { skill_id, json: _ } => {
+            let stub = stub_skill(&db, &skill_id)
+                .with_context(|| format!("failed to stub skill '{skill_id}'"))?;
+            print_json(&ApiResponse::ok(stub))
+        }
+        Commands::Rehydrate {
+            skill_id,
+            app,
+            json: _,
+        } => {
+            let app_type = parse_target_app(&app)?;
+            let skill = rehydrate_stub(&db, &skill_id, &app_type)
+                .with_context(|| format!("failed to rehydrate skill '{skill_id}'"))?;
+            print_json(&ApiResponse::ok(skill))
+        }
         Commands::BackupList { json: _ } => {
             let backups = SkillService::list_backups().context("failed to list skill backups")?;
             print_json(&ApiResponse::ok(backups))
@@ -511,6 +557,163 @@ fn normalize_branch(branch: &str) -> String {
     }
 }
 
+fn list_stubbed_skills(db: &Arc<Database>) -> Result<Vec<StubbedSkill>> {
+    let mut store = load_stub_store()?;
+    let original_count = store.stubs.len();
+    let installed = db
+        .get_all_installed_skills()
+        .context("failed to load installed skills while pruning stubs")?;
+
+    store
+        .stubs
+        .retain(|stub| !installed.contains_key(&stub.skill.id));
+    store
+        .stubs
+        .sort_by_key(|stub| std::cmp::Reverse(stub.stubbed_at));
+
+    if store.stubs.len() != original_count {
+        save_stub_store(&store)?;
+    }
+
+    Ok(store.stubs)
+}
+
+fn stub_skill(db: &Arc<Database>, skill_id: &str) -> Result<StubbedSkill> {
+    let skill = db
+        .get_installed_skill(skill_id)
+        .context("failed to read installed skill before stubbing")?
+        .with_context(|| format!("skill not found: {skill_id}"))?;
+
+    let uninstall_result = SkillService::uninstall(db, skill_id)
+        .with_context(|| format!("failed to uninstall skill before stubbing: {skill_id}"))?;
+    let backup_path = uninstall_result
+        .backup_path
+        .with_context(|| format!("CC Switch did not create an uninstall backup for {skill_id}"))?;
+    let backup_id = backup_id_from_path(Path::new(&backup_path))?;
+
+    let stub = StubbedSkill {
+        skill,
+        backup_id,
+        backup_path,
+        stubbed_at: unix_timestamp(),
+    };
+    let mut store = load_stub_store()?;
+    upsert_stub(&mut store, stub.clone());
+    save_stub_store(&store)?;
+
+    Ok(stub)
+}
+
+fn rehydrate_stub(
+    db: &Arc<Database>,
+    skill_id: &str,
+    app_type: &AppType,
+) -> Result<InstalledSkill> {
+    let mut store = load_stub_store()?;
+    let stub = remove_stub(&mut store, skill_id)
+        .with_context(|| format!("Popskill stub not found: {skill_id}"))?;
+    let restored = SkillService::restore_from_backup(db, &stub.backup_id, app_type)
+        .with_context(|| format!("failed to restore backup '{}'", stub.backup_id))?;
+    save_stub_store(&store)?;
+
+    Ok(restored)
+}
+
+fn backup_id_from_path(path: &Path) -> Result<String> {
+    let backup_id = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .with_context(|| format!("backup path has no usable id: {}", path.display()))?;
+
+    if backup_id.contains("..") || backup_id.contains('/') || backup_id.contains('\\') {
+        bail!("invalid backup id derived from path: {backup_id}");
+    }
+
+    Ok(backup_id.to_string())
+}
+
+fn load_stub_store() -> Result<StubStore> {
+    load_stub_store_at(&stub_store_path()?)
+}
+
+fn save_stub_store(store: &StubStore) -> Result<()> {
+    save_stub_store_at(&stub_store_path()?, store)
+}
+
+fn load_stub_store_at(path: &Path) -> Result<StubStore> {
+    if !path.exists() {
+        return Ok(StubStore::default());
+    }
+
+    let content = fs::read_to_string(path)
+        .with_context(|| format!("failed to read Popskill stub store {}", path.display()))?;
+    let store: StubStore = serde_json::from_str(&content)
+        .with_context(|| format!("failed to parse Popskill stub store {}", path.display()))?;
+    Ok(store)
+}
+
+fn save_stub_store_at(path: &Path, store: &StubStore) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).with_context(|| {
+            format!(
+                "failed to create Popskill state directory {}",
+                parent.display()
+            )
+        })?;
+    }
+
+    let temp_path = path.with_extension("json.tmp");
+    let content = serde_json::to_vec_pretty(store).context("failed to serialize Popskill stubs")?;
+    fs::write(&temp_path, content).with_context(|| {
+        format!(
+            "failed to write Popskill stub store {}",
+            temp_path.display()
+        )
+    })?;
+    fs::rename(&temp_path, path)
+        .with_context(|| format!("failed to replace Popskill stub store {}", path.display()))?;
+    Ok(())
+}
+
+fn stub_store_path() -> Result<PathBuf> {
+    Ok(home_dir()?.join(".popskill").join("stubs.json"))
+}
+
+fn home_dir() -> Result<PathBuf> {
+    let home = std::env::var("HOME").context("HOME is not set")?;
+    if home.trim().is_empty() {
+        bail!("HOME is empty");
+    }
+    Ok(PathBuf::from(home))
+}
+
+fn unix_timestamp() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs() as i64)
+        .unwrap_or_default()
+}
+
+fn upsert_stub(store: &mut StubStore, stub: StubbedSkill) {
+    store
+        .stubs
+        .retain(|existing| existing.skill.id != stub.skill.id);
+    store.stubs.push(stub);
+    store
+        .stubs
+        .sort_by_key(|stub| std::cmp::Reverse(stub.stubbed_at));
+}
+
+fn remove_stub(store: &mut StubStore, skill_id: &str) -> Option<StubbedSkill> {
+    let index = store
+        .stubs
+        .iter()
+        .position(|stub| stub.skill.id == skill_id)?;
+    Some(store.stubs.remove(index))
+}
+
 fn format_error(error: &anyhow::Error) -> String {
     error
         .chain()
@@ -552,6 +755,22 @@ impl ApiResponse<()> {
 struct ApiError {
     code: &'static str,
     message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StubbedSkill {
+    skill: InstalledSkill,
+    backup_id: String,
+    backup_path: String,
+    stubbed_at: i64,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StubStore {
+    #[serde(default)]
+    stubs: Vec<StubbedSkill>,
 }
 
 #[cfg(test)]
@@ -646,5 +865,67 @@ mod tests {
     fn format_error_includes_context_chain() {
         let error = anyhow::anyhow!("root cause").context("outer context");
         assert_eq!(format_error(&error), "outer context: root cause");
+    }
+
+    #[test]
+    fn backup_id_from_path_uses_last_path_segment() {
+        let backup_id = backup_id_from_path(Path::new("/tmp/20260513_demo-skill")).unwrap();
+
+        assert_eq!(backup_id, "20260513_demo-skill");
+    }
+
+    #[test]
+    fn backup_id_from_path_rejects_empty_paths() {
+        let message = backup_id_from_path(Path::new("/")).unwrap_err().to_string();
+
+        assert!(message.contains("backup path has no usable id"));
+    }
+
+    #[test]
+    fn upsert_stub_replaces_existing_skill_and_sorts_newest_first() {
+        let mut store = StubStore::default();
+        upsert_stub(&mut store, stub_fixture("older", 10));
+        upsert_stub(&mut store, stub_fixture("newer", 30));
+        upsert_stub(&mut store, stub_fixture("older", 40));
+
+        assert_eq!(store.stubs.len(), 2);
+        assert_eq!(store.stubs[0].skill.id, "older");
+        assert_eq!(store.stubs[0].stubbed_at, 40);
+        assert_eq!(store.stubs[1].skill.id, "newer");
+    }
+
+    #[test]
+    fn remove_stub_returns_and_removes_matching_entry() {
+        let mut store = StubStore {
+            stubs: vec![stub_fixture("skill-a", 10), stub_fixture("skill-b", 20)],
+        };
+
+        let removed = remove_stub(&mut store, "skill-a").unwrap();
+
+        assert_eq!(removed.skill.id, "skill-a");
+        assert_eq!(store.stubs.len(), 1);
+        assert_eq!(store.stubs[0].skill.id, "skill-b");
+    }
+
+    fn stub_fixture(id: &str, stubbed_at: i64) -> StubbedSkill {
+        StubbedSkill {
+            skill: InstalledSkill {
+                id: id.to_string(),
+                name: id.to_string(),
+                description: Some("demo".to_string()),
+                directory: id.to_string(),
+                repo_owner: Some("owner".to_string()),
+                repo_name: Some("repo".to_string()),
+                repo_branch: Some("main".to_string()),
+                readme_url: None,
+                apps: SkillApps::default(),
+                installed_at: 1,
+                content_hash: Some("hash".to_string()),
+                updated_at: 0,
+            },
+            backup_id: format!("backup-{id}"),
+            backup_path: format!("/tmp/backup-{id}"),
+            stubbed_at,
+        }
     }
 }

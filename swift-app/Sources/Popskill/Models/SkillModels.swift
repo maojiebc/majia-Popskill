@@ -132,6 +132,15 @@ struct SkillUninstallResult: Codable, Equatable {
     let backupPath: String?
 }
 
+struct StubbedSkill: Identifiable, Codable, Equatable {
+    var id: String { skill.id }
+
+    let skill: Skill
+    let backupId: String
+    let backupPath: String
+    let stubbedAt: Int
+}
+
 struct SkillBackup: Identifiable, Codable, Equatable {
     var id: String { backupId }
 

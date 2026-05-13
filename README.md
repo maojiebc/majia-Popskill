@@ -94,6 +94,9 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 ./skill-cli/target/debug/skill-cli check-updates --json
 ./skill-cli/target/debug/skill-cli update <skill-id> --json
 ./skill-cli/target/debug/skill-cli uninstall <skill-id> --json
+./skill-cli/target/debug/skill-cli stub-list --json
+./skill-cli/target/debug/skill-cli stub <skill-id> --json
+./skill-cli/target/debug/skill-cli rehydrate <skill-id> --app codex --json
 ./skill-cli/target/debug/skill-cli backup-list --json
 ./skill-cli/target/debug/skill-cli backup-restore <backup-id> --app codex --json
 ./skill-cli/target/debug/skill-cli backup-delete <backup-id> --json
@@ -102,7 +105,7 @@ cc_switch_lib (CC Switch 当 git submodule，一行不改)
 
 SwiftUI 端已接入：
 
-- Library：本机 skill 列表、All/Active/Inactive 过滤、Claude/Codex/Gemini 行内 toggle、详情页 5 App toggle、unmanaged import banner
+- Library：本机 skill 列表、All/Active/Inactive/Stubs 过滤、Claude/Codex/Gemini 行内 toggle、详情页 5 App toggle、stub/rehydrate、unmanaged import banner
 - Discover：搜索 CC Switch 启用的 skill repositories，按 Claude/Codex/Gemini/OpenCode/Hermes 安装
 - Repositories：查看、启停、删除 CC Switch skill discovery sources
 - Updates：按需检查更新、逐条更新

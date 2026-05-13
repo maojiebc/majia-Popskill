@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 struct LibraryView: View {
@@ -24,68 +25,148 @@ struct LibraryView: View {
             }
 
             HStack(spacing: 0) {
-                List(viewModel.filteredSkills, selection: $selectedSkillID) { skill in
-                    SkillRow(
-                        skill: skill,
-                        isToggling: { app in
-                            viewModel.isToggling(skillID: skill.id, app: app)
-                        }
-                    ) { app, enabled in
-                        Task {
-                            await viewModel.setEnabled(enabled, for: skill, app: app)
-                        }
-                    }
-                    .tag(skill.id)
-                    .listRowSeparator(.visible)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
-                }
-                .listStyle(.plain)
-                .overlay {
-                    if viewModel.isLoading && viewModel.skills.isEmpty {
-                        ProgressView()
-                            .controlSize(.large)
-                    } else if viewModel.filteredSkills.isEmpty {
-                        ContentUnavailableView(emptyStateTitle, systemImage: "shippingbox")
-                    }
+                if viewModel.selectedFilter == .stub {
+                    stubList
+                } else {
+                    installedList
                 }
 
                 Divider()
 
-                SkillDetailPane(
-                    skill: selectedSkill,
-                    isUninstalling: selectedSkill.map { viewModel.isUninstalling(skillID: $0.id) } ?? false,
-                    isToggling: { skill, app in
-                        viewModel.isToggling(skillID: skill.id, app: app)
-                    },
-                    onToggle: { skill, app, enabled in
+                if viewModel.selectedFilter == .stub {
+                    StubDetailPane(
+                        stub: selectedStub,
+                        restoreApp: viewModel.selectedRehydrateApp,
+                        isRehydrating: selectedStub.map { viewModel.isRehydrating(skillID: $0.id) } ?? false
+                    ) { stub in
                         Task {
-                            await viewModel.setEnabled(enabled, for: skill, app: app)
+                            if await viewModel.rehydrate(stub) {
+                                selectedSkillID = viewModel.filteredSkills.first?.id
+                                viewModel.selectedFilter = .all
+                                await onLibraryMutation()
+                            }
                         }
                     }
-                ) { skill in
-                    Task {
-                        if await viewModel.uninstall(skill) {
-                            selectedSkillID = viewModel.filteredSkills.first?.id
-                            await onLibraryMutation()
-                        }
-                    }
-                }
                     .frame(width: 320)
+                } else {
+                    SkillDetailPane(
+                        skill: selectedSkill,
+                        isUninstalling: selectedSkill.map { viewModel.isUninstalling(skillID: $0.id) } ?? false,
+                        isStubbing: selectedSkill.map { viewModel.isStubbing(skillID: $0.id) } ?? false,
+                        isToggling: { skill, app in
+                            viewModel.isToggling(skillID: skill.id, app: app)
+                        },
+                        onToggle: { skill, app, enabled in
+                            Task {
+                                await viewModel.setEnabled(enabled, for: skill, app: app)
+                            }
+                        },
+                        onStub: { skill in
+                            Task {
+                                if await viewModel.stub(skill) {
+                                    selectedSkillID = viewModel.filteredSkills.first?.id ?? viewModel.filteredStubs.first?.id
+                                    if viewModel.filteredSkills.isEmpty {
+                                        viewModel.selectedFilter = .stub
+                                    }
+                                    await onLibraryMutation()
+                                }
+                            }
+                        }
+                    ) { skill in
+                        Task {
+                            if await viewModel.uninstall(skill) {
+                                selectedSkillID = viewModel.filteredSkills.first?.id
+                                await onLibraryMutation()
+                            }
+                        }
+                    }
+                    .frame(width: 320)
+                }
             }
             .onChange(of: viewModel.skills) { _, skills in
-                if selectedSkillID == nil {
+                if selectedSkillID == nil, viewModel.selectedFilter != .stub {
                     selectedSkillID = skills.first?.id
                 }
             }
             .onChange(of: viewModel.filteredSkills) { _, skills in
+                guard viewModel.selectedFilter != .stub else {
+                    return
+                }
                 if let selectedSkillID, skills.contains(where: { $0.id == selectedSkillID }) {
                     return
                 }
                 selectedSkillID = skills.first?.id
             }
+            .onChange(of: viewModel.filteredStubs) { _, stubs in
+                guard viewModel.selectedFilter == .stub else {
+                    return
+                }
+                if let selectedSkillID, stubs.contains(where: { $0.id == selectedSkillID }) {
+                    return
+                }
+                selectedSkillID = stubs.first?.id
+            }
+            .onChange(of: viewModel.selectedFilter) { _, filter in
+                selectedSkillID = filter == .stub ? viewModel.filteredStubs.first?.id : viewModel.filteredSkills.first?.id
+            }
         }
         .popPageBackground()
         .searchable(text: $viewModel.searchText, placement: .toolbar, prompt: "Search Library")
+    }
+
+    private var installedList: some View {
+        List(viewModel.filteredSkills, selection: $selectedSkillID) { skill in
+            SkillRow(
+                skill: skill,
+                isToggling: { app in
+                    viewModel.isToggling(skillID: skill.id, app: app)
+                }
+            ) { app, enabled in
+                Task {
+                    await viewModel.setEnabled(enabled, for: skill, app: app)
+                }
+            }
+            .tag(skill.id)
+            .listRowSeparator(.visible)
+            .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+        }
+        .listStyle(.plain)
+        .overlay {
+            if viewModel.isLoading && viewModel.skills.isEmpty {
+                ProgressView()
+                    .controlSize(.large)
+            } else if viewModel.filteredSkills.isEmpty {
+                ContentUnavailableView(emptyStateTitle, systemImage: "shippingbox")
+            }
+        }
+    }
+
+    private var stubList: some View {
+        List(viewModel.filteredStubs, selection: $selectedSkillID) { stub in
+            StubRow(
+                stub: stub,
+                isRehydrating: viewModel.isRehydrating(skillID: stub.id)
+            ) {
+                Task {
+                    if await viewModel.rehydrate(stub) {
+                        selectedSkillID = viewModel.filteredStubs.first?.id
+                        await onLibraryMutation()
+                    }
+                }
+            }
+            .tag(stub.id)
+            .listRowSeparator(.visible)
+            .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+        }
+        .listStyle(.plain)
+        .overlay {
+            if viewModel.isLoading && viewModel.stubs.isEmpty {
+                ProgressView()
+                    .controlSize(.large)
+            } else if viewModel.filteredStubs.isEmpty {
+                ContentUnavailableView(emptyStateTitle, systemImage: "icloud")
+            }
+        }
     }
 
     private var selectedSkill: Skill? {
@@ -95,7 +176,18 @@ struct LibraryView: View {
         return viewModel.filteredSkills.first { $0.id == selectedSkillID } ?? viewModel.filteredSkills.first
     }
 
+    private var selectedStub: StubbedSkill? {
+        guard let selectedSkillID else {
+            return viewModel.filteredStubs.first
+        }
+        return viewModel.filteredStubs.first { $0.id == selectedSkillID } ?? viewModel.filteredStubs.first
+    }
+
     private var emptyStateTitle: String {
+        if viewModel.selectedFilter == .stub {
+            return viewModel.stubs.isEmpty ? "No Stubs" : "No Matching Stubs"
+        }
+
         if viewModel.skills.isEmpty {
             return "No Skills"
         }
@@ -111,6 +203,8 @@ struct LibraryView: View {
             return "No Active Skills"
         case .inactive:
             return "No Inactive Skills"
+        case .stub:
+            return "No Stubs"
         }
     }
 
@@ -133,6 +227,11 @@ struct LibraryView: View {
                         title: "Unmanaged",
                         value: viewModel.unmanagedCount,
                         color: viewModel.unmanagedCount > 0 ? .popStatusWarning : .popLabel
+                    )
+                    SummaryMetric(
+                        title: "Stubs",
+                        value: viewModel.stubCount,
+                        color: viewModel.stubCount > 0 ? .popSectionBlue : .popLabel
                     )
                 }
 
@@ -158,7 +257,17 @@ struct LibraryView: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(width: 260)
+            .frame(width: 340)
+
+            if viewModel.selectedFilter == .stub {
+                Picker("Restore In", selection: $viewModel.selectedRehydrateApp) {
+                    ForEach(TargetApp.allCases, id: \.id) { app in
+                        Text(app.title).tag(app)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 160)
+            }
         }
         .padding(.horizontal, 28)
         .padding(.vertical, 18)
@@ -229,9 +338,12 @@ struct UnmanagedSkillsBanner: View {
 struct SkillDetailPane: View {
     let skill: Skill?
     let isUninstalling: Bool
+    let isStubbing: Bool
     let isToggling: (Skill, TargetApp) -> Bool
     let onToggle: (Skill, TargetApp, Bool) -> Void
+    let onStub: (Skill) -> Void
     let onUninstall: (Skill) -> Void
+    @State private var isConfirmingStub = false
     @State private var isConfirmingUninstall = false
 
     var body: some View {
@@ -297,35 +409,130 @@ struct SkillDetailPane: View {
                             }
                         }
 
-                        Button(role: .destructive) {
-                            isConfirmingUninstall = true
-                        } label: {
-                            if isUninstalling {
-                                ProgressView()
-                                    .controlSize(.small)
-                            } else {
-                                Label("Uninstall", systemImage: "trash")
+                        HStack(spacing: 10) {
+                            Button {
+                                isConfirmingStub = true
+                            } label: {
+                                if isStubbing {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Label("Make Stub", systemImage: "icloud.and.arrow.down")
+                                }
                             }
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(isUninstalling)
-                        .confirmationDialog(
-                            "Uninstall \(skill.name)?",
-                            isPresented: $isConfirmingUninstall,
-                            titleVisibility: .visible
-                        ) {
-                            Button("Uninstall", role: .destructive) {
-                                onUninstall(skill)
+                            .buttonStyle(.bordered)
+                            .disabled(isStubbing || isUninstalling)
+                            .confirmationDialog(
+                                "Make \(skill.name) a stub?",
+                                isPresented: $isConfirmingStub,
+                                titleVisibility: .visible
+                            ) {
+                                Button("Make Stub") {
+                                    onStub(skill)
+                                }
+                                Button("Cancel", role: .cancel) {}
+                            } message: {
+                                Text("Popskill will remove the local skill content through CC Switch, keep a backup, and leave a recoverable card in Stubs.")
                             }
-                            Button("Cancel", role: .cancel) {}
-                        } message: {
-                            Text("Popskill will ask CC Switch to remove this skill from all app skill folders and keep CC Switch's uninstall backup.")
+
+                            Button(role: .destructive) {
+                                isConfirmingUninstall = true
+                            } label: {
+                                if isUninstalling {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Label("Uninstall", systemImage: "trash")
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(isUninstalling || isStubbing)
+                            .confirmationDialog(
+                                "Uninstall \(skill.name)?",
+                                isPresented: $isConfirmingUninstall,
+                                titleVisibility: .visible
+                            ) {
+                                Button("Uninstall", role: .destructive) {
+                                    onUninstall(skill)
+                                }
+                                Button("Cancel", role: .cancel) {}
+                            } message: {
+                                Text("Popskill will ask CC Switch to remove this skill from all app skill folders and keep CC Switch's uninstall backup.")
+                            }
                         }
                     }
                     .padding(22)
                 }
             } else {
                 ContentUnavailableView("No Selection", systemImage: "sidebar.right")
+            }
+        }
+        .background(Color.popHeaderBackground.opacity(0.45))
+    }
+}
+
+struct StubDetailPane: View {
+    let stub: StubbedSkill?
+    let restoreApp: TargetApp
+    let isRehydrating: Bool
+    let onRehydrate: (StubbedSkill) -> Void
+
+    var body: some View {
+        Group {
+            if let stub {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        HStack(spacing: 12) {
+                            InitialAvatarView(name: stub.skill.name, identifier: stub.skill.id)
+                                .frame(width: 52, height: 52)
+                                .saturation(0.2)
+                                .opacity(0.78)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(stub.skill.name)
+                                    .font(.title2.weight(.bold))
+                                    .lineLimit(2)
+                                Text(stub.skill.sourceLabel)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+
+                        StatusPill(title: "Stub", color: .popSectionBlue)
+
+                        Text(stub.skill.description)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        DetailSection(title: "Restore", accent: PopskillSectionAccent.color(for: 0)) {
+                            DetailField(title: "Target App", value: restoreApp.title)
+                            DetailField(title: "Stubbed", value: formattedTimestamp(stub.stubbedAt))
+
+                            Button {
+                                onRehydrate(stub)
+                            } label: {
+                                if isRehydrating {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Label("Rehydrate", systemImage: "icloud.and.arrow.down")
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(isRehydrating)
+                        }
+
+                        DetailSection(title: "Backup", accent: PopskillSectionAccent.color(for: 1)) {
+                            DetailField(title: "Backup ID", value: stub.backupId)
+                            DetailField(title: "Backup Path", value: stub.backupPath)
+                        }
+                    }
+                    .padding(22)
+                }
+            } else {
+                ContentUnavailableView("No Stub Selected", systemImage: "icloud")
             }
         }
         .background(Color.popHeaderBackground.opacity(0.45))
@@ -381,4 +588,61 @@ struct SkillRow: View {
         }
         .frame(minHeight: 68)
     }
+}
+
+struct StubRow: View {
+    let stub: StubbedSkill
+    let isRehydrating: Bool
+    let onRehydrate: () -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            InitialAvatarView(name: stub.skill.name, identifier: stub.skill.id)
+                .saturation(0.2)
+                .opacity(0.78)
+
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 8) {
+                    Text(stub.skill.name)
+                        .font(.system(.headline, weight: .semibold))
+                        .foregroundStyle(Color.popLabel)
+                        .lineLimit(1)
+
+                    StatusPill(title: "Stub", color: .popSectionBlue)
+                }
+
+                Text(stub.skill.description)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+
+                Text("\(stub.skill.sourceLabel) · stubbed \(formattedTimestamp(stub.stubbedAt))")
+                    .font(.caption)
+                    .foregroundStyle(Color.popTertiaryLabel)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 20)
+
+            Button {
+                onRehydrate()
+            } label: {
+                if isRehydrating {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Image(systemName: "icloud.and.arrow.down")
+                }
+            }
+            .buttonStyle(.bordered)
+            .disabled(isRehydrating)
+            .help("Rehydrate")
+        }
+        .frame(minHeight: 68)
+    }
+}
+
+private func formattedTimestamp(_ timestamp: Int) -> String {
+    Date(timeIntervalSince1970: TimeInterval(timestamp))
+        .formatted(date: .abbreviated, time: .shortened)
 }

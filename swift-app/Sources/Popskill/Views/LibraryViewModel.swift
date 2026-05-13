@@ -5,9 +5,11 @@ import Observation
 @Observable
 final class LibraryViewModel {
     var skills: [Skill] = []
+    var stubs: [StubbedSkill] = []
     var unmanagedSkills: [UnmanagedSkill] = []
     var searchText = ""
     var selectedFilter: LibraryFilter = .all
+    var selectedRehydrateApp: TargetApp = .codex
     var isLoading = false
     var hasLoadedOnce = false
     var errorMessage: String?
@@ -15,6 +17,8 @@ final class LibraryViewModel {
     private let client = SkillCLIClient()
     private var pendingToggles: Set<String> = []
     private var uninstallingIDs: Set<String> = []
+    private var stubbingIDs: Set<String> = []
+    private var rehydratingIDs: Set<String> = []
     private var importingDirectories: Set<String> = []
 
     var filteredSkills: [Skill] {
@@ -31,6 +35,18 @@ final class LibraryViewModel {
         }
     }
 
+    var filteredStubs: [StubbedSkill] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        return stubs.filter { stub in
+            query.isEmpty
+                || stub.skill.name.lowercased().contains(query)
+                || stub.skill.description.lowercased().contains(query)
+                || stub.skill.sourceLabel.lowercased().contains(query)
+                || stub.skill.directory.lowercased().contains(query)
+        }
+    }
+
     var enabledCount: Int {
         skills.filter { $0.enabledAppCount > 0 }.count
     }
@@ -43,12 +59,24 @@ final class LibraryViewModel {
         unmanagedSkills.count
     }
 
+    var stubCount: Int {
+        stubs.count
+    }
+
     func isToggling(skillID: String, app: TargetApp) -> Bool {
         pendingToggles.contains(toggleKey(skillID: skillID, app: app))
     }
 
     func isUninstalling(skillID: String) -> Bool {
         uninstallingIDs.contains(skillID)
+    }
+
+    func isStubbing(skillID: String) -> Bool {
+        stubbingIDs.contains(skillID)
+    }
+
+    func isRehydrating(skillID: String) -> Bool {
+        rehydratingIDs.contains(skillID)
     }
 
     func isImporting(directory: String) -> Bool {
@@ -70,6 +98,8 @@ final class LibraryViewModel {
         do {
             skills = try await client.list()
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            stubs = try await client.listStubs()
+                .sorted { $0.stubbedAt > $1.stubbedAt }
             unmanagedSkills = try await client.scanUnmanaged()
                 .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         } catch {
@@ -125,6 +155,52 @@ final class LibraryViewModel {
     }
 
     @discardableResult
+    func stub(_ skill: Skill) async -> Bool {
+        guard !stubbingIDs.contains(skill.id) else {
+            return false
+        }
+
+        stubbingIDs.insert(skill.id)
+        errorMessage = nil
+        var didStub = false
+
+        do {
+            let stub = try await client.stub(skillID: skill.id)
+            skills.removeAll { $0.id == skill.id }
+            upsertStub(stub)
+            didStub = true
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        stubbingIDs.remove(skill.id)
+        return didStub
+    }
+
+    @discardableResult
+    func rehydrate(_ stub: StubbedSkill) async -> Bool {
+        guard !rehydratingIDs.contains(stub.id) else {
+            return false
+        }
+
+        rehydratingIDs.insert(stub.id)
+        errorMessage = nil
+        var didRehydrate = false
+
+        do {
+            let skill = try await client.rehydrate(skillID: stub.id, app: selectedRehydrateApp)
+            stubs.removeAll { $0.id == stub.id }
+            upsertSkill(skill)
+            didRehydrate = true
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        rehydratingIDs.remove(stub.id)
+        return didRehydrate
+    }
+
+    @discardableResult
     func importUnmanaged(_ unmanaged: UnmanagedSkill, apps: [TargetApp] = [.claude]) async -> Bool {
         guard !importingDirectories.contains(unmanaged.directory) else {
             return false
@@ -149,12 +225,25 @@ final class LibraryViewModel {
     private func toggleKey(skillID: String, app: TargetApp) -> String {
         "\(skillID)#\(app.rawValue)"
     }
+
+    private func upsertSkill(_ skill: Skill) {
+        skills.removeAll { $0.id == skill.id }
+        skills.append(skill)
+        skills.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private func upsertStub(_ stub: StubbedSkill) {
+        stubs.removeAll { $0.id == stub.id }
+        stubs.append(stub)
+        stubs.sort { $0.stubbedAt > $1.stubbedAt }
+    }
 }
 
 enum LibraryFilter: String, CaseIterable, Identifiable {
     case all
     case active
     case inactive
+    case stub
 
     var id: String { rawValue }
 
@@ -163,6 +252,7 @@ enum LibraryFilter: String, CaseIterable, Identifiable {
         case .all: "All"
         case .active: "Active"
         case .inactive: "Inactive"
+        case .stub: "Stubs"
         }
     }
 
@@ -171,6 +261,7 @@ enum LibraryFilter: String, CaseIterable, Identifiable {
         case .all: true
         case .active: skill.enabledAppCount > 0
         case .inactive: skill.enabledAppCount == 0
+        case .stub: false
         }
     }
 }

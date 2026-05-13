@@ -135,6 +135,27 @@ actor SkillCLIClient {
         return try Self.decodeResponse(SkillUninstallResult.self, from: data)
     }
 
+    func listStubs() async throws -> [StubbedSkill] {
+        let data = try run(arguments: ["stub-list", "--json"])
+        return try Self.decodeResponse([StubbedSkill].self, from: data)
+    }
+
+    func stub(skillID: String) async throws -> StubbedSkill {
+        let data = try run(arguments: ["stub", skillID, "--json"])
+        return try Self.decodeResponse(StubbedSkill.self, from: data)
+    }
+
+    func rehydrate(skillID: String, app: TargetApp) async throws -> Skill {
+        let data = try run(arguments: [
+            "rehydrate",
+            skillID,
+            "--app",
+            app.rawValue,
+            "--json",
+        ])
+        return try Self.decodeResponse(Skill.self, from: data)
+    }
+
     func listBackups() async throws -> [SkillBackup] {
         let data = try run(arguments: ["backup-list", "--json"])
         return try Self.decodeResponse([SkillBackup].self, from: data)
