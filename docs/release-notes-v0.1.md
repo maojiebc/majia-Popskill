@@ -14,7 +14,7 @@ Popskill v0.1 is a pre-alpha macOS app that starts as a Claude Code Agent Skills
 - AgentShield security scanning for third-party install/import flows.
 - WebDAV status, remote snapshot inspection, manual sync readiness diagnostics, and Settings-based config write.
 - Local Agent library view for `~/.claude/agents`, Agent target diagnostics, AgencyAgents catalog preview, and Agent install-plan preview.
-- Local release pipeline: development `.app`, DMG, release manifest, appcast generation, screenshot smoke, bundle smoke, and release doctor.
+- Local release pipeline: development `.app`, DMG, release manifest, appcast generation, screenshot smoke, bundle smoke, and release doctor with bundle/manifest/Sparkle metadata consistency checks.
 
 ## Privacy And Local Data
 
