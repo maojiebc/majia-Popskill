@@ -96,7 +96,7 @@ struct RootView: View {
                 }
             case .repositories:
                 RepositoriesView(viewModel: repositories) {
-                    if !discover.skills.isEmpty {
+                    if discover.hasLoadedOnce {
                         await discover.search()
                     }
                     await settings.load()
