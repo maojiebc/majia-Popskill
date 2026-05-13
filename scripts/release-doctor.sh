@@ -107,6 +107,18 @@ fi
 
 echo
 echo "==> Sparkle appcast"
+if [[ -n "${POPSKILL_SPARKLE_FEED_URL:-}" ]]; then
+  ok "Sparkle feed URL is set for the app bundle"
+else
+  warn "set POPSKILL_SPARKLE_FEED_URL before packaging a public Sparkle-enabled app"
+fi
+
+if [[ -n "${POPSKILL_SPARKLE_PUBLIC_ED_KEY:-}" ]]; then
+  ok "Sparkle public EdDSA key is set for the app bundle"
+else
+  warn "set POPSKILL_SPARKLE_PUBLIC_ED_KEY before packaging a public Sparkle-enabled app"
+fi
+
 if [[ -n "${POPSKILL_APPCAST_DOWNLOAD_URL:-}" || -n "${POPSKILL_RELEASE_BASE_URL:-}" ]]; then
   ok "appcast download URL source is set"
 else
