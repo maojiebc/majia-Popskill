@@ -53,12 +53,19 @@ struct LibraryView: View {
                         skill: selectedSkill,
                         isUninstalling: selectedSkill.map { viewModel.isUninstalling(skillID: $0.id) } ?? false,
                         isStubbing: selectedSkill.map { viewModel.isStubbing(skillID: $0.id) } ?? false,
+                        isScanningSecurity: selectedSkill.map { viewModel.isScanningSecurity(skillID: $0.id) } ?? false,
+                        securityScanResult: selectedSkill.flatMap { viewModel.securityScanResult(skillID: $0.id) },
                         isToggling: { skill, app in
                             viewModel.isToggling(skillID: skill.id, app: app)
                         },
                         onToggle: { skill, app, enabled in
                             Task {
                                 await viewModel.setEnabled(enabled, for: skill, app: app)
+                            }
+                        },
+                        onSecurityScan: { skill in
+                            Task {
+                                await viewModel.scanSecurity(skill)
                             }
                         },
                         onStub: { skill in
@@ -339,8 +346,11 @@ struct SkillDetailPane: View {
     let skill: Skill?
     let isUninstalling: Bool
     let isStubbing: Bool
+    let isScanningSecurity: Bool
+    let securityScanResult: SecurityScanResult?
     let isToggling: (Skill, TargetApp) -> Bool
     let onToggle: (Skill, TargetApp, Bool) -> Void
+    let onSecurityScan: (Skill) -> Void
     let onStub: (Skill) -> Void
     let onUninstall: (Skill) -> Void
     @State private var isConfirmingStub = false
@@ -391,6 +401,35 @@ struct SkillDetailPane: View {
                             if let contentHash = skill.contentHash, !contentHash.isEmpty {
                                 DetailField(title: "Hash", value: String(contentHash.prefix(12)))
                             }
+                        }
+
+                        DetailSection(title: "Security", accent: PopskillSectionAccent.color(for: 2)) {
+                            HStack(spacing: 8) {
+                                StatusPill(
+                                    title: securityScanTitle(securityScanResult),
+                                    color: securityScanColor(securityScanResult)
+                                )
+
+                                if let securityScanResult {
+                                    Text(securityScanResult.summary)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(2)
+                                }
+                            }
+
+                            Button {
+                                onSecurityScan(skill)
+                            } label: {
+                                if isScanningSecurity {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Label("Scan with AgentShield", systemImage: "shield.lefthalf.filled")
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(isScanningSecurity || !FileManager.default.fileExists(atPath: skill.localStoreURL.path))
                         }
 
                         HStack(spacing: 10) {
@@ -645,4 +684,38 @@ struct StubRow: View {
 private func formattedTimestamp(_ timestamp: Int) -> String {
     Date(timeIntervalSince1970: TimeInterval(timestamp))
         .formatted(date: .abbreviated, time: .shortened)
+}
+
+private func securityScanTitle(_ result: SecurityScanResult?) -> String {
+    guard let result else {
+        return "Not Scanned"
+    }
+
+    switch result.status {
+    case .verified:
+        return "Verified"
+    case .warning:
+        return "Warning"
+    case .blocked:
+        return "Blocked"
+    case .unavailable:
+        return "Unavailable"
+    }
+}
+
+private func securityScanColor(_ result: SecurityScanResult?) -> Color {
+    guard let result else {
+        return .popStatusNeutral
+    }
+
+    switch result.status {
+    case .verified:
+        return .popStatusOK
+    case .warning:
+        return .popStatusWarning
+    case .blocked:
+        return .popStatusError
+    case .unavailable:
+        return .popStatusNeutral
+    }
 }

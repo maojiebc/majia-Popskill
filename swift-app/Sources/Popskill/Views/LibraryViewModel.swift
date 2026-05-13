@@ -7,6 +7,7 @@ final class LibraryViewModel {
     var skills: [Skill] = []
     var stubs: [StubbedSkill] = []
     var unmanagedSkills: [UnmanagedSkill] = []
+    var securityScanResults: [Skill.ID: SecurityScanResult] = [:]
     var searchText = ""
     var selectedFilter: LibraryFilter = .all
     var selectedRehydrateApp: TargetApp = .codex
@@ -19,6 +20,7 @@ final class LibraryViewModel {
     private var uninstallingIDs: Set<String> = []
     private var stubbingIDs: Set<String> = []
     private var rehydratingIDs: Set<String> = []
+    private var scanningSecurityIDs: Set<String> = []
     private var importingDirectories: Set<String> = []
 
     var filteredSkills: [Skill] {
@@ -81,6 +83,14 @@ final class LibraryViewModel {
 
     func isImporting(directory: String) -> Bool {
         importingDirectories.contains(directory)
+    }
+
+    func isScanningSecurity(skillID: String) -> Bool {
+        scanningSecurityIDs.contains(skillID)
+    }
+
+    func securityScanResult(skillID: String) -> SecurityScanResult? {
+        securityScanResults[skillID]
     }
 
     func load() async {
@@ -198,6 +208,25 @@ final class LibraryViewModel {
 
         rehydratingIDs.remove(stub.id)
         return didRehydrate
+    }
+
+    func scanSecurity(_ skill: Skill) async {
+        guard !scanningSecurityIDs.contains(skill.id) else {
+            return
+        }
+
+        scanningSecurityIDs.insert(skill.id)
+        errorMessage = nil
+
+        do {
+            securityScanResults[skill.id] = try await client.securityScan(
+                skillDirectory: skill.localStoreURL.path
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        scanningSecurityIDs.remove(skill.id)
     }
 
     @discardableResult
