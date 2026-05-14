@@ -104,16 +104,33 @@ final class LibraryViewModel {
     }
 
     func packageCardSignals(for package: CapabilityPackage) -> PackageCardSignals {
+        let installedSkillComponents = installedSkillComponentCount(for: package)
+        let appEnabledCounts = TargetApp.supported.map { app in
+            PackageAppEnabledCount(
+                app: app,
+                enabledCount: enabledSkillCount(for: app, in: package)
+            )
+        }
         PackageCardSignals(
             pendingUpdates: updates(for: package).count,
             recoverableMissingComponents: package.recoverableMissingComponentCount,
             missingRequiredComponents: package.missingRequiredComponentCount,
-            lastCheckedUpdatesAt: lastCheckedUpdatesAt
+            lastCheckedUpdatesAt: lastCheckedUpdatesAt,
+            appEnabledCounts: appEnabledCounts,
+            installedSkillComponentCount: installedSkillComponents
         )
     }
 
     func enabledSkillCount(for app: TargetApp) -> Int {
         skills.reduce(into: 0) { count, skill in
+            if skill.apps.isEnabled(app) {
+                count += 1
+            }
+        }
+    }
+
+    func enabledSkillCount(for app: TargetApp, in package: CapabilityPackage) -> Int {
+        matchedInstalledSkills(for: package).reduce(into: 0) { count, skill in
             if skill.apps.isEnabled(app) {
                 count += 1
             }
@@ -566,6 +583,29 @@ final class LibraryViewModel {
         return identifiers
     }
 
+    private func installedSkillComponentCount(for package: CapabilityPackage) -> Int {
+        package.components.all.filter {
+            $0.installed && $0.kind.caseInsensitiveCompare("skill") == .orderedSame
+        }.count
+    }
+
+    private func matchedInstalledSkills(for package: CapabilityPackage) -> [Skill] {
+        let installedSkillComponents = package.components.all.filter {
+            $0.installed && $0.kind.caseInsensitiveCompare("skill") == .orderedSame
+        }
+        guard !installedSkillComponents.isEmpty else {
+            return []
+        }
+
+        var matchedByID: [String: Skill] = [:]
+        for component in installedSkillComponents {
+            for skill in skills where packageSkillComponent(component, matches: skill) {
+                matchedByID[skill.id] = skill
+            }
+        }
+        return Array(matchedByID.values)
+    }
+
     private func packageSkillComponent(_ component: PackageComponent, matches skill: Skill) -> Bool {
         if skill.id.caseInsensitiveCompare(component.id) == .orderedSame {
             return true
@@ -586,6 +626,15 @@ struct PackageCardSignals: Equatable {
     let recoverableMissingComponents: Int
     let missingRequiredComponents: Int
     let lastCheckedUpdatesAt: Date?
+    let appEnabledCounts: [PackageAppEnabledCount]
+    let installedSkillComponentCount: Int
+}
+
+struct PackageAppEnabledCount: Identifiable, Equatable {
+    var id: String { app.id }
+
+    let app: TargetApp
+    let enabledCount: Int
 }
 
 enum LibraryFilter: String, CaseIterable, Identifiable {

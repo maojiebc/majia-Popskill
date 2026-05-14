@@ -172,6 +172,124 @@ struct LibraryViewModelPackageUpdateTests {
     }
 
     @Test
+    func packageEnabledSkillCountUsesInstalledMatchingSkillComponents() {
+        let viewModel = LibraryViewModel()
+        viewModel.skills = [
+            Skill(
+                id: "owner/repo:lark-doc",
+                name: "Lark Doc",
+                description: "",
+                directory: "lark-doc",
+                repoOwner: "owner",
+                repoName: "repo",
+                readmeUrl: nil,
+                apps: SkillApps(claude: true, codex: false, gemini: true, opencode: false, hermes: false),
+                installedAt: nil,
+                updatedAt: nil,
+                contentHash: nil
+            ),
+            Skill(
+                id: "owner/repo:lark-base",
+                name: "Lark Base",
+                description: "",
+                directory: "lark-base",
+                repoOwner: "owner",
+                repoName: "repo",
+                readmeUrl: nil,
+                apps: SkillApps(claude: false, codex: true, gemini: false, opencode: false, hermes: false),
+                installedAt: nil,
+                updatedAt: nil,
+                contentHash: nil
+            )
+        ]
+
+        let package = CapabilityPackage(
+            id: "pkg:lark",
+            type: .composite,
+            name: "Lark",
+            vendor: nil,
+            summary: "Lark package",
+            source: PackageSource(
+                kind: "builtin",
+                location: "popskill/builtin/lark",
+                updateStrategy: "manual",
+                repoOwner: nil,
+                repoName: nil,
+                repoBranch: nil,
+                readmeUrl: nil
+            ),
+            components: PackageComponents(
+                cli: [],
+                skills: [
+                    PackageComponent(id: "lark-doc", name: "Lark Doc", kind: "skill", required: true, installed: true, status: "installed", location: "lark-doc"),
+                    PackageComponent(id: "lark-base", name: "Lark Base", kind: "skill", required: true, installed: true, status: "installed", location: "lark-base")
+                ],
+                mcp: [],
+                agents: []
+            ),
+            configSchema: [],
+            installed: true,
+            lifecycle: nil
+        )
+
+        #expect(viewModel.enabledSkillCount(for: .claude, in: package) == 1)
+        #expect(viewModel.enabledSkillCount(for: .codex, in: package) == 1)
+        #expect(viewModel.enabledSkillCount(for: .gemini, in: package) == 1)
+        #expect(viewModel.enabledSkillCount(for: .hermes, in: package) == 0)
+    }
+
+    @Test
+    func packageEnabledSkillCountIgnoresUninstalledOrUnmatchedComponents() {
+        let viewModel = LibraryViewModel()
+        viewModel.skills = [
+            Skill(
+                id: "owner/repo:lark-doc",
+                name: "Lark Doc",
+                description: "",
+                directory: "lark-doc",
+                repoOwner: "owner",
+                repoName: "repo",
+                readmeUrl: nil,
+                apps: SkillApps(claude: true, codex: false, gemini: false, opencode: false, hermes: false),
+                installedAt: nil,
+                updatedAt: nil,
+                contentHash: nil
+            )
+        ]
+
+        let package = CapabilityPackage(
+            id: "pkg:lark",
+            type: .composite,
+            name: "Lark",
+            vendor: nil,
+            summary: "Lark package",
+            source: PackageSource(
+                kind: "builtin",
+                location: "popskill/builtin/lark",
+                updateStrategy: "manual",
+                repoOwner: nil,
+                repoName: nil,
+                repoBranch: nil,
+                readmeUrl: nil
+            ),
+            components: PackageComponents(
+                cli: [],
+                skills: [
+                    PackageComponent(id: "lark-doc", name: "Lark Doc", kind: "skill", required: true, installed: false, status: "declared", location: "lark-doc"),
+                    PackageComponent(id: "lark-missing", name: "Lark Missing", kind: "skill", required: true, installed: true, status: "installed", location: "lark-missing")
+                ],
+                mcp: [],
+                agents: []
+            ),
+            configSchema: [],
+            installed: true,
+            lifecycle: nil
+        )
+
+        #expect(viewModel.enabledSkillCount(for: .claude, in: package) == 0)
+    }
+
+    @Test
     func packageCardSignalsExposeUpdateRecoveryAndLastCheck() {
         let viewModel = LibraryViewModel()
         viewModel.updates = [
@@ -222,6 +340,8 @@ struct LibraryViewModelPackageUpdateTests {
         #expect(signals.recoverableMissingComponents == 1)
         #expect(signals.missingRequiredComponents == 1)
         #expect(signals.lastCheckedUpdatesAt == referenceDate)
+        #expect(signals.installedSkillComponentCount == 0)
+        #expect(signals.appEnabledCounts.count == TargetApp.supported.count)
     }
 
     private func packageWithSkillComponent(id: String, name: String, location: String?) -> CapabilityPackage {

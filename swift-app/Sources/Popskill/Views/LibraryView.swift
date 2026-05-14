@@ -875,6 +875,13 @@ struct PackageRow: View {
                         .foregroundStyle(Color.popTertiaryLabel)
                         .lineLimit(1)
 
+                    if package.type == .composite, signals.installedSkillComponentCount > 0 {
+                        PackageAppCoverageBar(
+                            counts: signals.appEnabledCounts,
+                            totalSkills: signals.installedSkillComponentCount
+                        )
+                    }
+
                     HStack(spacing: 10) {
                         Label(packageUpdateChannelLabel(package), systemImage: "point.3.connected.trianglepath.dotted")
                             .lineLimit(1)

@@ -121,6 +121,37 @@ struct AppCountBar: View {
     }
 }
 
+struct PackageAppCoverageBar: View {
+    let counts: [PackageAppEnabledCount]
+    let totalSkills: Int
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(counts) { coverage in
+                HStack(spacing: 4) {
+                    Image(systemName: coverage.app.symbolName)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(coverage.enabledCount > 0 ? coverage.app.accentColor : Color.popStatusNeutral)
+                    Text("\(coverage.enabledCount)/\(totalSkills)")
+                        .font(.caption2.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(
+                    coverage.enabledCount > 0 ? coverage.app.accentColor.opacity(0.10) : Color.popCardBackground.opacity(0.44),
+                    in: RoundedRectangle(cornerRadius: PopskillRadius.button, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: PopskillRadius.button, style: .continuous)
+                        .stroke(coverage.enabledCount > 0 ? coverage.app.accentColor.opacity(0.25) : Color.popBorder, lineWidth: 1)
+                )
+                .help("\(coverage.app.title): \(coverage.enabledCount) of \(totalSkills) package skills enabled")
+            }
+        }
+    }
+}
+
 private extension TargetApp {
     var accentColor: Color {
         switch self {
