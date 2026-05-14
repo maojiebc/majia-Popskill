@@ -993,6 +993,52 @@ struct SkillUpdateInfo: Identifiable, Codable, Equatable {
     let remoteHash: String
 }
 
+extension SkillUpdateInfo {
+    var normalizedIdentifierCandidates: Set<String> {
+        let normalizedID = id.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalizedID.isEmpty else {
+            return []
+        }
+
+        var candidates: Set<String> = [normalizedID]
+        if let scopedSuffix = normalizedID.split(separator: ":").last {
+            candidates.insert(String(scopedSuffix))
+        }
+        if let pathSuffix = normalizedID.split(separator: "/").last {
+            candidates.insert(String(pathSuffix))
+        }
+        return candidates
+    }
+}
+
+extension PackageComponent {
+    func matchesSkillUpdate(_ update: SkillUpdateInfo) -> Bool {
+        guard kind.caseInsensitiveCompare("skill") == .orderedSame else {
+            return false
+        }
+
+        let candidates = update.normalizedIdentifierCandidates
+        let componentID = id.lowercased()
+        if candidates.contains(componentID) {
+            return true
+        }
+
+        if let location = location?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+           !location.isEmpty,
+           candidates.contains(location) {
+            return true
+        }
+
+        return name.caseInsensitiveCompare(update.name) == .orderedSame
+    }
+}
+
+extension CapabilityPackage {
+    func matchingSkillComponent(for update: SkillUpdateInfo) -> PackageComponent? {
+        components.skills.first { $0.matchesSkillUpdate(update) }
+    }
+}
+
 struct CLIResponse<T: Decodable>: Decodable {
     let ok: Bool
     let data: T?

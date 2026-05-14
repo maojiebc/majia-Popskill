@@ -748,6 +748,128 @@ struct SkillModelsTests {
         #expect(package.componentGroupSummaries.first(where: { $0.kind == "agent" })?.missingRequired == 1)
     }
 
+    @Test
+    func capabilityPackageMatchesScopedSkillUpdateIdentifier() {
+        let package = self.package(
+            components: [
+                PackageComponent(
+                    id: "lark-doc",
+                    name: "Lark Doc",
+                    kind: "skill",
+                    required: true,
+                    installed: true,
+                    status: "installed",
+                    location: "lark-doc"
+                )
+            ]
+        )
+        let update = SkillUpdateInfo(
+            id: "owner/repo:lark-doc",
+            name: "Lark Doc",
+            currentHash: "abc12345",
+            remoteHash: "def67890"
+        )
+
+        #expect(package.matchingSkillComponent(for: update)?.id == "lark-doc")
+    }
+
+    @Test
+    func capabilityPackageMatchesSkillUpdateByComponentLocation() {
+        let package = self.package(
+            components: [
+                PackageComponent(
+                    id: "lark-doc",
+                    name: "Lark Doc",
+                    kind: "skill",
+                    required: true,
+                    installed: true,
+                    status: "installed",
+                    location: "skills/lark-doc"
+                )
+            ]
+        )
+        let update = SkillUpdateInfo(
+            id: "owner/repo:skills/lark-doc",
+            name: "Lark Doc",
+            currentHash: nil,
+            remoteHash: "def67890"
+        )
+
+        #expect(package.matchingSkillComponent(for: update)?.location == "skills/lark-doc")
+    }
+
+    @Test
+    func capabilityPackageMatchesSkillUpdateByNameFallback() {
+        let package = self.package(
+            components: [
+                PackageComponent(
+                    id: "lark-doc",
+                    name: "Lark Doc",
+                    kind: "skill",
+                    required: true,
+                    installed: true,
+                    status: "installed",
+                    location: nil
+                )
+            ]
+        )
+        let update = SkillUpdateInfo(
+            id: "owner/repo:unknown",
+            name: "Lark Doc",
+            currentHash: nil,
+            remoteHash: "def67890"
+        )
+
+        #expect(package.matchingSkillComponent(for: update)?.id == "lark-doc")
+    }
+
+    @Test
+    func capabilityPackageUpdateMatchingSkipsNonSkillComponents() {
+        let package = CapabilityPackage(
+            id: "pkg:cli-only",
+            type: .composite,
+            name: "CLI Only",
+            vendor: nil,
+            summary: "No skills",
+            source: PackageSource(
+                kind: "builtin",
+                location: "demo",
+                updateStrategy: "manual",
+                repoOwner: nil,
+                repoName: nil,
+                repoBranch: nil,
+                readmeUrl: nil
+            ),
+            components: PackageComponents(
+                cli: [
+                    PackageComponent(
+                        id: "demo-cli",
+                        name: "demo-cli",
+                        kind: "cli",
+                        required: true,
+                        installed: true,
+                        status: "installed",
+                        location: nil
+                    )
+                ],
+                skills: [],
+                mcp: [],
+                agents: []
+            ),
+            configSchema: [],
+            installed: true,
+            lifecycle: nil
+        )
+        let update = SkillUpdateInfo(
+            id: "owner/repo:demo-cli",
+            name: "demo-cli",
+            currentHash: "abc",
+            remoteHash: "def"
+        )
+
+        #expect(package.matchingSkillComponent(for: update) == nil)
+    }
+
     private func catalogSkill(repoBranch: String?) -> CatalogSkill {
         CatalogSkill(
             key: "maojiebc/majia-skills/demo",

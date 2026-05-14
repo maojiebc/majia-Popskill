@@ -664,6 +664,7 @@ struct PackageDetailPane: View {
 
                             if !pendingUpdates.isEmpty {
                                 ForEach(pendingUpdates.prefix(3)) { update in
+                                    let matchingComponent = package.matchingSkillComponent(for: update)
                                     HStack(spacing: 8) {
                                         Image(systemName: "arrow.down.circle")
                                             .font(.system(size: 12, weight: .semibold))
@@ -672,11 +673,20 @@ struct PackageDetailPane: View {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(update.name)
                                                 .font(.caption.weight(.semibold))
-                                            Text(hashDeltaSummary(update))
+                                            Text(packageUpdateSourceLabel(update, component: matchingComponent))
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                            Text(packageUpdateHashSummary(update))
                                                 .font(.caption2)
                                                 .foregroundStyle(.secondary)
                                         }
                                     }
+                                }
+
+                                if pendingUpdates.count > 3 {
+                                    Text("+\(pendingUpdates.count - 3) more pending updates in Updates")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                         }
@@ -1476,8 +1486,32 @@ private func byteCountText(_ bytes: UInt64) -> String {
 }
 
 private func hashDeltaSummary(_ update: SkillUpdateInfo) -> String {
-    let current = update.currentHash.map { String($0.prefix(8)) } ?? "unknown"
-    return "\(current) -> \(String(update.remoteHash.prefix(8)))"
+    return "\(shortHash(update.currentHash)) -> \(shortHash(update.remoteHash))"
+}
+
+private func packageUpdateHashSummary(_ update: SkillUpdateInfo) -> String {
+    "Local \(shortHash(update.currentHash)) · Remote \(shortHash(update.remoteHash))"
+}
+
+private func packageUpdateSourceLabel(_ update: SkillUpdateInfo, component: PackageComponent?) -> String {
+    if let component {
+        if let location = component.location?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !location.isEmpty,
+           location.caseInsensitiveCompare(component.id) != .orderedSame {
+            return "Component \(component.id) · \(location)"
+        }
+        return "Component \(component.id)"
+    }
+    return "Update key \(update.id)"
+}
+
+private func shortHash(_ hash: String?, fallback: String = "unknown") -> String {
+    guard let hash,
+          !hash.isEmpty
+    else {
+        return fallback
+    }
+    return String(hash.prefix(8))
 }
 
 private func briefSummary(_ text: String, maxLength: Int = 180) -> String {
