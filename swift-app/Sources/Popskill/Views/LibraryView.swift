@@ -678,6 +678,8 @@ struct PackageDetailPane: View {
                             if let hash = lifecycle.contentHash, !hash.isEmpty {
                                 DetailField(title: "Hash", value: String(hash.prefix(12)))
                             }
+                            DetailField(title: "Local Hash State", value: packageLocalHashStateLabel(package, pendingUpdates: pendingUpdates))
+                            DetailField(title: "Remote Hash State", value: packageRemoteHashStateLabel(pendingUpdates))
 
                             if !pendingUpdates.isEmpty {
                                 ForEach(pendingUpdates.prefix(3)) { update in
@@ -872,6 +874,21 @@ struct PackageRow: View {
                         .font(.caption)
                         .foregroundStyle(Color.popTertiaryLabel)
                         .lineLimit(1)
+
+                    HStack(spacing: 10) {
+                        Label(packageUpdateChannelLabel(package), systemImage: "point.3.connected.trianglepath.dotted")
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Label(packageLifecycleSummaryLabel(package), systemImage: "clock.arrow.circlepath")
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        if let hash = package.trackedContentHash {
+                            Label(shortHash(hash), systemImage: "number")
+                                .lineLimit(1)
+                        }
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(Color.popTertiaryLabel)
 
                     if let quickToggle {
                         AppToggleRow(
@@ -1732,6 +1749,13 @@ private func packageLifecycleStateLabel(_ package: CapabilityPackage, pendingUpd
     return "Not installed"
 }
 
+private func packageLifecycleSummaryLabel(_ package: CapabilityPackage) -> String {
+    guard let timestamp = package.lastLifecycleTimestamp else {
+        return "Lifecycle untracked"
+    }
+    return "Updated \(formattedTimestamp(timestamp))"
+}
+
 private func packageUpdateChannelLabel(_ package: CapabilityPackage) -> String {
     guard let owner = package.source.repoOwner,
           let name = package.source.repoName,
@@ -1746,6 +1770,53 @@ private func packageUpdateChannelLabel(_ package: CapabilityPackage) -> String {
     }
 
     return "\(owner)/\(name)"
+}
+
+private func packageLocalHashStateLabel(_ package: CapabilityPackage, pendingUpdates: [SkillUpdateInfo]) -> String {
+    var hashes = Set<String>()
+    if let trackedHash = package.trackedContentHash {
+        hashes.insert(trackedHash)
+    }
+    for update in pendingUpdates {
+        if let hash = update.currentHash?.trimmingCharacters(in: .whitespacesAndNewlines), !hash.isEmpty {
+            hashes.insert(hash)
+        }
+    }
+
+    return packageHashStateLabel(
+        hashes,
+        emptyFallback: "Not Tracked",
+        manyTemplate: "%d local hashes"
+    )
+}
+
+private func packageRemoteHashStateLabel(_ pendingUpdates: [SkillUpdateInfo]) -> String {
+    let hashes = Set(
+        pendingUpdates
+            .map(\.remoteHash)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    )
+    return packageHashStateLabel(
+        hashes,
+        emptyFallback: "No Remote Drift",
+        manyTemplate: "%d remote hashes"
+    )
+}
+
+private func packageHashStateLabel(
+    _ hashes: Set<String>,
+    emptyFallback: String,
+    manyTemplate: String
+) -> String {
+    let sorted = hashes.sorted()
+    guard !sorted.isEmpty else {
+        return emptyFallback
+    }
+    if sorted.count == 1, let hash = sorted.first {
+        return shortHash(hash)
+    }
+    return String(format: manyTemplate, sorted.count)
 }
 
 private func packageSourceKindLabel(_ kind: String) -> String {

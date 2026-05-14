@@ -622,6 +622,23 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
             PackageComponentGroupSummary(kind: "agent", title: "Agents", components: components.agents)
         ].filter { $0.total > 0 }
     }
+
+    var lastLifecycleTimestamp: Int? {
+        [lifecycle?.installedAt, lifecycle?.updatedAt]
+            .compactMap { value -> Int? in
+                guard let value, value > 0 else {
+                    return nil
+                }
+                return value
+            }
+            .max()
+    }
+
+    var trackedContentHash: String? {
+        lifecycle?.contentHash?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .nilIfEmpty
+    }
 }
 
 struct PackageComponentGroupSummary: Identifiable, Equatable {
@@ -666,6 +683,12 @@ struct PackageLifecycle: Codable, Equatable {
         updatedAt: nil,
         contentHash: nil
     )
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
+    }
 }
 
 struct PackageComponents: Codable, Equatable {

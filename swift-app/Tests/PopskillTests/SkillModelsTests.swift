@@ -749,6 +749,57 @@ struct SkillModelsTests {
     }
 
     @Test
+    func capabilityPackageLifecycleHelpersExposeLatestTimestampAndTrackedHash() {
+        var package = self.package(components: [component(installed: true)])
+        package = CapabilityPackage(
+            id: package.id,
+            type: package.type,
+            name: package.name,
+            vendor: package.vendor,
+            summary: package.summary,
+            source: package.source,
+            components: package.components,
+            configSchema: package.configSchema,
+            installed: package.installed,
+            lifecycle: PackageLifecycle(
+                installedAt: 1_700_000_000,
+                updatedAt: 1_700_000_120,
+                contentHash: "  abcdef12  "
+            )
+        )
+
+        #expect(package.lastLifecycleTimestamp == 1_700_000_120)
+        #expect(package.trackedContentHash == "abcdef12")
+    }
+
+    @Test
+    func capabilityPackageLifecycleHelpersHandleMissingOrBlankValues() {
+        var package = self.package(components: [])
+        #expect(package.lastLifecycleTimestamp == nil)
+        #expect(package.trackedContentHash == nil)
+
+        package = CapabilityPackage(
+            id: package.id,
+            type: package.type,
+            name: package.name,
+            vendor: package.vendor,
+            summary: package.summary,
+            source: package.source,
+            components: package.components,
+            configSchema: package.configSchema,
+            installed: package.installed,
+            lifecycle: PackageLifecycle(
+                installedAt: 0,
+                updatedAt: -42,
+                contentHash: "   "
+            )
+        )
+
+        #expect(package.lastLifecycleTimestamp == nil)
+        #expect(package.trackedContentHash == nil)
+    }
+
+    @Test
     func capabilityPackageMatchesScopedSkillUpdateIdentifier() {
         let package = self.package(
             components: [
