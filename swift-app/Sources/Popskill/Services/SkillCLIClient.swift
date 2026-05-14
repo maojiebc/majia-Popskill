@@ -24,6 +24,11 @@ actor SkillCLIClient {
         return (override as NSString).expandingTildeInPath
     }
 
+    func domainSchema() async throws -> AssetDomainSchema {
+        let data = try run(arguments: ["domain-schema", "--json"])
+        return try Self.decodeResponse(AssetDomainSchema.self, from: data)
+    }
+
     func health() async throws -> SidecarHealth {
         let data = try run(arguments: ["health", "--json"])
         return try Self.decodeResponse(SidecarHealth.self, from: data)

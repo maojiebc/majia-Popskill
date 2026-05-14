@@ -8,6 +8,7 @@ struct LocalizationTests {
 
         #expect(localization.string("Settings") == "设置")
         #expect(localization.string("Capability Packages") == "能力包")
+        #expect(localization.string("Asset Model") == "资产模型")
     }
 
     @Test

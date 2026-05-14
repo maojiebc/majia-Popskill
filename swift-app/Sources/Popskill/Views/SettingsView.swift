@@ -5,10 +5,12 @@ import SwiftUI
 @MainActor
 @Observable
 final class SettingsViewModel {
+    var domainSchema: AssetDomainSchema?
     var health: SidecarHealth?
     var webdavStatus: WebDAVStatus?
     var webdavRemoteInfo: WebDAVRemoteInfo?
     var webdavSyncPlan: WebDAVSyncPlan?
+    var domainSchemaError: String?
     var webdavRemoteError: String?
     var isLoading = false
     var isCheckingWebDAVRemote = false
@@ -37,6 +39,14 @@ final class SettingsViewModel {
         defer {
             isLoading = false
             hasLoadedOnce = true
+        }
+
+        do {
+            domainSchema = try await client.domainSchema()
+            domainSchemaError = nil
+        } catch {
+            domainSchema = nil
+            domainSchemaError = error.localizedDescription
         }
 
         do {
@@ -177,7 +187,14 @@ struct SettingsView: View {
                         }
                     }
 
-                    DetailSection(title: "CC Switch", accent: PopskillSectionAccent.color(for: 1)) {
+                    DetailSection(title: "Asset Model", accent: PopskillSectionAccent.color(for: 1)) {
+                        AssetDomainSchemaSummary(
+                            schema: viewModel.domainSchema,
+                            errorMessage: viewModel.domainSchemaError
+                        )
+                    }
+
+                    DetailSection(title: "CC Switch", accent: PopskillSectionAccent.color(for: 2)) {
                         SettingsFieldGrid {
                             DetailField(title: "Installed", value: countText(viewModel.health?.installedCount))
                             DetailField(title: "Unmanaged", value: countText(viewModel.health?.unmanagedCount))
@@ -188,12 +205,12 @@ struct SettingsView: View {
                         DetailField(title: "Skill Backups", value: viewModel.health?.skillBackupPath ?? backupPath)
                     }
 
-                    DetailSection(title: "Secrets", accent: PopskillSectionAccent.color(for: 2)) {
+                    DetailSection(title: "Secrets", accent: PopskillSectionAccent.color(for: 3)) {
                         DetailField(title: "Local Secrets", value: localization.string("settings.localSecrets.value"))
                         DetailField(title: "WebDAV Credentials", value: localization.string("settings.webDAVCredentials.value"))
                     }
 
-                    DetailSection(title: "WebDAV", accent: PopskillSectionAccent.color(for: 3)) {
+                    DetailSection(title: "WebDAV", accent: PopskillSectionAccent.color(for: 4)) {
                         WebDAVReadinessNote(status: viewModel.webdavStatus, syncPlan: viewModel.webdavSyncPlan)
                         WebDAVConfigForm(viewModel: viewModel)
                         Divider()
@@ -246,13 +263,13 @@ struct SettingsView: View {
                         }
                     }
 
-                if let docsURL = ipcDocsURL {
-                    Link(destination: docsURL) {
-                        LocalizedLabel(title: "Open IPC Docs", systemImage: "doc.text")
+                    if let docsURL = ipcDocsURL {
+                        Link(destination: docsURL) {
+                            LocalizedLabel(title: "Open IPC Docs", systemImage: "doc.text")
+                        }
+                        .buttonStyle(.bordered)
                     }
-                    .buttonStyle(.bordered)
                 }
-            }
                 .frame(maxWidth: 920, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 28)
@@ -339,6 +356,69 @@ struct SettingsView: View {
             .appendingPathComponent("docs")
             .appendingPathComponent("ipc.md")
         return FileManager.default.fileExists(atPath: docsURL.path) ? docsURL : nil
+    }
+}
+
+private struct AssetDomainSchemaSummary: View {
+    let schema: AssetDomainSchema?
+    let errorMessage: String?
+    @Environment(\.popskillLocalization) private var localization
+
+    var body: some View {
+        if let schema {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(localization.string("settings.assetModel.summary"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                SettingsFieldGrid {
+                    DetailField(title: "Model Contract", value: schema.modelName)
+                    DetailField(title: "Schema Version", value: "\(schema.schemaVersion)")
+                    DetailField(title: "Source Kinds", value: schema.sourceKinds.joined(separator: ", "))
+                    DetailField(title: "Component Kinds", value: schema.componentKindSummary)
+                    DetailField(title: "Deployment Strategies", value: schema.deploymentStrategySummary)
+                    DetailField(title: "Runtime Transports", value: schema.runtimeTransportSummary)
+                    DetailField(title: "Mutation Phases", value: schema.mutationPhaseSummary)
+                    DetailField(title: "Stable Error Codes", value: "\(schema.errorCodes.count)")
+                    DetailField(title: "Rollback Errors", value: rollbackErrorSummary(schema))
+                }
+
+                if !schema.invariants.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        LocalizedText("Invariants")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        ForEach(Array(schema.invariants.prefix(3)), id: \.self) { invariant in
+                            Label {
+                                Text(invariant)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            } icon: {
+                                Image(systemName: "checkmark.seal")
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        } else if let errorMessage {
+            Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(Color.popStatusWarning)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            LocalizedText("settings.assetModel.unavailable")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func rollbackErrorSummary(_ schema: AssetDomainSchema) -> String {
+        schema.rollbackErrorCodes.isEmpty
+            ? localization.string("None")
+            : schema.rollbackErrorCodes.joined(separator: ", ")
     }
 }
 
