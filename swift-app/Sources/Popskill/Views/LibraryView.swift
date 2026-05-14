@@ -226,6 +226,8 @@ struct LibraryView: View {
     private func skillDetailPane(_ skill: Skill) -> some View {
         SkillDetailPane(
             skill: skill,
+            updateInfo: viewModel.updateInfo(skillID: skill.id),
+            lastCheckedUpdatesAt: viewModel.lastCheckedUpdatesAt,
             isUninstalling: viewModel.isUninstalling(skillID: skill.id),
             isStubbing: viewModel.isStubbing(skillID: skill.id),
             isScanningSecurity: viewModel.isScanningSecurity(skillID: skill.id),
@@ -914,6 +916,8 @@ struct PackageComponentLine: View {
 
 struct SkillDetailPane: View {
     let skill: Skill?
+    let updateInfo: SkillUpdateInfo?
+    let lastCheckedUpdatesAt: Date?
     let isUninstalling: Bool
     let isStubbing: Bool
     let isScanningSecurity: Bool
@@ -977,10 +981,23 @@ struct SkillDetailPane: View {
 
                             DetailField(title: "Directory", value: skill.directory)
                             DetailField(title: "Identifier", value: skill.id)
+                            DetailField(title: "Source Kind", value: skillSourceKindLabel(skill))
+                            DetailField(
+                                title: "Repository",
+                                value: skillRepositoryLabel(skill, fallback: localization.string("Not Tracked"))
+                            )
+                            DetailField(title: "Update Strategy", value: skillUpdateStrategyLabel(skill))
                         }
 
                         DetailSection(title: "Lifecycle", accent: PopskillSectionAccent.color(for: 1)) {
-                            DetailField(title: "Version", value: localization.string("Not Tracked"))
+                            DetailField(title: "Lifecycle State", value: skillLifecycleStateLabel(skill, updateInfo: updateInfo))
+                            DetailField(title: "Pending Updates", value: updateInfo == nil ? "0" : "1")
+                            DetailField(
+                                title: "Last Checked",
+                                value: lastCheckedUpdatesAt?.formatted(date: .abbreviated, time: .shortened)
+                                    ?? localization.string("Not Tracked")
+                            )
+                            DetailField(title: "Update Channel", value: skillUpdateChannelLabel(skill))
                             DetailField(
                                 title: "Installed Date",
                                 value: formattedOptionalTimestamp(skill.installedAt, fallback: localization.string("Not Tracked"))
@@ -990,9 +1007,11 @@ struct SkillDetailPane: View {
                                 value: formattedOptionalTimestamp(skill.updatedAt, fallback: localization.string("Not Tracked"))
                             )
                             DetailField(title: "Size", value: skill.sizeBytes.map(byteCountText) ?? localization.string("Not Tracked"))
-                            DetailField(title: "Downloads", value: localization.string("Not Tracked"))
                             if let contentHash = skill.contentHash, !contentHash.isEmpty {
                                 DetailField(title: "Hash", value: String(contentHash.prefix(12)))
+                            }
+                            if let updateInfo {
+                                DetailField(title: "Hash Delta", value: hashDeltaSummary(updateInfo))
                             }
                         }
 
@@ -1552,6 +1571,61 @@ private func packageUpdateStrategyLabel(_ strategy: String) -> String {
     default:
         return strategy.capitalized
     }
+}
+
+private func skillRepositoryLabel(_ skill: Skill, fallback: String) -> String {
+    guard let owner = skill.repoOwner,
+          let name = skill.repoName,
+          !owner.isEmpty,
+          !name.isEmpty
+    else {
+        return fallback
+    }
+
+    return "\(owner)/\(name)"
+}
+
+private func skillSourceKindLabel(_ skill: Skill) -> String {
+    if skill.repoOwner?.isEmpty == false, skill.repoName?.isEmpty == false {
+        return "GitHub"
+    }
+
+    if skill.sourceURL != nil {
+        return "Remote"
+    }
+
+    return "Local"
+}
+
+private func skillUpdateStrategyLabel(_ skill: Skill) -> String {
+    skill.repoOwner?.isEmpty == false && skill.repoName?.isEmpty == false ? "Git" : "Manual"
+}
+
+private func skillUpdateChannelLabel(_ skill: Skill) -> String {
+    if let owner = skill.repoOwner,
+       let name = skill.repoName,
+       !owner.isEmpty,
+       !name.isEmpty {
+        return "\(owner)/\(name)"
+    }
+
+    return "manual"
+}
+
+private func skillLifecycleStateLabel(_ skill: Skill, updateInfo: SkillUpdateInfo?) -> String {
+    if updateInfo != nil {
+        return "Update available"
+    }
+
+    if skill.enabledAppCount == 0 {
+        return "Inactive"
+    }
+
+    if skill.lastLifecycleTimestamp == nil {
+        return "Installed (untracked dates)"
+    }
+
+    return "Up to date"
 }
 
 private func packagePrimaryFolderURL(_ package: CapabilityPackage) -> URL? {
