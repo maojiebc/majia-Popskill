@@ -103,6 +103,15 @@ final class LibraryViewModel {
         updates.count
     }
 
+    func packageCardSignals(for package: CapabilityPackage) -> PackageCardSignals {
+        PackageCardSignals(
+            pendingUpdates: updates(for: package).count,
+            recoverableMissingComponents: package.recoverableMissingComponentCount,
+            missingRequiredComponents: package.missingRequiredComponentCount,
+            lastCheckedUpdatesAt: lastCheckedUpdatesAt
+        )
+    }
+
     func enabledSkillCount(for app: TargetApp) -> Int {
         skills.reduce(into: 0) { count, skill in
             if skill.apps.isEnabled(app) {
@@ -570,6 +579,13 @@ final class LibraryViewModel {
 
         return skill.name.caseInsensitiveCompare(component.name) == .orderedSame
     }
+}
+
+struct PackageCardSignals: Equatable {
+    let pendingUpdates: Int
+    let recoverableMissingComponents: Int
+    let missingRequiredComponents: Int
+    let lastCheckedUpdatesAt: Date?
 }
 
 enum LibraryFilter: String, CaseIterable, Identifiable {

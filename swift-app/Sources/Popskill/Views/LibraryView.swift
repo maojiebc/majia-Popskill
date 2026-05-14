@@ -129,7 +129,7 @@ struct LibraryView: View {
                             } content: {
                                 PackageRow(
                                     package: package,
-                                    pendingUpdates: viewModel.updates(for: package).count
+                                    signals: viewModel.packageCardSignals(for: package)
                                 )
                             }
                         }
@@ -783,7 +783,8 @@ struct PackageDetailPane: View {
 
 struct PackageRow: View {
     let package: CapabilityPackage
-    let pendingUpdates: Int
+    let signals: PackageCardSignals
+    var showsStatusSignals: Bool = true
     @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
@@ -801,8 +802,8 @@ struct PackageRow: View {
 
                         StatusPill(title: package.typeLabel, color: packageColor(package.type))
                         StatusPill(title: package.health.title, color: packageHealthColor(package.health))
-                        if pendingUpdates > 0 {
-                            StatusPill(title: "Updates \(pendingUpdates)", color: .popStatusWarning)
+                        if signals.pendingUpdates > 0 {
+                            StatusPill(title: "Updates \(signals.pendingUpdates)", color: .popStatusWarning)
                         }
 
                         if package.missingComponentCount > 0 {
@@ -830,11 +831,99 @@ struct PackageRow: View {
                         .font(.caption)
                         .foregroundStyle(Color.popTertiaryLabel)
                         .lineLimit(1)
+
+                    if packageSignalChipData.isEmpty == false {
+                        HStack(spacing: 6) {
+                            ForEach(packageSignalChipData, id: \.id) { chip in
+                                HStack(spacing: 4) {
+                                    Image(systemName: chip.systemImage)
+                                        .font(.system(size: 10, weight: .semibold))
+                                    Text(chip.title)
+                                        .font(.caption2.weight(.semibold))
+                                        .lineLimit(1)
+                                }
+                                .foregroundStyle(chip.color)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(chip.color.opacity(0.10), in: Capsule())
+                            }
+                        }
+                    }
                 }
             }
         }
         .frame(minHeight: 96)
     }
+
+    private var packageSignalChipData: [PackageSignalChipData] {
+        guard showsStatusSignals else {
+            return []
+        }
+
+        var chips: [PackageSignalChipData] = []
+
+        if signals.pendingUpdates > 0 {
+            chips.append(
+                PackageSignalChipData(
+                    id: "updates",
+                    title: "\(signals.pendingUpdates) pending",
+                    systemImage: "arrow.down.circle",
+                    color: .popStatusWarning
+                )
+            )
+        }
+
+        if signals.recoverableMissingComponents > 0 {
+            chips.append(
+                PackageSignalChipData(
+                    id: "rehydrate",
+                    title: "Rehydrate \(signals.recoverableMissingComponents)",
+                    systemImage: "icloud.and.arrow.down",
+                    color: .popSectionBlue
+                )
+            )
+        }
+
+        if signals.missingRequiredComponents > 0 {
+            chips.append(
+                PackageSignalChipData(
+                    id: "missing-required",
+                    title: "Required missing \(signals.missingRequiredComponents)",
+                    systemImage: "exclamationmark.triangle",
+                    color: .popStatusError
+                )
+            )
+        }
+
+        if let checkedAt = signals.lastCheckedUpdatesAt {
+            chips.append(
+                PackageSignalChipData(
+                    id: "checked",
+                    title: "Checked \(checkedAt.formatted(date: .omitted, time: .shortened))",
+                    systemImage: "clock.arrow.circlepath",
+                    color: .popTertiaryLabel
+                )
+            )
+        } else {
+            chips.append(
+                PackageSignalChipData(
+                    id: "check-pending",
+                    title: "Check pending",
+                    systemImage: "clock.badge.questionmark",
+                    color: .popStatusNeutral
+                )
+            )
+        }
+
+        return chips
+    }
+}
+
+private struct PackageSignalChipData {
+    let id: String
+    let title: String
+    let systemImage: String
+    let color: Color
 }
 
 struct PackageComponentTree: View {

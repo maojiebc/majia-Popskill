@@ -1,4 +1,5 @@
 @testable import Popskill
+import Foundation
 import Testing
 
 @MainActor
@@ -168,6 +169,59 @@ struct LibraryViewModelPackageUpdateTests {
         #expect(viewModel.enabledSkillCount(for: .gemini) == 1)
         #expect(viewModel.enabledSkillCount(for: .opencode) == 1)
         #expect(viewModel.enabledSkillCount(for: .hermes) == 0)
+    }
+
+    @Test
+    func packageCardSignalsExposeUpdateRecoveryAndLastCheck() {
+        let viewModel = LibraryViewModel()
+        viewModel.updates = [
+            SkillUpdateInfo(id: "lark-doc", name: "Lark Doc", currentHash: nil, remoteHash: "def456")
+        ]
+        let referenceDate = Date(timeIntervalSince1970: 1_778_700_000)
+        viewModel.lastCheckedUpdatesAt = referenceDate
+
+        let package = CapabilityPackage(
+            id: "pkg:lark",
+            type: .composite,
+            name: "Lark",
+            vendor: nil,
+            summary: "Lark package",
+            source: PackageSource(
+                kind: "builtin",
+                location: "popskill/builtin/lark",
+                updateStrategy: "manual",
+                repoOwner: nil,
+                repoName: nil,
+                repoBranch: nil,
+                readmeUrl: nil
+            ),
+            components: PackageComponents(
+                cli: [],
+                skills: [
+                    PackageComponent(
+                        id: "lark-doc",
+                        name: "Lark Doc",
+                        kind: "skill",
+                        required: true,
+                        installed: false,
+                        status: "stub",
+                        location: "lark-doc"
+                    )
+                ],
+                mcp: [],
+                agents: []
+            ),
+            configSchema: [],
+            installed: true,
+            lifecycle: nil
+        )
+
+        let signals = viewModel.packageCardSignals(for: package)
+
+        #expect(signals.pendingUpdates == 1)
+        #expect(signals.recoverableMissingComponents == 1)
+        #expect(signals.missingRequiredComponents == 1)
+        #expect(signals.lastCheckedUpdatesAt == referenceDate)
     }
 
     private func packageWithSkillComponent(id: String, name: String, location: String?) -> CapabilityPackage {
