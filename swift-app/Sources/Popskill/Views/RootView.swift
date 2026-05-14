@@ -37,7 +37,7 @@ enum SidebarSelection: String, CaseIterable, Identifiable {
 }
 
 struct RootView: View {
-    @State private var selection: SidebarSelection? = .installed
+    @State private var selection: SidebarSelection?
     @AppStorage("preferredLanguage") private var preferredLanguage = AppLanguage.system.rawValue
     @State private var repositories = RepositoriesViewModel()
     @State private var library = LibraryViewModel()
@@ -45,6 +45,11 @@ struct RootView: View {
     @State private var backups = BackupsViewModel()
     @State private var insights = InsightsViewModel()
     @State private var settings = SettingsViewModel()
+
+    init() {
+        let rawSelection = ProcessInfo.processInfo.environment["POPSKILL_INITIAL_SIDEBAR"]
+        _selection = State(initialValue: rawSelection.flatMap(SidebarSelection.init(rawValue:)) ?? .installed)
+    }
 
     var body: some View {
         let language = AppLanguage.fromStoredValue(preferredLanguage)
@@ -86,7 +91,7 @@ struct RootView: View {
                     sidebarLink(.settings)
                 }
             }
-            .navigationSplitViewColumnWidth(min: 260, ideal: 280)
+            .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)
         } detail: {
             switch selection ?? .installed {
             case .repositories:

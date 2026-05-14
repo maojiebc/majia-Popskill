@@ -189,8 +189,8 @@ struct SettingsView: View {
                     }
 
                     DetailSection(title: "Secrets", accent: PopskillSectionAccent.color(for: 2)) {
-                        DetailField(title: "Local Secrets", value: "Popskill stores its own secrets in macOS Keychain.")
-                        DetailField(title: "WebDAV Credentials", value: "Owned by CC Switch settings. New passwords are passed to the sidecar through an environment variable.")
+                        DetailField(title: "Local Secrets", value: localization.string("settings.localSecrets.value"))
+                        DetailField(title: "WebDAV Credentials", value: localization.string("settings.webDAVCredentials.value"))
                     }
 
                     DetailSection(title: "WebDAV", accent: PopskillSectionAccent.color(for: 3)) {
@@ -246,15 +246,17 @@ struct SettingsView: View {
                         }
                     }
 
-                    if let docsURL = ipcDocsURL {
-                        Link(destination: docsURL) {
-                            LocalizedLabel(title: "Open IPC Docs", systemImage: "doc.text")
-                        }
-                        .buttonStyle(.bordered)
+                if let docsURL = ipcDocsURL {
+                    Link(destination: docsURL) {
+                        LocalizedLabel(title: "Open IPC Docs", systemImage: "doc.text")
                     }
+                    .buttonStyle(.bordered)
                 }
-                .frame(maxWidth: 720, alignment: .leading)
-                .padding(28)
+            }
+                .frame(maxWidth: 920, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 24)
             }
         }
         .popPageBackground()
@@ -493,6 +495,7 @@ private struct LabeledField<Content: View>: View {
 struct WebDAVReadinessNote: View {
     let status: WebDAVStatus?
     let syncPlan: WebDAVSyncPlan?
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -502,9 +505,9 @@ struct WebDAVReadinessNote: View {
                 .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(localization.string(titleKey))
                     .font(.subheadline.weight(.semibold))
-                Text(message)
+                Text(messageText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -519,7 +522,7 @@ struct WebDAVReadinessNote: View {
         )
     }
 
-    private var title: String {
+    private var titleKey: String {
         guard let status else {
             return "WebDAV status unknown"
         }
@@ -535,20 +538,20 @@ struct WebDAVReadinessNote: View {
         return syncPlan?.available == true ? "WebDAV sync ready" : "WebDAV remote read-only"
     }
 
-    private var message: String {
+    private var messageText: String {
         guard let status else {
-            return "Refresh settings to load the saved CC Switch WebDAV configuration."
+            return localization.string("webdav.message.unknown")
         }
 
         guard status.configured else {
-            return "Save a server URL and username to create the CC Switch WebDAV configuration."
+            return localization.string("webdav.message.notConfigured")
         }
 
         guard status.enabled == true else {
-            return "Remote snapshot lookup is disabled until CC Switch WebDAV sync is enabled."
+            return localization.string("webdav.message.disabled")
         }
 
-        return syncPlan?.summary ?? "Remote snapshot lookup is available. Upload/download sync is intentionally not exposed from the sidecar yet."
+        return syncPlan?.summary ?? localization.string("webdav.message.ready")
     }
 
     private var symbolName: String {

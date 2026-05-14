@@ -36,14 +36,19 @@ final class InsightsViewModel {
 
 struct InsightsView: View {
     @Bindable var viewModel: InsightsViewModel
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Usage")
+                    LocalizedText("Usage")
                         .font(.system(.largeTitle, weight: .bold))
-                    Text("\(viewModel.summary.filesScanned) files · \(viewModel.summary.sessions) sessions")
+                    Text(localization.string(
+                        "usage.header.subtitle",
+                        viewModel.summary.filesScanned,
+                        viewModel.summary.sessions
+                    ))
                         .foregroundStyle(.secondary)
                 }
 
@@ -60,7 +65,7 @@ struct InsightsView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .help("Refresh")
+                .help(localization.string("Refresh"))
                 .disabled(viewModel.isScanning)
             }
             .padding(.horizontal, 28)
@@ -75,50 +80,63 @@ struct InsightsView: View {
                 Divider()
             }
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    TranscriptBoundaryNote()
+            Group {
+                if viewModel.isScanning && !viewModel.hasScannedOnce {
+                    UsageLoadingView()
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 22) {
+                            TranscriptBoundaryNote()
 
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 14)], spacing: 14) {
-                        UsageMetricCard(title: "Total Tokens", value: viewModel.summary.totalTokens, accent: PopskillSectionAccent.color(for: 0))
-                        UsageMetricCard(title: "Input", value: viewModel.summary.inputTokens, accent: PopskillSectionAccent.color(for: 1))
-                        UsageMetricCard(title: "Output", value: viewModel.summary.outputTokens, accent: PopskillSectionAccent.color(for: 2))
-                        UsageMetricCard(title: "Cache Read", value: viewModel.summary.cacheReadTokens, accent: PopskillSectionAccent.color(for: 3))
-                        UsageMetricCard(title: "Cache Create", value: viewModel.summary.cacheCreationTokens, accent: PopskillSectionAccent.color(for: 4))
-                        UsageMetricCard(title: "Usage Events", value: Int64(viewModel.summary.usageEvents), accent: PopskillSectionAccent.color(for: 5))
-                        UsageMetricCard(title: "Skill Events", value: Int64(viewModel.summary.attributedSkillUsageEvents), accent: PopskillSectionAccent.color(for: 6))
-                    }
-
-                    DetailSection(title: "Source", accent: PopskillSectionAccent.color(for: 1)) {
-                        DetailField(title: "Transcript Files", value: "\(viewModel.summary.filesScanned)")
-                        DetailField(title: "Sessions", value: "\(viewModel.summary.sessions)")
-                        DetailField(title: "Skill Attribution", value: "\(viewModel.summary.attributedSkillUsageEvents) of \(viewModel.summary.usageEvents) events")
-                    }
-
-                    DetailSection(title: "Models", accent: PopskillSectionAccent.color(for: 2)) {
-                        VStack(spacing: 8) {
-                            ForEach(viewModel.summary.modelStats.prefix(8)) { stat in
-                                ModelUsageRow(stat: stat, maxTokens: maxModelTokens)
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 14)], spacing: 14) {
+                                UsageMetricCard(title: "Total Tokens", value: viewModel.summary.totalTokens, accent: PopskillSectionAccent.color(for: 0))
+                                UsageMetricCard(title: "Input", value: viewModel.summary.inputTokens, accent: PopskillSectionAccent.color(for: 1))
+                                UsageMetricCard(title: "Output", value: viewModel.summary.outputTokens, accent: PopskillSectionAccent.color(for: 2))
+                                UsageMetricCard(title: "Cache Read", value: viewModel.summary.cacheReadTokens, accent: PopskillSectionAccent.color(for: 3))
+                                UsageMetricCard(title: "Cache Create", value: viewModel.summary.cacheCreationTokens, accent: PopskillSectionAccent.color(for: 4))
+                                UsageMetricCard(title: "Usage Events", value: Int64(viewModel.summary.usageEvents), accent: PopskillSectionAccent.color(for: 5))
+                                UsageMetricCard(title: "Skill Events", value: Int64(viewModel.summary.attributedSkillUsageEvents), accent: PopskillSectionAccent.color(for: 6))
                             }
-                        }
-                    }
 
-                    if !viewModel.summary.skillStats.isEmpty {
-                        DetailSection(title: "Skills", accent: PopskillSectionAccent.color(for: 3)) {
-                            VStack(spacing: 8) {
-                                ForEach(viewModel.summary.skillStats.prefix(8)) { stat in
-                                    SkillUsageRow(stat: stat, maxTokens: maxSkillTokens)
+                            DetailSection(title: "Source", accent: PopskillSectionAccent.color(for: 1)) {
+                                DetailField(title: "Transcript Files", value: "\(viewModel.summary.filesScanned)")
+                                DetailField(title: "Sessions", value: "\(viewModel.summary.sessions)")
+                                DetailField(
+                                    title: "Skill Attribution",
+                                    value: localization.string(
+                                        "usage.skillAttribution.value",
+                                        viewModel.summary.attributedSkillUsageEvents,
+                                        viewModel.summary.usageEvents
+                                    )
+                                )
+                            }
+
+                            DetailSection(title: "Models", accent: PopskillSectionAccent.color(for: 2)) {
+                                if viewModel.summary.modelStats.isEmpty {
+                                    LocalizedText("No model usage yet")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    VStack(spacing: 8) {
+                                        ForEach(viewModel.summary.modelStats.prefix(8)) { stat in
+                                            ModelUsageRow(stat: stat, maxTokens: maxModelTokens)
+                                        }
+                                    }
+                                }
+                            }
+
+                            if !viewModel.summary.skillStats.isEmpty {
+                                DetailSection(title: "Skills", accent: PopskillSectionAccent.color(for: 3)) {
+                                    VStack(spacing: 8) {
+                                        ForEach(viewModel.summary.skillStats.prefix(8)) { stat in
+                                            SkillUsageRow(stat: stat, maxTokens: maxSkillTokens)
+                                        }
+                                    }
                                 }
                             }
                         }
+                        .padding(28)
                     }
-                }
-                .padding(28)
-            }
-            .overlay {
-                if viewModel.isScanning && viewModel.summary.filesScanned == 0 {
-                    ProgressView()
-                        .controlSize(.large)
                 }
             }
         }
@@ -139,6 +157,24 @@ struct InsightsView: View {
     }
 }
 
+struct UsageLoadingView: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .controlSize(.large)
+            LocalizedText("Scanning Usage")
+                .font(.headline)
+            LocalizedText("Scanning usage message")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 360)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(28)
+    }
+}
+
 struct TranscriptBoundaryNote: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -148,9 +184,9 @@ struct TranscriptBoundaryNote: View {
                 .frame(width: 28)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Local transcript totals")
+                LocalizedText("Local transcript totals")
                     .font(.subheadline.weight(.semibold))
-                Text("Message content is ignored. Skill totals use Claude Code's top-level attributionSkill marker when present; other usage remains grouped by session and model.")
+                LocalizedText("transcript.boundary.note")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -167,6 +203,7 @@ struct UsageMetricCard: View {
     let title: String
     let value: Int64
     var accent: Color = .popSectionBlue
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -175,7 +212,7 @@ struct UsageMetricCard: View {
                 .frame(width: 4)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(title.uppercased())
+                Text(localization.string(title).uppercased(with: localization.language.locale))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(accent)
                 Text(formattedValue)
@@ -197,6 +234,7 @@ struct UsageMetricCard: View {
 struct ModelUsageRow: View {
     let stat: ModelUsageStat
     let maxTokens: Int64
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -221,7 +259,12 @@ struct ModelUsageRow: View {
             }
             .frame(height: 7)
 
-            Text("\(stat.usageEvents) events · input \(stat.inputTokens.formatted(.number.notation(.compactName))) · output \(stat.outputTokens.formatted(.number.notation(.compactName)))")
+            Text(localization.string(
+                "usage.row.detail",
+                stat.usageEvents,
+                stat.inputTokens.formatted(.number.notation(.compactName)),
+                stat.outputTokens.formatted(.number.notation(.compactName))
+            ))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -240,6 +283,7 @@ struct ModelUsageRow: View {
 struct SkillUsageRow: View {
     let stat: SkillUsageStat
     let maxTokens: Int64
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -279,17 +323,22 @@ struct SkillUsageRow: View {
     }
 
     private var detailText: String {
-        var parts = [
-            "\(stat.usageEvents) events",
-            "input \(stat.inputTokens.formatted(.number.notation(.compactName)))",
-            "output \(stat.outputTokens.formatted(.number.notation(.compactName)))"
-        ]
-
         if let lastUsedAt = stat.lastUsedAt {
-            parts.append("last \(lastUsedAt.formatted(date: .abbreviated, time: .shortened))")
+            return localization.string(
+                "usage.row.detail.withLast",
+                stat.usageEvents,
+                stat.inputTokens.formatted(.number.notation(.compactName)),
+                stat.outputTokens.formatted(.number.notation(.compactName)),
+                lastUsedAt.formatted(date: .abbreviated, time: .shortened)
+            )
         }
 
-        return parts.joined(separator: " · ")
+        return localization.string(
+            "usage.row.detail",
+            stat.usageEvents,
+            stat.inputTokens.formatted(.number.notation(.compactName)),
+            stat.outputTokens.formatted(.number.notation(.compactName))
+        )
     }
 
     private var widthRatio: Double {

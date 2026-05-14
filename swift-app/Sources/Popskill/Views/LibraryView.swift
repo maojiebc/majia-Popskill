@@ -421,7 +421,7 @@ struct LibraryView: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                    .help("Update All")
+                    .help(localization.string("Update All"))
                     .disabled(viewModel.isCheckingUpdates || viewModel.isUpdatingAny)
                 }
 
@@ -436,7 +436,7 @@ struct LibraryView: View {
                     }
                 }
                 .buttonStyle(.bordered)
-                .help("Check Updates")
+                .help(localization.string("Check Updates"))
                 .disabled(viewModel.isCheckingUpdates || viewModel.isUpdatingAny)
 
                 Button {
@@ -450,7 +450,7 @@ struct LibraryView: View {
                     }
                 }
                 .buttonStyle(.bordered)
-                .help("Refresh")
+                .help(localization.string("Refresh"))
                 .disabled(viewModel.isLoading)
             }
 
@@ -531,14 +531,15 @@ struct UnmanagedSkillsBanner: View {
     @Bindable var viewModel: LibraryViewModel
     let onImported: () async -> Void
     @State private var selectedImportApp: TargetApp = .codex
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Label("\(viewModel.unmanagedCount) unmanaged skill\(viewModel.unmanagedCount == 1 ? "" : "s") found", systemImage: "tray.and.arrow.down")
+                Label(localization.string("library.unmanagedFound", viewModel.unmanagedCount), systemImage: "tray.and.arrow.down")
                     .font(.headline)
                 Spacer()
-                Picker("Import In", selection: $selectedImportApp) {
+                Picker(localization.string("Import In"), selection: $selectedImportApp) {
                     ForEach(TargetApp.supported, id: \.id) { app in
                         Text(app.title).tag(app)
                     }
@@ -577,7 +578,7 @@ struct UnmanagedSkillsBanner: View {
                     }
                     .buttonStyle(.bordered)
                     .disabled(viewModel.isImporting(directory: skill.directory))
-                    .help("Import into \(selectedImportApp.title)")
+                    .help(localization.string("library.importInto", selectedImportApp.title))
                 }
             }
         }

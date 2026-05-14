@@ -9,6 +9,7 @@ BUNDLED_CLI="$APP_DIR/Contents/Resources/skill-cli"
 BUNDLED_DOCS="$APP_DIR/Contents/Resources/ipc.md"
 BUNDLED_SPARKLE="$APP_DIR/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle"
 LOG_FILE="$(mktemp)"
+WINDOW_CHECKER="$(mktemp "${TMPDIR:-/tmp}/popskill-window-check.XXXXXX.swift")"
 APP_PID=""
 
 cleanup() {
@@ -16,7 +17,7 @@ cleanup() {
     kill "$APP_PID" 2> /dev/null || true
     wait "$APP_PID" 2> /dev/null || true
   fi
-  rm -f "$LOG_FILE"
+  rm -f "$LOG_FILE" "$WINDOW_CHECKER"
 }
 trap cleanup EXIT
 
@@ -49,6 +50,40 @@ if otool -L "$APP_BIN" | grep -q "Sparkle.framework"; then
   fi
 fi
 
+cat > "$WINDOW_CHECKER" <<'SWIFT'
+import CoreGraphics
+import Foundation
+
+func numericValue(_ value: Any?) -> Double? {
+    if let number = value as? NSNumber {
+        return number.doubleValue
+    }
+    if let double = value as? Double {
+        return double
+    }
+    if let int = value as? Int {
+        return Double(int)
+    }
+    return nil
+}
+
+let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+let hasMainWindow = windows.contains { window in
+    guard
+        (window[kCGWindowOwnerName as String] as? String) == "Popskill",
+        let bounds = window[kCGWindowBounds as String] as? [String: Any],
+        let width = numericValue(bounds["Width"]),
+        let height = numericValue(bounds["Height"])
+    else {
+        return false
+    }
+
+    return width >= 600 && height >= 400
+}
+
+exit(hasMainWindow ? 0 : 1)
+SWIFT
+
 env -u POPSKILL_CLI "$APP_BIN" > "$LOG_FILE" 2>&1 &
 APP_PID="$!"
 
@@ -63,6 +98,12 @@ fi
 if [[ -s "$LOG_FILE" ]] && grep -Eiq "fatal error|uncaught|crash" "$LOG_FILE"; then
   cat "$LOG_FILE" >&2
   echo "Popskill bundle launch log contains a crash signature" >&2
+  exit 1
+fi
+
+if ! swift "$WINDOW_CHECKER"; then
+  cat "$LOG_FILE" >&2
+  echo "Popskill bundle did not create a visible main window" >&2
   exit 1
 fi
 

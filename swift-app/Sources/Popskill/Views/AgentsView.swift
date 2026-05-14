@@ -91,6 +91,7 @@ final class AgentsViewModel {
 struct AgentsView: View {
     @Bindable var viewModel: AgentsViewModel
     @State private var selectedAgentID: LocalAgent.ID?
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         VStack(spacing: 0) {
@@ -107,27 +108,28 @@ struct AgentsView: View {
             HStack(alignment: .top, spacing: 20) {
                 agentList
 
-                AgentDetailPane(agent: selectedAgent, targets: viewModel.targets)
-                    .frame(width: 340)
-                    .popMaterialCard()
+                Group {
+                    if let selectedAgent {
+                        AgentDetailPane(agent: selectedAgent, targets: viewModel.targets)
+                    } else {
+                        AgentTargetsDetailPane(targets: viewModel.targets)
+                    }
+                }
+                .frame(width: 340)
+                .popMaterialCard()
             }
             .padding(.horizontal, 28)
             .padding(.bottom, 24)
             .frame(maxHeight: .infinity, alignment: .top)
-            .onChange(of: viewModel.agents) { _, agents in
-                if selectedAgentID == nil {
-                    selectedAgentID = agents.first?.id
-                }
-            }
             .onChange(of: viewModel.filteredAgents) { _, agents in
                 if let selectedAgentID, agents.contains(where: { $0.id == selectedAgentID }) {
                     return
                 }
-                selectedAgentID = agents.first?.id
+                selectedAgentID = nil
             }
         }
         .popPageBackground()
-        .searchable(text: $viewModel.searchText, placement: .toolbar, prompt: "Search Agents")
+        .searchable(text: $viewModel.searchText, placement: .toolbar, prompt: localization.string("Search Agents"))
         .task {
             if !viewModel.hasLoadedOnce {
                 await viewModel.load()
@@ -139,9 +141,14 @@ struct AgentsView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Agents")
+                    LocalizedText("Agents")
                         .font(.popLargeTitle)
-                    Text("\(viewModel.agents.count) Claude Code agents · \(viewModel.detectedTargetCount)/\(viewModel.knownTargets.count) detected")
+                    Text(localization.string(
+                        "agents.subtitle.detected",
+                        viewModel.agents.count,
+                        viewModel.detectedTargetCount,
+                        viewModel.knownTargets.count
+                    ))
                         .foregroundStyle(.secondary)
                 }
 
@@ -169,9 +176,9 @@ struct AgentsView: View {
                 .disabled(viewModel.isLoading)
             }
 
-            Picker("Category", selection: $viewModel.selectedCategory) {
+            Picker(localization.string("Category"), selection: $viewModel.selectedCategory) {
                 ForEach(viewModel.categories, id: \.self) { category in
-                    Text(category == "All" ? "All Categories" : category).tag(category)
+                    Text(category == "All" ? localization.string("All Categories") : category).tag(category)
                 }
             }
             .pickerStyle(.menu)
@@ -187,7 +194,7 @@ struct AgentsView: View {
             LazyVStack(alignment: .leading, spacing: 16) {
                 PopskillSectionTitle(
                     title: "Agents",
-                    subtitle: "\(viewModel.filteredAgents.count) local agents"
+                    subtitle: localization.string("agents.list.subtitle", viewModel.filteredAgents.count)
                 )
 
                 ForEach(viewModel.filteredAgents) { agent in
@@ -208,21 +215,19 @@ struct AgentsView: View {
                 ProgressView()
                     .controlSize(.large)
             } else if viewModel.filteredAgents.isEmpty {
-                ContentUnavailableView(emptyStateTitle, systemImage: "person.crop.circle.badge.questionmark")
+                ContentUnavailableView(localization.string(emptyStateTitleKey), systemImage: "person.crop.circle.badge.questionmark")
             }
         }
     }
 
     private var selectedAgent: LocalAgent? {
-        guard let selectedAgentID else {
-            return viewModel.filteredAgents.first
-        }
-        return viewModel.filteredAgents.first { $0.id == selectedAgentID } ?? viewModel.filteredAgents.first
+        guard let selectedAgentID else { return nil }
+        return viewModel.filteredAgents.first { $0.id == selectedAgentID }
     }
 
-    private var emptyStateTitle: String {
+    private var emptyStateTitleKey: String {
         if viewModel.agents.isEmpty {
-            return "No Agents"
+            return "No Local Agents"
         }
         return "No Matching Agents"
     }
@@ -261,60 +266,149 @@ struct AgentRow: View {
     }
 }
 
+struct AgentTargetsDetailPane: View {
+    let targets: [AgentTarget]
+    @Environment(\.popskillLocalization) private var localization
+
+    private var knownTargets: [AgentTarget] {
+        targets.filter(\.isRegistryTarget)
+    }
+
+    private var detectedTargets: [AgentTarget] {
+        knownTargets.filter(\.detected)
+    }
+
+    private var missingTargets: [AgentTarget] {
+        knownTargets.filter { !$0.detected }
+    }
+
+    private var importedTargets: [AgentTarget] {
+        targets.filter(\.isImportedTarget)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: PopskillRadius.smallCard, style: .continuous)
+                            .fill(Color.popSectionBlue.gradient)
+                        Image(systemName: "person.crop.circle.badge.checkmark")
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+                    .frame(width: 52, height: 52)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        LocalizedText("Agent Targets")
+                            .font(.title2.weight(.bold))
+                        Text(localization.string(
+                            "agent.targets.subtitle",
+                            detectedTargets.count,
+                            knownTargets.count,
+                            importedTargets.count
+                        ))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                    }
+                }
+
+                Text(localization.string("agent.targets.emptyDetail"))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                DetailSection(title: "Detected Targets", accent: .popStatusOK) {
+                    targetList(detectedTargets, emptyKey: "No detected targets")
+                }
+
+                DetailSection(title: "Missing Targets", accent: .popStatusNeutral) {
+                    targetList(missingTargets, emptyKey: "No missing targets")
+                }
+
+                if !importedTargets.isEmpty {
+                    DetailSection(title: "Imported Targets", accent: .popSectionBlue) {
+                        targetList(importedTargets, emptyKey: "No imported targets")
+                    }
+                }
+            }
+            .padding(22)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: PopskillRadius.largeCard, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func targetList(_ targets: [AgentTarget], emptyKey: String) -> some View {
+        if targets.isEmpty {
+            LocalizedText(emptyKey)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(targets.prefix(8)) { target in
+                    AgentTargetLine(target: target)
+                }
+
+                if targets.count > 8 {
+                    Text(localization.string("more.count", targets.count - 8))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 24)
+                }
+            }
+        }
+    }
+}
+
 struct AgentDetailPane: View {
-    let agent: LocalAgent?
+    let agent: LocalAgent
     let targets: [AgentTarget]
 
     var body: some View {
-        Group {
-            if let agent {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        HStack(spacing: 12) {
-                            PackageAvatar(name: agent.name, identifier: agent.id, size: 52)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(spacing: 12) {
+                    PackageAvatar(name: agent.name, identifier: agent.id, size: 52)
 
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(agent.name)
-                                    .font(.title2.weight(.bold))
-                                    .lineLimit(2)
-                                Text(agent.categoryLabel)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-
-                        Text(agent.description)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(agent.name)
+                            .font(.title2.weight(.bold))
+                            .lineLimit(2)
+                        Text(agent.categoryLabel)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        DetailSection(title: "Agent", accent: PopskillSectionAccent.color(for: 0)) {
-                            DetailField(title: "Identifier", value: agent.id)
-                            DetailField(title: "File", value: agent.fileName)
-                            DetailField(title: "Modified", value: timestampText(agent.lastModifiedAt))
-                        }
-
-                        DetailSection(title: "Runtime", accent: PopskillSectionAccent.color(for: 1)) {
-                            DetailField(title: "Model", value: agent.model ?? "Default")
-                            DetailField(title: "Tools", value: agent.toolSummary)
-                            DetailField(title: "Size", value: byteCountText(agent.sizeBytes))
-                        }
-
-                        DetailSection(title: "Targets", accent: PopskillSectionAccent.color(for: 2)) {
-                            AgentTargetOverview(targets: targets)
-                        }
-
-                        Link(destination: agent.fileURL) {
-                            Label("Open Agent File", systemImage: "doc.text")
-                        }
-                        .buttonStyle(.bordered)
+                            .lineLimit(1)
                     }
-                    .padding(22)
                 }
-            } else {
-                ContentUnavailableView("No Agent Selected", systemImage: "person.crop.circle")
+
+                Text(agent.description)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                DetailSection(title: "Agent", accent: PopskillSectionAccent.color(for: 0)) {
+                    DetailField(title: "Identifier", value: agent.id)
+                    DetailField(title: "File", value: agent.fileName)
+                    DetailField(title: "Modified", value: timestampText(agent.lastModifiedAt))
+                }
+
+                DetailSection(title: "Runtime", accent: PopskillSectionAccent.color(for: 1)) {
+                    DetailField(title: "Model", value: agent.model ?? "Default")
+                    DetailField(title: "Tools", value: agent.toolSummary)
+                    DetailField(title: "Size", value: byteCountText(agent.sizeBytes))
+                }
+
+                DetailSection(title: "Targets", accent: PopskillSectionAccent.color(for: 2)) {
+                    AgentTargetOverview(targets: targets)
+                }
+
+                Link(destination: agent.fileURL) {
+                    LocalizedLabel(title: "Open Agent File", systemImage: "doc.text")
+                }
+                .buttonStyle(.bordered)
             }
+            .padding(22)
         }
         .clipShape(RoundedRectangle(cornerRadius: PopskillRadius.largeCard, style: .continuous))
     }
@@ -334,6 +428,7 @@ struct AgentDetailPane: View {
 
 struct AgentTargetOverview: View {
     let targets: [AgentTarget]
+    @Environment(\.popskillLocalization) private var localization
 
     private var knownTargets: [AgentTarget] {
         targets.filter(\.isRegistryTarget)
@@ -381,7 +476,7 @@ struct AgentTargetOverview: View {
                 }
 
                 if targets.count > 6 {
-                    Text("+ \(targets.count - 6) more")
+                    Text(localization.string("more.count", targets.count - 6))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .padding(.leading, 24)

@@ -34,12 +34,30 @@ final class PopskillAppDelegate: NSObject, NSApplicationDelegate {
     )
 #endif
 
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.regular)
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        DispatchQueue.main.async {
+            NSApp.activate(ignoringOtherApps: true)
+        }
+
 #if canImport(Sparkle)
         if Self.sparkleConfiguration.isReady {
             updaterController.startUpdater()
         }
 #endif
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if flag {
+            return true
+        }
+
+        sender.windows.first?.makeKeyAndOrderFront(nil)
+        sender.activate(ignoringOtherApps: true)
+        return true
     }
 
     func checkForUpdates() {
