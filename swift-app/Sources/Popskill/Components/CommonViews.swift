@@ -5,6 +5,11 @@ struct AppToggle: View {
     let isOn: Bool
     let isPending: Bool
     let onChange: (Bool) -> Void
+    var size: CGFloat = 28
+
+    private var cornerRadius: CGFloat {
+        max(6, size * 0.34)
+    }
 
     var body: some View {
         Button {
@@ -16,23 +21,23 @@ struct AppToggle: View {
                         .controlSize(.mini)
                 } else {
                     Image(systemName: app.symbolName)
-                        .font(.system(size: 12, weight: isOn ? .semibold : .regular))
+                        .font(.system(size: max(10, size * 0.42), weight: isOn ? .semibold : .regular))
                         .foregroundStyle(isOn ? app.accentColor : Color.popStatusNeutral)
                 }
             }
-            .frame(width: 28, height: 28)
+            .frame(width: size, height: size)
         }
         .buttonStyle(.plain)
         .disabled(isPending)
         .background(
             isOn ? app.accentColor.opacity(0.14) : Color.popCardBackground.opacity(0.34),
-            in: RoundedRectangle(cornerRadius: PopskillRadius.button)
+            in: RoundedRectangle(cornerRadius: cornerRadius)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: PopskillRadius.button)
+            RoundedRectangle(cornerRadius: cornerRadius)
                 .stroke(isOn ? app.accentColor.opacity(0.38) : Color.popBorder, lineWidth: 1)
         )
-        .contentShape(RoundedRectangle(cornerRadius: PopskillRadius.button))
+        .contentShape(RoundedRectangle(cornerRadius: cornerRadius))
         .help("\(app.title) · \(isOn ? "Enabled" : "Disabled")")
         .accessibilityLabel(Text(app.title))
         .accessibilityValue(Text(isOn ? "Enabled" : "Disabled"))
@@ -45,6 +50,7 @@ struct AppToggleRow: View {
     let isPending: (TargetApp) -> Bool
     let onToggle: (TargetApp, Bool) -> Void
     var showsEnabledSummary: Bool = true
+    var toggleSize: CGFloat = 26
 
     private var enabledCount: Int {
         apps.filter { app in
@@ -53,16 +59,18 @@ struct AppToggleRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 8) {
-            HStack(spacing: 6) {
+        HStack(alignment: .center, spacing: 6) {
+            HStack(spacing: 5) {
                 ForEach(apps, id: \.id) { app in
                     AppToggle(
                         app: app,
                         isOn: isOn(app),
-                        isPending: isPending(app)
-                    ) { enabled in
+                        isPending: isPending(app),
+                        onChange: { enabled in
                         onToggle(app, enabled)
-                    }
+                    },
+                        size: toggleSize
+                    )
                 }
             }
 
@@ -70,12 +78,44 @@ struct AppToggleRow: View {
                 Text("\(enabledCount)/\(apps.count)")
                     .font(.caption2.monospacedDigit().weight(.semibold))
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2.5)
                     .background(Color.popCardBackground.opacity(0.52), in: Capsule())
                     .help("Enabled apps")
                     .accessibilityLabel(Text("Enabled apps"))
                     .accessibilityValue(Text("\(enabledCount) of \(apps.count)"))
+            }
+        }
+    }
+}
+
+struct AppCountBar: View {
+    let apps: [TargetApp]
+    let count: (TargetApp) -> Int
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(apps, id: \.id) { app in
+                let enabled = count(app)
+                HStack(spacing: 4) {
+                    Image(systemName: app.symbolName)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(enabled > 0 ? app.accentColor : Color.popStatusNeutral)
+                    Text("\(enabled)")
+                        .font(.caption2.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(
+                    enabled > 0 ? app.accentColor.opacity(0.10) : Color.popCardBackground.opacity(0.44),
+                    in: RoundedRectangle(cornerRadius: PopskillRadius.button, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: PopskillRadius.button, style: .continuous)
+                        .stroke(enabled > 0 ? app.accentColor.opacity(0.25) : Color.popBorder, lineWidth: 1)
+                )
+                .help("\(app.title): \(enabled) enabled")
             }
         }
     }

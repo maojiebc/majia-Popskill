@@ -103,6 +103,14 @@ final class LibraryViewModel {
         updates.count
     }
 
+    func enabledSkillCount(for app: TargetApp) -> Int {
+        skills.reduce(into: 0) { count, skill in
+            if skill.apps.isEnabled(app) {
+                count += 1
+            }
+        }
+    }
+
     func updates(for package: CapabilityPackage) -> [SkillUpdateInfo] {
         guard !updates.isEmpty else {
             return []

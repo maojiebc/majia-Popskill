@@ -483,6 +483,10 @@ struct LibraryView: View {
                 .frame(width: 340)
             }
 
+            AppCountBar(apps: TargetApp.supported) { app in
+                viewModel.enabledSkillCount(for: app)
+            }
+
             HStack(spacing: 8) {
                 Image(systemName: viewModel.lastUpdateCheckError == nil ? "clock.arrow.circlepath" : "exclamationmark.triangle")
                     .foregroundStyle(viewModel.lastUpdateCheckError == nil ? Color.popTertiaryLabel : Color.popStatusWarning)
@@ -1026,7 +1030,8 @@ struct SkillDetailPane: View {
                                 },
                                 onToggle: { app, enabled in
                                     onToggle(skill, app, enabled)
-                                }
+                                },
+                                toggleSize: 24
                             )
                         }
 
@@ -1270,7 +1275,8 @@ struct SkillRow: View {
                     isPending: { app in
                         isToggling(app)
                     },
-                    onToggle: onToggle
+                    onToggle: onToggle,
+                    toggleSize: 24
                 )
             }
 

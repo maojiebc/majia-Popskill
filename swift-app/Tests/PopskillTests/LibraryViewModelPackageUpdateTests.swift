@@ -131,6 +131,45 @@ struct LibraryViewModelPackageUpdateTests {
         #expect(viewModel.recoverableStub(for: component)?.id == "owner/repo:lark-doc")
     }
 
+    @Test
+    func enabledSkillCountTracksEachTargetApp() {
+        let viewModel = LibraryViewModel()
+        viewModel.skills = [
+            Skill(
+                id: "skill-a",
+                name: "Skill A",
+                description: "",
+                directory: "skill-a",
+                repoOwner: nil,
+                repoName: nil,
+                readmeUrl: nil,
+                apps: SkillApps(claude: true, codex: false, gemini: true, opencode: false, hermes: false),
+                installedAt: nil,
+                updatedAt: nil,
+                contentHash: nil
+            ),
+            Skill(
+                id: "skill-b",
+                name: "Skill B",
+                description: "",
+                directory: "skill-b",
+                repoOwner: nil,
+                repoName: nil,
+                readmeUrl: nil,
+                apps: SkillApps(claude: false, codex: true, gemini: false, opencode: true, hermes: false),
+                installedAt: nil,
+                updatedAt: nil,
+                contentHash: nil
+            )
+        ]
+
+        #expect(viewModel.enabledSkillCount(for: .claude) == 1)
+        #expect(viewModel.enabledSkillCount(for: .codex) == 1)
+        #expect(viewModel.enabledSkillCount(for: .gemini) == 1)
+        #expect(viewModel.enabledSkillCount(for: .opencode) == 1)
+        #expect(viewModel.enabledSkillCount(for: .hermes) == 0)
+    }
+
     private func packageWithSkillComponent(id: String, name: String, location: String?) -> CapabilityPackage {
         CapabilityPackage(
             id: "pkg:\(id)",
