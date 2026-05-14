@@ -124,12 +124,29 @@ struct LibraryView: View {
                     LazyVGrid(columns: packageGridColumns, alignment: .leading, spacing: 16) {
                         ForEach(viewModel.filteredPackages) { package in
                             let selectionID = selectionID(forPackage: package.id)
+                            let standaloneSkill = skill(forStandalonePackage: package)
                             PopskillSelectableCard(isSelected: selectedItemID == selectionID) {
                                 selectedItemID = selectionID
                             } content: {
                                 PackageRow(
                                     package: package,
-                                    signals: viewModel.packageCardSignals(for: package)
+                                    signals: viewModel.packageCardSignals(for: package),
+                                    quickToggle: standaloneSkill.map { skill in
+                                        PackageQuickToggle(
+                                            apps: TargetApp.supported,
+                                            isOn: { app in
+                                                skill.apps.isEnabled(app)
+                                            },
+                                            isPending: { app in
+                                                viewModel.isToggling(skillID: skill.id, app: app)
+                                            },
+                                            onToggle: { app, enabled in
+                                                Task {
+                                                    await viewModel.setEnabled(enabled, for: skill, app: app)
+                                                }
+                                            }
+                                        )
+                                    }
                                 )
                             }
                         }
@@ -808,6 +825,7 @@ struct PackageRow: View {
     let package: CapabilityPackage
     let signals: PackageCardSignals
     var showsStatusSignals: Bool = true
+    var quickToggle: PackageQuickToggle? = nil
     @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
@@ -854,6 +872,17 @@ struct PackageRow: View {
                         .font(.caption)
                         .foregroundStyle(Color.popTertiaryLabel)
                         .lineLimit(1)
+
+                    if let quickToggle {
+                        AppToggleRow(
+                            apps: quickToggle.apps,
+                            isOn: quickToggle.isOn,
+                            isPending: quickToggle.isPending,
+                            onToggle: quickToggle.onToggle,
+                            showsEnabledSummary: true,
+                            toggleSize: 22
+                        )
+                    }
 
                     if packageSignalChipData.isEmpty == false {
                         HStack(spacing: 6) {
@@ -947,6 +976,13 @@ private struct PackageSignalChipData {
     let title: String
     let systemImage: String
     let color: Color
+}
+
+struct PackageQuickToggle {
+    let apps: [TargetApp]
+    let isOn: (TargetApp) -> Bool
+    let isPending: (TargetApp) -> Bool
+    let onToggle: (TargetApp, Bool) -> Void
 }
 
 struct PackageComponentTree: View {
