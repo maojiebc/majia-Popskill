@@ -27,6 +27,39 @@ Every failed command writes JSON to stderr and exits non-zero:
 
 ## Commands
 
+### `skill-cli domain-schema --json`
+
+Returns Popskill's canonical asset-control-plane primitives. This command is read-only and exists so UI code, docs, tests, and future adapters share the same vocabulary for sources, packages, components, deployments, runtimes, mutation phases, and stable error codes.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "schemaVersion": 1,
+    "modelName": "popskill.asset-control-plane",
+    "sourceKinds": ["local", "git", "zip", "registry", "mcp"],
+    "versionModes": ["pinned", "floating"],
+    "packageTypes": ["standalone", "composite"],
+    "componentKinds": ["skill", "cli", "mcpServer", "agent", "rule", "prompt", "config"],
+    "deploymentStrategies": ["copy", "symlink", "wrapper", "configPatch"],
+    "runtimeTransports": ["stdio", "streamableHttp", "none"],
+    "mutationPhases": ["plan", "snapshot", "apply", "verify", "commit", "rollback"],
+    "defaultStrategyOrder": ["copy", "configPatch", "wrapper", "symlink"],
+    "errorCodes": [
+      {
+        "code": "E_CONFIG_MERGE_CONFLICT",
+        "retryable": false,
+        "rollbackRelevant": true,
+        "description": "A third-party config file could not be merged without risking user data."
+      }
+    ],
+    "invariants": [
+      "SSOT lives in Popskill-controlled state; target folders are projections."
+    ]
+  }
+}
+```
+
 ### `skill-cli health --json`
 
 Returns local sidecar and CC Switch diagnostics used by Settings.

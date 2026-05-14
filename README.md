@@ -190,7 +190,7 @@ SwiftUI 端已接入：
 
 ### Roadmap
 
-**v0.2 will introduce the Package abstraction**：一个 Package 代表完整 AI 能力（例如飞书、GitHub、PDF），可打包 CLI、MCP、Skills、Agents 和 Config。Popskill 会从 "Claude Code skill manager" 进化为 "AI Capability App Store"，但 v0.1 仍先保持当前 Skill 中心化范围发布。
+**v0.3 is now formalizing the asset-control-plane model**：一个 Package 代表完整 AI 能力（例如飞书、GitHub、PDF），可打包 CLI、MCP、Skills、Agents 和 Config。Popskill 会从 "Claude Code skill manager" 进化为 "AI Capability App Store"。`skill-cli domain-schema --json` exposes the canonical `source -> package -> component -> deployment -> runtime` vocabulary for sidecar, UI, docs, and tests.
 
 ### 文档导航
 
@@ -205,6 +205,8 @@ SwiftUI 端已接入：
   - 附录 A：新电脑接手 6 步 checklist
 
 - **[STYLE.md](./STYLE.md)**（~840 行）—— 视觉设计语言，含立即可用的 SwiftUI design token 代码。
+- **[CONTRIBUTING_FOR_AI.md](./CONTRIBUTING_FOR_AI.md)** —— AI-assisted development guardrails: domain first, typed commands, snapshots, no overwrite config writes.
+- **[docs/asset-control-plane.md](./docs/asset-control-plane.md)** —— Source / Package / Component / Deployment / Runtime model, adapter contract, transaction phases, and stable error codes.
 - **[docs/ipc.md](./docs/ipc.md)** —— SwiftUI ↔ `skill-cli` JSON 合约。
 - **[docs/transcript-parsing.md](./docs/transcript-parsing.md)** —— Claude transcript 字段观察和 Insights MVP 策略。
 - **[docs/security.md](./docs/security.md)** —— Keychain、skill 内容和 transcript insights 的安全边界。

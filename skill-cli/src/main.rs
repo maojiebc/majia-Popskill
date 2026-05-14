@@ -27,6 +27,12 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// Return Popskill's canonical asset-control-plane schema.
+    DomainSchema {
+        /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
     /// Return sidecar and local CC Switch diagnostics.
     Health {
         /// Kept for the Swift client contract; output is JSON either way.
@@ -356,6 +362,7 @@ async fn run() -> Result<()> {
     let db = Arc::new(Database::init().context("failed to open CC Switch database")?);
 
     match cli.command {
+        Commands::DomainSchema { json: _ } => print_json(&ApiResponse::ok(domain_schema())),
         Commands::Health { json: _ } => {
             let skills =
                 SkillService::get_all_installed(&db).context("failed to list installed skills")?;
@@ -2490,6 +2497,288 @@ struct ApiError {
     message: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DomainSchema {
+    schema_version: u8,
+    model_name: &'static str,
+    source_kinds: Vec<AssetSourceKind>,
+    version_modes: Vec<AssetVersionMode>,
+    package_types: Vec<AssetPackageType>,
+    component_kinds: Vec<AssetComponentKind>,
+    deployment_strategies: Vec<AssetDeploymentStrategy>,
+    runtime_transports: Vec<AssetRuntimeTransport>,
+    mutation_phases: Vec<AssetMutationPhase>,
+    default_strategy_order: Vec<AssetDeploymentStrategy>,
+    error_codes: Vec<AppErrorDefinition>,
+    invariants: Vec<&'static str>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct AssetPackageManifest {
+    schema_version: u8,
+    id: String,
+    display_name: String,
+    package_type: AssetPackageType,
+    source: AssetSourceRef,
+    components: Vec<AssetComponentManifest>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct AssetSourceRef {
+    id: String,
+    kind: AssetSourceKind,
+    locator: String,
+    version_mode: AssetVersionMode,
+    resolved_version: Option<String>,
+    content_hash: Option<String>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct AssetComponentManifest {
+    id: String,
+    kind: AssetComponentKind,
+    display_name: String,
+    entry: String,
+    runtime: Option<AssetRuntimeSpec>,
+    compatibility: Vec<AssetTargetCompatibility>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct AssetRuntimeSpec {
+    command: String,
+    args: Vec<String>,
+    env_refs: Vec<String>,
+    transport: AssetRuntimeTransport,
+    healthcheck: Option<AssetHealthcheck>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct AssetHealthcheck {
+    kind: String,
+    value: Option<String>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct AssetTargetCompatibility {
+    target_id: String,
+    supported: bool,
+    preferred_strategy: Option<AssetDeploymentStrategy>,
+    notes: Option<String>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct AssetDeploymentRecord {
+    package_id: String,
+    component_id: String,
+    target_id: String,
+    strategy: AssetDeploymentStrategy,
+    target_path: String,
+    status: String,
+    applied_hash: Option<String>,
+    applied_at: Option<i64>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct AssetSnapshotRecord {
+    id: String,
+    before_paths: Vec<String>,
+    after_paths: Vec<String>,
+    backup_path: String,
+    created_at: i64,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+enum AssetSourceKind {
+    Local,
+    Git,
+    Zip,
+    Registry,
+    Mcp,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+enum AssetVersionMode {
+    Pinned,
+    Floating,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+enum AssetPackageType {
+    Standalone,
+    Composite,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+enum AssetComponentKind {
+    Skill,
+    Cli,
+    McpServer,
+    Agent,
+    Rule,
+    Prompt,
+    Config,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+enum AssetDeploymentStrategy {
+    Copy,
+    Symlink,
+    Wrapper,
+    ConfigPatch,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+enum AssetRuntimeTransport {
+    Stdio,
+    StreamableHttp,
+    None,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+enum AssetMutationPhase {
+    Plan,
+    Snapshot,
+    Apply,
+    Verify,
+    Commit,
+    Rollback,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AppErrorDefinition {
+    code: &'static str,
+    retryable: bool,
+    rollback_relevant: bool,
+    description: &'static str,
+}
+
+fn domain_schema() -> DomainSchema {
+    DomainSchema {
+        schema_version: 1,
+        model_name: "popskill.asset-control-plane",
+        source_kinds: vec![
+            AssetSourceKind::Local,
+            AssetSourceKind::Git,
+            AssetSourceKind::Zip,
+            AssetSourceKind::Registry,
+            AssetSourceKind::Mcp,
+        ],
+        version_modes: vec![AssetVersionMode::Pinned, AssetVersionMode::Floating],
+        package_types: vec![AssetPackageType::Standalone, AssetPackageType::Composite],
+        component_kinds: vec![
+            AssetComponentKind::Skill,
+            AssetComponentKind::Cli,
+            AssetComponentKind::McpServer,
+            AssetComponentKind::Agent,
+            AssetComponentKind::Rule,
+            AssetComponentKind::Prompt,
+            AssetComponentKind::Config,
+        ],
+        deployment_strategies: vec![
+            AssetDeploymentStrategy::Copy,
+            AssetDeploymentStrategy::Symlink,
+            AssetDeploymentStrategy::Wrapper,
+            AssetDeploymentStrategy::ConfigPatch,
+        ],
+        runtime_transports: vec![
+            AssetRuntimeTransport::Stdio,
+            AssetRuntimeTransport::StreamableHttp,
+            AssetRuntimeTransport::None,
+        ],
+        mutation_phases: vec![
+            AssetMutationPhase::Plan,
+            AssetMutationPhase::Snapshot,
+            AssetMutationPhase::Apply,
+            AssetMutationPhase::Verify,
+            AssetMutationPhase::Commit,
+            AssetMutationPhase::Rollback,
+        ],
+        default_strategy_order: vec![
+            AssetDeploymentStrategy::Copy,
+            AssetDeploymentStrategy::ConfigPatch,
+            AssetDeploymentStrategy::Wrapper,
+            AssetDeploymentStrategy::Symlink,
+        ],
+        error_codes: vec![
+            AppErrorDefinition {
+                code: "E_TARGET_NOT_FOUND",
+                retryable: false,
+                rollback_relevant: false,
+                description: "The requested deployment target is not registered or not detected.",
+            },
+            AppErrorDefinition {
+                code: "E_STRATEGY_UNSUPPORTED",
+                retryable: false,
+                rollback_relevant: false,
+                description: "The target does not support the requested deployment strategy.",
+            },
+            AppErrorDefinition {
+                code: "E_CONFIG_MERGE_CONFLICT",
+                retryable: false,
+                rollback_relevant: true,
+                description: "A third-party config file could not be merged without risking user data.",
+            },
+            AppErrorDefinition {
+                code: "E_SECRET_UNAVAILABLE",
+                retryable: true,
+                rollback_relevant: false,
+                description: "A required secret reference could not be resolved from the OS secret store.",
+            },
+            AppErrorDefinition {
+                code: "E_PROCESS_TIMEOUT",
+                retryable: true,
+                rollback_relevant: true,
+                description: "A managed runtime process did not become healthy before its timeout.",
+            },
+            AppErrorDefinition {
+                code: "E_VERIFY_FAILED",
+                retryable: true,
+                rollback_relevant: true,
+                description: "Apply finished but post-apply verification failed.",
+            },
+            AppErrorDefinition {
+                code: "E_ROLLBACK_FAILED",
+                retryable: false,
+                rollback_relevant: true,
+                description: "Rollback was attempted but one or more restore steps failed.",
+            },
+        ],
+        invariants: vec![
+            "SSOT lives in Popskill-controlled state; target folders are projections.",
+            "Symlink is a target-specific deployment strategy, never the only source of truth.",
+            "Mutating operations run plan -> snapshot -> apply -> verify -> commit, with rollback on apply or verify failure.",
+            "Third-party configuration writes must use merge/patch; whole-file overwrite is forbidden.",
+            "UI code must call typed sidecar commands and must not directly mutate third-party files.",
+            "Secrets are stored as OS secret-store references, not in SQLite, JSON, logs, or argv.",
+        ],
+    }
+}
+
 #[derive(Default)]
 struct ParsedAgentMarkdown {
     name: Option<String>,
@@ -3334,6 +3623,43 @@ Turns fuzzy product ideas into crisp release plans.
         assert_eq!(package.source.kind, "builtin");
         assert_eq!(package.components.skills[0].id, "pdf-merge-split");
         assert!(!package.installed);
+    }
+
+    #[test]
+    fn domain_schema_declares_asset_control_plane_primitives() {
+        let schema = domain_schema();
+
+        assert_eq!(schema.schema_version, 1);
+        assert_eq!(schema.model_name, "popskill.asset-control-plane");
+        assert!(schema.component_kinds.contains(&AssetComponentKind::Skill));
+        assert!(
+            schema
+                .component_kinds
+                .contains(&AssetComponentKind::McpServer)
+        );
+        assert!(schema.component_kinds.contains(&AssetComponentKind::Agent));
+        assert!(
+            schema
+                .deployment_strategies
+                .contains(&AssetDeploymentStrategy::Copy)
+        );
+        assert!(
+            schema
+                .deployment_strategies
+                .contains(&AssetDeploymentStrategy::ConfigPatch)
+        );
+        assert_eq!(
+            schema.default_strategy_order.last(),
+            Some(&AssetDeploymentStrategy::Symlink)
+        );
+        assert!(
+            schema.error_codes.iter().any(|error| {
+                error.code == "E_CONFIG_MERGE_CONFLICT" && error.rollback_relevant
+            })
+        );
+        assert!(schema.invariants.iter().any(|invariant| {
+            invariant.contains("Symlink is a target-specific deployment strategy")
+        }));
     }
 
     fn stub_fixture(id: &str, stubbed_at: i64) -> StubbedSkill {

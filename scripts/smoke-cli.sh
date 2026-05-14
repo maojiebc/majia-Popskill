@@ -29,6 +29,18 @@ require_ok() {
 
 echo "==> Smoke testing skill-cli"
 
+domain_schema_output="$TMP_DIR/domain-schema.json"
+"$CLI" domain-schema --json > "$domain_schema_output"
+jq -e '
+  .ok == true
+  and .data.modelName == "popskill.asset-control-plane"
+  and (.data.componentKinds | index("mcpServer"))
+  and (.data.deploymentStrategies | index("configPatch"))
+  and (.data.defaultStrategyOrder[-1] == "symlink")
+  and any(.data.errorCodes[]; .code == "E_CONFIG_MERGE_CONFLICT" and .rollbackRelevant == true)
+' "$domain_schema_output" > /dev/null
+echo "domain-schema ok"
+
 list_output="$TMP_DIR/list.json"
 "$CLI" list --json > "$list_output"
 jq -e '.ok == true and (.data | type) == "array"' "$list_output" > /dev/null

@@ -28,6 +28,14 @@ Install/update/import operations are delegated to CC Switch so Popskill does not
 
 Catalog-provided source/readme links should only open `http` or `https` URLs. Unsupported schemes are ignored and Popskill falls back to the repository URL when owner/name metadata is available.
 
+## Deployment Safety
+
+Popskill treats target folders as projections, not as the source of truth. Future mutating deployment work must follow the asset-control-plane transaction in `docs/asset-control-plane.md`: plan, snapshot, apply, verify, commit, with rollback on apply or verify failure.
+
+Symlink is only a target-specific strategy after verification. Copy fallback must remain available because AI clients do not all discover symlinked skills or agents consistently.
+
+Third-party configuration files must be patched or merged. Whole-file overwrite is forbidden because it can remove user-owned hooks, permissions, plugins, or MCP settings.
+
 ## Transcript Insights
 
 Insights should aggregate numeric fields and metadata only. Do not display or persist message text unless the user explicitly asks for a transcript inspection workflow.
