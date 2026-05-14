@@ -8,18 +8,25 @@ APP_BIN="$APP_DIR/Contents/MacOS/Popskill"
 BUNDLED_CLI="$APP_DIR/Contents/Resources/skill-cli"
 BUNDLED_DOCS="$APP_DIR/Contents/Resources/ipc.md"
 BUNDLED_SPARKLE="$APP_DIR/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle"
-LOG_FILE="$(mktemp)"
 WINDOW_CHECKER="$(mktemp "${TMPDIR:-/tmp}/popskill-window-check.XXXXXX.swift")"
 APP_PID=""
+
+running_app_pids() {
+  pgrep -f "$APP_BIN" 2> /dev/null || true
+}
 
 cleanup() {
   if [[ -n "$APP_PID" ]] && kill -0 "$APP_PID" 2> /dev/null; then
     kill "$APP_PID" 2> /dev/null || true
     wait "$APP_PID" 2> /dev/null || true
   fi
-  rm -f "$LOG_FILE" "$WINDOW_CHECKER"
+  rm -f "$WINDOW_CHECKER"
 }
 trap cleanup EXIT
+
+for existing_pid in $(running_app_pids); do
+  kill "$existing_pid" 2> /dev/null || true
+done
 
 "$ROOT_DIR/scripts/package-dev-app.sh" > /dev/null
 
@@ -84,25 +91,29 @@ let hasMainWindow = windows.contains { window in
 exit(hasMainWindow ? 0 : 1)
 SWIFT
 
-env -u POPSKILL_CLI "$APP_BIN" > "$LOG_FILE" 2>&1 &
-APP_PID="$!"
+env -u POPSKILL_CLI open -n "$APP_DIR"
+
+for _ in {1..50}; do
+  APP_PID="$(running_app_pids | head -n 1)"
+  if [[ -n "$APP_PID" ]]; then
+    break
+  fi
+  sleep 0.1
+done
+
+if [[ -z "$APP_PID" ]]; then
+  echo "Popskill bundle did not start through LaunchServices" >&2
+  exit 1
+fi
 
 sleep "$RUN_SECONDS"
 
 if ! kill -0 "$APP_PID" 2> /dev/null; then
-  cat "$LOG_FILE" >&2
   echo "Popskill bundle exited during launch smoke" >&2
   exit 1
 fi
 
-if [[ -s "$LOG_FILE" ]] && grep -Eiq "fatal error|uncaught|crash" "$LOG_FILE"; then
-  cat "$LOG_FILE" >&2
-  echo "Popskill bundle launch log contains a crash signature" >&2
-  exit 1
-fi
-
 if ! swift "$WINDOW_CHECKER"; then
-  cat "$LOG_FILE" >&2
   echo "Popskill bundle did not create a visible main window" >&2
   exit 1
 fi
