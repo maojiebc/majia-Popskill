@@ -24,6 +24,10 @@ enum TargetApp: String, CaseIterable, Identifiable, Codable {
     static var supported: [TargetApp] {
         TargetAppRegistry.all.map(\.app)
     }
+
+    static var quickToggleSupported: [TargetApp] {
+        TargetAppRegistry.quickToggle.map(\.app)
+    }
 }
 
 struct TargetAppDefinition: Identifiable, Equatable {
@@ -32,6 +36,7 @@ struct TargetAppDefinition: Identifiable, Equatable {
     let app: TargetApp
     let displayName: String
     let symbolName: String
+    let quickToggle: Bool
     let skillDirectory: String
     let detectPath: String
     let cliCommands: [String]
@@ -44,6 +49,7 @@ enum TargetAppRegistry {
             app: .claude,
             displayName: "Claude",
             symbolName: "sparkles",
+            quickToggle: true,
             skillDirectory: ".claude/skills",
             detectPath: ".claude",
             cliCommands: ["claude"],
@@ -53,6 +59,7 @@ enum TargetAppRegistry {
             app: .codex,
             displayName: "Codex",
             symbolName: "chevron.left.forwardslash.chevron.right",
+            quickToggle: true,
             skillDirectory: ".codex/skills",
             detectPath: ".codex",
             cliCommands: ["codex"],
@@ -62,6 +69,7 @@ enum TargetAppRegistry {
             app: .gemini,
             displayName: "Gemini",
             symbolName: "diamond",
+            quickToggle: true,
             skillDirectory: ".gemini/skills",
             detectPath: ".gemini",
             cliCommands: ["gemini"],
@@ -71,6 +79,7 @@ enum TargetAppRegistry {
             app: .opencode,
             displayName: "OpenCode",
             symbolName: "terminal",
+            quickToggle: false,
             skillDirectory: ".config/opencode/skills",
             detectPath: ".config/opencode",
             cliCommands: ["opencode"],
@@ -80,6 +89,7 @@ enum TargetAppRegistry {
             app: .hermes,
             displayName: "Hermes",
             symbolName: "h.circle",
+            quickToggle: false,
             skillDirectory: ".hermes/skills",
             detectPath: ".hermes",
             cliCommands: ["hermes"],
@@ -87,11 +97,16 @@ enum TargetAppRegistry {
         )
     ]
 
+    static var quickToggle: [TargetAppDefinition] {
+        all.filter(\.quickToggle)
+    }
+
     static func definition(for app: TargetApp) -> TargetAppDefinition {
         all.first { $0.app == app } ?? TargetAppDefinition(
             app: app,
             displayName: app.rawValue,
             symbolName: "circle",
+            quickToggle: false,
             skillDirectory: "",
             detectPath: "",
             cliCommands: [],

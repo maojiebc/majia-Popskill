@@ -129,9 +129,11 @@ struct SkillModelsTests {
     @Test
     func targetAppRegistryCoversCurrentSkillTargets() {
         #expect(TargetAppRegistry.all.map(\.app) == TargetApp.supported)
+        #expect(TargetApp.quickToggleSupported == [.claude, .codex, .gemini])
         #expect(TargetApp.codex.title == "Codex")
         #expect(TargetApp.codex.symbolName == "chevron.left.forwardslash.chevron.right")
         #expect(TargetApp.codex.definition.skillDirectory == ".codex/skills")
+        #expect(TargetApp.hermes.definition.quickToggle == false)
         #expect(TargetApp.opencode.definition.detectPath == ".config/opencode")
     }
 

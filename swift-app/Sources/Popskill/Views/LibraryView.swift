@@ -133,7 +133,7 @@ struct LibraryView: View {
                                     signals: viewModel.packageCardSignals(for: package),
                                     quickToggle: standaloneSkill.map { skill in
                                         PackageQuickToggle(
-                                            apps: TargetApp.supported,
+                                            apps: TargetApp.quickToggleSupported,
                                             isOn: { app in
                                                 skill.apps.isEnabled(app)
                                             },
@@ -1441,7 +1441,7 @@ struct SkillRow: View {
                 }
 
                 AppToggleRow(
-                    apps: TargetApp.supported,
+                    apps: TargetApp.quickToggleSupported,
                     isOn: { app in
                         skill.apps.isEnabled(app)
                     },
