@@ -258,6 +258,28 @@ struct AgentTarget: Identifiable, Codable, Equatable {
         definition.linkedApp
     }
 
+    var expectedPathSummary: String? {
+        let paths = definition.detectPaths
+        guard !paths.isEmpty else {
+            return nil
+        }
+        return paths.joined(separator: ", ")
+    }
+
+    var cliCommandSummary: String? {
+        guard !definition.cliCommands.isEmpty else {
+            return nil
+        }
+        return definition.cliCommands.joined(separator: ", ")
+    }
+
+    var appBundleSummary: String? {
+        guard !definition.appBundleNames.isEmpty else {
+            return nil
+        }
+        return definition.appBundleNames.joined(separator: ", ")
+    }
+
     var isRegistryTarget: Bool {
         TargetAgentRegistry.isKnown(id: id)
     }
@@ -274,23 +296,126 @@ struct TargetAgentDefinition: Identifiable, Equatable {
     let displayName: String
     let symbolName: String
     let linkedApp: TargetApp?
+    let detectPaths: [String]
+    let cliCommands: [String]
+    let appBundleNames: [String]
+    let note: String?
 }
 
 enum TargetAgentRegistry {
     static let defaultSource = "agency-agents"
 
     static let all: [TargetAgentDefinition] = [
-        TargetAgentDefinition(targetID: "claude-code", displayName: "Claude Code", symbolName: "sparkles", linkedApp: .claude),
-        TargetAgentDefinition(targetID: "copilot", displayName: "GitHub Copilot", symbolName: "network", linkedApp: nil),
-        TargetAgentDefinition(targetID: "antigravity", displayName: "Antigravity", symbolName: "arrow.up.circle", linkedApp: nil),
-        TargetAgentDefinition(targetID: "gemini-cli", displayName: "Gemini CLI", symbolName: "diamond", linkedApp: .gemini),
-        TargetAgentDefinition(targetID: "opencode", displayName: "OpenCode", symbolName: "terminal", linkedApp: .opencode),
-        TargetAgentDefinition(targetID: "openclaw", displayName: "OpenClaw", symbolName: "hammer", linkedApp: nil),
-        TargetAgentDefinition(targetID: "cursor", displayName: "Cursor", symbolName: "cursorarrow", linkedApp: nil),
-        TargetAgentDefinition(targetID: "aider", displayName: "Aider", symbolName: "text.book.closed", linkedApp: nil),
-        TargetAgentDefinition(targetID: "windsurf", displayName: "Windsurf", symbolName: "wind", linkedApp: nil),
-        TargetAgentDefinition(targetID: "qwen", displayName: "Qwen Code", symbolName: "q.circle", linkedApp: nil),
-        TargetAgentDefinition(targetID: "kimi", displayName: "Kimi Code", symbolName: "k.circle", linkedApp: nil)
+        TargetAgentDefinition(
+            targetID: "claude-code",
+            displayName: "Claude Code",
+            symbolName: "sparkles",
+            linkedApp: .claude,
+            detectPaths: [".claude", ".claude/agents"],
+            cliCommands: ["claude"],
+            appBundleNames: [],
+            note: "Uses ~/.claude roots for skills and local agents."
+        ),
+        TargetAgentDefinition(
+            targetID: "copilot",
+            displayName: "GitHub Copilot",
+            symbolName: "network",
+            linkedApp: nil,
+            detectPaths: [],
+            cliCommands: ["copilot"],
+            appBundleNames: ["GitHub Copilot"],
+            note: nil
+        ),
+        TargetAgentDefinition(
+            targetID: "antigravity",
+            displayName: "Antigravity",
+            symbolName: "arrow.up.circle",
+            linkedApp: nil,
+            detectPaths: [],
+            cliCommands: ["antigravity"],
+            appBundleNames: [],
+            note: nil
+        ),
+        TargetAgentDefinition(
+            targetID: "gemini-cli",
+            displayName: "Gemini CLI",
+            symbolName: "diamond",
+            linkedApp: .gemini,
+            detectPaths: [".gemini", ".gemini/agents"],
+            cliCommands: ["gemini"],
+            appBundleNames: [],
+            note: "Shares ~/.gemini root with Popskill skill toggles."
+        ),
+        TargetAgentDefinition(
+            targetID: "opencode",
+            displayName: "OpenCode",
+            symbolName: "terminal",
+            linkedApp: .opencode,
+            detectPaths: [".config/opencode"],
+            cliCommands: ["opencode"],
+            appBundleNames: [],
+            note: "XDG-based target rooted at ~/.config/opencode."
+        ),
+        TargetAgentDefinition(
+            targetID: "openclaw",
+            displayName: "OpenClaw",
+            symbolName: "hammer",
+            linkedApp: nil,
+            detectPaths: [],
+            cliCommands: ["openclaw"],
+            appBundleNames: ["OpenClaw"],
+            note: nil
+        ),
+        TargetAgentDefinition(
+            targetID: "cursor",
+            displayName: "Cursor",
+            symbolName: "cursorarrow",
+            linkedApp: nil,
+            detectPaths: [],
+            cliCommands: ["cursor"],
+            appBundleNames: ["Cursor"],
+            note: nil
+        ),
+        TargetAgentDefinition(
+            targetID: "aider",
+            displayName: "Aider",
+            symbolName: "text.book.closed",
+            linkedApp: nil,
+            detectPaths: [],
+            cliCommands: ["aider"],
+            appBundleNames: [],
+            note: nil
+        ),
+        TargetAgentDefinition(
+            targetID: "windsurf",
+            displayName: "Windsurf",
+            symbolName: "wind",
+            linkedApp: nil,
+            detectPaths: [],
+            cliCommands: ["windsurf"],
+            appBundleNames: ["Windsurf"],
+            note: nil
+        ),
+        TargetAgentDefinition(
+            targetID: "qwen",
+            displayName: "Qwen Code",
+            symbolName: "q.circle",
+            linkedApp: nil,
+            detectPaths: [],
+            cliCommands: ["qwen"],
+            appBundleNames: [],
+            note: nil
+        ),
+        TargetAgentDefinition(
+            targetID: "kimi",
+            displayName: "Kimi Code",
+            symbolName: "k.circle",
+            linkedApp: nil,
+            detectPaths: [],
+            cliCommands: ["kimi"],
+            appBundleNames: [],
+            note: nil
+        )
     ]
 
     static func definition(for id: String, fallbackName: String) -> TargetAgentDefinition {
@@ -299,7 +424,11 @@ enum TargetAgentRegistry {
                 targetID: id,
                 displayName: fallbackName,
                 symbolName: "person.crop.circle",
-                linkedApp: nil
+                linkedApp: nil,
+                detectPaths: [],
+                cliCommands: [],
+                appBundleNames: [],
+                note: nil
             )
         }
         return definition

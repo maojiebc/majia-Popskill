@@ -426,6 +426,26 @@ struct SkillModelsTests {
         ])
         #expect(TargetAgentRegistry.definition(for: "claude-code", fallbackName: "Claude").linkedApp == .claude)
         #expect(TargetAgentRegistry.definition(for: "opencode", fallbackName: "OpenCode").linkedApp == .opencode)
+        #expect(TargetAgentRegistry.definition(for: "claude-code", fallbackName: "Claude").detectPaths == [".claude", ".claude/agents"])
+        #expect(TargetAgentRegistry.definition(for: "gemini-cli", fallbackName: "Gemini CLI").cliCommands == ["gemini"])
+    }
+
+    @Test
+    func agentTargetExposesRegistryDiagnostics() {
+        let target = AgentTarget(
+            id: "claude-code",
+            name: "Claude Code",
+            scope: "user",
+            format: "markdown-agent",
+            paths: ["/Users/example/.claude/agents"],
+            detected: false,
+            source: "agency-agents",
+            note: nil
+        )
+
+        #expect(target.expectedPathSummary == ".claude, .claude/agents")
+        #expect(target.cliCommandSummary == "claude")
+        #expect(target.appBundleSummary == nil)
     }
 
     @Test

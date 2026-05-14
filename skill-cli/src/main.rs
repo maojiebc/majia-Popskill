@@ -1479,8 +1479,16 @@ fn list_capability_packages(db: &Arc<Database>) -> Result<Vec<CapabilityPackage>
         lark_capability_package(&skills, &agents),
         pdf_capability_package(&skills),
     ];
+    if let Some(package) = baoyu_capability_package(&skills) {
+        packages.push(package);
+    }
 
-    packages.extend(skills.iter().map(standalone_skill_package));
+    packages.extend(
+        skills
+            .iter()
+            .filter(|skill| !is_baoyu_package_skill(skill))
+            .map(standalone_skill_package),
+    );
     packages.sort_by(|left, right| {
         package_sort_rank(left)
             .cmp(&package_sort_rank(right))
@@ -1509,6 +1517,95 @@ fn package_sort_rank(package: &CapabilityPackage) -> u8 {
             }
         }
     }
+}
+
+fn baoyu_capability_package(skills: &[InstalledSkill]) -> Option<CapabilityPackage> {
+    let mut package_skills = skills
+        .iter()
+        .filter(|skill| is_baoyu_package_skill(skill))
+        .collect::<Vec<_>>();
+    if package_skills.is_empty() {
+        return None;
+    }
+
+    package_skills.sort_by(|left, right| {
+        left.name
+            .to_lowercase()
+            .cmp(&right.name.to_lowercase())
+            .then_with(|| left.id.cmp(&right.id))
+    });
+
+    let repo_branch = package_skills
+        .iter()
+        .filter_map(|skill| skill.repo_branch.as_deref())
+        .find(|branch| !branch.trim().is_empty() && !branch.eq_ignore_ascii_case("HEAD"))
+        .unwrap_or("main");
+    let skill_components = package_skills
+        .iter()
+        .map(|skill| {
+            package_component(
+                "skill",
+                &skill.id,
+                &skill.name,
+                true,
+                true,
+                "installed",
+                Some(&skill.directory),
+            )
+        })
+        .collect::<Vec<_>>();
+
+    Some(CapabilityPackage {
+        id: "pkg:jimliu/baoyu-skills".to_string(),
+        package_type: CapabilityPackageType::Composite,
+        name: "Baoyu Skills".to_string(),
+        vendor: Some("jimliu".to_string()),
+        summary: "Composite creator and publishing skill suite maintained in the jimliu/baoyu-skills GitHub repository.".to_string(),
+        source: PackageSource {
+            kind: "github".to_string(),
+            location: "jimliu/baoyu-skills".to_string(),
+            update_strategy: "git".to_string(),
+            repo_owner: Some("jimliu".to_string()),
+            repo_name: Some("baoyu-skills".to_string()),
+            repo_branch: Some(repo_branch.to_string()),
+            readme_url: Some("https://github.com/jimliu/baoyu-skills".to_string()),
+        },
+        components: PackageComponents {
+            cli: Vec::new(),
+            skills: skill_components,
+            mcp: Vec::new(),
+            agents: Vec::new(),
+        },
+        config_schema: Vec::new(),
+        installed: true,
+        lifecycle: lifecycle_from_skills(package_skills),
+    })
+}
+
+fn is_baoyu_package_skill(skill: &InstalledSkill) -> bool {
+    let repo_matches = skill
+        .repo_owner
+        .as_deref()
+        .zip(skill.repo_name.as_deref())
+        .map(|(owner, name)| {
+            owner.eq_ignore_ascii_case("jimliu") && name.eq_ignore_ascii_case("baoyu-skills")
+        })
+        .unwrap_or(false);
+    if repo_matches {
+        return true;
+    }
+
+    [
+        skill.directory.as_str(),
+        skill.name.as_str(),
+        skill
+            .id
+            .split_once(':')
+            .map(|(_, slug)| slug)
+            .unwrap_or(skill.id.as_str()),
+    ]
+    .iter()
+    .any(|candidate| candidate.to_lowercase().starts_with("baoyu-"))
 }
 
 fn standalone_skill_package(skill: &InstalledSkill) -> CapabilityPackage {
@@ -3612,6 +3709,63 @@ Turns fuzzy product ideas into crisp release plans.
                 .iter()
                 .all(|field| field.storage == "keychain")
         );
+    }
+
+    #[test]
+    fn baoyu_capability_package_groups_repo_and_local_baoyu_skills() {
+        let mut repo_skill =
+            installed_skill_fixture("jimliu/baoyu-skills:baoyu-article-illustrator");
+        repo_skill.name = "baoyu-article-illustrator".to_string();
+        repo_skill.directory = "baoyu-article-illustrator".to_string();
+        repo_skill.repo_owner = Some("JimLiu".to_string());
+        repo_skill.repo_name = Some("baoyu-skills".to_string());
+        repo_skill.repo_branch = Some("main".to_string());
+
+        let mut local_skill = installed_skill_fixture("local:baoyu-imagine");
+        local_skill.name = "baoyu-imagine".to_string();
+        local_skill.directory = "baoyu-imagine".to_string();
+        local_skill.repo_owner = None;
+        local_skill.repo_name = None;
+        local_skill.repo_branch = None;
+
+        let skills = vec![repo_skill, local_skill];
+        let package = baoyu_capability_package(&skills).expect("baoyu package should be grouped");
+
+        assert_eq!(package.id, "pkg:jimliu/baoyu-skills");
+        assert_eq!(package.package_type, CapabilityPackageType::Composite);
+        assert_eq!(package.source.kind, "github");
+        assert_eq!(package.source.location, "jimliu/baoyu-skills");
+        assert_eq!(package.components.skills.len(), 2);
+        assert_eq!(
+            package
+                .components
+                .skills
+                .iter()
+                .map(|component| component.location.as_deref().unwrap_or(""))
+                .collect::<Vec<_>>(),
+            vec!["baoyu-article-illustrator", "baoyu-imagine"]
+        );
+    }
+
+    #[test]
+    fn baoyu_package_detection_uses_repo_metadata_before_slug_fallback() {
+        let mut repo_skill = installed_skill_fixture("jimliu/baoyu-skills:custom-name");
+        repo_skill.name = "custom-name".to_string();
+        repo_skill.directory = "custom-name".to_string();
+        repo_skill.repo_owner = Some("jimliu".to_string());
+        repo_skill.repo_name = Some("baoyu-skills".to_string());
+
+        let mut local_baoyu = installed_skill_fixture("local:baoyu-diagram");
+        local_baoyu.name = "baoyu-diagram".to_string();
+        local_baoyu.directory = "baoyu-diagram".to_string();
+        local_baoyu.repo_owner = None;
+        local_baoyu.repo_name = None;
+
+        let unrelated = installed_skill_fixture("owner/repo:demo-skill");
+
+        assert!(is_baoyu_package_skill(&repo_skill));
+        assert!(is_baoyu_package_skill(&local_baoyu));
+        assert!(!is_baoyu_package_skill(&unrelated));
     }
 
     #[test]

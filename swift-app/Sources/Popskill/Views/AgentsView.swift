@@ -512,6 +512,34 @@ struct AgentTargetLine: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
 
+                if let expectedPathSummary = target.expectedPathSummary, !target.detected {
+                    Text("Expected roots: \(expectedPathSummary)")
+                        .font(.caption2)
+                        .foregroundStyle(Color.popTertiaryLabel)
+                        .lineLimit(2)
+                }
+
+                if let cliSummary = target.cliCommandSummary {
+                    Text("CLI: \(cliSummary)")
+                        .font(.caption2)
+                        .foregroundStyle(Color.popTertiaryLabel)
+                        .lineLimit(1)
+                }
+
+                if let appBundleSummary = target.appBundleSummary {
+                    Text("Apps: \(appBundleSummary)")
+                        .font(.caption2)
+                        .foregroundStyle(Color.popTertiaryLabel)
+                        .lineLimit(1)
+                }
+
+                if let registryNote = target.definition.note, !registryNote.isEmpty {
+                    Text(registryNote)
+                        .font(.caption2)
+                        .foregroundStyle(Color.popTertiaryLabel)
+                        .lineLimit(2)
+                }
+
                 if let note = target.note, !note.isEmpty {
                     Text(note)
                         .font(.caption2)
