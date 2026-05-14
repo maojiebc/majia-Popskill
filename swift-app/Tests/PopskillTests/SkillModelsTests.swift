@@ -675,6 +675,79 @@ struct SkillModelsTests {
         #expect(package.primaryComponentKindsLabel == "Skill + Cli")
     }
 
+    @Test
+    func capabilityPackageComponentGroupSummariesTrackPerKindHealth() {
+        let package = CapabilityPackage(
+            id: "pkg:groups",
+            type: .composite,
+            name: "Group Demo",
+            vendor: nil,
+            summary: "Group summary package",
+            source: PackageSource(
+                kind: "builtin",
+                location: "group-demo",
+                updateStrategy: "manual",
+                repoOwner: nil,
+                repoName: nil,
+                repoBranch: nil,
+                readmeUrl: nil
+            ),
+            components: PackageComponents(
+                cli: [
+                    PackageComponent(
+                        id: "tool-a",
+                        name: "tool-a",
+                        kind: "cli",
+                        required: true,
+                        installed: true,
+                        status: "installed",
+                        location: nil
+                    )
+                ],
+                skills: [
+                    PackageComponent(
+                        id: "skill-a",
+                        name: "Skill A",
+                        kind: "skill",
+                        required: true,
+                        installed: true,
+                        status: "installed",
+                        location: "skill-a"
+                    ),
+                    PackageComponent(
+                        id: "skill-b",
+                        name: "Skill B",
+                        kind: "skill",
+                        required: false,
+                        installed: false,
+                        status: "stub",
+                        location: "skill-b"
+                    )
+                ],
+                mcp: [],
+                agents: [
+                    PackageComponent(
+                        id: "agent-a",
+                        name: "Agent A",
+                        kind: "agent",
+                        required: true,
+                        installed: false,
+                        status: "declared",
+                        location: nil
+                    )
+                ]
+            ),
+            configSchema: [],
+            installed: true,
+            lifecycle: nil
+        )
+
+        #expect(package.componentGroupSummaries.map(\.kind) == ["skill", "cli", "agent"])
+        #expect(package.componentGroupSummaries.first(where: { $0.kind == "skill" })?.installed == 1)
+        #expect(package.componentGroupSummaries.first(where: { $0.kind == "skill" })?.recoverableMissing == 1)
+        #expect(package.componentGroupSummaries.first(where: { $0.kind == "agent" })?.missingRequired == 1)
+    }
+
     private func catalogSkill(repoBranch: String?) -> CatalogSkill {
         CatalogSkill(
             key: "maojiebc/majia-skills/demo",

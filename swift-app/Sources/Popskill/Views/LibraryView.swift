@@ -654,6 +654,7 @@ struct PackageDetailPane: View {
                                 value: formattedOptionalTimestamp(lifecycle.updatedAt, fallback: localization.string("Not Tracked"))
                             )
                             DetailField(title: "Installed Components", value: "\(package.installedComponentCount) / \(package.componentCount)")
+                            DetailField(title: "Coverage", value: packageCoverageLabel(package))
                             DetailField(title: "Missing Components", value: "\(package.missingComponentCount)")
                             DetailField(title: "Required Missing", value: "\(package.missingRequiredComponentCount)")
                             DetailField(title: "Recoverable Missing", value: "\(package.recoverableMissingComponentCount)")
@@ -681,6 +682,10 @@ struct PackageDetailPane: View {
                         }
 
                         DetailSection(title: "Components", accent: PopskillSectionAccent.color(for: 1)) {
+                            ForEach(package.componentGroupSummaries) { group in
+                                DetailField(title: group.title, value: packageGroupSummaryLabel(group))
+                            }
+
                             let rehydratableComponents = package.components.all.filter { component in
                                 recoverableStubForComponent(component) != nil
                             }
@@ -743,8 +748,16 @@ struct PackageDetailPane: View {
                             DetailField(title: "Location", value: package.source.location)
                             DetailField(title: "Update Strategy", value: packageUpdateStrategyLabel(package.source.updateStrategy))
                             DetailField(
+                                title: "Repository Branch",
+                                value: package.source.repoBranch ?? localization.string("Not Tracked")
+                            )
+                            DetailField(
                                 title: "Repository",
                                 value: packageRepositoryLabel(package, fallback: localization.string("Not Tracked"))
+                            )
+                            DetailField(
+                                title: "README",
+                                value: package.source.readmeUrl ?? localization.string("Not Tracked")
                             )
 
                             HStack(spacing: 8) {
@@ -1606,6 +1619,28 @@ private func packageReadmeURL(_ package: CapabilityPackage) -> URL? {
         return nil
     }
     return url
+}
+
+private func packageCoverageLabel(_ package: CapabilityPackage) -> String {
+    guard package.componentCount > 0 else {
+        return "0%"
+    }
+    let ratio = Double(package.installedComponentCount) / Double(package.componentCount)
+    return "\(Int((ratio * 100).rounded()))%"
+}
+
+private func packageGroupSummaryLabel(_ group: PackageComponentGroupSummary) -> String {
+    var segments = ["\(group.installed)/\(group.total) installed"]
+    if group.missing > 0 {
+        segments.append("\(group.missing) missing")
+    }
+    if group.recoverableMissing > 0 {
+        segments.append("\(group.recoverableMissing) recoverable")
+    }
+    if group.missingRequired > 0 {
+        segments.append("\(group.missingRequired) required missing")
+    }
+    return segments.joined(separator: " · ")
 }
 
 private func packageLifecycleStateLabel(_ package: CapabilityPackage, pendingUpdates: Int) -> String {

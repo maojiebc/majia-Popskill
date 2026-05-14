@@ -613,6 +613,37 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
         let labels = orderedKinds.filter { kinds.contains($0) }.map(\.capitalized)
         return labels.isEmpty ? "Unknown" : labels.joined(separator: " + ")
     }
+
+    var componentGroupSummaries: [PackageComponentGroupSummary] {
+        [
+            PackageComponentGroupSummary(kind: "skill", title: "Skills", components: components.skills),
+            PackageComponentGroupSummary(kind: "cli", title: "CLI", components: components.cli),
+            PackageComponentGroupSummary(kind: "mcp", title: "MCP", components: components.mcp),
+            PackageComponentGroupSummary(kind: "agent", title: "Agents", components: components.agents)
+        ].filter { $0.total > 0 }
+    }
+}
+
+struct PackageComponentGroupSummary: Identifiable, Equatable {
+    let kind: String
+    let title: String
+    let total: Int
+    let installed: Int
+    let missing: Int
+    let missingRequired: Int
+    let recoverableMissing: Int
+
+    var id: String { kind }
+
+    init(kind: String, title: String, components: [PackageComponent]) {
+        self.kind = kind
+        self.title = title
+        total = components.count
+        installed = components.filter(\.installed).count
+        missing = max(0, total - installed)
+        missingRequired = components.filter { !$0.installed && $0.required }.count
+        recoverableMissing = components.filter { !$0.installed && $0.isRecoverable }.count
+    }
 }
 
 struct PackageSource: Codable, Equatable {
