@@ -142,6 +142,69 @@ CREATE VIRTUAL TABLE search_docs USING fts5(
 
 The UI should read cached package and search state first, then let background jobs refresh disk, source, and update status.
 
+## Content-Addressable Store (v0.2 Reserve)
+
+This section reserves design space for v0.2. It is not implemented in v0.1.
+Full source material in [architecture-reference-skillctl.md](./architecture-reference-skillctl.md) (Chinese, archived from a 2026-05-15 design session).
+
+The current `source -> package -> component -> deployment -> runtime` chain is conceptually complete but operationally thin in one spot: there is no dedicated **content-addressable store** between `source` and `deployment`. v0.2 introduces that layer.
+
+### Proposed three-tier layout
+
+```text
+~/.popskill/sources/      # upstream origins (local source / git / archive)
+   <package-id>/          # mutable: dev symlink to ~/projects/<repo>
+   <package-id>@<ver>/    # immutable: pinned snapshot from registry / archive
+
+~/.popskill/store/        # content-addressable, one physical copy
+   <package-id>@<ver>-<hash4>/   # tag = first 4 hex of sha256(SKILL.md + key files)
+                                 # multiple versions coexist
+
+~/.popskill/projections/  # one per target agent, symlink-based
+   claude/skills/<name>      -> ../../store/<package-id>@<ver>-<hash4>/
+   codex/skills/<name>       -> ../../store/<package-id>@<other-ver>-<hash4>/
+```
+
+Targets (`~/.claude/skills/`, `~/.codex/skills/`, etc.) symlink once to the corresponding `projections/<target>/skills/` directory. From v0.2 on, popskill never writes into target directories directly; it only renders projection trees.
+
+### Five hard invariants (from architecture-reference-skillctl.md)
+
+1. **Plugin namespace is read-only sidetrack.** `anthropic-skills:*` and host-app plugin skills never enter `store/`. `skill-cli doctor --inventory` surfaces them as `external` namespace, no projection, no hijack.
+2. **Projection is the sole agent-visible surface.** Whole-directory symlink preferred; per-file symlink as fallback after probe testing.
+3. **Lockfile is truth, symlink is render.** `projections/<target>/lock.toml` holds the per-agent pinned state. Symlink tree can be rebuilt from lockfile at any time without data loss.
+4. **Mutable must be explicit.** Default `store/` entries are immutable snapshots. Dev mode (pointing at `~/projects/<repo>`) sets `mutable = true` + `observed_hash` in lockfile; doctor flags hash drift instead of pretending the entry is frozen.
+5. **`id` first, `name`/`alias` second.** Stable reverse-domain `id = "com.author.skill"` is the dedup primary key. `name` is for display and trigger; `aliases = [...]` handles historical renames. Legacy entries without `id` get synthetic ids and a doctor "please add `id`" hint.
+
+### Lockfile shape (per target)
+
+```toml
+# ~/.popskill/projections/claude/lock.toml
+
+[[skills]]
+id = "com.majia.guanyuan"
+name = "majia-guanyuan"
+version = "2.1.4"
+hash = "sha256:7f3a..."
+store = "majia-guanyuan@2.1.4-7f3a"
+source = "local:/Users/majia/projects/majia-guanyuan"
+mutable = false
+aliases = ["guanyuan-majia"]
+```
+
+Each target's lockfile is independent. Claude can run a new version while Codex temporarily pins an older one — that is the whole point of per-target pinning, and it is the strongest reason to introduce `store/` at all.
+
+### Concretely deferred from v0.1
+
+- v0.1 keeps SQLite as the operational SSOT. SQLite is the runtime cache and search index. v0.2 lockfile is the human-readable view + cross-device sync medium, not a replacement.
+- v0.1 does not add the `id` column. The v0.1.x patch cycle introduces `id` with a SQLite migration that generates synthetic ids (`gen:{owner}.{name}`) for legacy rows.
+- v0.1 does not implement projection rendering. v0.1 still uses `copy` / `configPatch` / `wrapper` / `symlink` deployment strategies directly. v0.2 promotes `symlink-from-projection` to the default after target-agent `_probe` tests pass.
+
+### Probe gate before v0.2 work begins
+
+Before writing any `store/` or `projections/` code, v0.2 must run the `_probe` empirical test matrix described in [architecture-reference-skillctl.md §7](./architecture-reference-skillctl.md): a minimal `_probe` skill with `version: B` in the physical store and `version: A` at the projection symlink, executed against each target (Claude Code / Codex / Cursor / OpenClaw / Hermes) to confirm the agent actually reads through the symlink chain instead of caching its own copy.
+
+If any target fails the whole-directory symlink probe, the v0.2 design must accept per-file symlink fallback for that target before any production rollout.
+
 ## Current Bridge
 
 The current implementation is still SwiftUI plus Rust sidecar plus CC Switch. That is fine. The immediate bridge is:
