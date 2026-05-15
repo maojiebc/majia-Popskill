@@ -111,7 +111,7 @@ final class LibraryViewModel {
                 enabledCount: enabledSkillCount(for: app, in: package)
             )
         }
-        PackageCardSignals(
+        return PackageCardSignals(
             pendingUpdates: updates(for: package).count,
             recoverableMissingComponents: package.recoverableMissingComponentCount,
             missingRequiredComponents: package.missingRequiredComponentCount,
