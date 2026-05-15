@@ -861,7 +861,6 @@ struct PackageDetailPane: View {
 struct PackageRow: View {
     let package: CapabilityPackage
     let signals: PackageCardSignals
-    var showsStatusSignals: Bool = true
     var quickToggle: PackageQuickToggle? = nil
     var searchState: LibrarySearchRowState? = nil
     @Environment(\.popskillLocalization) private var localization
@@ -870,198 +869,82 @@ struct PackageRow: View {
         searchState?.capabilitySummary ?? package.summary
     }
 
+    /// Cards expose only the signals a user can act on at a glance: name,
+    /// type, pending updates, summary, app coverage (composite) or quick
+    /// toggle (standalone), and the search trigger chips when the user is
+    /// hunting. Everything else — health, lifecycle, hash, recoverable
+    /// component counts, last-checked timestamp — lives in PackageDetailPane
+    /// so the row reads like an App Store entry rather than a control panel.
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             PackageAvatar(name: package.name, identifier: package.id)
 
-            VStack(alignment: .leading, spacing: 9) {
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 8) {
-                        Text(highlightedSearchString(package.name, query: searchState?.query))
-                            .font(.system(.headline, weight: .semibold))
-                            .foregroundStyle(Color.popLabel)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Text(highlightedSearchString(package.name, query: searchState?.query))
+                        .font(.popHeadline)
+                        .foregroundStyle(Color.popLabel)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
 
-                        StatusPill(title: package.typeLabel, color: packageColor(package.type))
-                        StatusPill(title: package.health.title, color: packageHealthColor(package.health))
-                        if signals.pendingUpdates > 0 {
-                            StatusPill(title: "Updates \(signals.pendingUpdates)", color: .popStatusWarning)
-                        }
+                    StatusPill(title: package.typeLabel, color: packageColor(package.type))
 
-                        if package.missingComponentCount > 0 {
-                            Label("\(package.missingComponentCount)", systemImage: "icloud.and.arrow.down")
+                    if signals.pendingUpdates > 0 {
+                        StatusPill(
+                            title: localization.string("package.row.updatesBadge", signals.pendingUpdates),
+                            color: .popStatusWarning
+                        )
+                    }
+                }
+
+                Text(highlightedSearchString(summaryToShow, query: searchState?.query))
+                    .font(.popSubheadline)
+                    .foregroundStyle(Color.popSecondaryLabel)
+                    .lineLimit(2)
+
+                if let searchState, !searchState.hit.matchedTriggers.isEmpty {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkle.magnifyingglass")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color.accentColor)
+                        ForEach(searchState.hit.matchedTriggers.prefix(4), id: \.self) { trigger in
+                            Text(trigger)
                                 .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color.popStatusWarning)
-                                .labelStyle(.titleAndIcon)
+                                .foregroundStyle(Color.accentColor)
+                                .lineLimit(1)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(Color.popStatusWarning.opacity(0.10), in: Capsule())
+                                .background(Color.accentColor.opacity(0.10), in: Capsule())
                         }
-                    }
-
-                    Text(highlightedSearchString(summaryToShow, query: searchState?.query))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-
-                    if let searchState, !searchState.hit.matchedTriggers.isEmpty {
-                        HStack(spacing: 6) {
-                            Image(systemName: "sparkle.magnifyingglass")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(Color.accentColor)
-                            ForEach(searchState.hit.matchedTriggers.prefix(4), id: \.self) { trigger in
-                                Text(trigger)
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(Color.accentColor)
-                                    .lineLimit(1)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.accentColor.opacity(0.10), in: Capsule())
-                            }
-                            if searchState.hit.matchedTriggers.count > 4 {
-                                Text("+\(searchState.hit.matchedTriggers.count - 4)")
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-
-                    Text(localization.string(
-                        "package.componentSummary",
-                        package.componentCount,
-                        package.installedComponentCount,
-                        package.requiredComponentCount
-                    ))
-                        .font(.caption)
-                        .foregroundStyle(Color.popTertiaryLabel)
-                        .lineLimit(1)
-
-                    if package.type == .composite, signals.installedSkillComponentCount > 0 {
-                        PackageAppCoverageBar(
-                            counts: signals.appEnabledCounts,
-                            totalSkills: signals.installedSkillComponentCount
-                        )
-                    }
-
-                    HStack(spacing: 10) {
-                        Label(packageUpdateChannelLabel(package), systemImage: "point.3.connected.trianglepath.dotted")
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                        Label(packageLifecycleSummaryLabel(package), systemImage: "clock.arrow.circlepath")
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                        if let hash = package.trackedContentHash {
-                            Label(shortHash(hash), systemImage: "number")
-                                .lineLimit(1)
-                        }
-                    }
-                    .font(.caption2)
-                    .foregroundStyle(Color.popTertiaryLabel)
-
-                    if let quickToggle {
-                        AppToggleRow(
-                            apps: quickToggle.apps,
-                            isOn: quickToggle.isOn,
-                            isPending: quickToggle.isPending,
-                            onToggle: quickToggle.onToggle,
-                            showsEnabledSummary: true,
-                            toggleSize: 22
-                        )
-                    }
-
-                    if packageSignalChipData.isEmpty == false {
-                        HStack(spacing: 6) {
-                            ForEach(packageSignalChipData, id: \.id) { chip in
-                                HStack(spacing: 4) {
-                                    Image(systemName: chip.systemImage)
-                                        .font(.system(size: 10, weight: .semibold))
-                                    Text(chip.title)
-                                        .font(.caption2.weight(.semibold))
-                                        .lineLimit(1)
-                                }
-                                .foregroundStyle(chip.color)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 3)
-                                .background(chip.color.opacity(0.10), in: Capsule())
-                            }
+                        if searchState.hit.matchedTriggers.count > 4 {
+                            Text("+\(searchState.hit.matchedTriggers.count - 4)")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
+
+                if package.type == .composite, signals.installedSkillComponentCount > 0 {
+                    PackageAppCoverageBar(
+                        counts: signals.appEnabledCounts,
+                        totalSkills: signals.installedSkillComponentCount
+                    )
+                }
+
+                if let quickToggle {
+                    AppToggleRow(
+                        apps: quickToggle.apps,
+                        isOn: quickToggle.isOn,
+                        isPending: quickToggle.isPending,
+                        onToggle: quickToggle.onToggle,
+                        showsEnabledSummary: false,
+                        toggleSize: 22
+                    )
+                }
             }
         }
-        .frame(minHeight: 96)
+        .frame(minHeight: 88)
     }
-
-    private var packageSignalChipData: [PackageSignalChipData] {
-        guard showsStatusSignals else {
-            return []
-        }
-
-        var chips: [PackageSignalChipData] = []
-
-        if signals.pendingUpdates > 0 {
-            chips.append(
-                PackageSignalChipData(
-                    id: "updates",
-                    title: "\(signals.pendingUpdates) pending",
-                    systemImage: "arrow.down.circle",
-                    color: .popStatusWarning
-                )
-            )
-        }
-
-        if signals.recoverableMissingComponents > 0 {
-            chips.append(
-                PackageSignalChipData(
-                    id: "rehydrate",
-                    title: "Rehydrate \(signals.recoverableMissingComponents)",
-                    systemImage: "icloud.and.arrow.down",
-                    color: .popSectionBlue
-                )
-            )
-        }
-
-        if signals.missingRequiredComponents > 0 {
-            chips.append(
-                PackageSignalChipData(
-                    id: "missing-required",
-                    title: "Required missing \(signals.missingRequiredComponents)",
-                    systemImage: "exclamationmark.triangle",
-                    color: .popStatusError
-                )
-            )
-        }
-
-        if let checkedAt = signals.lastCheckedUpdatesAt {
-            chips.append(
-                PackageSignalChipData(
-                    id: "checked",
-                    title: "Checked \(checkedAt.formatted(date: .omitted, time: .shortened))",
-                    systemImage: "clock.arrow.circlepath",
-                    color: .popTertiaryLabel
-                )
-            )
-        } else {
-            chips.append(
-                PackageSignalChipData(
-                    id: "check-pending",
-                    title: "Check pending",
-                    systemImage: "clock.badge.questionmark",
-                    color: .popStatusNeutral
-                )
-            )
-        }
-
-        return chips
-    }
-}
-
-private struct PackageSignalChipData {
-    let id: String
-    let title: String
-    let systemImage: String
-    let color: Color
 }
 
 struct PackageQuickToggle {

@@ -279,3 +279,4 @@
 
 "Add Repository" = "Add Repository";
 "repositories.summary" = "%d enabled of %d";
+"package.row.updatesBadge" = "%d update";
