@@ -269,3 +269,5 @@
 "uninstall.strategy.backup.title" = "Uninstall (Keep Backup)";
 "uninstall.strategy.delete.title" = "Delete Permanently";
 "uninstall.strategy.dialog.message" = "Choose how Popskill should handle this skill's files. Backup is the safest — CC Switch auto-creates a recovery snapshot. Keep leaves every file in place and only disables apps. Delete is irreversible.";
+
+"agents.search.emptyHint" = "Try a different keyword, agent name, or trigger word.";

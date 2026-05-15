@@ -16,18 +16,48 @@ final class AgentsViewModel {
     private let client = SkillCLIClient()
 
     var filteredAgents: [LocalAgent] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-
-        return agents.filter { agent in
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let scoped = agents.filter { agent in
             selectedCategory == "All" || agent.categoryLabel == selectedCategory
-        }.filter { agent in
-            query.isEmpty
-                || agent.name.lowercased().contains(query)
-                || agent.description.lowercased().contains(query)
-                || agent.categoryLabel.lowercased().contains(query)
-                || agent.fileName.lowercased().contains(query)
-                || agent.tools.contains { $0.lowercased().contains(query) }
         }
+
+        guard !query.isEmpty else {
+            return scoped
+        }
+
+        let scored: [(LocalAgent, Int)] = scoped.compactMap { agent in
+            if let hit = SkillSearchScorer.score(agent: agent, query: query) {
+                return (agent, hit.score)
+            }
+            // Tools list is searched in addition to the scored fields — the
+            // exact-list match shouldn't fall off the cliff when an old query
+            // hits a tool string.
+            if agent.tools.contains(where: { $0.lowercased().contains(query.lowercased()) }) {
+                return (agent, 5)
+            }
+            return nil
+        }
+
+        return scored
+            .sorted { lhs, rhs in
+                if lhs.1 != rhs.1 { return lhs.1 > rhs.1 }
+                return lhs.0.name.localizedCaseInsensitiveCompare(rhs.0.name) == .orderedAscending
+            }
+            .map(\.0)
+    }
+
+    /// Returns the current search query if non-empty, otherwise nil. Mirrors the
+    /// helper on `LibraryViewModel` so view code uses one signal to switch on
+    /// the search-active row variant.
+    var activeSearchQuery: String? {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return query.isEmpty ? nil : query
+    }
+
+    func searchHit(for agent: LocalAgent) -> SkillSearchHit? {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return nil }
+        return SkillSearchScorer.score(agent: agent, query: query)
     }
 
     var categories: [String] {
@@ -198,10 +228,20 @@ struct AgentsView: View {
                 )
 
                 ForEach(viewModel.filteredAgents) { agent in
+                    let searchState = viewModel.activeSearchQuery.flatMap { query -> LibrarySearchRowState? in
+                        guard let hit = viewModel.searchHit(for: agent) else {
+                            return nil
+                        }
+                        return LibrarySearchRowState(
+                            query: query,
+                            hit: hit,
+                            capabilitySummary: agent.capabilitySummary
+                        )
+                    }
                     PopskillSelectableCard(isSelected: selectedAgentID == agent.id) {
                         selectedAgentID = agent.id
                     } content: {
-                        AgentRow(agent: agent)
+                        AgentRow(agent: agent, searchState: searchState)
                     }
                 }
             }
@@ -215,7 +255,15 @@ struct AgentsView: View {
                 ProgressView()
                     .controlSize(.large)
             } else if viewModel.filteredAgents.isEmpty {
-                ContentUnavailableView(localization.string(emptyStateTitleKey), systemImage: "person.crop.circle.badge.questionmark")
+                if viewModel.activeSearchQuery != nil {
+                    ContentUnavailableView {
+                        Label(localization.string(emptyStateTitleKey), systemImage: "person.crop.circle.badge.questionmark")
+                    } description: {
+                        Text(localization.string("agents.search.emptyHint"))
+                    }
+                } else {
+                    ContentUnavailableView(localization.string(emptyStateTitleKey), systemImage: "person.crop.circle.badge.questionmark")
+                }
             }
         }
     }
@@ -235,6 +283,11 @@ struct AgentsView: View {
 
 struct AgentRow: View {
     let agent: LocalAgent
+    var searchState: LibrarySearchRowState? = nil
+
+    private var descriptionToShow: String {
+        searchState?.capabilitySummary ?? agent.description
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -242,7 +295,7 @@ struct AgentRow: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
-                    Text(agent.name)
+                    Text(highlightedSearchString(agent.name, query: searchState?.query))
                         .font(.system(.headline, weight: .semibold))
                         .foregroundStyle(Color.popLabel)
                         .lineLimit(1)
@@ -251,10 +304,32 @@ struct AgentRow: View {
                     StatusPill(title: agent.categoryLabel, color: .popSectionGreen)
                 }
 
-                Text(agent.description)
+                Text(highlightedSearchString(descriptionToShow, query: searchState?.query))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
+
+                if let searchState, !searchState.hit.matchedTriggers.isEmpty {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkle.magnifyingglass")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color.accentColor)
+                        ForEach(searchState.hit.matchedTriggers.prefix(4), id: \.self) { trigger in
+                            Text(trigger)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(Color.accentColor)
+                                .lineLimit(1)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.accentColor.opacity(0.10), in: Capsule())
+                        }
+                        if searchState.hit.matchedTriggers.count > 4 {
+                            Text("+\(searchState.hit.matchedTriggers.count - 4)")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
 
                 Text(agent.toolSummary)
                     .font(.caption)

@@ -93,6 +93,48 @@ struct SkillSearchScorerTests {
         #expect((hit?.matchedTriggers ?? []).contains("画个图"))
     }
 
+    @Test
+    func agentScoringUsesCategoryAndFileNameAsAuxiliaryFields() {
+        // Auxiliary-only match: query lives in category, name has no match.
+        let hit = SkillSearchScorer.score(
+            agent: localAgent(
+                name: "doc-writer",
+                description: "Drafts Lark documents",
+                category: "office"
+            ),
+            query: "office"
+        )
+        // category contains (10) + fileName "doc-writer.md" no contains (0) = 10
+        #expect(hit?.score == 10)
+        #expect(hit?.matchedOnName == false)
+    }
+
+    @Test
+    func agentScoringCombinesNameTriggerAndSummary() {
+        let hit = SkillSearchScorer.score(
+            agent: localAgent(
+                name: "diagram-agent",
+                description: "Drafts architecture diagrams",
+                capabilitySummary: "Drafts architecture diagrams",
+                triggerScenarios: ["draw a diagram", "render flowchart"]
+            ),
+            query: "diagram"
+        )
+        // name hasPrefix (500) + 1 trigger match (100) + summary contains (50) +
+        // description contains (20) + fileName "" no hit (0) = 670
+        #expect((hit?.score ?? 0) >= 670)
+        #expect(hit?.matchedTriggers == ["draw a diagram"])
+    }
+
+    @Test
+    func agentZeroMatchReturnsNil() {
+        let hit = SkillSearchScorer.score(
+            agent: localAgent(name: "lark-office-assistant", description: "Drafts Lark documents"),
+            query: "unrelated-xyz"
+        )
+        #expect(hit == nil)
+    }
+
     private func skill(
         name: String,
         description: String = "",
@@ -111,6 +153,29 @@ struct SkillSearchScorerTests {
             installedAt: nil,
             updatedAt: nil,
             contentHash: nil,
+            capabilitySummary: capabilitySummary,
+            triggerScenarios: triggerScenarios
+        )
+    }
+
+    private func localAgent(
+        name: String,
+        description: String = "",
+        category: String = "local",
+        capabilitySummary: String? = nil,
+        triggerScenarios: [String]? = nil
+    ) -> LocalAgent {
+        LocalAgent(
+            id: "test/\(name)",
+            name: name,
+            description: description,
+            fileName: "\(name).md",
+            path: "/tmp/\(name).md",
+            category: category,
+            tools: [],
+            model: nil,
+            lastModifiedAt: nil,
+            sizeBytes: 0,
             capabilitySummary: capabilitySummary,
             triggerScenarios: triggerScenarios
         )

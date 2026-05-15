@@ -269,3 +269,5 @@
 "uninstall.strategy.backup.title" = "卸载（自动备份）";
 "uninstall.strategy.delete.title" = "永久删除（不可恢复）";
 "uninstall.strategy.dialog.message" = "选择 Popskill 如何处理这个 skill 的文件。Backup 最安全 —— CC Switch 会自动保留一份可恢复的快照。Keep 完全保留文件，只是把所有 app 停用。Delete 不可恢复。";
+
+"agents.search.emptyHint" = "换个关键词试试，可以搜 agent 名称、能力，或触发词。";

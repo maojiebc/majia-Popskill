@@ -90,4 +90,64 @@ enum SkillSearchScorer {
             matchedOnName: matchedOnName
         )
     }
+
+    /// Mirror of `score(skill:query:)` for `LocalAgent`. Same weight curve, but
+    /// uses `categoryLabel` and `fileName` as auxiliary fields instead of
+    /// `sourceLabel`/`directory`. Returns nil when no field matches.
+    static func score(agent: LocalAgent, query: String) -> SkillSearchHit? {
+        let q = query.lowercased()
+        guard !q.isEmpty else { return nil }
+
+        let name = agent.name.lowercased()
+        let summary = (agent.capabilitySummary ?? "").lowercased()
+        let description = agent.description.lowercased()
+        let triggers = agent.triggerScenarios ?? []
+        let category = agent.categoryLabel.lowercased()
+        let fileName = agent.fileName.lowercased()
+
+        var score = 0
+        var matchedOnName = false
+        var matchedTriggers: [String] = []
+        var seenTriggers: Set<String> = []
+
+        if name == q {
+            score += 1000
+            matchedOnName = true
+        } else if name.hasPrefix(q) {
+            score += 500
+            matchedOnName = true
+        } else if name.contains(q) {
+            score += 200
+            matchedOnName = true
+        }
+
+        for trigger in triggers {
+            let lower = trigger.lowercased()
+            guard lower.contains(q), !seenTriggers.contains(lower) else { continue }
+            seenTriggers.insert(lower)
+            score += 100
+            matchedTriggers.append(trigger)
+        }
+
+        if !summary.isEmpty, summary.contains(q) {
+            score += 50
+        }
+        if description.contains(q) {
+            score += 20
+        }
+        if category.contains(q) {
+            score += 10
+        }
+        if fileName.contains(q) {
+            score += 5
+        }
+
+        guard score > 0 else { return nil }
+
+        return SkillSearchHit(
+            score: score,
+            matchedTriggers: matchedTriggers,
+            matchedOnName: matchedOnName
+        )
+    }
 }

@@ -221,6 +221,8 @@ struct LocalAgent: Identifiable, Codable, Equatable {
     let model: String?
     let lastModifiedAt: Int?
     let sizeBytes: UInt64
+    var capabilitySummary: String? = nil
+    var triggerScenarios: [String]? = nil
 
     var fileURL: URL {
         URL(fileURLWithPath: path)

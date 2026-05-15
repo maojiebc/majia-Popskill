@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// State a `PackageRow` needs to render the search-active variant: highlighted name,
-/// optional capability summary in place of the package summary, and trigger chips.
-struct PackageRowSearchState {
+/// Shared search-active row state used by every Library/Agent row that wants
+/// to highlight matches and surface trigger chips. Owners pick a sensible
+/// `capabilitySummary` (e.g. underlying skill's summary for a standalone
+/// package, agent's own summary for an AgentRow) or nil to fall back to the
+/// row's default description text.
+struct LibrarySearchRowState {
     let query: String
     let hit: SkillSearchHit
-    /// Capability summary copied from the standalone underlying skill (when available).
-    /// Composite packages have no underlying skill and supply nil — the row falls back
-    /// to `package.summary`.
     let capabilitySummary: String?
 }
 

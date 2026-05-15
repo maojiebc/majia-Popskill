@@ -125,11 +125,11 @@ struct LibraryView: View {
                         ForEach(viewModel.filteredPackages) { package in
                             let selectionID = selectionID(forPackage: package.id)
                             let standaloneSkill = skill(forStandalonePackage: package)
-                            let searchState = viewModel.activeSearchQuery.flatMap { query -> PackageRowSearchState? in
+                            let searchState = viewModel.activeSearchQuery.flatMap { query -> LibrarySearchRowState? in
                                 guard let hit = viewModel.searchHit(for: package) else {
                                     return nil
                                 }
-                                return PackageRowSearchState(
+                                return LibrarySearchRowState(
                                     query: query,
                                     hit: hit,
                                     capabilitySummary: standaloneSkill?.capabilitySummary
@@ -863,7 +863,7 @@ struct PackageRow: View {
     let signals: PackageCardSignals
     var showsStatusSignals: Bool = true
     var quickToggle: PackageQuickToggle? = nil
-    var searchState: PackageRowSearchState? = nil
+    var searchState: LibrarySearchRowState? = nil
     @Environment(\.popskillLocalization) private var localization
 
     private var summaryToShow: String {

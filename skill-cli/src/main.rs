@@ -990,13 +990,17 @@ fn local_agent_from_markdown(
         .filter(|category| !category.is_empty())
         .unwrap_or_else(|| "local".to_string());
 
+    let description = parsed.description.unwrap_or_else(|| {
+        first_markdown_paragraph(content)
+            .unwrap_or_else(|| "Local Claude Code agent".to_string())
+    });
+    let capability_summary = first_sentence_of(&description);
+    let trigger_scenarios = parse_skill_triggers(content);
+
     Ok(LocalAgent {
         id,
         name: parsed.name.unwrap_or_else(|| title_from_slug(file_stem)),
-        description: parsed.description.unwrap_or_else(|| {
-            first_markdown_paragraph(content)
-                .unwrap_or_else(|| "Local Claude Code agent".to_string())
-        }),
+        description,
         file_name,
         path: path.to_string_lossy().to_string(),
         category,
@@ -1007,6 +1011,8 @@ fn local_agent_from_markdown(
             .ok()
             .and_then(system_time_to_unix_timestamp),
         size_bytes: metadata.len(),
+        capability_summary,
+        trigger_scenarios,
     })
 }
 
@@ -3082,6 +3088,10 @@ struct LocalAgent {
     category: String,
     tools: Vec<String>,
     model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    capability_summary: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    trigger_scenarios: Vec<String>,
     last_modified_at: Option<i64>,
     size_bytes: u64,
 }
@@ -3880,6 +3890,8 @@ Turns fuzzy product ideas into crisp release plans.
             model: None,
             last_modified_at: Some(1),
             size_bytes: 128,
+            capability_summary: None,
+            trigger_scenarios: Vec::new(),
         }];
 
         let package = lark_capability_package(&skills, &agents);
