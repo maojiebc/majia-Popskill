@@ -851,7 +851,11 @@ struct PackageDetailPane: View {
                     .padding(22)
                 }
             } else {
-                ContentUnavailableView("No Package Selected", systemImage: "square.stack.3d.up")
+                ContentUnavailableView {
+                    Label(localization.string("library.empty.title"), systemImage: "square.stack.3d.up")
+                } description: {
+                    Text(localization.string("library.empty.message"))
+                }
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: PopskillRadius.largeCard, style: .continuous))
@@ -1255,7 +1259,11 @@ struct SkillDetailPane: View {
                     .padding(22)
                 }
             } else {
-                ContentUnavailableView("No Selection", systemImage: "sidebar.right")
+                ContentUnavailableView {
+                    Label(localization.string("skill.empty.title"), systemImage: "sidebar.right")
+                } description: {
+                    Text(localization.string("skill.empty.message"))
+                }
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: PopskillRadius.largeCard, style: .continuous))
@@ -1338,7 +1346,11 @@ struct StubDetailPane: View {
                     .padding(22)
                 }
             } else {
-                ContentUnavailableView("No Stub Selected", systemImage: "icloud")
+                ContentUnavailableView {
+                    Label(localization.string("stub.empty.title"), systemImage: "icloud")
+                } description: {
+                    Text(localization.string("stub.empty.message"))
+                }
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: PopskillRadius.largeCard, style: .continuous))

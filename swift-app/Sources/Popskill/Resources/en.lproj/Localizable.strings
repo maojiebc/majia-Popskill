@@ -280,3 +280,10 @@
 "Add Repository" = "Add Repository";
 "repositories.summary" = "%d enabled of %d";
 "package.row.updatesBadge" = "%d update";
+
+"library.empty.title" = "Pick a package";
+"library.empty.message" = "Select a card on the left to see version, source, app coverage, and uninstall options.";
+"skill.empty.title" = "Pick a skill";
+"skill.empty.message" = "Choose an installed skill to inspect its source, last activity, and toggle apps.";
+"stub.empty.title" = "Pick a stub to rehydrate";
+"stub.empty.message" = "Stubs preserve a recovery snapshot of the original skill. Restore one by selecting it and choosing a target app.";

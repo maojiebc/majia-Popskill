@@ -280,3 +280,10 @@
 "Add Repository" = "添加仓库";
 "repositories.summary" = "%d 个已启用，共 %d 个";
 "package.row.updatesBadge" = "%d 个更新";
+
+"library.empty.title" = "挑一个能力包看看";
+"library.empty.message" = "在左侧网格里选一张卡片，可以查看版本、来源、应用启用情况，以及卸载选项。";
+"skill.empty.title" = "挑一个 skill 看看";
+"skill.empty.message" = "选一个已安装的 skill，可以查看它的来源、最近活动，并切换在哪些 app 启用。";
+"stub.empty.title" = "挑一个 stub 恢复";
+"stub.empty.message" = "Stub 是原 skill 的可恢复快照。选中后挑一个目标 app，即可把它重新安装回去。";

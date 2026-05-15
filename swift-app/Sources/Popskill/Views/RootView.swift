@@ -130,15 +130,34 @@ struct RootView: View {
 
     @ViewBuilder
     private func sidebarLink(_ item: SidebarSelection, badge: Int? = nil, updateBadge: Int? = nil) -> some View {
-        let isSelected = selection == item
+        SidebarLink(
+            item: item,
+            isSelected: selection == item,
+            badge: badge,
+            updateBadge: updateBadge,
+            onSelect: { selection = item }
+        )
+        .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 2, trailing: 10))
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+    }
+}
 
-        Button {
-            selection = item
-        } label: {
+private struct SidebarLink: View {
+    let item: SidebarSelection
+    let isSelected: Bool
+    let badge: Int?
+    let updateBadge: Int?
+    let onSelect: () -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: onSelect) {
             HStack(spacing: 9) {
                 Image(systemName: item.symbolName)
                     .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                    .foregroundStyle(iconForeground)
                     .frame(width: 18)
 
                 LocalizedText(item.titleKey)
@@ -172,17 +191,31 @@ struct RootView: View {
                         )
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .contentShape(RoundedRectangle(cornerRadius: 6))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .contentShape(RoundedRectangle(cornerRadius: 8))
             .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(backgroundFill)
             )
+            .animation(.easeInOut(duration: 0.14), value: isHovering)
+            .animation(.easeInOut(duration: 0.18), value: isSelected)
         }
         .buttonStyle(.plain)
-        .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 2, trailing: 10))
-        .listRowSeparator(.hidden)
-        .listRowBackground(Color.clear)
+        .onHover { isHovering = $0 }
+    }
+
+    private var iconForeground: Color {
+        if isSelected {
+            return Color.accentColor
+        }
+        return isHovering ? Color.popLabel : Color.secondary
+    }
+
+    private var backgroundFill: Color {
+        if isSelected {
+            return Color.accentColor.opacity(0.12)
+        }
+        return isHovering ? Color.accentColor.opacity(0.06) : Color.clear
     }
 }
