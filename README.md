@@ -38,6 +38,15 @@ Popskill is part of a growing AI tools ecosystem. It complements these excellent
 
 The planned v0.2 Package model is therefore not "first ever"; it is Popskill's attempt to make the full combination work on Mac: **Skill + Agent + CLI + MCP + Config**, across AI tools, with App Store-level UX, Usage Insights, Stub, and AgentShield.
 
+## Why Now (May 2026)
+
+Two head Skills developers publicly framed the exact gap Popskill targets, in the same week as v0.1 release prep:
+
+- **[@dotey (宝玉)](https://x.com/dotey)**, author of `baoyu-skills` (~20K stars), in a [126K-view long-form post on 2026-05-11](https://x.com/dotey/status/2053940091970580736): *"My baoyu-skills is close to 20K stars, but the income from it is \$0. Skills are transparent... the moat is shallow. The most reasonable path is a plugin mechanism — App Store and Chrome plugin marketplaces have already proven a working revenue and copyright model."*
+- **[@op7418 (歸藏)](https://x.com/op7418)** on [2026-05-13](https://x.com/op7418/status/2054414353731109224), naming "藏师傅, 宝玉, 乔木, 一泽" as the four head Skills developers, said in his own reply #2: *"We need a focused public space for distribution, exposure, and connection — and to serve developers well, especially the best ones."*
+
+Popskill is one concrete answer to that call. Full reasoning and evidence chain in [docs/why-popskill.md](./docs/why-popskill.md).
+
 ## Why Mac Native?
 
 Popskill is a local asset manager, so it should feel like a Mac utility instead of a web app in a desktop shell. We chose Swift + SwiftUI for instant launch, lower memory overhead, native sidebar/window behavior, and a design language that can follow macOS conventions closely.
@@ -68,6 +77,15 @@ Popskill follows the Google Stitch-style [DESIGN.md](./DESIGN.md) structure for 
 Claude Code 的 Agent Skills 生态在 GitHub 上已经爆炸（[anthropics/skills](https://github.com/anthropics/skills) 13万⭐、各种 awesome-list 60万+⭐ 总和），AgencyAgents 这类仓库也证明了 Agent 角色库正在变成中文圈高频入口；但**没有一个 Mac 客户端把"发现 / 安装 / 管理 / 统计"做成 App Store 那种体验**。
 
 Popskill 就是来填这个坑的。
+
+### 为什么是现在（2026 年 5 月）
+
+v0.1 发布前一周，两位头部 Skills 开发者在 X 上公开点出了 popskill 想填的那个坑：
+
+- **[@dotey（宝玉）](https://x.com/dotey)**，`baoyu-skills`（约 2 万⭐）作者，在 [2026-05-11 的 126K views 长推](https://x.com/dotey/status/2053940091970580736) 里说：「*我自己的 baoyu-skills 快 2 万 Star 了，但从中赚到的钱是 \$0。Skill 这东西几乎是透明的...护城河都很浅。最合理的路，是插件机制——App Store 和 Chrome 插件市场已经跑通了一套收费和版权保护机制。*」
+- **[@op7418（歸藏）](https://x.com/op7418)** 在 [2026-05-13](https://x.com/op7418/status/2054414353731109224) 钦点「藏师傅、宝玉、乔木、一泽」四位头部 Skills 开发者，自家评论 #2 给出方案：「*我们需要一个聚焦的公共空间，去分发、展示、曝光和连接。还有就是服务好开发者尤其是优质开发者。*」
+
+popskill 是这个呼吁的一个具体回答。完整论证和证据链见 [docs/why-popskill.md](./docs/why-popskill.md)。
 
 ### 它跟现有方案差在哪
 
