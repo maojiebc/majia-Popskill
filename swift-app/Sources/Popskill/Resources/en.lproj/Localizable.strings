@@ -271,3 +271,8 @@
 "uninstall.strategy.dialog.message" = "Choose how Popskill should handle this skill's files. Backup is the safest — CC Switch auto-creates a recovery snapshot. Keep leaves every file in place and only disables apps. Delete is irreversible.";
 
 "agents.search.emptyHint" = "Try a different keyword, agent name, or trigger word.";
+
+"Search Repositories" = "Search Repositories";
+"No Matching Repositories" = "No Matching Repositories";
+"No Repositories" = "No Repositories";
+"repositories.search.emptyHint" = "Try a different keyword, owner, or branch name.";

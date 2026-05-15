@@ -5,6 +5,7 @@ import SwiftUI
 @Observable
 final class RepositoriesViewModel {
     var repositories: [SkillRepository] = []
+    var searchText = ""
     var isLoading = false
     var hasLoadedOnce = false
     var errorMessage: String?
@@ -16,6 +17,29 @@ final class RepositoriesViewModel {
 
     var enabledCount: Int {
         repositories.filter(\.enabled).count
+    }
+
+    /// Returns the current search query if non-empty, otherwise nil. Mirrors
+    /// the helper on Library/Agents view models so view code stays uniform.
+    var activeSearchQuery: String? {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return query.isEmpty ? nil : query
+    }
+
+    /// Repositories filtered by the toolbar search. Matches owner / name /
+    /// branch / label (case-insensitive substring). Returns the existing sort
+    /// order (already alphabetical by label after load) so users see stable
+    /// rows when typing.
+    var filteredRepositories: [SkillRepository] {
+        guard let query = activeSearchQuery?.lowercased() else {
+            return repositories
+        }
+        return repositories.filter { repository in
+            repository.label.lowercased().contains(query)
+                || repository.owner.lowercased().contains(query)
+                || repository.name.lowercased().contains(query)
+                || repository.branch.lowercased().contains(query)
+        }
     }
 
     func load() async {
@@ -183,6 +207,7 @@ struct RepositoriesView: View {
     @Bindable var viewModel: RepositoriesViewModel
     let onRepositoriesChanged: () async -> Void
     @State private var isShowingAddSheet = false
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         VStack(spacing: 0) {
@@ -197,11 +222,12 @@ struct RepositoriesView: View {
                 Divider()
             }
 
-            List(viewModel.repositories) { repository in
+            List(viewModel.filteredRepositories) { repository in
                 RepositoryRow(
                     repository: repository,
                     isPending: viewModel.isPending(repository),
-                    isRemoving: viewModel.isRemoving(repository)
+                    isRemoving: viewModel.isRemoving(repository),
+                    searchQuery: viewModel.activeSearchQuery
                 ) { enabled in
                     Task {
                         if await viewModel.setEnabled(enabled, for: repository) {
@@ -219,12 +245,25 @@ struct RepositoriesView: View {
                 .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
             }
             .listStyle(.plain)
+            .searchable(
+                text: $viewModel.searchText,
+                placement: .toolbar,
+                prompt: Text(localization.string("Search Repositories"))
+            )
             .overlay {
                 if viewModel.isLoading && viewModel.repositories.isEmpty {
                     ProgressView()
                         .controlSize(.large)
-                } else if viewModel.repositories.isEmpty {
-                    ContentUnavailableView("No Repositories", systemImage: "folder.badge.gearshape")
+                } else if viewModel.filteredRepositories.isEmpty {
+                    if viewModel.activeSearchQuery != nil {
+                        ContentUnavailableView {
+                            Label(localization.string("No Matching Repositories"), systemImage: "folder.badge.gearshape")
+                        } description: {
+                            Text(localization.string("repositories.search.emptyHint"))
+                        }
+                    } else {
+                        ContentUnavailableView(localization.string("No Repositories"), systemImage: "folder.badge.gearshape")
+                    }
                 }
             }
         }
@@ -351,6 +390,7 @@ struct RepositoryRow: View {
     let repository: SkillRepository
     let isPending: Bool
     let isRemoving: Bool
+    var searchQuery: String? = nil
     let onToggle: (Bool) -> Void
     let onRemove: () -> Void
 
@@ -362,7 +402,7 @@ struct RepositoryRow: View {
 
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 8) {
-                    Text(repository.label)
+                    Text(highlightedSearchString(repository.label, query: searchQuery))
                         .font(.headline.weight(.semibold))
                         .lineLimit(1)
                     StatusPill(
@@ -371,7 +411,7 @@ struct RepositoryRow: View {
                     )
                 }
 
-                Text("Branch \(repository.branch)")
+                Text(highlightedSearchString("Branch \(repository.branch)", query: searchQuery))
                     .font(.caption)
                     .foregroundStyle(Color.popTertiaryLabel)
                     .lineLimit(1)
