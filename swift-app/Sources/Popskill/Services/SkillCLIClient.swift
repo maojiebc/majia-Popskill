@@ -313,23 +313,52 @@ actor SkillCLIClient {
         }
 
         let outputPipe = Pipe()
+        let errorPipe = Pipe()
         process.standardOutput = outputPipe
-        process.standardError = outputPipe
+        process.standardError = errorPipe
 
         try process.run()
-        let output = outputPipe.fileHandleForReading.readDataToEndOfFile()
+
+        // Drain stdout and stderr concurrently. readDataToEndOfFile() blocks
+        // until EOF; if we read stdout sequentially while stderr fills its
+        // 64 KiB OS pipe buffer, the child would block on stderr write while
+        // we wait on stdout, deadlocking the call. Long sidecar commands
+        // (discover, security-scan, transcript scanners) can plausibly
+        // produce that much warning output.
+        //
+        // DispatchGroup.wait() is a synchronization barrier: after it
+        // returns, writes inside the async closures are visible without
+        // extra locks. See docs/ipc.md for the stdout/stderr channel
+        // separation contract this method implements.
+        var stdoutBuffer = Data()
+        var stderrBuffer = Data()
+        let ioGroup = DispatchGroup()
+
+        ioGroup.enter()
+        DispatchQueue.global(qos: .userInitiated).async {
+            stdoutBuffer = outputPipe.fileHandleForReading.readDataToEndOfFile()
+            ioGroup.leave()
+        }
+
+        ioGroup.enter()
+        DispatchQueue.global(qos: .userInitiated).async {
+            stderrBuffer = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            ioGroup.leave()
+        }
+
+        ioGroup.wait()
         process.waitUntilExit()
 
         guard process.terminationStatus == 0 else {
             let message = Self.commandFailureMessage(
-                stdout: output,
-                stderr: Data(),
+                stdout: stdoutBuffer,
+                stderr: stderrBuffer,
                 status: process.terminationStatus
             )
             throw CLIClientError.commandFailed(message)
         }
 
-        return output
+        return stdoutBuffer
     }
 
     static func webDAVConfigureInvocation(
