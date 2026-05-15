@@ -35,6 +35,35 @@ USAGE
   esac
 done
 
+echo "==> Local CI: prerequisites"
+# Submodule preflight: skill-cli has a path dependency on cc-switch via
+# .gitmodules. A fresh clone without --recurse-submodules will fail with
+# an opaque cargo error pointing at the missing Cargo.toml. Fail early
+# with a readable message instead.
+CC_SWITCH_MANIFEST="$ROOT_DIR/cc-switch/src-tauri/Cargo.toml"
+if [[ ! -f "$CC_SWITCH_MANIFEST" ]]; then
+  cat >&2 <<'PREFLIGHT'
+error: cc-switch submodule is not initialized.
+
+popskill depends on the cc-switch submodule for its skill-cli Rust path
+dependency. The current working tree is missing:
+  cc-switch/src-tauri/Cargo.toml
+
+Run this from the repo root, then re-run scripts/ci-local.sh:
+  git submodule update --init --recursive
+
+If you originally cloned without submodules, you can also do:
+  git clone --recurse-submodules <repo-url> popskill
+
+Network-restricted environments must reach github.com/farion1231/cc-switch
+to fetch the submodule.
+PREFLIGHT
+  echo "" >&2
+  echo "current submodule status:" >&2
+  git -C "$ROOT_DIR" submodule status >&2 || true
+  exit 65
+fi
+
 echo "==> Local CI: shell script syntax"
 for script in "$ROOT_DIR"/scripts/*.sh; do
   bash -n "$script"
