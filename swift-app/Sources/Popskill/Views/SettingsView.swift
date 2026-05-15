@@ -197,16 +197,10 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    LocalizedText("Settings")
-                        .font(.system(.largeTitle, weight: .bold))
-                    LocalizedText("Local diagnostics")
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
+            PopskillPageHeader(
+                titleKey: "Settings",
+                subtitle: localization.string("Local diagnostics")
+            ) {
                 Button {
                     Task { await viewModel.load() }
                 } label: {
@@ -217,12 +211,10 @@ struct SettingsView: View {
                         Image(systemName: "arrow.clockwise")
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
                 .help(localization.string("Refresh"))
                 .disabled(viewModel.isLoading)
             }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 20)
 
             Divider()
 

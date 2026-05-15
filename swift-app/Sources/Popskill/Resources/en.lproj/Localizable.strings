@@ -276,3 +276,6 @@
 "No Matching Repositories" = "No Matching Repositories";
 "No Repositories" = "No Repositories";
 "repositories.search.emptyHint" = "Try a different keyword, owner, or branch name.";
+
+"Add Repository" = "Add Repository";
+"repositories.summary" = "%d enabled of %d";

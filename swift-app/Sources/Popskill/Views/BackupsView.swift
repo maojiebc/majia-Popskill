@@ -139,40 +139,34 @@ struct BackupsView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Backups")
-                    .font(.system(.largeTitle, weight: .bold))
-                Text("\(viewModel.backups.count) uninstall snapshots")
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            Picker("Restore In", selection: $viewModel.selectedRestoreApp) {
-                ForEach(TargetApp.supported, id: \.id) { app in
-                    Text(app.title).tag(app)
+        PopskillPageHeader(
+            titleKey: "Backups",
+            subtitle: "\(viewModel.backups.count) uninstall snapshots"
+        ) {
+            HStack(spacing: 12) {
+                Picker("Restore In", selection: $viewModel.selectedRestoreApp) {
+                    ForEach(TargetApp.supported, id: \.id) { app in
+                        Text(app.title).tag(app)
+                    }
                 }
-            }
-            .pickerStyle(.menu)
-            .frame(width: 160)
+                .pickerStyle(.menu)
+                .frame(width: 160)
 
-            Button {
-                Task { await viewModel.load() }
-            } label: {
-                if viewModel.isLoading {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Image(systemName: "arrow.clockwise")
+                Button {
+                    Task { await viewModel.load() }
+                } label: {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
                 }
+                .buttonStyle(.bordered)
+                .help("Refresh")
+                .disabled(viewModel.isLoading)
             }
-            .buttonStyle(.borderedProminent)
-            .help("Refresh")
-            .disabled(viewModel.isLoading)
         }
-        .padding(.horizontal, 28)
-        .padding(.vertical, 20)
     }
 }
 

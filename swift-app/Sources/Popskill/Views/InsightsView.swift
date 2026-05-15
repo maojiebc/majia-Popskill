@@ -40,20 +40,14 @@ struct InsightsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    LocalizedText("Usage")
-                        .font(.system(.largeTitle, weight: .bold))
-                    Text(localization.string(
-                        "usage.header.subtitle",
-                        viewModel.summary.filesScanned,
-                        viewModel.summary.sessions
-                    ))
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
+            PopskillPageHeader(
+                titleKey: "Usage",
+                subtitle: localization.string(
+                    "usage.header.subtitle",
+                    viewModel.summary.filesScanned,
+                    viewModel.summary.sessions
+                )
+            ) {
                 Button {
                     Task { await viewModel.scan() }
                 } label: {
@@ -64,12 +58,10 @@ struct InsightsView: View {
                         Image(systemName: "arrow.clockwise")
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
                 .help(localization.string("Refresh"))
                 .disabled(viewModel.isScanning)
             }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 20)
 
             Divider()
 

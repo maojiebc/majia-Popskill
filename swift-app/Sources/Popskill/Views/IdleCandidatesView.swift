@@ -16,49 +16,43 @@ struct IdleCandidatesView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Idle Candidates")
-                        .font(.system(.largeTitle, weight: .bold))
-                    Text(subtitle)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Button {
-                    isConfirmingBulkStub = true
-                } label: {
-                    if viewModel.isBulkStubbing {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Label("Stub All", systemImage: "tray.and.arrow.down")
+            PopskillPageHeader(
+                titleKey: "Idle Candidates",
+                subtitle: subtitle
+            ) {
+                HStack(spacing: 12) {
+                    Button {
+                        isConfirmingBulkStub = true
+                    } label: {
+                        if viewModel.isBulkStubbing {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Label("Stub All", systemImage: "tray.and.arrow.down")
+                        }
                     }
-                }
-                .buttonStyle(.bordered)
-                .disabled(idleSkills.isEmpty || viewModel.isBulkStubbing)
-                .help("Make All Idle Skills Stub")
+                    .buttonStyle(.bordered)
+                    .disabled(idleSkills.isEmpty || viewModel.isBulkStubbing)
+                    .help("Make All Idle Skills Stub")
 
-                Button {
-                    Task {
-                        await viewModel.load()
-                        await insightsViewModel.scan()
+                    Button {
+                        Task {
+                            await viewModel.load()
+                            await insightsViewModel.scan()
+                        }
+                    } label: {
+                        if isRefreshing {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
                     }
-                } label: {
-                    if isRefreshing {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                    }
+                    .buttonStyle(.bordered)
+                    .help("Refresh")
+                    .disabled(isRefreshing)
                 }
-                .buttonStyle(.borderedProminent)
-                .help("Refresh")
-                .disabled(isRefreshing)
             }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 20)
 
             Divider()
 

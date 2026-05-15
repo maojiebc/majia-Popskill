@@ -293,41 +293,39 @@ struct RepositoriesView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Repositories")
-                    .font(.system(.largeTitle, weight: .bold))
-                Text("\(viewModel.enabledCount) enabled of \(viewModel.repositories.count)")
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            Button {
-                viewModel.errorMessage = nil
-                isShowingAddSheet = true
-            } label: {
-                Image(systemName: "plus")
-            }
-            .buttonStyle(.bordered)
-            .help("Add Repository")
-
-            Button {
-                Task { await viewModel.load() }
-            } label: {
-                if viewModel.isLoading {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Image(systemName: "arrow.clockwise")
+        PopskillPageHeader(
+            titleKey: "sidebar.repositories",
+            subtitle: localization.string(
+                "repositories.summary",
+                viewModel.enabledCount,
+                viewModel.repositories.count
+            )
+        ) {
+            HStack(spacing: 12) {
+                Button {
+                    viewModel.errorMessage = nil
+                    isShowingAddSheet = true
+                } label: {
+                    Label(localization.string("Add Repository"), systemImage: "plus")
                 }
+                .buttonStyle(.borderedProminent)
+                .help("Add Repository")
+
+                Button {
+                    Task { await viewModel.load() }
+                } label: {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .help("Refresh")
+                .disabled(viewModel.isLoading)
             }
-            .buttonStyle(.borderedProminent)
-            .help("Refresh")
-            .disabled(viewModel.isLoading)
         }
-        .padding(.horizontal, 28)
-        .padding(.vertical, 20)
     }
 }
 
