@@ -2,7 +2,7 @@ use anyhow::{Context, Result, bail};
 use cc_switch_lib::{
     AppType, Database, ImportSkillSelection, InstalledSkill, SkillApps, SkillService,
 };
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::env;
@@ -248,8 +248,16 @@ enum Commands {
         json: bool,
     },
     /// Uninstall one installed skill.
+    ///
+    /// `--strategy` selects how user data is treated:
+    ///   keep   = disable apps, keep SSOT files (reversible, no backup created)
+    ///   backup = cc-switch default: remove SSOT files but auto-backup first
+    ///   delete = backup + immediately delete the backup (irreversible)
     Uninstall {
         skill_id: String,
+        /// Data-protection strategy. Defaults to `backup` for safety.
+        #[arg(long, value_enum, default_value_t = UninstallStrategy::default())]
+        strategy: UninstallStrategy,
         /// Kept for the Swift client contract; output is JSON either way.
         #[arg(long)]
         json: bool,
@@ -701,10 +709,13 @@ async fn run() -> Result<()> {
                 .with_context(|| format!("failed to update skill '{skill_id}'"))?;
             print_json(&ApiResponse::ok(skill))
         }
-        Commands::Uninstall { skill_id, json: _ } => {
-            let result = SkillService::uninstall(&db, &skill_id)
-                .with_context(|| format!("failed to uninstall skill '{skill_id}'"))?;
-            print_json(&ApiResponse::ok(result))
+        Commands::Uninstall {
+            skill_id,
+            strategy,
+            json: _,
+        } => {
+            let response = run_uninstall_with_strategy(&db, &skill_id, strategy)?;
+            print_json(&ApiResponse::ok(response))
         }
         Commands::StubList { json: _ } => {
             let stubs = list_stubbed_skills(&db).context("failed to list Popskill stubs")?;
@@ -2087,6 +2098,86 @@ struct EnrichedInstalledSkill {
     capability_summary: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     trigger_scenarios: Vec<String>,
+}
+
+/// Strategy passed to `Commands::Uninstall` to honor majia 13-项校准 #12
+/// (保护用户原数据是最高优先级). See docs/ipc.md for the JSON envelope shape.
+#[derive(Clone, Copy, Debug, Default, ValueEnum)]
+enum UninstallStrategy {
+    /// Default cc-switch behavior: remove app entries and the SSOT directory,
+    /// but auto-backup the SSOT contents into `~/.cc-switch/skill-backups` first.
+    /// Recovery is possible via `restore-from-backup`.
+    #[default]
+    Backup,
+    /// Disable the skill for every target app but leave SSOT files untouched.
+    /// The skill stays in the library, contentHash and appsState reflect that
+    /// every app is off. Reversible via the normal toggle path.
+    Keep,
+    /// Same as `backup` plus immediately delete the safety backup cc-switch
+    /// creates. Irreversible. Only invoked when the user has explicitly
+    /// confirmed irreversible deletion.
+    Delete,
+}
+
+/// Execute uninstall and return a JSON-friendly envelope keyed by strategy.
+/// Every branch records the strategy so the Swift client can render the
+/// correct confirmation message without inferring from absent fields.
+fn run_uninstall_with_strategy(
+    db: &Arc<Database>,
+    skill_id: &str,
+    strategy: UninstallStrategy,
+) -> Result<serde_json::Value> {
+    match strategy {
+        UninstallStrategy::Keep => {
+            for app in AppType::all() {
+                SkillService::toggle_app(db, skill_id, &app, false).with_context(|| {
+                    format!(
+                        "failed to disable {} for '{skill_id}' during keep-strategy uninstall",
+                        app.as_str()
+                    )
+                })?;
+            }
+            let updated = db
+                .get_installed_skill(skill_id)
+                .with_context(|| {
+                    format!("failed to read skill '{skill_id}' after keep-strategy uninstall")
+                })?;
+            Ok(json!({
+                "strategy": "keep",
+                "skill": updated,
+            }))
+        }
+        UninstallStrategy::Backup => {
+            let result = SkillService::uninstall(db, skill_id)
+                .with_context(|| format!("failed to uninstall skill '{skill_id}'"))?;
+            Ok(json!({
+                "strategy": "backup",
+                "backupPath": result.backup_path,
+            }))
+        }
+        UninstallStrategy::Delete => {
+            let result = SkillService::uninstall(db, skill_id)
+                .with_context(|| format!("failed to uninstall skill '{skill_id}'"))?;
+            let deleted_backup_id = match result.backup_path.as_deref() {
+                Some(path) => match backup_id_from_path(Path::new(path)) {
+                    Ok(id) => {
+                        SkillService::delete_backup(&id).with_context(|| {
+                            format!(
+                                "failed to delete safety backup '{id}' during delete-strategy uninstall"
+                            )
+                        })?;
+                        Some(id)
+                    }
+                    Err(_) => None,
+                },
+                None => None,
+            };
+            Ok(json!({
+                "strategy": "delete",
+                "deletedBackupId": deleted_backup_id,
+            }))
+        }
+    }
 }
 
 fn enrich_installed_skill(skill: InstalledSkill) -> EnrichedInstalledSkill {

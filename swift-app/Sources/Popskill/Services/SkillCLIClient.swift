@@ -216,8 +216,15 @@ actor SkillCLIClient {
         return try Self.decodeResponse(Skill.self, from: data)
     }
 
-    func uninstall(skillID: String) async throws -> SkillUninstallResult {
-        let data = try run(arguments: ["uninstall", skillID, "--json"])
+    func uninstall(
+        skillID: String,
+        strategy: UninstallStrategy = .backup
+    ) async throws -> SkillUninstallResult {
+        let data = try run(arguments: [
+            "uninstall", skillID,
+            "--strategy", strategy.rawValue,
+            "--json",
+        ])
         return try Self.decodeResponse(SkillUninstallResult.self, from: data)
     }
 

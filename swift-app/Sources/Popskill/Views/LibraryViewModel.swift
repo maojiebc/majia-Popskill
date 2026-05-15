@@ -450,7 +450,7 @@ final class LibraryViewModel {
     }
 
     @discardableResult
-    func uninstall(_ skill: Skill) async -> Bool {
+    func uninstall(_ skill: Skill, strategy: UninstallStrategy = .backup) async -> Bool {
         guard !uninstallingIDs.contains(skill.id) else {
             return false
         }
@@ -460,10 +460,20 @@ final class LibraryViewModel {
         var didUninstall = false
 
         do {
-            _ = try await client.uninstall(skillID: skill.id)
-            skills.removeAll { $0.id == skill.id }
-            updates.removeAll { $0.id == skill.id }
-            securityScanResults[skill.id] = nil
+            let result = try await client.uninstall(skillID: skill.id, strategy: strategy)
+            switch result.strategy {
+            case .keep:
+                // Skill stays in the library with every app disabled; reflect the
+                // updated app state so toggles render correctly without a refetch.
+                if let updated = result.skill,
+                   let index = skills.firstIndex(where: { $0.id == skill.id }) {
+                    skills[index] = updated
+                }
+            case .backup, .delete:
+                skills.removeAll { $0.id == skill.id }
+                updates.removeAll { $0.id == skill.id }
+                securityScanResults[skill.id] = nil
+            }
             didUninstall = true
         } catch {
             errorMessage = error.localizedDescription

@@ -875,8 +875,27 @@ struct InstallPlanWrites: Codable, Equatable {
     let appSkillPath: String?
 }
 
+/// Strategy passed to `skill-cli uninstall --strategy`. Maps to majia 13-项校准
+/// #12 ("保护用户原数据是最高优先级"). Defaults to `.backup` for safety.
+enum UninstallStrategy: String, Codable, Equatable, CaseIterable {
+    /// Disable the skill for every target app but leave SSOT files intact. No
+    /// backup is created; the skill remains in the library and can be re-enabled.
+    case keep
+    /// Default: cc-switch removes SSOT files but creates an auto-backup first.
+    /// Recovery is possible via Backups view.
+    case backup
+    /// Same as `backup` plus immediately deletes the safety backup. Irreversible.
+    case delete
+}
+
+/// JSON envelope returned by `skill-cli uninstall`. The shape varies by strategy
+/// but a stable `strategy` discriminant is always present so view code can pick
+/// the right post-action UI without inferring from optional fields.
 struct SkillUninstallResult: Codable, Equatable {
+    let strategy: UninstallStrategy
     let backupPath: String?
+    let skill: Skill?
+    let deletedBackupId: String?
 }
 
 struct StubbedSkill: Identifiable, Codable, Equatable {

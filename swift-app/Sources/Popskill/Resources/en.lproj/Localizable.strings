@@ -264,3 +264,8 @@
 "transcript.boundary.note" = "Message content is ignored. Skill totals use Claude Code's top-level attributionSkill marker when present; other usage remains grouped by session and model.";
 
 "library.search.emptyHint" = "Try a different keyword, skill name, or trigger word.";
+
+"uninstall.strategy.keep.title" = "Disable Only (Keep Files)";
+"uninstall.strategy.backup.title" = "Uninstall (Keep Backup)";
+"uninstall.strategy.delete.title" = "Delete Permanently";
+"uninstall.strategy.dialog.message" = "Choose how Popskill should handle this skill's files. Backup is the safest — CC Switch auto-creates a recovery snapshot. Keep leaves every file in place and only disables apps. Delete is irreversible.";

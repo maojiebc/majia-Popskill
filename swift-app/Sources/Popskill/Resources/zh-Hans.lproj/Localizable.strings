@@ -264,3 +264,8 @@
 "transcript.boundary.note" = "不会读取消息正文。Skill 统计只使用 Claude Code 顶层 attributionSkill 标记；其他用量按会话和模型汇总。";
 
 "library.search.emptyHint" = "换个关键词试试，可以搜 skill 名称、能力，或触发词。";
+
+"uninstall.strategy.keep.title" = "仅停用（保留文件）";
+"uninstall.strategy.backup.title" = "卸载（自动备份）";
+"uninstall.strategy.delete.title" = "永久删除（不可恢复）";
+"uninstall.strategy.dialog.message" = "选择 Popskill 如何处理这个 skill 的文件。Backup 最安全 —— CC Switch 会自动保留一份可恢复的快照。Keep 完全保留文件，只是把所有 app 停用。Delete 不可恢复。";

@@ -304,10 +304,14 @@ struct LibraryView: View {
                     }
                 }
             }
-        ) { skill in
+        ) { skill, strategy in
             Task {
-                if await viewModel.uninstall(skill) {
-                    selectedItemID = nil
+                if await viewModel.uninstall(skill, strategy: strategy) {
+                    // .keep leaves the skill in the library; only clear selection
+                    // for backup/delete which actually remove it.
+                    if strategy != .keep {
+                        selectedItemID = nil
+                    }
                     await onLibraryMutation()
                 }
             }
@@ -1161,7 +1165,7 @@ struct SkillDetailPane: View {
     let onToggle: (Skill, TargetApp, Bool) -> Void
     let onSecurityScan: (Skill) -> Void
     let onStub: (Skill) -> Void
-    let onUninstall: (Skill) -> Void
+    let onUninstall: (Skill, UninstallStrategy) -> Void
     @State private var isConfirmingStub = false
     @State private var isConfirmingUninstall = false
     @Environment(\.popskillLocalization) private var localization
@@ -1342,16 +1346,26 @@ struct SkillDetailPane: View {
                                 isPresented: $isConfirmingUninstall,
                                 titleVisibility: .visible
                             ) {
-                                Button(role: .destructive) {
-                                    onUninstall(skill)
+                                Button {
+                                    onUninstall(skill, .keep)
                                 } label: {
-                                    LocalizedText("Uninstall")
+                                    LocalizedText("uninstall.strategy.keep.title")
+                                }
+                                Button(role: .destructive) {
+                                    onUninstall(skill, .backup)
+                                } label: {
+                                    LocalizedText("uninstall.strategy.backup.title")
+                                }
+                                Button(role: .destructive) {
+                                    onUninstall(skill, .delete)
+                                } label: {
+                                    LocalizedText("uninstall.strategy.delete.title")
                                 }
                                 Button(role: .cancel) {} label: {
                                     LocalizedText("Cancel")
                                 }
                             } message: {
-                                Text("Popskill will ask CC Switch to remove this skill from all app skill folders and keep CC Switch's uninstall backup.")
+                                Text(localization.string("uninstall.strategy.dialog.message"))
                             }
                         }
                     }
