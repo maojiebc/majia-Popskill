@@ -450,7 +450,9 @@ async fn run() -> Result<()> {
         Commands::List { json: _ } => {
             let skills =
                 SkillService::get_all_installed(&db).context("failed to list installed skills")?;
-            print_json(&ApiResponse::ok(skills))
+            let enriched: Vec<EnrichedInstalledSkill> =
+                skills.into_iter().map(enrich_installed_skill).collect();
+            print_json(&ApiResponse::ok(enriched))
         }
         Commands::PackageList { json: _ } => {
             let packages = list_capability_packages(&db)?;
@@ -2076,6 +2078,36 @@ fn installed_skill_dir(skill: &InstalledSkill) -> Result<PathBuf> {
         .join(&skill.directory))
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EnrichedInstalledSkill {
+    #[serde(flatten)]
+    inner: InstalledSkill,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    capability_summary: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    trigger_scenarios: Vec<String>,
+}
+
+fn enrich_installed_skill(skill: InstalledSkill) -> EnrichedInstalledSkill {
+    // CC Switch already parses SKILL.md frontmatter description (including YAML
+    // multi-line scalars), so reuse it for capability_summary. Only read SKILL.md
+    // ourselves to extract the `triggers:` field, which CC Switch does not expose.
+    let trigger_scenarios = installed_skill_dir(&skill)
+        .ok()
+        .and_then(|dir| std::fs::read_to_string(dir.join("SKILL.md")).ok())
+        .map(|content| parse_skill_triggers(&content))
+        .unwrap_or_default();
+
+    let capability_summary = skill.description.as_deref().and_then(first_sentence_of);
+
+    EnrichedInstalledSkill {
+        inner: skill,
+        capability_summary,
+        trigger_scenarios,
+    }
+}
+
 fn backup_id_from_path(path: &Path) -> Result<String> {
     let backup_id = path
         .file_name()
@@ -2390,6 +2422,70 @@ fn parse_agent_markdown(content: &str) -> ParsedAgentMarkdown {
     }
 
     parsed
+}
+
+fn parse_skill_triggers(content: &str) -> Vec<String> {
+    let Some((frontmatter, _body)) = split_frontmatter(content) else {
+        return Vec::new();
+    };
+
+    let mut triggers: Vec<String> = Vec::new();
+    let mut in_triggers_block = false;
+
+    for line in frontmatter.lines() {
+        if in_triggers_block {
+            let trimmed = line.trim_start();
+            if let Some(item) = trimmed.strip_prefix("- ") {
+                let cleaned = unquote_frontmatter_value(item.trim());
+                if !cleaned.is_empty() {
+                    triggers.push(cleaned);
+                }
+                continue;
+            }
+            in_triggers_block = false;
+        }
+
+        let Some((key, value)) = line.split_once(':') else {
+            continue;
+        };
+        let key = key.trim();
+        let value = unquote_frontmatter_value(value.trim());
+
+        if key == "triggers" {
+            if value.is_empty() {
+                in_triggers_block = true;
+            } else {
+                let inline = value.trim_start_matches('[').trim_end_matches(']');
+                for item in inline.split(',') {
+                    let cleaned = unquote_frontmatter_value(item.trim());
+                    if !cleaned.is_empty() {
+                        triggers.push(cleaned);
+                    }
+                }
+            }
+        }
+    }
+
+    triggers
+}
+
+fn first_sentence_of(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let cut = trimmed.find(['。', '.', ';', '；', '!', '！', '?', '？']);
+    let summary = match cut {
+        Some(index) => &trimmed[..index],
+        None => trimmed,
+    };
+    let summary = summary.trim();
+    if summary.is_empty() {
+        None
+    } else {
+        let limited: String = summary.chars().take(120).collect();
+        Some(limited)
+    }
 }
 
 fn split_frontmatter(content: &str) -> Option<(&str, &str)> {
