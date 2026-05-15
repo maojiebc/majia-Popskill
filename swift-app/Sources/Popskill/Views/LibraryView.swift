@@ -125,6 +125,16 @@ struct LibraryView: View {
                         ForEach(viewModel.filteredPackages) { package in
                             let selectionID = selectionID(forPackage: package.id)
                             let standaloneSkill = skill(forStandalonePackage: package)
+                            let searchState = viewModel.activeSearchQuery.flatMap { query -> PackageRowSearchState? in
+                                guard let hit = viewModel.searchHit(for: package) else {
+                                    return nil
+                                }
+                                return PackageRowSearchState(
+                                    query: query,
+                                    hit: hit,
+                                    capabilitySummary: standaloneSkill?.capabilitySummary
+                                )
+                            }
                             PopskillSelectableCard(isSelected: selectedItemID == selectionID) {
                                 selectedItemID = selectionID
                             } content: {
@@ -146,7 +156,8 @@ struct LibraryView: View {
                                                 }
                                             }
                                         )
-                                    }
+                                    },
+                                    searchState: searchState
                                 )
                             }
                         }
@@ -163,9 +174,29 @@ struct LibraryView: View {
                 ProgressView()
                     .controlSize(.large)
             } else if viewModel.filteredPackages.isEmpty {
-                ContentUnavailableView(emptyStateTitle, systemImage: "shippingbox")
+                emptyStateView
             }
         }
+    }
+
+    @ViewBuilder
+    private var emptyStateView: some View {
+        if let description = emptyStateDescription {
+            ContentUnavailableView {
+                Label(emptyStateTitle, systemImage: "shippingbox")
+            } description: {
+                Text(description)
+            }
+        } else {
+            ContentUnavailableView(emptyStateTitle, systemImage: "shippingbox")
+        }
+    }
+
+    private var emptyStateDescription: String? {
+        guard !viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        return localization.string("library.search.emptyHint")
     }
 
     private var stubList: some View {
@@ -828,7 +859,12 @@ struct PackageRow: View {
     let signals: PackageCardSignals
     var showsStatusSignals: Bool = true
     var quickToggle: PackageQuickToggle? = nil
+    var searchState: PackageRowSearchState? = nil
     @Environment(\.popskillLocalization) private var localization
+
+    private var summaryToShow: String {
+        searchState?.capabilitySummary ?? package.summary
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -837,7 +873,7 @@ struct PackageRow: View {
             VStack(alignment: .leading, spacing: 9) {
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 8) {
-                        Text(package.name)
+                        Text(highlightedSearchString(package.name, query: searchState?.query))
                             .font(.system(.headline, weight: .semibold))
                             .foregroundStyle(Color.popLabel)
                             .lineLimit(1)
@@ -860,10 +896,32 @@ struct PackageRow: View {
                         }
                     }
 
-                    Text(package.summary)
+                    Text(highlightedSearchString(summaryToShow, query: searchState?.query))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
+
+                    if let searchState, !searchState.hit.matchedTriggers.isEmpty {
+                        HStack(spacing: 6) {
+                            Image(systemName: "sparkle.magnifyingglass")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(Color.accentColor)
+                            ForEach(searchState.hit.matchedTriggers.prefix(4), id: \.self) { trigger in
+                                Text(trigger)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(Color.accentColor)
+                                    .lineLimit(1)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.accentColor.opacity(0.10), in: Capsule())
+                            }
+                            if searchState.hit.matchedTriggers.count > 4 {
+                                Text("+\(searchState.hit.matchedTriggers.count - 4)")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
 
                     Text(localization.string(
                         "package.componentSummary",

@@ -127,6 +127,8 @@ struct Skill: Identifiable, Codable, Equatable {
     let installedAt: Int?
     let updatedAt: Int?
     let contentHash: String?
+    var capabilitySummary: String? = nil
+    var triggerScenarios: [String]? = nil
     var lastUsedAt: Int? = nil
     var sizeBytes: UInt64? = nil
 

@@ -262,3 +262,5 @@
 "No model usage yet" = "暂无模型用量";
 "Local transcript totals" = "本地转录统计";
 "transcript.boundary.note" = "不会读取消息正文。Skill 统计只使用 Claude Code 顶层 attributionSkill 标记；其他用量按会话和模型汇总。";
+
+"library.search.emptyHint" = "换个关键词试试，可以搜 skill 名称、能力，或触发词。";

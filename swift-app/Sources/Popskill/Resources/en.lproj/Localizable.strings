@@ -262,3 +262,5 @@
 "No model usage yet" = "No model usage yet";
 "Local transcript totals" = "Local transcript totals";
 "transcript.boundary.note" = "Message content is ignored. Skill totals use Claude Code's top-level attributionSkill marker when present; other usage remains grouped by session and model.";
+
+"library.search.emptyHint" = "Try a different keyword, skill name, or trigger word.";

@@ -38,17 +38,26 @@ final class LibraryViewModel {
     private var importingDirectories: Set<String> = []
 
     var filteredSkills: [Skill] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let scoped = skills.filter { selectedFilter.includes($0) }
 
-        return skills.filter { skill in
-            selectedFilter.includes(skill)
-        }.filter { skill in
-            query.isEmpty
-                || skill.name.lowercased().contains(query)
-                || skill.description.lowercased().contains(query)
-                || skill.sourceLabel.lowercased().contains(query)
-                || skill.directory.lowercased().contains(query)
-        }.sorted(by: sortOption.areInIncreasingOrder)
+        guard !query.isEmpty else {
+            return scoped.sorted(by: sortOption.areInIncreasingOrder)
+        }
+
+        let scored: [(Skill, Int)] = scoped.compactMap { skill in
+            guard let hit = SkillSearchScorer.score(skill: skill, query: query) else {
+                return nil
+            }
+            return (skill, hit.score)
+        }
+
+        return scored
+            .sorted { lhs, rhs in
+                if lhs.1 != rhs.1 { return lhs.1 > rhs.1 }
+                return lhs.0.name.localizedCaseInsensitiveCompare(rhs.0.name) == .orderedAscending
+            }
+            .map(\.0)
     }
 
     var filteredStubs: [StubbedSkill] {
@@ -64,23 +73,97 @@ final class LibraryViewModel {
     }
 
     var filteredPackages: [CapabilityPackage] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-
-        return packages.filter { package in
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let scoped = packages.filter { package in
             selectedPackageFilter.includes(package)
                 && selectedFilter.includes(package, installedSkills: skills)
-        }.filter { package in
-            query.isEmpty
-                || package.name.lowercased().contains(query)
-                || package.summary.lowercased().contains(query)
-                || package.sourceLabel.lowercased().contains(query)
-                || package.source.location.lowercased().contains(query)
-                || package.components.all.contains { component in
-                    component.name.lowercased().contains(query)
-                        || component.id.lowercased().contains(query)
-                        || component.kind.lowercased().contains(query)
-                }
         }
+
+        guard !query.isEmpty else {
+            return scoped
+        }
+
+        let scored: [(CapabilityPackage, Int)] = scoped.compactMap { package in
+            guard let score = packageScore(for: package, query: query) else {
+                return nil
+            }
+            return (package, score)
+        }
+
+        return scored
+            .sorted { lhs, rhs in
+                if lhs.1 != rhs.1 { return lhs.1 > rhs.1 }
+                return lhs.0.name.localizedCaseInsensitiveCompare(rhs.0.name) == .orderedAscending
+            }
+            .map(\.0)
+    }
+
+    /// Search hit for a standalone package's underlying skill, or nil for composite
+    /// packages and zero-score matches. UI uses this to render trigger chips and to
+    /// decide whether to show the capability summary as a secondary line.
+    func searchHit(for package: CapabilityPackage) -> SkillSearchHit? {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return nil }
+        guard let skill = skillForStandalonePackage(package) else { return nil }
+        return SkillSearchScorer.score(skill: skill, query: query)
+    }
+
+    /// Returns the current search query if non-empty, otherwise nil. View code uses
+    /// this as a single signal to decide whether to apply highlight rendering.
+    var activeSearchQuery: String? {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return query.isEmpty ? nil : query
+    }
+
+    private func skillForStandalonePackage(_ package: CapabilityPackage) -> Skill? {
+        guard package.type == .standalone,
+              let component = package.components.skills.first
+                ?? package.components.all.first(where: { $0.kind == "skill" }) else {
+            return nil
+        }
+        return skills.first { skill in
+            skill.id == component.id
+                || skill.directory == component.location
+                || skill.name == component.name
+        }
+    }
+
+    private func packageScore(for package: CapabilityPackage, query: String) -> Int? {
+        if let skill = skillForStandalonePackage(package),
+           let hit = SkillSearchScorer.score(skill: skill, query: query) {
+            return hit.score
+        }
+
+        let q = query.lowercased()
+        var score = 0
+
+        let name = package.name.lowercased()
+        if name == q {
+            score += 1000
+        } else if name.hasPrefix(q) {
+            score += 500
+        } else if name.contains(q) {
+            score += 200
+        }
+
+        if package.summary.lowercased().contains(q) {
+            score += 50
+        }
+        if package.sourceLabel.lowercased().contains(q) {
+            score += 10
+        }
+        if package.source.location.lowercased().contains(q) {
+            score += 5
+        }
+
+        for component in package.components.all
+        where component.name.lowercased().contains(q)
+            || component.id.lowercased().contains(q)
+            || component.kind.lowercased().contains(q) {
+            score += 30
+        }
+
+        return score > 0 ? score : nil
     }
 
     var enabledCount: Int {
