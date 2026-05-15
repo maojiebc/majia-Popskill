@@ -26,8 +26,12 @@ final class SettingsViewModel {
     var webdavProfile = "default"
     var webdavEnabled = true
     var webdavAutoSync = false
+    var webdavPasswordSavedInKeychain = false
+    var webdavKeychainWarning: String?
 
     private let client = SkillCLIClient()
+    private let keychain = KeychainService()
+    private static let webdavPasswordKeychainKey = "webdav-password"
 
     func load() async {
         guard !isLoading else {
@@ -58,6 +62,18 @@ final class SettingsViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+
+        refreshKeychainPasswordState()
+    }
+
+    private func refreshKeychainPasswordState() {
+        do {
+            webdavPasswordSavedInKeychain = try keychain.read(key: Self.webdavPasswordKeychainKey) != nil
+            webdavKeychainWarning = nil
+        } catch {
+            webdavPasswordSavedInKeychain = false
+            webdavKeychainWarning = "Keychain unavailable: \(error.localizedDescription)"
+        }
     }
 
     func checkWebDAVRemote() async {
@@ -83,12 +99,27 @@ final class SettingsViewModel {
             return
         }
 
+        // Resolve the password to use for this save. Precedence:
+        //   1. Whatever the user just typed into the form, if non-empty.
+        //   2. Otherwise, the password previously persisted to Keychain.
+        //   3. Otherwise, an empty string — the sidecar treats this as
+        //      "keep whatever CC Switch already has on disk".
+        var effectivePassword = webdavPassword
+        var keychainReadError: String?
+        if effectivePassword.isEmpty && webdavPasswordSavedInKeychain {
+            do {
+                effectivePassword = try keychain.read(key: Self.webdavPasswordKeychainKey) ?? ""
+            } catch {
+                keychainReadError = error.localizedDescription
+            }
+        }
+
         let configuration = WebDAVConfiguration(
             enabled: webdavEnabled,
             autoSync: webdavAutoSync,
             baseUrl: webdavBaseURL,
             username: webdavUsername,
-            password: webdavPassword,
+            password: effectivePassword,
             remoteRoot: webdavRemoteRoot,
             profile: webdavProfile
         )
@@ -96,6 +127,7 @@ final class SettingsViewModel {
         isSavingWebDAV = true
         webdavSaveMessage = nil
         webdavSaveError = nil
+        webdavKeychainWarning = keychainReadError
         defer { isSavingWebDAV = false }
 
         do {
@@ -105,8 +137,34 @@ final class SettingsViewModel {
             webdavRemoteInfo = nil
             webdavRemoteError = nil
             webdavSaveMessage = "Saved to CC Switch settings"
+
+            // If the user supplied a new password in the form, persist it to
+            // Keychain so subsequent loads don't have to re-prompt. We only
+            // touch Keychain when the form had explicit input; an empty form
+            // submission means "keep existing", not "delete saved".
+            if !webdavPassword.isEmpty {
+                do {
+                    try keychain.save(webdavPassword, for: Self.webdavPasswordKeychainKey)
+                    webdavPasswordSavedInKeychain = true
+                } catch {
+                    webdavKeychainWarning = "Saved to CC Switch but not to Keychain: \(error.localizedDescription)"
+                }
+            }
         } catch {
             webdavSaveError = error.localizedDescription
+        }
+    }
+
+    /// Explicit user action: forget the Keychain-stored WebDAV password.
+    /// Does not touch CC Switch settings — call saveWebDAVConfiguration()
+    /// separately if you want both stores cleared.
+    func clearWebDAVPasswordFromKeychain() {
+        do {
+            try keychain.delete(key: Self.webdavPasswordKeychainKey)
+            webdavPasswordSavedInKeychain = false
+            webdavKeychainWarning = nil
+        } catch {
+            webdavKeychainWarning = "Keychain delete failed: \(error.localizedDescription)"
         }
     }
 
@@ -494,6 +552,12 @@ private struct WebDAVConfigForm: View {
         GridItem(.adaptive(minimum: 214), spacing: 12, alignment: .topLeading)
     ]
 
+    private var passwordPlaceholder: String {
+        viewModel.webdavPasswordSavedInKeychain
+            ? "Leave blank to use saved password"
+            : "Enter password"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
@@ -506,7 +570,27 @@ private struct WebDAVConfigForm: View {
                 }
 
                 LabeledField(title: "Password") {
-                    SecureField("Leave blank to keep existing", text: $viewModel.webdavPassword)
+                    VStack(alignment: .leading, spacing: 4) {
+                        SecureField(passwordPlaceholder, text: $viewModel.webdavPassword)
+                        if viewModel.webdavPasswordSavedInKeychain {
+                            HStack(spacing: 6) {
+                                Image(systemName: "lock.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(Color.popStatusOK)
+                                Text("Saved in macOS Keychain")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                Button {
+                                    viewModel.clearWebDAVPasswordFromKeychain()
+                                } label: {
+                                    Text("Forget")
+                                        .font(.caption2)
+                                }
+                                .buttonStyle(.plain)
+                                .foregroundStyle(Color.popStatusWarning)
+                            }
+                        }
+                    }
                 }
 
                 LabeledField(title: "Remote Root") {
@@ -552,6 +636,13 @@ private struct WebDAVConfigForm: View {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)
                     .foregroundStyle(Color.popStatusError)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let warning = viewModel.webdavKeychainWarning {
+                Label(warning, systemImage: "key.slash")
+                    .font(.caption)
+                    .foregroundStyle(Color.popStatusWarning)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
