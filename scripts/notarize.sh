@@ -48,12 +48,41 @@ if [[ -z "$KEYCHAIN_PROFILE" ]]; then
 fi
 
 echo "==> Signing nested frameworks and XPC services"
+# Sparkle ships a nested Updater.app + Autoupdate Mach-O binary that the
+# Apple notary service insists on being signed individually with Developer
+# ID + secure timestamp. Generic `find -name "*.framework"` is not enough
+# because it doesn't descend into framework Versions/.../Updater.app or
+# pick up the Mach-O Autoupdate helper. Sign the deepest first so the
+# parent container's seal covers everything.
+SPARKLE_FRAMEWORK_PATH="$APP_PATH/Contents/Frameworks/Sparkle.framework"
+if [[ -d "$SPARKLE_FRAMEWORK_PATH" ]]; then
+  SPARKLE_VERSION_DIR="$SPARKLE_FRAMEWORK_PATH/Versions/B"
+  if [[ -d "$SPARKLE_VERSION_DIR" ]]; then
+    if [[ -f "$SPARKLE_VERSION_DIR/Updater.app/Contents/MacOS/Updater" ]]; then
+      sign_component "$SPARKLE_VERSION_DIR/Updater.app/Contents/MacOS/Updater"
+    fi
+    if [[ -d "$SPARKLE_VERSION_DIR/Updater.app" ]]; then
+      sign_component "$SPARKLE_VERSION_DIR/Updater.app"
+    fi
+    if [[ -f "$SPARKLE_VERSION_DIR/Autoupdate" ]]; then
+      sign_component "$SPARKLE_VERSION_DIR/Autoupdate"
+    fi
+    while IFS= read -r -d '' xpc; do
+      sign_component "$xpc"
+    done < <(find "$SPARKLE_VERSION_DIR/XPCServices" -name "*.xpc" -type d -print0 2>/dev/null | sort -z)
+  fi
+  sign_component "$SPARKLE_FRAMEWORK_PATH"
+fi
+
 if [[ -d "$APP_PATH/Contents/Frameworks" ]]; then
   while IFS= read -r -d '' xpc; do
+    # Already covered above for Sparkle; skip to avoid double-signing churn.
+    [[ "$xpc" == "$SPARKLE_FRAMEWORK_PATH"* ]] && continue
     sign_component "$xpc"
   done < <(find "$APP_PATH/Contents/Frameworks" -name "*.xpc" -type d -print0 | sort -z)
 
   while IFS= read -r -d '' framework; do
+    [[ "$framework" == "$SPARKLE_FRAMEWORK_PATH" ]] && continue
     sign_component "$framework"
   done < <(find "$APP_PATH/Contents/Frameworks" -name "*.framework" -type d -print0 | sort -z)
 fi
