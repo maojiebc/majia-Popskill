@@ -216,9 +216,37 @@ actor SkillCLIClient {
         return try Self.decodeResponse(Skill.self, from: data)
     }
 
-    func uninstall(skillID: String) async throws -> SkillUninstallResult {
-        let data = try run(arguments: ["uninstall", skillID, "--json"])
+    func uninstall(
+        skillID: String,
+        strategy: UninstallStrategy = .backup
+    ) async throws -> SkillUninstallResult {
+        let data = try run(arguments: [
+            "uninstall", skillID,
+            "--strategy", strategy.rawValue,
+            "--json",
+        ])
         return try Self.decodeResponse(SkillUninstallResult.self, from: data)
+    }
+
+    /// Walk every installed skill, returning aggregate counts plus per-skill
+    /// deployment shape. Used by "链接健康" view + the status-bar `♺ N/M` indicator.
+    func linkHealth() async throws -> LinkHealthReport {
+        let data = try run(arguments: ["link-health", "--json"])
+        return try Self.decodeResponse(LinkHealthReport.self, from: data)
+    }
+
+    /// Trigger a sync action (push / pull / status) through the given provider.
+    /// v0.3: only `git` is real, others return an `implemented: false` payload.
+    func sync(action: String, provider: String = "git") async throws -> SyncResult {
+        let data = try run(arguments: ["sync", action, "--provider", provider, "--json"])
+        return try Self.decodeResponse(SyncResult.self, from: data)
+    }
+
+    /// First-run inventory: where skill / CLI / MCP / agent already live on
+    /// this Mac. Powers onboarding wizard step 3.
+    func onboardScan() async throws -> OnboardScanReport {
+        let data = try run(arguments: ["onboard-scan", "--json"])
+        return try Self.decodeResponse(OnboardScanReport.self, from: data)
     }
 
     func listStubs() async throws -> [StubbedSkill] {

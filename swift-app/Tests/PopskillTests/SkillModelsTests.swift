@@ -129,9 +129,11 @@ struct SkillModelsTests {
     @Test
     func targetAppRegistryCoversCurrentSkillTargets() {
         #expect(TargetAppRegistry.all.map(\.app) == TargetApp.supported)
+        #expect(TargetApp.quickToggleSupported == [.claude, .codex, .gemini])
         #expect(TargetApp.codex.title == "Codex")
         #expect(TargetApp.codex.symbolName == "chevron.left.forwardslash.chevron.right")
         #expect(TargetApp.codex.definition.skillDirectory == ".codex/skills")
+        #expect(TargetApp.hermes.definition.quickToggle == false)
         #expect(TargetApp.opencode.definition.detectPath == ".config/opencode")
     }
 
@@ -746,6 +748,57 @@ struct SkillModelsTests {
         #expect(package.componentGroupSummaries.first(where: { $0.kind == "skill" })?.installed == 1)
         #expect(package.componentGroupSummaries.first(where: { $0.kind == "skill" })?.recoverableMissing == 1)
         #expect(package.componentGroupSummaries.first(where: { $0.kind == "agent" })?.missingRequired == 1)
+    }
+
+    @Test
+    func capabilityPackageLifecycleHelpersExposeLatestTimestampAndTrackedHash() {
+        var package = self.package(components: [component(installed: true)])
+        package = CapabilityPackage(
+            id: package.id,
+            type: package.type,
+            name: package.name,
+            vendor: package.vendor,
+            summary: package.summary,
+            source: package.source,
+            components: package.components,
+            configSchema: package.configSchema,
+            installed: package.installed,
+            lifecycle: PackageLifecycle(
+                installedAt: 1_700_000_000,
+                updatedAt: 1_700_000_120,
+                contentHash: "  abcdef12  "
+            )
+        )
+
+        #expect(package.lastLifecycleTimestamp == 1_700_000_120)
+        #expect(package.trackedContentHash == "abcdef12")
+    }
+
+    @Test
+    func capabilityPackageLifecycleHelpersHandleMissingOrBlankValues() {
+        var package = self.package(components: [])
+        #expect(package.lastLifecycleTimestamp == nil)
+        #expect(package.trackedContentHash == nil)
+
+        package = CapabilityPackage(
+            id: package.id,
+            type: package.type,
+            name: package.name,
+            vendor: package.vendor,
+            summary: package.summary,
+            source: package.source,
+            components: package.components,
+            configSchema: package.configSchema,
+            installed: package.installed,
+            lifecycle: PackageLifecycle(
+                installedAt: 0,
+                updatedAt: -42,
+                contentHash: "   "
+            )
+        )
+
+        #expect(package.lastLifecycleTimestamp == nil)
+        #expect(package.trackedContentHash == nil)
     }
 
     @Test

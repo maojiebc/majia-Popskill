@@ -1,270 +1,185 @@
-import Observation
-import Foundation
 import SwiftUI
 
-@MainActor
-@Observable
-final class UpdatesViewModel {
-    var updates: [SkillUpdateInfo] = []
-    var isChecking = false
-    var isUpdatingAll = false
-    var hasCheckedOnce = false
-    var lastCheckedAt: Date?
-    var errorMessage: String?
-
-    private let client = SkillCLIClient()
-    private var updatingIDs: Set<String> = []
-
-    func check() async {
-        guard !isChecking else {
-            return
-        }
-
-        isChecking = true
-        errorMessage = nil
-        defer {
-            isChecking = false
-            hasCheckedOnce = true
-        }
-
-        do {
-            updates = try await client.checkUpdates()
-                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-            lastCheckedAt = Date()
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    func isUpdating(_ id: String) -> Bool {
-        updatingIDs.contains(id)
-    }
-
-    var isUpdatingAny: Bool {
-        isUpdatingAll || !updatingIDs.isEmpty
-    }
-
-    @discardableResult
-    func update(_ update: SkillUpdateInfo) async -> Bool {
-        guard !updatingIDs.contains(update.id) else {
-            return false
-        }
-
-        updatingIDs.insert(update.id)
-        errorMessage = nil
-        var didUpdate = false
-
-        do {
-            _ = try await client.update(skillID: update.id)
-            updates.removeAll { $0.id == update.id }
-            didUpdate = true
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-
-        updatingIDs.remove(update.id)
-        return didUpdate
-    }
-
-    @discardableResult
-    func updateAll(onUpdated: @escaping () async -> Void) async -> Int {
-        guard !isUpdatingAll, !updates.isEmpty else {
-            return 0
-        }
-
-        isUpdatingAll = true
-        defer {
-            isUpdatingAll = false
-        }
-
-        var updatedCount = 0
-        let pendingUpdates = updates
-        for update in pendingUpdates {
-            if await self.update(update) {
-                updatedCount += 1
-            }
-        }
-
-        if updatedCount > 0 {
-            await onUpdated()
-        }
-
-        return updatedCount
-    }
-}
-
+/// Updates — lists every skill whose remote content hash differs from local.
+/// On `.task` we re-run `client.checkUpdates()` so the badge in the sidebar
+/// reflects the latest scan; the user can also trigger a manual re-scan.
 struct UpdatesView: View {
-    @Bindable var viewModel: UpdatesViewModel
-    let onUpdated: () async -> Void
+    @Bindable var store: PopskillStore
+    @Environment(\.popskillLocalization) private var localization
+
+    @State private var loading: Bool = false
+    @State private var pendingUpdate: Set<String> = []
+    @State private var lastScanAt: Date?
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Updates")
-                        .font(.system(.largeTitle, weight: .bold))
-                    Text(headerSubtitle)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                if !viewModel.updates.isEmpty || viewModel.isUpdatingAll {
+            PopskillPageHeader(
+                titleKey: "sidebar.updates",
+                subtitle: subtitle
+            ) {
+                HStack(spacing: 8) {
                     Button {
-                        Task {
-                            _ = await viewModel.updateAll(onUpdated: onUpdated)
-                        }
+                        Task { await rescan() }
                     } label: {
-                        if viewModel.isUpdatingAll {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else {
-                            Label("Update All", systemImage: "arrow.down.circle")
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(viewModel.isChecking || viewModel.isUpdatingAny)
-                    .help("Update All")
-                }
-
-                Button {
-                    Task { await viewModel.check() }
-                } label: {
-                    if viewModel.isChecking {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                }
-                .buttonStyle(.bordered)
-                .help("Check Updates")
-                .disabled(viewModel.isChecking || viewModel.isUpdatingAny)
-            }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 20)
-
-            Divider()
-
-            if let errorMessage = viewModel.errorMessage {
-                ErrorBanner(message: errorMessage) {
-                    Task { await viewModel.check() }
-                }
-                Divider()
-            }
-
-            List(viewModel.updates) { update in
-                HStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(update.name)
-                            .font(.headline)
-                        Text(update.id)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        HStack(spacing: 8) {
-                            HashBadge(title: "Local", hash: update.currentHash)
-                            HashBadge(title: "Remote", hash: update.remoteHash)
-                        }
-                    }
-
-                    Spacer()
-
-                    Button {
-                        Task {
-                            if await viewModel.update(update) {
-                                await onUpdated()
-                            }
-                        }
-                    } label: {
-                        if viewModel.isUpdating(update.id) {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else {
-                            Image(systemName: "arrow.down.circle")
-                        }
+                        Label(localization.string("updates.rescan"), systemImage: "arrow.clockwise")
                     }
                     .buttonStyle(.bordered)
-                    .help("Update")
-                    .disabled(viewModel.isUpdating(update.id) || viewModel.isUpdatingAll)
-                }
-                .padding(.vertical, 8)
-            }
-            .listStyle(.plain)
-            .overlay {
-                if viewModel.isChecking && viewModel.updates.isEmpty {
-                    ProgressView()
-                        .controlSize(.large)
-                } else if viewModel.updates.isEmpty {
-                    UpdatesEmptyState(
-                        title: emptyStateTitle,
-                        hasCheckedOnce: viewModel.hasCheckedOnce
-                    ) {
-                        Task { await viewModel.check() }
+                    .controlSize(.small)
+                    .disabled(loading)
+                    Button {
+                        Task { await updateAll() }
+                    } label: {
+                        Label(localization.string("updates.updateAll"), systemImage: "arrow.down.circle")
                     }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .disabled(store.updates.isEmpty)
                 }
+            }
+
+            if loading && store.updates.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if store.updates.isEmpty {
+                emptyState
+            } else {
+                list
             }
         }
         .popPageBackground()
-    }
-
-    private var emptyStateTitle: String {
-        viewModel.hasCheckedOnce ? "No Updates" : "Check for Updates"
-    }
-
-    private var headerSubtitle: String {
-        let availability = "\(viewModel.updates.count) available"
-        guard let lastCheckedAt = viewModel.lastCheckedAt else {
-            return availability
-        }
-
-        return "\(availability) · checked \(lastCheckedAt.formatted(date: .omitted, time: .shortened))"
-    }
-}
-
-struct UpdatesEmptyState: View {
-    let title: String
-    let hasCheckedOnce: Bool
-    let onCheck: () -> Void
-
-    var body: some View {
-        ContentUnavailableView {
-            Label(title, systemImage: "checkmark.seal")
-        } description: {
-            Text(description)
-        } actions: {
-            Button {
-                onCheck()
-            } label: {
-                Label("Check Updates", systemImage: "arrow.clockwise")
+        .task {
+            if store.updates.isEmpty && lastScanAt == nil {
+                await rescan()
             }
-            .buttonStyle(.borderedProminent)
         }
     }
 
-    private var description: String {
-        hasCheckedOnce
-            ? "Installed GitHub-backed skills are current."
-            : "Compare installed GitHub-backed skills against their remote content hashes."
-    }
-}
-
-struct HashBadge: View {
-    let title: String
-    let hash: String?
-
-    var body: some View {
-        Text("\(title) \(shortHash)")
-            .font(.caption.monospaced())
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(Color.popHeaderBackground, in: RoundedRectangle(cornerRadius: 6))
-    }
-
-    private var shortHash: String {
-        guard let hash, !hash.isEmpty else {
-            return "missing"
+    private var subtitle: String {
+        if loading {
+            return localization.string("updates.subtitleScanning", store.updates.count)
         }
-        return String(hash.prefix(10))
+        if let lastScanAt {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .short
+            return localization.string(
+                "updates.subtitle",
+                store.updates.count,
+                formatter.localizedString(for: lastScanAt, relativeTo: Date())
+            )
+        }
+        return localization.string("updates.subtitleNoScan", store.updates.count)
+    }
+
+    private var list: some View {
+        ScrollView {
+            LazyVStack(spacing: 8) {
+                ForEach(store.updates) { update in
+                    row(update)
+                }
+            }
+            .padding(.horizontal, 28)
+            .padding(.bottom, 24)
+        }
+    }
+
+    private func row(_ update: SkillUpdateInfo) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "arrow.down.circle.fill")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 32, height: 32)
+                .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(update.name)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(Color.popLabel)
+                if let current = update.currentHash {
+                    Text("\(shortHash(current)) → \(shortHash(update.remoteHash))")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(Color.popSecondaryLabel)
+                } else {
+                    Text(localization.string("updates.row.firstSync"))
+                        .font(.caption)
+                        .foregroundStyle(Color.popSecondaryLabel)
+                }
+            }
+            Spacer(minLength: 8)
+            if pendingUpdate.contains(update.id) {
+                ProgressView().controlSize(.small)
+            } else {
+                Button {
+                    Task { await applyUpdate(update) }
+                } label: {
+                    Text(localization.string("updates.row.update"))
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .popCard(cornerRadius: PopskillRadius.smallCard, shadowOpacity: 0.02)
+    }
+
+    private func shortHash(_ hash: String) -> String {
+        String(hash.prefix(7))
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "checkmark.seal")
+                .font(.system(size: 44, weight: .light))
+                .foregroundStyle(Color.popStatusOK)
+            LocalizedText("updates.empty.title")
+                .font(.title3.weight(.semibold))
+            LocalizedText("updates.empty.body")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: Actions
+
+    @MainActor
+    private func rescan() async {
+        guard !loading else { return }
+        loading = true
+        defer { loading = false }
+
+        do {
+            store.updates = try await store.client.checkUpdates()
+            lastScanAt = Date()
+        } catch {
+            store.errorMessage = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func applyUpdate(_ update: SkillUpdateInfo) async {
+        guard !pendingUpdate.contains(update.id) else { return }
+        pendingUpdate.insert(update.id)
+        defer { pendingUpdate.remove(update.id) }
+
+        do {
+            let refreshed = try await store.client.update(skillID: update.id)
+            if let idx = store.skills.firstIndex(where: { $0.id == refreshed.id }) {
+                store.skills[idx] = refreshed
+            }
+            store.updates.removeAll { $0.id == update.id }
+        } catch {
+            store.errorMessage = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func updateAll() async {
+        for update in store.updates {
+            await applyUpdate(update)
+        }
     }
 }

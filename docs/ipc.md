@@ -589,15 +589,43 @@ Returns one installed skill by id. The shape matches one item from `list`.
 }
 ```
 
-### `skill-cli uninstall <skill-id> --json`
+### `skill-cli uninstall <skill-id> [--strategy backup|keep|delete] --json`
 
-Uninstalls one managed skill through CC Switch. CC Switch removes app-folder copies/symlinks, deletes the SSOT skill directory, removes the DB record, and creates an uninstall backup when possible.
+Honors majia 13-项校准 #12 ("保护用户原数据是最高优先级"). `--strategy` selects how user data is handled. Defaults to `backup` for safety.
+
+| strategy | behavior | reversible |
+|---|---|---|
+| `keep` | Disables the skill for every target app via `SkillService::toggle_app`, leaves SSOT files and the DB record intact. No backup is created. | ✅ Re-enable via toggles |
+| `backup` *(default)* | CC Switch removes app-folder copies/symlinks, deletes the SSOT skill directory, removes the DB record, and creates a recovery snapshot in `~/.cc-switch/skill-backups/`. | ✅ Restore via `restore-from-backup` |
+| `delete` | Same as `backup` plus immediately deletes the recovery snapshot. Use only when the user has explicitly accepted irreversible deletion. | ❌ |
+
+Response envelope always carries a stable `strategy` discriminant; other fields are populated per strategy:
 
 ```json
+// strategy = "keep"
 {
   "ok": true,
   "data": {
-    "backupPath": "/Users/example/.cc-switch/skill-backups/..."
+    "strategy": "keep",
+    "skill": { "id": "...", "apps": { "claude": false, "codex": false, ... }, ... }
+  }
+}
+
+// strategy = "backup" (default)
+{
+  "ok": true,
+  "data": {
+    "strategy": "backup",
+    "backupPath": "/Users/example/.cc-switch/skill-backups/20260515_133045_my-skill"
+  }
+}
+
+// strategy = "delete"
+{
+  "ok": true,
+  "data": {
+    "strategy": "delete",
+    "deletedBackupId": "20260515_133045_my-skill"
   }
 }
 ```

@@ -121,6 +121,10 @@ struct AppCountBar: View {
     }
 }
 
+// PackageAppCoverageBar removed in S2 — its mock dependency `PackageAppEnabledCount`
+// lived inside LibraryViewModel. S3 will reintroduce coverage chips on the new
+// matrix row if needed.
+
 private extension TargetApp {
     var accentColor: Color {
         switch self {

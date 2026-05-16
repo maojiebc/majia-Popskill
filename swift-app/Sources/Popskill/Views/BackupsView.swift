@@ -1,274 +1,213 @@
-import Observation
 import SwiftUI
 
-@MainActor
-@Observable
-final class BackupsViewModel {
-    var backups: [SkillBackup] = []
-    var selectedRestoreApp: TargetApp = .codex
-    var isLoading = false
-    var hasLoadedOnce = false
-    var errorMessage: String?
-
-    private let client = SkillCLIClient()
-    private var restoringIDs: Set<String> = []
-    private var deletingIDs: Set<String> = []
-
-    func load() async {
-        guard !isLoading else {
-            return
-        }
-
-        isLoading = true
-        errorMessage = nil
-        defer {
-            isLoading = false
-            hasLoadedOnce = true
-        }
-
-        do {
-            backups = try await client.listBackups()
-                .sorted { $0.createdAt > $1.createdAt }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    func isRestoring(_ backupID: String) -> Bool {
-        restoringIDs.contains(backupID)
-    }
-
-    func isDeleting(_ backupID: String) -> Bool {
-        deletingIDs.contains(backupID)
-    }
-
-    func restore(_ backup: SkillBackup, onRestored: @escaping () async -> Void) async {
-        guard !restoringIDs.contains(backup.backupId) else {
-            return
-        }
-
-        restoringIDs.insert(backup.backupId)
-        errorMessage = nil
-
-        do {
-            _ = try await client.restoreBackup(backupID: backup.backupId, app: selectedRestoreApp)
-            await onRestored()
-            await load()
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-
-        restoringIDs.remove(backup.backupId)
-    }
-
-    @discardableResult
-    func delete(_ backup: SkillBackup) async -> Bool {
-        guard !deletingIDs.contains(backup.backupId) else {
-            return false
-        }
-
-        deletingIDs.insert(backup.backupId)
-        errorMessage = nil
-        var didDelete = false
-
-        do {
-            _ = try await client.deleteBackup(backupID: backup.backupId)
-            backups.removeAll { $0.backupId == backup.backupId }
-            didDelete = true
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-
-        deletingIDs.remove(backup.backupId)
-        return didDelete
-    }
-}
-
+/// Backups — snapshots created by the safe-by-default uninstall strategy (#12
+/// in 麦麦 13-项校准: "保护用户原数据是最高优先级"). v0.3 lists them flat
+/// with date headers and per-row restore / delete. Restore picks Claude by
+/// default since most users only have Claude wired; v0.4 will add a target
+/// chooser.
 struct BackupsView: View {
-    @Bindable var viewModel: BackupsViewModel
-    let onRestored: () async -> Void
-    let onBackupsChanged: () async -> Void
+    @Bindable var store: PopskillStore
+    @Environment(\.popskillLocalization) private var localization
+
+    @State private var loading: Bool = false
+    @State private var pendingRestore: Set<String> = []
+    @State private var pendingDelete: Set<String> = []
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-
-            Divider()
-
-            if let errorMessage = viewModel.errorMessage {
-                ErrorBanner(message: errorMessage) {
-                    Task { await viewModel.load() }
+            PopskillPageHeader(
+                titleKey: "sidebar.backups",
+                subtitle: localization.string("backups.subtitle", store.backups.count)
+            ) {
+                Button {
+                    Task { await refresh() }
+                } label: {
+                    Label(localization.string("backups.refresh"), systemImage: "arrow.clockwise")
                 }
-                Divider()
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(loading)
             }
 
-            List(viewModel.backups) { backup in
-                SkillBackupRow(
-                    backup: backup,
-                    restoreApp: viewModel.selectedRestoreApp,
-                    isRestoring: viewModel.isRestoring(backup.backupId),
-                    isDeleting: viewModel.isDeleting(backup.backupId)
-                ) {
-                    Task { await viewModel.restore(backup, onRestored: onRestored) }
-                } onDelete: {
-                    Task {
-                        if await viewModel.delete(backup) {
-                            await onBackupsChanged()
-                        }
-                    }
-                }
-                .listRowSeparator(.visible)
-                .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
-            }
-            .listStyle(.plain)
-            .overlay {
-                if viewModel.isLoading && viewModel.backups.isEmpty {
-                    ProgressView()
-                        .controlSize(.large)
-                } else if viewModel.backups.isEmpty {
-                    ContentUnavailableView("No Backups", systemImage: "clock.arrow.circlepath")
-                }
+            if loading && store.backups.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if store.backups.isEmpty {
+                emptyState
+            } else {
+                list
             }
         }
         .popPageBackground()
         .task {
-            if !viewModel.hasLoadedOnce {
-                await viewModel.load()
+            if store.backups.isEmpty {
+                await refresh()
             }
         }
     }
 
-    private var header: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Backups")
-                    .font(.system(.largeTitle, weight: .bold))
-                Text("\(viewModel.backups.count) uninstall snapshots")
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            Picker("Restore In", selection: $viewModel.selectedRestoreApp) {
-                ForEach(TargetApp.supported, id: \.id) { app in
-                    Text(app.title).tag(app)
+    private var list: some View {
+        ScrollView {
+            LazyVStack(spacing: 8, pinnedViews: [.sectionHeaders]) {
+                ForEach(groupedByDay, id: \.day) { bucket in
+                    Section {
+                        ForEach(bucket.backups) { backup in
+                            row(backup)
+                        }
+                    } header: {
+                        Text(bucket.day)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.popTertiaryLabel)
+                            .textCase(.uppercase)
+                            .tracking(0.6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 28)
+                            .padding(.vertical, 6)
+                            .background(.thinMaterial)
+                    }
                 }
             }
-            .pickerStyle(.menu)
-            .frame(width: 160)
-
-            Button {
-                Task { await viewModel.load() }
-            } label: {
-                if viewModel.isLoading {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Image(systemName: "arrow.clockwise")
-                }
-            }
-            .buttonStyle(.borderedProminent)
-            .help("Refresh")
-            .disabled(viewModel.isLoading)
+            .padding(.bottom, 24)
         }
-        .padding(.horizontal, 28)
-        .padding(.vertical, 20)
     }
-}
 
-struct SkillBackupRow: View {
-    let backup: SkillBackup
-    let restoreApp: TargetApp
-    let isRestoring: Bool
-    let isDeleting: Bool
-    let onRestore: () -> Void
-    let onDelete: () -> Void
+    private struct BackupBucket {
+        let day: String
+        let backups: [SkillBackup]
+    }
 
-    @State private var isConfirmingRestore = false
-    @State private var isConfirmingDelete = false
+    private var groupedByDay: [BackupBucket] {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
 
-    var body: some View {
-        HStack(spacing: 14) {
-            PackageAvatar(name: backup.skill.name, identifier: backup.backupId)
+        let buckets = Dictionary(grouping: store.backups) { backup -> String in
+            formatter.string(from: Date(timeIntervalSince1970: TimeInterval(backup.createdAt)))
+        }
+        return buckets
+            .map { key, value in BackupBucket(day: key, backups: value.sorted { $0.createdAt > $1.createdAt }) }
+            .sorted { lhs, rhs in
+                let l = lhs.backups.first?.createdAt ?? 0
+                let r = rhs.backups.first?.createdAt ?? 0
+                return l > r
+            }
+    }
 
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 8) {
-                    Text(backup.skill.name)
-                        .font(.headline.weight(.semibold))
-                        .lineLimit(1)
-                    StatusPill(title: createdAtText, color: .popStatusNeutral)
-                }
+    private func row(_ backup: SkillBackup) -> some View {
+        HStack(spacing: 12) {
+            InitialAvatarView(name: backup.skill.name, identifier: backup.skill.id)
+                .frame(width: 32, height: 32)
 
-                Text(backup.skill.description)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-
-                Text(backup.backupPath)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(backup.skill.name)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(Color.popLabel)
+                Text(Self.formatTimestamp(backup.createdAt))
                     .font(.caption)
-                    .foregroundStyle(Color.popTertiaryLabel)
-                    .lineLimit(1)
+                    .foregroundStyle(Color.popSecondaryLabel)
             }
-
-            Spacer(minLength: 20)
-
-            HStack(spacing: 8) {
+            Spacer(minLength: 8)
+            if pendingRestore.contains(backup.backupId) || pendingDelete.contains(backup.backupId) {
+                ProgressView().controlSize(.small)
+            } else {
                 Button {
-                    isConfirmingRestore = true
+                    Task { await restore(backup) }
                 } label: {
-                    if isRestoring {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Image(systemName: "arrow.uturn.backward.circle")
-                    }
+                    Text(localization.string("backups.row.restore"))
+                        .font(.caption.weight(.semibold))
                 }
-                .buttonStyle(.bordered)
-                .disabled(isRestoring || isDeleting)
-                .help("Restore")
-                .confirmationDialog(
-                    "Restore \(backup.skill.name) to \(restoreApp.title)?",
-                    isPresented: $isConfirmingRestore,
-                    titleVisibility: .visible
-                ) {
-                    Button("Restore") {
-                        onRestore()
-                    }
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text("Popskill will ask CC Switch to copy this backup into the managed skill store and enable it for \(restoreApp.title).")
-                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
 
-                Button(role: .destructive) {
-                    isConfirmingDelete = true
+                Menu {
+                    Button(role: .destructive) {
+                        Task { await deleteBackup(backup) }
+                    } label: {
+                        Label(localization.string("backups.row.delete"), systemImage: "trash")
+                    }
                 } label: {
-                    if isDeleting {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Image(systemName: "trash")
-                    }
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.popSecondaryLabel)
                 }
-                .buttonStyle(.bordered)
-                .disabled(isRestoring || isDeleting)
-                .help("Delete Backup")
-                .confirmationDialog(
-                    "Delete backup for \(backup.skill.name)?",
-                    isPresented: $isConfirmingDelete,
-                    titleVisibility: .visible
-                ) {
-                    Button("Delete", role: .destructive) {
-                        onDelete()
-                    }
-                    Button("Cancel", role: .cancel) {}
-                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .frame(width: 26)
             }
         }
-        .frame(minHeight: 72)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .popCard(cornerRadius: PopskillRadius.smallCard, shadowOpacity: 0.02)
+        .padding(.horizontal, 28)
     }
 
-    private var createdAtText: String {
-        Date(timeIntervalSince1970: TimeInterval(backup.createdAt))
-            .formatted(date: .abbreviated, time: .shortened)
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.system(size: 44, weight: .light))
+                .foregroundStyle(.tertiary)
+            LocalizedText("backups.empty.title")
+                .font(.title3.weight(.semibold))
+            LocalizedText("backups.empty.body")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: Actions
+
+    @MainActor
+    private func refresh() async {
+        guard !loading else { return }
+        loading = true
+        defer { loading = false }
+        do {
+            store.backups = try await store.client.listBackups()
+        } catch {
+            store.errorMessage = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func restore(_ backup: SkillBackup) async {
+        guard !pendingRestore.contains(backup.backupId) else { return }
+        pendingRestore.insert(backup.backupId)
+        defer { pendingRestore.remove(backup.backupId) }
+        do {
+            let restored = try await store.client.restoreBackup(backupID: backup.backupId, app: .claude)
+            if let idx = store.skills.firstIndex(where: { $0.id == restored.id }) {
+                store.skills[idx] = restored
+            } else {
+                store.skills.append(restored)
+            }
+            store.backups.removeAll { $0.backupId == backup.backupId }
+        } catch {
+            store.errorMessage = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func deleteBackup(_ backup: SkillBackup) async {
+        guard !pendingDelete.contains(backup.backupId) else { return }
+        pendingDelete.insert(backup.backupId)
+        defer { pendingDelete.remove(backup.backupId) }
+        do {
+            let result = try await store.client.deleteBackup(backupID: backup.backupId)
+            store.backups.removeAll { $0.backupId == result.backupId }
+        } catch {
+            store.errorMessage = error.localizedDescription
+        }
+    }
+
+    private static func formatTimestamp(_ ts: Int) -> String {
+        let date = Date(timeIntervalSince1970: TimeInterval(ts))
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }

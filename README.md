@@ -4,7 +4,7 @@
 > Mac 上的 AI 能力 App Store，从 Claude Code Agent Skills 开始。
 
 <p align="center">
-  <strong>Status: Pre-alpha — v0.3 self-use iteration is active; MVP verticals compile and pass local CI.</strong>
+  <strong>Status: v1.0.0 — first signed + notarized release. SwiftUI matrix UI, ⌘K spotlight, transcript-token insights, iCloud Drive sync, Sparkle auto-update all wired end-to-end. See <a href="./docs/release/v1.0.0.md">release notes</a>.</strong>
 </p>
 
 ---

@@ -262,3 +262,291 @@
 "No model usage yet" = "No model usage yet";
 "Local transcript totals" = "Local transcript totals";
 "transcript.boundary.note" = "Message content is ignored. Skill totals use Claude Code's top-level attributionSkill marker when present; other usage remains grouped by session and model.";
+
+"library.search.emptyHint" = "Try a different keyword, skill name, or trigger word.";
+
+"uninstall.strategy.keep.title" = "Disable Only (Keep Files)";
+"uninstall.strategy.backup.title" = "Uninstall (Keep Backup)";
+"uninstall.strategy.delete.title" = "Delete Permanently";
+"uninstall.strategy.dialog.message" = "Choose how Popskill should handle this skill's files. Backup is the safest — CC Switch auto-creates a recovery snapshot. Keep leaves every file in place and only disables apps. Delete is irreversible.";
+
+"agents.search.emptyHint" = "Try a different keyword, agent name, or trigger word.";
+
+"Search Repositories" = "Search Repositories";
+"No Matching Repositories" = "No Matching Repositories";
+"No Repositories" = "No Repositories";
+"repositories.search.emptyHint" = "Try a different keyword, owner, or branch name.";
+
+"Add Repository" = "Add Repository";
+"repositories.summary" = "%d enabled of %d";
+"package.row.updatesBadge" = "%d update";
+
+"library.empty.title" = "Pick a package";
+"library.empty.message" = "Select a card on the left to see version, source, app coverage, and uninstall options.";
+"skill.empty.title" = "Pick a skill";
+"skill.empty.message" = "Choose an installed skill to inspect its source, last activity, and toggle apps.";
+"stub.empty.title" = "Pick a stub to rehydrate";
+"stub.empty.message" = "Stubs preserve a recovery snapshot of the original skill. Restore one by selecting it and choosing a target app.";
+
+// S2 新增 — v0.3 三段 sidebar + 8 个 view
+"sidebar.matrix" = "Skills × Tools";
+"sidebar.sources" = "Sources";
+"sidebar.idle" = "Idle";
+"sidebar.insights" = "Insights";
+"sidebar.health" = "Link Health";
+"sidebar.section.control" = "CONTROL";
+"sidebar.section.sources" = "SOURCES";
+"sidebar.section.maintenance" = "MAINTENANCE";
+
+// S3 新增 — Matrix + Inspector
+"matrix.subtitle" = "%d capabilities · %d active toggles";
+"matrix.search.placeholder" = "Filter by name, trigger, or directory";
+"matrix.col.capability" = "Capability";
+"matrix.col.source" = "Source";
+
+"matrix.filter.all" = "All";
+"matrix.filter.updates" = "Updates";
+"matrix.filter.claudeOnly" = "Claude only";
+"matrix.filter.codexOnly" = "Codex only";
+"matrix.filter.inactive" = "Inactive";
+
+"matrix.type.all" = "All types";
+"matrix.type.skill" = "Skill";
+"matrix.type.agent" = "Agent";
+"matrix.type.cli" = "CLI";
+"matrix.type.mcp" = "MCP";
+"matrix.type.config" = "Config";
+
+"matrix.row.readOnly" = "Read-only (no per-app toggle yet)";
+"matrix.inspector.readOnly" = "Agents are Claude Code only — toggle not supported yet.";
+
+"matrix.group.ungrouped" = "Other";
+
+"matrix.row.updateBadge" = "UPDATE";
+"matrix.row.noSummary" = "No summary";
+"matrix.row.menu.inspect" = "Open Inspector";
+"matrix.row.menu.openSource" = "Open Source";
+"matrix.row.menu.revealInFinder" = "Reveal in Finder";
+"matrix.row.menu.help" = "More actions";
+
+"matrix.empty.title" = "No capabilities yet";
+"matrix.empty.body" = "Install your first skill from a source, or wait for bootstrap to finish.";
+"matrix.empty.refresh" = "Refresh";
+
+"matrix.inspector.empty.title" = "Select a capability";
+"matrix.inspector.empty.body" = "Pick a row to see its description, deployment links, and source.";
+"matrix.inspector.close" = "Close inspector";
+
+"matrix.inspector.section.summary" = "SUMMARY";
+"matrix.inspector.section.triggers" = "TRIGGERS";
+"matrix.inspector.section.apps" = "APPS";
+"matrix.inspector.section.deployment" = "DEPLOYMENT";
+"matrix.inspector.section.meta" = "METADATA";
+
+"matrix.inspector.deployment.ssot" = "SSOT (real file)";
+"matrix.inspector.deployment.strategy" = "Strategy · %@";
+"matrix.inspector.deployment.empty" = "Deployment info not available — link health hasn't run yet.";
+
+"matrix.inspector.linkStatus.ok" = "OK";
+"matrix.inspector.linkStatus.broken" = "BROKEN";
+"matrix.inspector.linkStatus.inactive" = "OFF";
+"matrix.inspector.linkStatus.na" = "N/A";
+
+"matrix.inspector.meta.directory" = "Directory";
+"matrix.inspector.meta.sourceType" = "Source type";
+"matrix.inspector.meta.installedAt" = "Installed";
+"matrix.inspector.meta.updatedAt" = "Updated";
+"matrix.inspector.meta.size" = "Size";
+"matrix.inspector.meta.openSource" = "Open source page";
+
+// S4 新增 — ⌘K Spotlight
+"spotlight.title" = "Spotlight ⌘K";
+"spotlight.placeholder" = "Search capabilities, run actions…";
+"spotlight.clear" = "Clear";
+
+"spotlight.section.capabilities" = "CAPABILITIES";
+"spotlight.section.actions" = "ACTIONS";
+
+"spotlight.empty.title" = "No matches";
+"spotlight.empty.body" = "Try a name, trigger word, or use ↑↓ to pick a recent capability.";
+
+"spotlight.hint.navigate" = "↑↓ navigate";
+"spotlight.hint.open" = "↩ open";
+"spotlight.hint.close" = "esc close";
+
+"spotlight.action.refresh.title" = "Refresh data";
+"spotlight.action.refresh.subtitle" = "Re-bootstrap skills, sources, and agents from sidecar";
+"spotlight.action.linkHealth.title" = "Open Link Health";
+"spotlight.action.linkHealth.subtitle" = "Inspect SSOT ↔ symlink integrity";
+"spotlight.action.updates.title" = "Open Updates";
+"spotlight.action.updates.subtitle" = "See pending capability updates";
+"spotlight.action.settings.title" = "Open Settings";
+"spotlight.action.settings.subtitle" = "Storage, sync provider, sources";
+
+// S5 — Sources view
+"sources.subtitle" = "%d of %d enabled";
+"sources.refresh" = "Refresh";
+"sources.add" = "Add Source";
+"sources.row.branch" = "Branch · %@";
+"sources.row.openGithub" = "Open on GitHub";
+"sources.row.remove" = "Remove";
+"sources.empty.title" = "No sources yet";
+"sources.empty.body" = "Add a GitHub catalog repo to populate the matrix. npm / brew / folder sources land in v0.4.";
+"sources.add.title" = "Add source";
+"sources.add.help" = "Format: owner/name or owner/name@branch. Accepts GitHub URLs too.";
+"sources.add.cancel" = "Cancel";
+"sources.add.submit" = "Add";
+
+// S5 — Updates view
+"updates.subtitle" = "%d pending · scanned %@";
+"updates.subtitleNoScan" = "%d pending · scan not run yet";
+"updates.subtitleScanning" = "%d pending · scanning…";
+"updates.rescan" = "Re-scan";
+"updates.updateAll" = "Update all";
+"updates.row.firstSync" = "First sync available";
+"updates.row.update" = "Update";
+"updates.empty.title" = "Everything up to date";
+"updates.empty.body" = "No upstream changes detected. Re-scan to recheck.";
+
+// S5 — Backups view
+"backups.subtitle" = "%d snapshots";
+"backups.refresh" = "Refresh";
+"backups.row.restore" = "Restore";
+"backups.row.delete" = "Delete permanently";
+"backups.empty.title" = "No backups";
+"backups.empty.body" = "Uninstalls with the default safe strategy create a backup here.";
+
+// S5 — Idle view
+"idle.subtitle" = "%d capabilities · threshold %d days";
+"idle.threshold.30" = "30d";
+"idle.threshold.60" = "60d";
+"idle.threshold.90" = "90d";
+"idle.row.lastSeen" = "Last activity %d days ago";
+"idle.row.neverTouched" = "Never touched";
+"idle.row.inspect" = "Inspect";
+"idle.row.stub" = "Turn into stub";
+"idle.row.uninstall" = "Uninstall (backup)";
+"idle.row.action" = "Decide";
+"idle.empty.title" = "Nothing idle";
+"idle.empty.body" = "Every installed capability has been used or toggled recently.";
+
+// S5 — Insights view
+"insights.subtitle" = "Snapshot of what's installed and what needs attention";
+"insights.metric.totalSkills" = "Total skills";
+"insights.metric.enabledToggles" = "Active app toggles";
+"insights.metric.pendingUpdates" = "Pending updates";
+"insights.metric.brokenLinks" = "Broken symlinks";
+"insights.breakdown.title" = "BREAKDOWN";
+"insights.breakdown.claude" = "Claude Code coverage";
+"insights.breakdown.codex" = "Codex coverage";
+"insights.breakdown.topSources" = "Top sources";
+
+// S9 — Token usage
+"insights.refresh" = "Re-scan";
+"insights.tokens.title" = "TRANSCRIPT TOKENS";
+"insights.tokens.scanFooter" = "%d sessions · %d files scanned";
+"insights.tokens.input" = "Input";
+"insights.tokens.output" = "Output";
+"insights.tokens.cacheCreation" = "Cache create";
+"insights.tokens.cacheRead" = "Cache read";
+"insights.tokens.total" = "Total";
+
+"insights.topSkills.title" = "TOP CAPABILITIES BY USAGE";
+"insights.topSkills.empty" = "No skill attributions found in this scan.";
+
+"insights.scan.scanning" = "Scanning ~/.claude/projects…";
+"insights.scan.scanningHint" = "Reads every .jsonl session file in the background.";
+"insights.scan.errorTitle" = "Couldn't read transcripts";
+"insights.scan.emptyTitle" = "No transcript data yet";
+"insights.scan.emptyBody" = "Use Claude Code at least once, then re-scan to see token usage here.";
+
+// S5 — Link Health view
+"health.subtitle" = "%d OK · %d broken · %d inactive";
+"health.subtitleNoScan" = "Scan hasn't run yet";
+"health.refresh" = "Re-scan";
+"health.summary.ok" = "Healthy";
+"health.summary.broken" = "Broken";
+"health.summary.inactive" = "Inactive";
+"health.row.noPath" = "No SSOT path recorded";
+"health.empty.title" = "Run a link-health scan";
+"health.empty.runScan" = "Scan now";
+
+// S5 — Settings view
+"settings.subtitle" = "Storage, sync, sources, and re-running onboarding";
+"settings.storage.title" = "STORAGE";
+"settings.storage.ssot" = "Skills root (SSOT)";
+"settings.storage.ssotHint" = "The real files; every app's skill dir symlinks here.";
+"settings.storage.backups" = "Popskill backups";
+"settings.storage.backupsHint" = "Snapshots created by the default safe uninstall strategy.";
+"settings.storage.reveal" = "Reveal";
+
+"settings.sync.title" = "SYNC";
+"settings.sync.icloud.title" = "iCloud Drive";
+"settings.sync.icloud.subtitle" = "Native macOS sync. Recommended.";
+"settings.sync.git.title" = "Git remote";
+"settings.sync.git.subtitle" = "Push / pull a repo you control.";
+"settings.sync.webdav.title" = "WebDAV";
+"settings.sync.webdav.subtitle" = "Self-hosted / Nextcloud.";
+"settings.sync.none.title" = "No sync";
+"settings.sync.none.subtitle" = "Local only.";
+"settings.sync.soon" = "SOON";
+"settings.sync.push" = "Push";
+"settings.sync.pull" = "Pull";
+"settings.sync.done" = "%@ via %@ done";
+
+"settings.sources.title" = "SOURCES";
+"settings.sources.summary" = "%d of %d sources enabled";
+"settings.sources.hint" = "Manage GitHub / npm / folder catalogs that feed the matrix.";
+"settings.sources.manage" = "Manage…";
+
+"settings.onboarding.title" = "GUIDED SETUP";
+"settings.onboarding.body" = "Re-run the 5-step onboarding wizard";
+"settings.onboarding.hint" = "Re-detect tools, scan capabilities, choose storage + sync.";
+"settings.onboarding.openButton" = "Open";
+
+// S6 — Onboarding wizard
+"onboarding.title" = "Welcome to Popskill";
+"onboarding.back" = "Back";
+"onboarding.next" = "Next";
+"onboarding.skip" = "Skip";
+"onboarding.finish" = "Open matrix";
+
+"onboarding.welcome.title" = "One control surface for your AI tools";
+"onboarding.welcome.body" = "Popskill lines up every skill, CLI, and MCP against Claude Code and Codex so you can see what's wired, fix broken links, and sync across machines.";
+"onboarding.welcome.bullet1" = "Matrix of capabilities × tools";
+"onboarding.welcome.bullet2" = "SSOT + symlink health monitor";
+"onboarding.welcome.bullet3" = "iCloud / Git sync across Macs";
+
+"onboarding.detect.title" = "Detect your AI tools";
+"onboarding.detect.subtitle" = "We scan the standard paths for Claude Code and Codex.";
+"onboarding.detect.placeholderTitle" = "Run the scan to detect installed tools";
+"onboarding.detect.placeholderBody" = "Popskill will look at ~/.claude, ~/.codex, brew, and npm globals.";
+"onboarding.detect.found" = "FOUND";
+"onboarding.detect.missing" = "MISSING";
+"onboarding.detect.empty" = "Not yet";
+"onboarding.detect.cliEmpty" = "No common AI CLIs found in /opt/homebrew/bin.";
+"onboarding.detect.npmEmpty" = "No global @modelcontextprotocol / mcp- packages found.";
+
+"onboarding.scan.title" = "Scan capabilities";
+"onboarding.scan.subtitle" = "We list capabilities already present in ~/.agents/skills.";
+"onboarding.scan.placeholderTitle" = "Run the scan to read your capability tree";
+"onboarding.scan.placeholderBody" = "Sidecar reads ~/.agents/skills and Popskill's SSOT in seconds.";
+"onboarding.scan.empty" = "No capabilities";
+"onboarding.scan.now" = "Run scan";
+"onboarding.scan.installed" = "Tracked by Popskill";
+"onboarding.scan.totalAgents" = "Total in ~/.agents";
+"onboarding.scan.agentsRoot" = "Skills root";
+"onboarding.scan.ssotLabel" = "SSOT path";
+
+"onboarding.storage.title" = "Where to store and how to sync";
+"onboarding.storage.subtitle" = "Popskill keeps the real files at the standard agents skills root and symlinks them into each app.";
+"onboarding.storage.ssotLabel" = "SSOT";
+"onboarding.storage.ssotHint" = "The real, single source of truth. Each AI tool's skill folder symlinks here.";
+"onboarding.storage.providerLabel" = "Sync provider";
+"onboarding.storage.recommended" = "RECOMMENDED";
+
+"onboarding.done.title" = "You're set";
+"onboarding.done.body" = "Pick a row in the matrix to inspect, or hit ⌘K to jump anywhere.";
+"onboarding.done.tip1" = "⌘K opens the command palette";
+"onboarding.done.tip2" = "Link Health view shows broken symlinks";
+"onboarding.done.tip3" = "Updates view flags upstream changes";

@@ -1,350 +1,412 @@
-import Observation
 import SwiftUI
 
-@MainActor
-@Observable
-final class InsightsViewModel {
-    var summary = UsageSummary()
-    var isScanning = false
-    var hasScannedOnce = false
-    var errorMessage: String?
-
-    private let scanner = TranscriptUsageScanner()
-
-    func scan() async {
-        guard !isScanning else {
-            return
-        }
-
-        isScanning = true
-        errorMessage = nil
-        defer {
-            isScanning = false
-            hasScannedOnce = true
-        }
-
-        do {
-            let scanner = self.scanner
-            summary = try await Task.detached {
-                try scanner.scan()
-            }.value
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-}
-
+/// Insights — installed-capability snapshot + transcript token usage. v0.4
+/// wires the `TranscriptUsageScanner` back in, surfacing token totals (input
+/// / output / cache read / cache create) and the top 10 capabilities by
+/// token consumption inferred from `~/.claude/projects/**/*.jsonl`. The scan
+/// runs off the main thread; the section degrades gracefully when there's no
+/// `~/.claude/projects/` directory yet.
 struct InsightsView: View {
-    @Bindable var viewModel: InsightsViewModel
+    @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization
 
+    @State private var lastScanAt: Date?
+
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    LocalizedText("Usage")
-                        .font(.system(.largeTitle, weight: .bold))
-                    Text(localization.string(
-                        "usage.header.subtitle",
-                        viewModel.summary.filesScanned,
-                        viewModel.summary.sessions
-                    ))
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Button {
-                    Task { await viewModel.scan() }
-                } label: {
-                    if viewModel.isScanning {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                PopskillPageHeader(
+                    titleKey: "sidebar.insights",
+                    subtitle: localization.string("insights.subtitle")
+                ) {
+                    Button {
+                        Task { await runScan() }
+                    } label: {
+                        Label(
+                            localization.string("insights.refresh"),
+                            systemImage: store.usageScanInFlight ? "arrow.clockwise" : "arrow.clockwise"
+                        )
                     }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(store.usageScanInFlight)
                 }
-                .buttonStyle(.borderedProminent)
-                .help(localization.string("Refresh"))
-                .disabled(viewModel.isScanning)
-            }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 20)
 
-            Divider()
+                heroGrid
 
-            if let errorMessage = viewModel.errorMessage {
-                ErrorBanner(message: errorMessage) {
-                    Task { await viewModel.scan() }
-                }
-                Divider()
-            }
-
-            Group {
-                if viewModel.isScanning && !viewModel.hasScannedOnce {
-                    UsageLoadingView()
+                if let summary = store.usageSummary {
+                    tokenSection(summary: summary).padding(.horizontal, 28)
+                    topSkillsSection(summary: summary).padding(.horizontal, 28)
+                } else if store.usageScanInFlight {
+                    scanningCard.padding(.horizontal, 28)
+                } else if let error = store.usageScanError {
+                    errorCard(error).padding(.horizontal, 28)
                 } else {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 22) {
-                            TranscriptBoundaryNote()
-
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 14)], spacing: 14) {
-                                UsageMetricCard(title: "Total Tokens", value: viewModel.summary.totalTokens, accent: PopskillSectionAccent.color(for: 0))
-                                UsageMetricCard(title: "Input", value: viewModel.summary.inputTokens, accent: PopskillSectionAccent.color(for: 1))
-                                UsageMetricCard(title: "Output", value: viewModel.summary.outputTokens, accent: PopskillSectionAccent.color(for: 2))
-                                UsageMetricCard(title: "Cache Read", value: viewModel.summary.cacheReadTokens, accent: PopskillSectionAccent.color(for: 3))
-                                UsageMetricCard(title: "Cache Create", value: viewModel.summary.cacheCreationTokens, accent: PopskillSectionAccent.color(for: 4))
-                                UsageMetricCard(title: "Usage Events", value: Int64(viewModel.summary.usageEvents), accent: PopskillSectionAccent.color(for: 5))
-                                UsageMetricCard(title: "Skill Events", value: Int64(viewModel.summary.attributedSkillUsageEvents), accent: PopskillSectionAccent.color(for: 6))
-                            }
-
-                            DetailSection(title: "Source", accent: PopskillSectionAccent.color(for: 1)) {
-                                DetailField(title: "Transcript Files", value: "\(viewModel.summary.filesScanned)")
-                                DetailField(title: "Sessions", value: "\(viewModel.summary.sessions)")
-                                DetailField(
-                                    title: "Skill Attribution",
-                                    value: localization.string(
-                                        "usage.skillAttribution.value",
-                                        viewModel.summary.attributedSkillUsageEvents,
-                                        viewModel.summary.usageEvents
-                                    )
-                                )
-                            }
-
-                            DetailSection(title: "Models", accent: PopskillSectionAccent.color(for: 2)) {
-                                if viewModel.summary.modelStats.isEmpty {
-                                    LocalizedText("No model usage yet")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                } else {
-                                    VStack(spacing: 8) {
-                                        ForEach(viewModel.summary.modelStats.prefix(8)) { stat in
-                                            ModelUsageRow(stat: stat, maxTokens: maxModelTokens)
-                                        }
-                                    }
-                                }
-                            }
-
-                            if !viewModel.summary.skillStats.isEmpty {
-                                DetailSection(title: "Skills", accent: PopskillSectionAccent.color(for: 3)) {
-                                    VStack(spacing: 8) {
-                                        ForEach(viewModel.summary.skillStats.prefix(8)) { stat in
-                                            SkillUsageRow(stat: stat, maxTokens: maxSkillTokens)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .padding(28)
-                    }
+                    emptyUsageCard.padding(.horizontal, 28)
                 }
+
+                breakdownCard.padding(.horizontal, 28)
+
+                Color.clear.frame(height: 32)
             }
         }
         .popPageBackground()
         .task {
-            if !viewModel.hasScannedOnce {
-                await viewModel.scan()
+            if store.usageSummary == nil && !store.usageScanInFlight && store.usageScanError == nil {
+                await runScan()
             }
         }
     }
 
-    private var maxModelTokens: Int64 {
-        viewModel.summary.modelStats.map(\.totalTokens).max() ?? 0
+    @MainActor
+    private func runScan() async {
+        await store.refreshUsageScan()
+        if store.usageSummary != nil { lastScanAt = Date() }
     }
 
-    private var maxSkillTokens: Int64 {
-        viewModel.summary.skillStats.map(\.totalTokens).max() ?? 0
-    }
-}
+    // MARK: Hero grid (unchanged from v0.3)
 
-struct UsageLoadingView: View {
-    var body: some View {
-        VStack(spacing: 12) {
-            ProgressView()
-                .controlSize(.large)
-            LocalizedText("Scanning Usage")
-                .font(.headline)
-            LocalizedText("Scanning usage message")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 360)
+    private var heroGrid: some View {
+        LazyVGrid(
+            columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
+            spacing: 12
+        ) {
+            metricCard(
+                titleKey: "insights.metric.totalSkills",
+                value: store.skills.count,
+                symbol: "square.grid.3x3.fill",
+                tint: .accentColor
+            )
+            metricCard(
+                titleKey: "insights.metric.enabledToggles",
+                value: store.enabledSkillCount,
+                symbol: "bolt.fill",
+                tint: .orange
+            )
+            metricCard(
+                titleKey: "insights.metric.pendingUpdates",
+                value: store.pendingUpdateCount,
+                symbol: "arrow.down.circle.fill",
+                tint: store.pendingUpdateCount > 0 ? .blue : Color.popTertiaryLabel
+            )
+            metricCard(
+                titleKey: "insights.metric.brokenLinks",
+                value: store.brokenLinkCount,
+                symbol: "exclamationmark.triangle.fill",
+                tint: store.brokenLinkCount > 0 ? .red : .green
+            )
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(28)
+        .padding(.horizontal, 28)
     }
-}
 
-struct TranscriptBoundaryNote: View {
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "lock.shield")
-                .font(.title3)
-                .foregroundStyle(Color.popSectionBlue)
-                .frame(width: 28)
-
-            VStack(alignment: .leading, spacing: 4) {
-                LocalizedText("Local transcript totals")
-                    .font(.subheadline.weight(.semibold))
-                LocalizedText("transcript.boundary.note")
+    private func metricCard(titleKey: String, value: Int, symbol: String, tint: Color) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: symbol)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 44, height: 44)
+                .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(value)")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(Color.popLabel)
+                LocalizedText(titleKey)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(Color.popSecondaryLabel)
             }
-
             Spacer(minLength: 0)
         }
-        .padding(14)
-        .popCard(cornerRadius: PopskillRadius.smallCard, shadowOpacity: 0.02)
-    }
-}
-
-struct UsageMetricCard: View {
-    let title: String
-    let value: Int64
-    var accent: Color = .popSectionBlue
-    @Environment(\.popskillLocalization) private var localization
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(accent)
-                .frame(width: 4)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(localization.string(title).uppercased(with: localization.language.locale))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(accent)
-                Text(formattedValue)
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .minimumScaleFactor(0.68)
-            }
-        }
-        .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
         .padding(14)
         .popCard(cornerRadius: PopskillRadius.card)
     }
 
-    private var formattedValue: String {
-        value.formatted(.number.notation(.compactName))
-    }
-}
+    // MARK: Tokens
 
-struct ModelUsageRow: View {
-    let stat: ModelUsageStat
-    let maxTokens: Int64
-    @Environment(\.popskillLocalization) private var localization
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+    private func tokenSection(summary: UsageSummary) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(stat.model)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
+                SectionHeading(title: "insights.tokens.title", accent: .accentColor)
                 Spacer()
-                Text(stat.totalTokens.formatted(.number.notation(.compactName)))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                Text(localization.string("insights.tokens.scanFooter", summary.sessions, summary.filesScanned))
+                    .font(.caption2)
+                    .foregroundStyle(Color.popTertiaryLabel)
             }
 
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.popHeaderBackground)
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.accentColor.opacity(0.65))
-                        .frame(width: proxy.size.width * widthRatio)
-                }
+            LazyVGrid(
+                columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
+                spacing: 10
+            ) {
+                tokenCard(
+                    titleKey: "insights.tokens.input",
+                    value: summary.inputTokens,
+                    tint: .blue
+                )
+                tokenCard(
+                    titleKey: "insights.tokens.output",
+                    value: summary.outputTokens,
+                    tint: .green
+                )
+                tokenCard(
+                    titleKey: "insights.tokens.cacheCreation",
+                    value: summary.cacheCreationTokens,
+                    tint: .orange
+                )
+                tokenCard(
+                    titleKey: "insights.tokens.cacheRead",
+                    value: summary.cacheReadTokens,
+                    tint: .purple
+                )
             }
-            .frame(height: 7)
 
-            Text(localization.string(
-                "usage.row.detail",
-                stat.usageEvents,
-                stat.inputTokens.formatted(.number.notation(.compactName)),
-                stat.outputTokens.formatted(.number.notation(.compactName))
-            ))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(12)
-        .popCard(cornerRadius: PopskillRadius.smallCard, shadowOpacity: 0.02)
-    }
-
-    private var widthRatio: Double {
-        guard maxTokens > 0 else {
-            return 0
-        }
-        return max(0.02, min(1, Double(stat.totalTokens) / Double(maxTokens)))
-    }
-}
-
-struct SkillUsageRow: View {
-    let stat: SkillUsageStat
-    let maxTokens: Int64
-    @Environment(\.popskillLocalization) private var localization
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Text(stat.skillID)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-
-                if let sourcePlugin = stat.sourcePlugin {
-                    StatusPill(title: sourcePlugin, color: .popStatusNeutral)
-                }
-
+                Image(systemName: "sum")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.popSecondaryLabel)
+                Text(localization.string("insights.tokens.total"))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.popSecondaryLabel)
                 Spacer()
-
-                Text(stat.totalTokens.formatted(.number.notation(.compactName)))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                Text(Self.formatTokens(summary.totalTokens))
+                    .font(.system(size: 18, weight: .bold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(Color.popLabel)
             }
+            .padding(.top, 4)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .popCard(cornerRadius: PopskillRadius.card)
+    }
 
+    private func tokenCard(titleKey: String, value: Int64, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Circle().fill(tint).frame(width: 8, height: 8)
+                LocalizedText(titleKey)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.popSecondaryLabel)
+            }
+            Text(Self.formatTokens(value))
+                .font(.system(size: 22, weight: .bold, design: .rounded).monospacedDigit())
+                .foregroundStyle(Color.popLabel)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(tint.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    // MARK: Top skills
+
+    private func topSkillsSection(summary: UsageSummary) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "insights.topSkills.title", accent: .accentColor)
+            if summary.skillStats.isEmpty {
+                Text(localization.string("insights.topSkills.empty"))
+                    .font(.caption)
+                    .foregroundStyle(Color.popTertiaryLabel)
+            } else {
+                let max = summary.skillStats.first?.totalTokens ?? 1
+                ForEach(summary.skillStats.prefix(10)) { stat in
+                    topSkillRow(stat: stat, normalizedMax: max)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .popCard(cornerRadius: PopskillRadius.card)
+    }
+
+    private func topSkillRow(stat: SkillUsageStat, normalizedMax: Int64) -> some View {
+        let label = displayLabel(for: stat)
+        let fraction = normalizedMax > 0 ? Double(stat.totalTokens) / Double(normalizedMax) : 0
+        return VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(label)
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(Color.popLabel)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer()
+                Text(Self.formatTokens(stat.totalTokens))
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(Color.popSecondaryLabel)
+            }
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.accentColor.opacity(0.10))
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.accentColor)
+                        .frame(width: max(2, proxy.size.width * fraction))
+                }
+            }
+            .frame(height: 5)
+        }
+    }
+
+    /// Map raw `skillID` from the scanner back to a readable name. The scanner
+    /// observed-attribution strings can be either a skill id, a skill name,
+    /// or a plugin-prefixed identifier — `matchesAttributionSkill` already
+    /// handles the normalization so we leverage it here for display lookup.
+    private func displayLabel(for stat: SkillUsageStat) -> String {
+        if let match = store.skills.first(where: { $0.matchesAttributionSkill(stat.skillID) }) {
+            return match.name
+        }
+        return stat.skillID
+    }
+
+    // MARK: Existing breakdown card (claude/codex coverage + top sources)
+
+    private var breakdownCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeading(title: "insights.breakdown.title")
+
+            breakdownRow(label: localization.string("insights.breakdown.claude"), enabled: claudeOn, total: store.skills.count, tint: .orange)
+            breakdownRow(label: localization.string("insights.breakdown.codex"), enabled: codexOn, total: store.skills.count, tint: .green)
+
+            Divider().padding(.vertical, 2)
+
+            Text(localization.string("insights.breakdown.topSources"))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.popSecondaryLabel)
+            ForEach(topSources, id: \.label) { source in
+                HStack(spacing: 6) {
+                    Text(source.label)
+                        .font(.caption)
+                        .foregroundStyle(Color.popLabel)
+                    Spacer()
+                    Text("\(source.count)")
+                        .font(.caption.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(Color.popSecondaryLabel)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .popCard(cornerRadius: PopskillRadius.card)
+    }
+
+    private func breakdownRow(label: String, enabled: Int, total: Int, tint: Color) -> some View {
+        let fraction = total > 0 ? Double(enabled) / Double(total) : 0
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(label)
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(Color.popLabel)
+                Spacer()
+                Text("\(enabled) / \(total)")
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(Color.popSecondaryLabel)
+            }
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.popHeaderBackground)
+                        .fill(tint.opacity(0.10))
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.popSectionGreen.opacity(0.68))
-                        .frame(width: proxy.size.width * widthRatio)
+                        .fill(tint)
+                        .frame(width: max(2, proxy.size.width * fraction))
                 }
             }
-            .frame(height: 7)
+            .frame(height: 6)
+        }
+    }
 
-            Text(detailText)
+    private var claudeOn: Int { store.skills.filter { $0.apps.claude }.count }
+    private var codexOn: Int { store.skills.filter { $0.apps.codex }.count }
+
+    private struct SourceSummary {
+        let label: String
+        let count: Int
+    }
+
+    private var topSources: [SourceSummary] {
+        let buckets = Dictionary(grouping: store.skills) { skill -> String in
+            skill.sourceLabel
+        }
+        return buckets
+            .map { SourceSummary(label: $0.key, count: $0.value.count) }
+            .sorted { $0.count > $1.count }
+            .prefix(5)
+            .map { $0 }
+    }
+
+    // MARK: States
+
+    private var scanningCard: some View {
+        HStack(spacing: 10) {
+            ProgressView().controlSize(.small)
+            VStack(alignment: .leading, spacing: 2) {
+                LocalizedText("insights.scan.scanning")
+                    .font(.callout.weight(.semibold))
+                LocalizedText("insights.scan.scanningHint")
+                    .font(.caption)
+                    .foregroundStyle(Color.popSecondaryLabel)
+            }
+            Spacer()
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .popCard(cornerRadius: PopskillRadius.card)
+    }
+
+    private func errorCard(_ error: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(Color.popStatusWarning)
+            VStack(alignment: .leading, spacing: 4) {
+                LocalizedText("insights.scan.errorTitle")
+                    .font(.callout.weight(.semibold))
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(Color.popSecondaryLabel)
+                    .textSelection(.enabled)
+            }
+            Spacer()
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .popCard(cornerRadius: PopskillRadius.card)
+    }
+
+    private var emptyUsageCard: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "chart.bar.doc.horizontal")
+                .font(.system(size: 28, weight: .light))
+                .foregroundStyle(Color.popTertiaryLabel)
+            LocalizedText("insights.scan.emptyTitle")
+                .font(.callout.weight(.semibold))
+            LocalizedText("insights.scan.emptyBody")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.popSecondaryLabel)
+                .multilineTextAlignment(.center)
+            Button {
+                Task { await runScan() }
+            } label: {
+                Label(localization.string("insights.refresh"), systemImage: "play.circle")
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
         }
-        .padding(12)
-        .popCard(cornerRadius: PopskillRadius.smallCard, shadowOpacity: 0.02)
+        .padding(20)
+        .frame(maxWidth: .infinity)
+        .popCard(cornerRadius: PopskillRadius.card)
     }
 
-    private var detailText: String {
-        if let lastUsedAt = stat.lastUsedAt {
-            return localization.string(
-                "usage.row.detail.withLast",
-                stat.usageEvents,
-                stat.inputTokens.formatted(.number.notation(.compactName)),
-                stat.outputTokens.formatted(.number.notation(.compactName)),
-                lastUsedAt.formatted(date: .abbreviated, time: .shortened)
-            )
-        }
+    // MARK: Format
 
-        return localization.string(
-            "usage.row.detail",
-            stat.usageEvents,
-            stat.inputTokens.formatted(.number.notation(.compactName)),
-            stat.outputTokens.formatted(.number.notation(.compactName))
-        )
-    }
-
-    private var widthRatio: Double {
-        guard maxTokens > 0 else {
-            return 0
+    private static func formatTokens(_ value: Int64) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = ","
+        if value < 1_000 {
+            return formatter.string(from: NSNumber(value: value)) ?? "0"
         }
-        return max(0.02, min(1, Double(stat.totalTokens) / Double(maxTokens)))
+        if value < 1_000_000 {
+            return String(format: "%.1fK", Double(value) / 1_000.0)
+        }
+        if value < 1_000_000_000 {
+            return String(format: "%.1fM", Double(value) / 1_000_000.0)
+        }
+        return String(format: "%.2fB", Double(value) / 1_000_000_000.0)
     }
 }

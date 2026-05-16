@@ -15,6 +15,14 @@ struct PopskillApp: App {
         }
         .windowResizability(.contentMinSize)
         .commands {
+            // Replace the system About panel with our branded version so it
+            // shows the real version + bundle ID instead of the SwiftUI
+            // default that ships with $(EXECUTABLE_NAME) placeholders.
+            CommandGroup(replacing: .appInfo) {
+                Button("About Popskill") {
+                    appDelegate.showAboutPanel()
+                }
+            }
             CommandGroup(after: .appInfo) {
                 Button("Check for Updates...") {
                     appDelegate.checkForUpdates()
@@ -58,6 +66,32 @@ final class PopskillAppDelegate: NSObject, NSApplicationDelegate {
         sender.windows.first?.makeKeyAndOrderFront(nil)
         sender.activate(ignoringOtherApps: true)
         return true
+    }
+
+    func showAboutPanel() {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let version = info["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        let build = info["CFBundleVersion"] as? String ?? "0"
+        let copyright = info["NSHumanReadableCopyright"] as? String ?? "Copyright © 2026 majia."
+        let credits = NSAttributedString(
+            string: """
+            One control surface for your AI capabilities.
+
+            Built on top of CC Switch's skill store, with a Rust sidecar and \
+            SwiftUI front-end. Source: github.com/maojiebc/majia-Popskill
+            """,
+            attributes: [.font: NSFont.systemFont(ofSize: 11)]
+        )
+        // NSApplication.AboutPanelOptionKey on macOS doesn't expose a typed
+        // `.copyright`, but the underlying string key is "Copyright". The
+        // rawValue init form is the documented escape hatch.
+        let copyrightKey = NSApplication.AboutPanelOptionKey(rawValue: "Copyright")
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .applicationVersion: "\(version) (build \(build))",
+            .applicationName: "Popskill",
+            .credits: credits,
+            copyrightKey: copyright,
+        ])
     }
 
     func checkForUpdates() {

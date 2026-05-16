@@ -24,6 +24,10 @@ enum TargetApp: String, CaseIterable, Identifiable, Codable {
     static var supported: [TargetApp] {
         TargetAppRegistry.all.map(\.app)
     }
+
+    static var quickToggleSupported: [TargetApp] {
+        TargetAppRegistry.quickToggle.map(\.app)
+    }
 }
 
 struct TargetAppDefinition: Identifiable, Equatable {
@@ -32,6 +36,7 @@ struct TargetAppDefinition: Identifiable, Equatable {
     let app: TargetApp
     let displayName: String
     let symbolName: String
+    let quickToggle: Bool
     let skillDirectory: String
     let detectPath: String
     let cliCommands: [String]
@@ -44,6 +49,7 @@ enum TargetAppRegistry {
             app: .claude,
             displayName: "Claude",
             symbolName: "sparkles",
+            quickToggle: true,
             skillDirectory: ".claude/skills",
             detectPath: ".claude",
             cliCommands: ["claude"],
@@ -53,6 +59,7 @@ enum TargetAppRegistry {
             app: .codex,
             displayName: "Codex",
             symbolName: "chevron.left.forwardslash.chevron.right",
+            quickToggle: true,
             skillDirectory: ".codex/skills",
             detectPath: ".codex",
             cliCommands: ["codex"],
@@ -62,6 +69,7 @@ enum TargetAppRegistry {
             app: .gemini,
             displayName: "Gemini",
             symbolName: "diamond",
+            quickToggle: true,
             skillDirectory: ".gemini/skills",
             detectPath: ".gemini",
             cliCommands: ["gemini"],
@@ -71,6 +79,7 @@ enum TargetAppRegistry {
             app: .opencode,
             displayName: "OpenCode",
             symbolName: "terminal",
+            quickToggle: false,
             skillDirectory: ".config/opencode/skills",
             detectPath: ".config/opencode",
             cliCommands: ["opencode"],
@@ -80,6 +89,7 @@ enum TargetAppRegistry {
             app: .hermes,
             displayName: "Hermes",
             symbolName: "h.circle",
+            quickToggle: false,
             skillDirectory: ".hermes/skills",
             detectPath: ".hermes",
             cliCommands: ["hermes"],
@@ -87,11 +97,16 @@ enum TargetAppRegistry {
         )
     ]
 
+    static var quickToggle: [TargetAppDefinition] {
+        all.filter(\.quickToggle)
+    }
+
     static func definition(for app: TargetApp) -> TargetAppDefinition {
         all.first { $0.app == app } ?? TargetAppDefinition(
             app: app,
             displayName: app.rawValue,
             symbolName: "circle",
+            quickToggle: false,
             skillDirectory: "",
             detectPath: "",
             cliCommands: [],
@@ -112,6 +127,13 @@ struct Skill: Identifiable, Codable, Equatable {
     let installedAt: Int?
     let updatedAt: Int?
     let contentHash: String?
+    var capabilitySummary: String? = nil
+    var triggerScenarios: [String]? = nil
+    /// 来源类型（"github" | "npm" | "brew" | "pip" | "builtin"），sidecar 推断。
+    /// Swift 端在 ViewModel 里可做更精细的二次推断（如 sourceShort 解析）。
+    var sourceType: String? = nil
+    /// 真身 + 各 AI 工具 symlink 状态。喂给 Inspector "位置与链接" 与 链接健康 view。
+    var deployment: SkillDeployment? = nil
     var lastUsedAt: Int? = nil
     var sizeBytes: UInt64? = nil
 
@@ -204,6 +226,8 @@ struct LocalAgent: Identifiable, Codable, Equatable {
     let model: String?
     let lastModifiedAt: Int?
     let sizeBytes: UInt64
+    var capabilitySummary: String? = nil
+    var triggerScenarios: [String]? = nil
 
     var fileURL: URL {
         URL(fileURLWithPath: path)
@@ -622,6 +646,23 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
             PackageComponentGroupSummary(kind: "agent", title: "Agents", components: components.agents)
         ].filter { $0.total > 0 }
     }
+
+    var lastLifecycleTimestamp: Int? {
+        [lifecycle?.installedAt, lifecycle?.updatedAt]
+            .compactMap { value -> Int? in
+                guard let value, value > 0 else {
+                    return nil
+                }
+                return value
+            }
+            .max()
+    }
+
+    var trackedContentHash: String? {
+        lifecycle?.contentHash?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .nilIfEmpty
+    }
 }
 
 struct PackageComponentGroupSummary: Identifiable, Equatable {
@@ -666,6 +707,12 @@ struct PackageLifecycle: Codable, Equatable {
         updatedAt: nil,
         contentHash: nil
     )
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
+    }
 }
 
 struct PackageComponents: Codable, Equatable {
@@ -835,8 +882,27 @@ struct InstallPlanWrites: Codable, Equatable {
     let appSkillPath: String?
 }
 
+/// Strategy passed to `skill-cli uninstall --strategy`. Maps to majia 13-项校准
+/// #12 ("保护用户原数据是最高优先级"). Defaults to `.backup` for safety.
+enum UninstallStrategy: String, Codable, Equatable, CaseIterable {
+    /// Disable the skill for every target app but leave SSOT files intact. No
+    /// backup is created; the skill remains in the library and can be re-enabled.
+    case keep
+    /// Default: cc-switch removes SSOT files but creates an auto-backup first.
+    /// Recovery is possible via Backups view.
+    case backup
+    /// Same as `backup` plus immediately deletes the safety backup. Irreversible.
+    case delete
+}
+
+/// JSON envelope returned by `skill-cli uninstall`. The shape varies by strategy
+/// but a stable `strategy` discriminant is always present so view code can pick
+/// the right post-action UI without inferring from optional fields.
 struct SkillUninstallResult: Codable, Equatable {
+    let strategy: UninstallStrategy
     let backupPath: String?
+    let skill: Skill?
+    let deletedBackupId: String?
 }
 
 struct StubbedSkill: Identifiable, Codable, Equatable {
@@ -974,6 +1040,88 @@ struct SkillApps: Codable, Equatable {
         case .hermes: hermes = enabled
         }
     }
+}
+
+/// Deployment shape returned by `skill-cli list` (per skill) and
+/// `skill-cli link-health` (aggregated). Mirrors the sidecar `DeploymentInfo`
+/// struct 1:1.
+struct SkillDeployment: Codable, Equatable, Hashable {
+    /// "symlink" | "copy" | "path" | "mcp-config"
+    let strategy: String
+    let ssotPath: String
+    /// key = "claude" | "codex" | future "gemini" / "opencode" / ...
+    let appLinks: [String: AppLinkStatus]
+}
+
+struct AppLinkStatus: Codable, Equatable, Hashable {
+    let path: String
+    /// "ok" | "broken" | "inactive" | "na"
+    let status: String
+}
+
+/// Top-level envelope returned by `skill-cli link-health --json`.
+struct LinkHealthReport: Codable, Equatable {
+    let summary: LinkHealthSummary
+    let rows: [LinkHealthRow]
+}
+
+struct LinkHealthSummary: Codable, Equatable {
+    let ok: Int
+    let broken: Int
+    let inactive: Int
+}
+
+struct LinkHealthRow: Codable, Equatable {
+    let skillId: String
+    let skillName: String
+    let deployment: SkillDeployment?
+}
+
+/// Envelope returned by `skill-cli onboard-scan --json`. Powers onboarding
+/// wizard step 3.
+struct OnboardScanReport: Codable, Equatable {
+    let popskillSsot: String?
+    let popskillInstalledCount: Int
+    let agentsDir: OnboardScanDir
+    let claudeSkillsDir: OnboardScanDir
+    let codexSkillsDir: OnboardScanDir
+    let claudeAgentsDir: OnboardScanDir
+    let brewCli: [String]
+    let npmGlobalMcp: [String]
+    let iCloudDriveAvailable: Bool
+    let recommendedSyncProvider: String
+
+    enum CodingKeys: String, CodingKey {
+        case popskillSsot
+        case popskillInstalledCount
+        case agentsDir
+        case claudeSkillsDir
+        case codexSkillsDir
+        case claudeAgentsDir
+        case brewCli
+        case npmGlobalMcp
+        case iCloudDriveAvailable = "iCloudDriveAvailable"
+        case recommendedSyncProvider
+    }
+}
+
+struct OnboardScanDir: Codable, Equatable {
+    let path: String
+    let exists: Bool
+    let count: Int
+    let isGit: Bool
+}
+
+/// Envelope returned by `skill-cli sync <action> --provider <p>`.
+struct SyncResult: Codable, Equatable {
+    let provider: String
+    let action: String
+    let ok: Bool?
+    let exitCode: Int?
+    let stdout: String?
+    let stderr: String?
+    let message: String?
+    let implemented: Bool?
 }
 
 struct UnmanagedSkill: Identifiable, Codable, Equatable {

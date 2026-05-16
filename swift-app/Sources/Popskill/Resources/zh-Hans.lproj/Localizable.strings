@@ -262,3 +262,291 @@
 "No model usage yet" = "暂无模型用量";
 "Local transcript totals" = "本地转录统计";
 "transcript.boundary.note" = "不会读取消息正文。Skill 统计只使用 Claude Code 顶层 attributionSkill 标记；其他用量按会话和模型汇总。";
+
+"library.search.emptyHint" = "换个关键词试试，可以搜 skill 名称、能力，或触发词。";
+
+"uninstall.strategy.keep.title" = "仅停用（保留文件）";
+"uninstall.strategy.backup.title" = "卸载（自动备份）";
+"uninstall.strategy.delete.title" = "永久删除（不可恢复）";
+"uninstall.strategy.dialog.message" = "选择 Popskill 如何处理这个 skill 的文件。Backup 最安全 —— CC Switch 会自动保留一份可恢复的快照。Keep 完全保留文件，只是把所有 app 停用。Delete 不可恢复。";
+
+"agents.search.emptyHint" = "换个关键词试试，可以搜 agent 名称、能力，或触发词。";
+
+"Search Repositories" = "搜索仓库";
+"No Matching Repositories" = "没有匹配的仓库";
+"No Repositories" = "暂无仓库";
+"repositories.search.emptyHint" = "换个关键词试试，可以搜仓库名、所有者或分支名。";
+
+"Add Repository" = "添加仓库";
+"repositories.summary" = "%d 个已启用，共 %d 个";
+"package.row.updatesBadge" = "%d 个更新";
+
+"library.empty.title" = "挑一个能力包看看";
+"library.empty.message" = "在左侧网格里选一张卡片，可以查看版本、来源、应用启用情况，以及卸载选项。";
+"skill.empty.title" = "挑一个 skill 看看";
+"skill.empty.message" = "选一个已安装的 skill，可以查看它的来源、最近活动，并切换在哪些 app 启用。";
+"stub.empty.title" = "挑一个 stub 恢复";
+"stub.empty.message" = "Stub 是原 skill 的可恢复快照。选中后挑一个目标 app，即可把它重新安装回去。";
+
+// S2 新增 — v0.3 三段 sidebar + 8 个 view
+"sidebar.matrix" = "能力 × 工具";
+"sidebar.sources" = "数据源";
+"sidebar.idle" = "闲置";
+"sidebar.insights" = "用量";
+"sidebar.health" = "链接健康";
+"sidebar.section.control" = "操控台";
+"sidebar.section.sources" = "来源";
+"sidebar.section.maintenance" = "维护";
+
+// S3 新增 — 矩阵主视图 + Inspector
+"matrix.subtitle" = "%d 项能力 · %d 个已启用开关";
+"matrix.search.placeholder" = "按名称、触发词或目录过滤";
+"matrix.col.capability" = "能力";
+"matrix.col.source" = "来源";
+
+"matrix.filter.all" = "全部";
+"matrix.filter.updates" = "可更新";
+"matrix.filter.claudeOnly" = "仅 Claude";
+"matrix.filter.codexOnly" = "仅 Codex";
+"matrix.filter.inactive" = "未启用";
+
+"matrix.type.all" = "所有类型";
+"matrix.type.skill" = "Skill";
+"matrix.type.agent" = "Agent";
+"matrix.type.cli" = "CLI";
+"matrix.type.mcp" = "MCP";
+"matrix.type.config" = "配置";
+
+"matrix.row.readOnly" = "只读（暂无逐应用开关）";
+"matrix.inspector.readOnly" = "Agent 仅 Claude Code 可用,暂不支持切换。";
+
+"matrix.group.ungrouped" = "其他";
+
+"matrix.row.updateBadge" = "可更新";
+"matrix.row.noSummary" = "暂无说明";
+"matrix.row.menu.inspect" = "打开 Inspector";
+"matrix.row.menu.openSource" = "查看来源";
+"matrix.row.menu.revealInFinder" = "在 Finder 中显示";
+"matrix.row.menu.help" = "更多操作";
+
+"matrix.empty.title" = "还没有能力";
+"matrix.empty.body" = "从数据源安装第一个 skill,或等 sidecar 初始化完成。";
+"matrix.empty.refresh" = "刷新";
+
+"matrix.inspector.empty.title" = "选个能力看详情";
+"matrix.inspector.empty.body" = "点左边的能力,这里会显示描述、部署链接和来源。";
+"matrix.inspector.close" = "关闭面板";
+
+"matrix.inspector.section.summary" = "简介";
+"matrix.inspector.section.triggers" = "触发场景";
+"matrix.inspector.section.apps" = "应用启用";
+"matrix.inspector.section.deployment" = "位置与链接";
+"matrix.inspector.section.meta" = "元信息";
+
+"matrix.inspector.deployment.ssot" = "真身 (SSOT)";
+"matrix.inspector.deployment.strategy" = "部署策略 · %@";
+"matrix.inspector.deployment.empty" = "暂无部署信息 — 还没跑过链接健康。";
+
+"matrix.inspector.linkStatus.ok" = "正常";
+"matrix.inspector.linkStatus.broken" = "断链";
+"matrix.inspector.linkStatus.inactive" = "未启用";
+"matrix.inspector.linkStatus.na" = "无";
+
+"matrix.inspector.meta.directory" = "目录";
+"matrix.inspector.meta.sourceType" = "来源类型";
+"matrix.inspector.meta.installedAt" = "安装于";
+"matrix.inspector.meta.updatedAt" = "更新于";
+"matrix.inspector.meta.size" = "大小";
+"matrix.inspector.meta.openSource" = "打开来源页";
+
+// S4 新增 — ⌘K Spotlight
+"spotlight.title" = "Spotlight ⌘K";
+"spotlight.placeholder" = "搜索能力、运行操作…";
+"spotlight.clear" = "清空";
+
+"spotlight.section.capabilities" = "能力";
+"spotlight.section.actions" = "操作";
+
+"spotlight.empty.title" = "没有匹配";
+"spotlight.empty.body" = "试试名字、触发词,或按 ↑↓ 挑一条最近更新的能力。";
+
+"spotlight.hint.navigate" = "↑↓ 导航";
+"spotlight.hint.open" = "↩ 打开";
+"spotlight.hint.close" = "esc 关闭";
+
+"spotlight.action.refresh.title" = "刷新数据";
+"spotlight.action.refresh.subtitle" = "重新从 sidecar 拉 skills / 数据源 / agents";
+"spotlight.action.linkHealth.title" = "打开链接健康";
+"spotlight.action.linkHealth.subtitle" = "检查 SSOT 与 symlink 的健康";
+"spotlight.action.updates.title" = "打开更新列表";
+"spotlight.action.updates.subtitle" = "查看待更新的能力";
+"spotlight.action.settings.title" = "打开设置";
+"spotlight.action.settings.subtitle" = "存储 / 同步 / 数据源";
+
+// S5 — Sources
+"sources.subtitle" = "%d / %d 启用中";
+"sources.refresh" = "刷新";
+"sources.add" = "新增数据源";
+"sources.row.branch" = "分支 · %@";
+"sources.row.openGithub" = "在 GitHub 上打开";
+"sources.row.remove" = "移除";
+"sources.empty.title" = "还没有数据源";
+"sources.empty.body" = "添加一个 GitHub catalog 仓库,矩阵就会被填上。npm / brew / 文件夹放到 v0.4。";
+"sources.add.title" = "添加数据源";
+"sources.add.help" = "格式：owner/name 或 owner/name@branch,也支持 GitHub URL。";
+"sources.add.cancel" = "取消";
+"sources.add.submit" = "添加";
+
+// S5 — Updates
+"updates.subtitle" = "%d 项可更新 · %@ 扫描";
+"updates.subtitleNoScan" = "%d 项可更新 · 还没扫描";
+"updates.subtitleScanning" = "%d 项可更新 · 扫描中…";
+"updates.rescan" = "重新扫描";
+"updates.updateAll" = "全部更新";
+"updates.row.firstSync" = "首次拉取可用";
+"updates.row.update" = "更新";
+"updates.empty.title" = "都是最新的";
+"updates.empty.body" = "没有发现上游变更,可以再扫一次。";
+
+// S5 — Backups
+"backups.subtitle" = "%d 个快照";
+"backups.refresh" = "刷新";
+"backups.row.restore" = "恢复";
+"backups.row.delete" = "永久删除";
+"backups.empty.title" = "没有备份";
+"backups.empty.body" = "默认安全卸载会在这里留快照。";
+
+// S5 — Idle
+"idle.subtitle" = "%d 项 · 阈值 %d 天";
+"idle.threshold.30" = "30 天";
+"idle.threshold.60" = "60 天";
+"idle.threshold.90" = "90 天";
+"idle.row.lastSeen" = "%d 天前最后活动";
+"idle.row.neverTouched" = "从未触碰";
+"idle.row.inspect" = "查看";
+"idle.row.stub" = "变 stub";
+"idle.row.uninstall" = "卸载（带备份）";
+"idle.row.action" = "处理";
+"idle.empty.title" = "没有闲置";
+"idle.empty.body" = "已安装的能力最近都被用过或开过开关。";
+
+// S5 — Insights
+"insights.subtitle" = "已安装能力与需要关注事项的快照";
+"insights.metric.totalSkills" = "总能力数";
+"insights.metric.enabledToggles" = "活跃开关数";
+"insights.metric.pendingUpdates" = "待更新";
+"insights.metric.brokenLinks" = "断链";
+"insights.breakdown.title" = "拆分";
+"insights.breakdown.claude" = "Claude Code 覆盖";
+"insights.breakdown.codex" = "Codex 覆盖";
+"insights.breakdown.topSources" = "Top 数据源";
+
+// S9 — Token 用量
+"insights.refresh" = "重新扫描";
+"insights.tokens.title" = "对话 token 用量";
+"insights.tokens.scanFooter" = "%d 个会话 · 扫了 %d 个文件";
+"insights.tokens.input" = "输入";
+"insights.tokens.output" = "输出";
+"insights.tokens.cacheCreation" = "缓存创建";
+"insights.tokens.cacheRead" = "缓存读取";
+"insights.tokens.total" = "总计";
+
+"insights.topSkills.title" = "Top 能力按用量";
+"insights.topSkills.empty" = "本次扫描没找到 skill 归因记录。";
+
+"insights.scan.scanning" = "正在扫描 ~/.claude/projects…";
+"insights.scan.scanningHint" = "在后台读每个 .jsonl 会话文件。";
+"insights.scan.errorTitle" = "读取 transcript 失败";
+"insights.scan.emptyTitle" = "还没有用量数据";
+"insights.scan.emptyBody" = "至少用一次 Claude Code,再重新扫描就能看到 token 用量。";
+
+// S5 — Link Health
+"health.subtitle" = "%d 正常 · %d 断 · %d 未启用";
+"health.subtitleNoScan" = "还没扫描";
+"health.refresh" = "重新扫描";
+"health.summary.ok" = "健康";
+"health.summary.broken" = "断链";
+"health.summary.inactive" = "未启用";
+"health.row.noPath" = "没有 SSOT 路径";
+"health.empty.title" = "跑一次链接健康";
+"health.empty.runScan" = "现在扫描";
+
+// S5 — Settings
+"settings.subtitle" = "存储、同步、数据源、重新引导";
+"settings.storage.title" = "存储";
+"settings.storage.ssot" = "能力根目录 (SSOT)";
+"settings.storage.ssotHint" = "真身文件,各 AI 工具的 skill 目录都软链到这里。";
+"settings.storage.backups" = "Popskill 备份";
+"settings.storage.backupsHint" = "默认安全卸载策略留下的快照。";
+"settings.storage.reveal" = "打开";
+
+"settings.sync.title" = "同步";
+"settings.sync.icloud.title" = "iCloud Drive";
+"settings.sync.icloud.subtitle" = "macOS 原生同步,推荐。";
+"settings.sync.git.title" = "Git 远端";
+"settings.sync.git.subtitle" = "推 / 拉你自己的仓库。";
+"settings.sync.webdav.title" = "WebDAV";
+"settings.sync.webdav.subtitle" = "自托管 / Nextcloud。";
+"settings.sync.none.title" = "不同步";
+"settings.sync.none.subtitle" = "只在本机。";
+"settings.sync.soon" = "稍后";
+"settings.sync.push" = "推送";
+"settings.sync.pull" = "拉取";
+"settings.sync.done" = "已通过 %2$@ %1$@";
+
+"settings.sources.title" = "数据源";
+"settings.sources.summary" = "%d / %d 个数据源已启用";
+"settings.sources.hint" = "管理喂矩阵的 GitHub / npm / 文件夹源。";
+"settings.sources.manage" = "管理…";
+
+"settings.onboarding.title" = "引导";
+"settings.onboarding.body" = "重新跑一遍 5 步引导";
+"settings.onboarding.hint" = "重新检测工具、扫描能力、挑存储 + 同步。";
+"settings.onboarding.openButton" = "打开";
+
+// S6 — 引导
+"onboarding.title" = "欢迎使用 Popskill";
+"onboarding.back" = "上一步";
+"onboarding.next" = "下一步";
+"onboarding.skip" = "跳过";
+"onboarding.finish" = "进入矩阵";
+
+"onboarding.welcome.title" = "一处看齐所有 AI 工具";
+"onboarding.welcome.body" = "Popskill 把每一个 skill / CLI / MCP 与 Claude Code、Codex 摆成矩阵,你一眼看清哪些已接、哪些链断了,还能跨设备同步。";
+"onboarding.welcome.bullet1" = "能力 × 工具矩阵";
+"onboarding.welcome.bullet2" = "SSOT + 链接健康监控";
+"onboarding.welcome.bullet3" = "iCloud / Git 跨设备同步";
+
+"onboarding.detect.title" = "检测已装的 AI 工具";
+"onboarding.detect.subtitle" = "扫描 Claude Code / Codex 的标准路径。";
+"onboarding.detect.placeholderTitle" = "运行扫描以检测已装工具";
+"onboarding.detect.placeholderBody" = "Popskill 会看 ~/.claude / ~/.codex / brew / npm 全局包。";
+"onboarding.detect.found" = "已找到";
+"onboarding.detect.missing" = "缺失";
+"onboarding.detect.empty" = "暂无";
+"onboarding.detect.cliEmpty" = "/opt/homebrew/bin 中没有常见的 AI CLI。";
+"onboarding.detect.npmEmpty" = "没有发现全局 @modelcontextprotocol / mcp- 包。";
+
+"onboarding.scan.title" = "扫描能力";
+"onboarding.scan.subtitle" = "列出 ~/.agents/skills 下已有的能力。";
+"onboarding.scan.placeholderTitle" = "运行扫描以读取能力树";
+"onboarding.scan.placeholderBody" = "sidecar 几秒内读 ~/.agents/skills 与 Popskill SSOT。";
+"onboarding.scan.empty" = "没有能力";
+"onboarding.scan.now" = "现在扫描";
+"onboarding.scan.installed" = "Popskill 已跟踪";
+"onboarding.scan.totalAgents" = "~/.agents 总数";
+"onboarding.scan.agentsRoot" = "能力根目录";
+"onboarding.scan.ssotLabel" = "SSOT 路径";
+
+"onboarding.storage.title" = "存哪里、怎么同步";
+"onboarding.storage.subtitle" = "Popskill 把真身放在 agents skills 根目录,各 AI 工具的 skill 目录都软链到它。";
+"onboarding.storage.ssotLabel" = "SSOT";
+"onboarding.storage.ssotHint" = "真身,单一真源。每个 AI 工具的 skill 目录都软链到这里。";
+"onboarding.storage.providerLabel" = "同步方式";
+"onboarding.storage.recommended" = "推荐";
+
+"onboarding.done.title" = "齐活了";
+"onboarding.done.body" = "去矩阵选一行查看详情,或 ⌘K 一键直达任何地方。";
+"onboarding.done.tip1" = "⌘K 打开命令面板";
+"onboarding.done.tip2" = "链接健康查断链";
+"onboarding.done.tip3" = "更新页看上游变更";
