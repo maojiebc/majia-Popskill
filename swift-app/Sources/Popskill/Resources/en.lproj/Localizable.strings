@@ -377,3 +377,104 @@
 "spotlight.action.updates.subtitle" = "See pending capability updates";
 "spotlight.action.settings.title" = "Open Settings";
 "spotlight.action.settings.subtitle" = "Storage, sync provider, sources";
+
+// S5 — Sources view
+"sources.subtitle" = "%d of %d enabled";
+"sources.refresh" = "Refresh";
+"sources.add" = "Add Source";
+"sources.row.branch" = "Branch · %@";
+"sources.row.openGithub" = "Open on GitHub";
+"sources.row.remove" = "Remove";
+"sources.empty.title" = "No sources yet";
+"sources.empty.body" = "Add a GitHub catalog repo to populate the matrix. npm / brew / folder sources land in v0.4.";
+"sources.add.title" = "Add source";
+"sources.add.help" = "Format: owner/name or owner/name@branch. Accepts GitHub URLs too.";
+"sources.add.cancel" = "Cancel";
+"sources.add.submit" = "Add";
+
+// S5 — Updates view
+"updates.subtitle" = "%d pending · scanned %@";
+"updates.subtitleNoScan" = "%d pending · scan not run yet";
+"updates.rescan" = "Re-scan";
+"updates.updateAll" = "Update all";
+"updates.row.firstSync" = "First sync available";
+"updates.row.update" = "Update";
+"updates.empty.title" = "Everything up to date";
+"updates.empty.body" = "No upstream changes detected. Re-scan to recheck.";
+
+// S5 — Backups view
+"backups.subtitle" = "%d snapshots";
+"backups.refresh" = "Refresh";
+"backups.row.restore" = "Restore";
+"backups.row.delete" = "Delete permanently";
+"backups.empty.title" = "No backups";
+"backups.empty.body" = "Uninstalls with the default safe strategy create a backup here.";
+
+// S5 — Idle view
+"idle.subtitle" = "%d capabilities · threshold %d days";
+"idle.threshold.30" = "30d";
+"idle.threshold.60" = "60d";
+"idle.threshold.90" = "90d";
+"idle.row.lastSeen" = "Last activity %d days ago";
+"idle.row.neverTouched" = "Never touched";
+"idle.row.inspect" = "Inspect";
+"idle.row.stub" = "Turn into stub";
+"idle.row.uninstall" = "Uninstall (backup)";
+"idle.row.action" = "Decide";
+"idle.empty.title" = "Nothing idle";
+"idle.empty.body" = "Every installed capability has been used or toggled recently.";
+
+// S5 — Insights view
+"insights.subtitle" = "Snapshot of what's installed and what needs attention";
+"insights.metric.totalSkills" = "Total skills";
+"insights.metric.enabledToggles" = "Active app toggles";
+"insights.metric.pendingUpdates" = "Pending updates";
+"insights.metric.brokenLinks" = "Broken symlinks";
+"insights.breakdown.title" = "BREAKDOWN";
+"insights.breakdown.claude" = "Claude Code coverage";
+"insights.breakdown.codex" = "Codex coverage";
+"insights.breakdown.topSources" = "Top sources";
+
+// S5 — Link Health view
+"health.subtitle" = "%d OK · %d broken · %d inactive";
+"health.subtitleNoScan" = "Scan hasn't run yet";
+"health.refresh" = "Re-scan";
+"health.summary.ok" = "Healthy";
+"health.summary.broken" = "Broken";
+"health.summary.inactive" = "Inactive";
+"health.row.noPath" = "No SSOT path recorded";
+"health.empty.title" = "Run a link-health scan";
+"health.empty.runScan" = "Scan now";
+
+// S5 — Settings view
+"settings.subtitle" = "Storage, sync, sources, and re-running onboarding";
+"settings.storage.title" = "STORAGE";
+"settings.storage.ssot" = "Skills root (SSOT)";
+"settings.storage.ssotHint" = "The real files; every app's skill dir symlinks here.";
+"settings.storage.backups" = "Popskill backups";
+"settings.storage.backupsHint" = "Snapshots created by the default safe uninstall strategy.";
+"settings.storage.reveal" = "Reveal";
+
+"settings.sync.title" = "SYNC";
+"settings.sync.icloud.title" = "iCloud Drive";
+"settings.sync.icloud.subtitle" = "Native macOS sync. Recommended.";
+"settings.sync.git.title" = "Git remote";
+"settings.sync.git.subtitle" = "Push / pull a repo you control.";
+"settings.sync.webdav.title" = "WebDAV";
+"settings.sync.webdav.subtitle" = "Self-hosted / Nextcloud.";
+"settings.sync.none.title" = "No sync";
+"settings.sync.none.subtitle" = "Local only.";
+"settings.sync.soon" = "SOON";
+"settings.sync.push" = "Push";
+"settings.sync.pull" = "Pull";
+"settings.sync.done" = "%@ via %@ done";
+
+"settings.sources.title" = "SOURCES";
+"settings.sources.summary" = "%d of %d sources enabled";
+"settings.sources.hint" = "Manage GitHub / npm / folder catalogs that feed the matrix.";
+"settings.sources.manage" = "Manage…";
+
+"settings.onboarding.title" = "GUIDED SETUP";
+"settings.onboarding.body" = "Re-run the 5-step onboarding wizard";
+"settings.onboarding.hint" = "Re-detect tools, scan capabilities, choose storage + sync.";
+"settings.onboarding.openButton" = "Open";

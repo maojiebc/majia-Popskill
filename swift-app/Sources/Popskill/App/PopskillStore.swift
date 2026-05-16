@@ -31,6 +31,9 @@ final class PopskillStore {
     var selectedSkillID: String? = nil
     var inspectorOpen: Bool = false
     var spotlightOpen: Bool = false
+    /// Toggled by Settings → "Re-run onboarding" and by the first-launch hook
+    /// in `RootView`. S6 binds the wizard sheet to this flag.
+    var onboardingOpen: Bool = false
 
     // ===== Matrix state =====
     var matrixFilter: MatrixFilter = .all

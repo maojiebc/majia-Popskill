@@ -377,3 +377,104 @@
 "spotlight.action.updates.subtitle" = "查看待更新的能力";
 "spotlight.action.settings.title" = "打开设置";
 "spotlight.action.settings.subtitle" = "存储 / 同步 / 数据源";
+
+// S5 — Sources
+"sources.subtitle" = "%d / %d 启用中";
+"sources.refresh" = "刷新";
+"sources.add" = "新增数据源";
+"sources.row.branch" = "分支 · %@";
+"sources.row.openGithub" = "在 GitHub 上打开";
+"sources.row.remove" = "移除";
+"sources.empty.title" = "还没有数据源";
+"sources.empty.body" = "添加一个 GitHub catalog 仓库,矩阵就会被填上。npm / brew / 文件夹放到 v0.4。";
+"sources.add.title" = "添加数据源";
+"sources.add.help" = "格式：owner/name 或 owner/name@branch,也支持 GitHub URL。";
+"sources.add.cancel" = "取消";
+"sources.add.submit" = "添加";
+
+// S5 — Updates
+"updates.subtitle" = "%d 项可更新 · %@ 扫描";
+"updates.subtitleNoScan" = "%d 项可更新 · 还没扫描";
+"updates.rescan" = "重新扫描";
+"updates.updateAll" = "全部更新";
+"updates.row.firstSync" = "首次拉取可用";
+"updates.row.update" = "更新";
+"updates.empty.title" = "都是最新的";
+"updates.empty.body" = "没有发现上游变更,可以再扫一次。";
+
+// S5 — Backups
+"backups.subtitle" = "%d 个快照";
+"backups.refresh" = "刷新";
+"backups.row.restore" = "恢复";
+"backups.row.delete" = "永久删除";
+"backups.empty.title" = "没有备份";
+"backups.empty.body" = "默认安全卸载会在这里留快照。";
+
+// S5 — Idle
+"idle.subtitle" = "%d 项 · 阈值 %d 天";
+"idle.threshold.30" = "30 天";
+"idle.threshold.60" = "60 天";
+"idle.threshold.90" = "90 天";
+"idle.row.lastSeen" = "%d 天前最后活动";
+"idle.row.neverTouched" = "从未触碰";
+"idle.row.inspect" = "查看";
+"idle.row.stub" = "变 stub";
+"idle.row.uninstall" = "卸载（带备份）";
+"idle.row.action" = "处理";
+"idle.empty.title" = "没有闲置";
+"idle.empty.body" = "已安装的能力最近都被用过或开过开关。";
+
+// S5 — Insights
+"insights.subtitle" = "已安装能力与需要关注事项的快照";
+"insights.metric.totalSkills" = "总能力数";
+"insights.metric.enabledToggles" = "活跃开关数";
+"insights.metric.pendingUpdates" = "待更新";
+"insights.metric.brokenLinks" = "断链";
+"insights.breakdown.title" = "拆分";
+"insights.breakdown.claude" = "Claude Code 覆盖";
+"insights.breakdown.codex" = "Codex 覆盖";
+"insights.breakdown.topSources" = "Top 数据源";
+
+// S5 — Link Health
+"health.subtitle" = "%d 正常 · %d 断 · %d 未启用";
+"health.subtitleNoScan" = "还没扫描";
+"health.refresh" = "重新扫描";
+"health.summary.ok" = "健康";
+"health.summary.broken" = "断链";
+"health.summary.inactive" = "未启用";
+"health.row.noPath" = "没有 SSOT 路径";
+"health.empty.title" = "跑一次链接健康";
+"health.empty.runScan" = "现在扫描";
+
+// S5 — Settings
+"settings.subtitle" = "存储、同步、数据源、重新引导";
+"settings.storage.title" = "存储";
+"settings.storage.ssot" = "能力根目录 (SSOT)";
+"settings.storage.ssotHint" = "真身文件,各 AI 工具的 skill 目录都软链到这里。";
+"settings.storage.backups" = "Popskill 备份";
+"settings.storage.backupsHint" = "默认安全卸载策略留下的快照。";
+"settings.storage.reveal" = "打开";
+
+"settings.sync.title" = "同步";
+"settings.sync.icloud.title" = "iCloud Drive";
+"settings.sync.icloud.subtitle" = "macOS 原生同步,推荐。";
+"settings.sync.git.title" = "Git 远端";
+"settings.sync.git.subtitle" = "推 / 拉你自己的仓库。";
+"settings.sync.webdav.title" = "WebDAV";
+"settings.sync.webdav.subtitle" = "自托管 / Nextcloud。";
+"settings.sync.none.title" = "不同步";
+"settings.sync.none.subtitle" = "只在本机。";
+"settings.sync.soon" = "稍后";
+"settings.sync.push" = "推送";
+"settings.sync.pull" = "拉取";
+"settings.sync.done" = "已通过 %2$@ %1$@";
+
+"settings.sources.title" = "数据源";
+"settings.sources.summary" = "%d / %d 个数据源已启用";
+"settings.sources.hint" = "管理喂矩阵的 GitHub / npm / 文件夹源。";
+"settings.sources.manage" = "管理…";
+
+"settings.onboarding.title" = "引导";
+"settings.onboarding.body" = "重新跑一遍 5 步引导";
+"settings.onboarding.hint" = "重新检测工具、扫描能力、挑存储 + 同步。";
+"settings.onboarding.openButton" = "打开";
