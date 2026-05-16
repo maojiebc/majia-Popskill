@@ -13,35 +13,34 @@ struct SkillGroupingTests {
 
     @Test
     func singleSkillWithRepoProducesOneGroup() {
-        let skill = skill(name: "doc-writer", owner: "anthropics", name2: "skills")
-        let groups = SkillGrouping.group([skill])
+        let cap = capability(name: "doc-writer", owner: "anthropics", name2: "skills")
+        let groups = SkillGrouping.group([cap])
 
         #expect(groups.count == 1)
         #expect(groups.first?.id == "anthropics/skills")
         #expect(groups.first?.label == "anthropics/skills")
         #expect(groups.first?.isUngrouped == false)
-        #expect(groups.first?.skills.count == 1)
+        #expect(groups.first?.capabilities.count == 1)
     }
 
     @Test
     func skillsWithoutRepoFallIntoUngroupedBucket() {
-        let withRepo = skill(name: "alpha", owner: "anthropics", name2: "skills")
-        let standalone = skill(name: "beta", owner: nil, name2: nil)
+        let withRepo = capability(name: "alpha", owner: "anthropics", name2: "skills")
+        let standalone = capability(name: "beta", owner: nil, name2: nil)
 
         let groups = SkillGrouping.group([standalone, withRepo])
 
         #expect(groups.count == 2)
-        // Ungrouped must be last regardless of input order.
         #expect(groups.last?.id == SkillGrouping.ungroupedID)
         #expect(groups.last?.isUngrouped == true)
-        #expect(groups.last?.skills.first?.name == "beta")
+        #expect(groups.last?.capabilities.first?.name == "beta")
     }
 
     @Test
     func bucketSortIsAlphabeticAndStable() {
-        let a = skill(name: "alpha", owner: "zzz", name2: "lib")
-        let b = skill(name: "beta", owner: "aaa", name2: "lib")
-        let c = skill(name: "gamma", owner: "mmm", name2: "lib")
+        let a = capability(name: "alpha", owner: "zzz", name2: "lib")
+        let b = capability(name: "beta", owner: "aaa", name2: "lib")
+        let c = capability(name: "gamma", owner: "mmm", name2: "lib")
 
         let groups = SkillGrouping.group([a, b, c])
 
@@ -50,38 +49,82 @@ struct SkillGroupingTests {
 
     @Test
     func skillsInsideBucketSortByNameCaseInsensitive() {
-        let alpha = skill(name: "Alpha", owner: "anthropics", name2: "skills")
-        let beta = skill(name: "beta", owner: "anthropics", name2: "skills")
-        let charlie = skill(name: "Charlie", owner: "anthropics", name2: "skills")
+        let alpha = capability(name: "Alpha", owner: "anthropics", name2: "skills")
+        let beta = capability(name: "beta", owner: "anthropics", name2: "skills")
+        let charlie = capability(name: "Charlie", owner: "anthropics", name2: "skills")
 
         let group = SkillGrouping.group([charlie, beta, alpha]).first
 
-        #expect(group?.skills.map(\.name) == ["Alpha", "beta", "Charlie"])
+        #expect(group?.capabilities.map(\.name) == ["Alpha", "beta", "Charlie"])
     }
 
     @Test
     func ungroupedAlwaysLastEvenWithManyRepoGroups() {
-        let none = skill(name: "loose", owner: nil, name2: nil)
-        let z = skill(name: "z", owner: "z-org", name2: "lib")
-        let a = skill(name: "a", owner: "a-org", name2: "lib")
+        let none = capability(name: "loose", owner: nil, name2: nil)
+        let z = capability(name: "z", owner: "z-org", name2: "lib")
+        let a = capability(name: "a", owner: "a-org", name2: "lib")
 
         let groups = SkillGrouping.group([none, z, a])
         #expect(groups.map(\.id) == ["a-org/lib", "z-org/lib", SkillGrouping.ungroupedID])
     }
 
-    private func skill(name: String, owner: String?, name2: String?) -> Skill {
-        Skill(
-            id: "test/\(name)",
+    // MARK: kind-section tests (v0.4 matrix extension)
+
+    @Test
+    func sectionsBucketByKindAndSkipEmptyKinds() {
+        let skillCap = capability(name: "alpha", kind: .skill, owner: "a", name2: "lib")
+        let agentCap = capability(name: "agent-one", kind: .agent, owner: nil, name2: nil)
+
+        let sections = SkillGrouping.sections([skillCap, agentCap])
+
+        #expect(sections.count == 2)
+        #expect(sections.map(\.kind) == [.skill, .agent])
+        #expect(sections.first?.totalCount == 1)
+    }
+
+    @Test
+    func sectionsRespectCanonicalKindOrder() {
+        // CapabilityKind.allCases is the canonical order — even with inputs
+        // interleaved, sections come out in skill/agent/cli/mcp/config order.
+        let agentCap = capability(name: "z", kind: .agent, owner: nil, name2: nil)
+        let skillCap = capability(name: "y", kind: .skill, owner: "a", name2: "lib")
+
+        let sections = SkillGrouping.sections([agentCap, skillCap])
+
+        #expect(sections.map(\.kind) == [.skill, .agent])
+    }
+
+    @Test
+    func sectionsAreEmptyForEmptyInput() {
+        #expect(SkillGrouping.sections([]).isEmpty)
+    }
+
+    // MARK: helpers
+
+    private func capability(
+        name: String,
+        kind: CapabilityKind = .skill,
+        owner: String?,
+        name2: String?
+    ) -> MatrixCapability {
+        MatrixCapability(
+            id: "test:\(name)",
+            kind: kind,
             name: name,
-            description: "",
-            directory: name,
+            summary: nil,
+            sourceLabel: owner.flatMap { o in name2.map { n in "\(o)/\(n)" } } ?? name,
+            sourceType: nil,
             repoOwner: owner,
             repoName: name2,
-            readmeUrl: nil,
             apps: SkillApps(claude: false, codex: false, gemini: false, opencode: false, hermes: false),
+            deployment: nil,
+            directory: name,
             installedAt: nil,
             updatedAt: nil,
-            contentHash: nil
+            sizeBytes: nil,
+            triggerScenarios: nil,
+            underlyingSkillID: kind == .skill ? name : nil,
+            underlyingAgentID: kind == .agent ? name : nil
         )
     }
 }

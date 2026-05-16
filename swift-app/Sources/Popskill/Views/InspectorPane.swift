@@ -1,17 +1,13 @@
 import SwiftUI
 
-/// Right-pane inspector for the matrix. Sections (in order):
-///   1. Header: avatar + name + close.
-///   2. 描述 / 触发场景 — taken from sidecar `capabilitySummary` /
-///      `triggerScenarios`. If both empty, we fall back to `description`.
-///   3. 应用启用状态 — Claude / Codex toggle row.
-///   4. 位置与链接 — SSOT 真身 + 每个 app 的 symlink 状态。This is the
-///      headline diff vs. the v0.1 LibraryView; it surfaces deployment health
-///      without needing a separate trip to the Link Health page.
-///   5. 来源 / 元信息 — repo, sourceType, installedAt, sizeBytes.
+/// Right-pane inspector for the matrix. Renders a single
+/// `MatrixCapability` — skill / agent / cli / mcp / config. Skill rows show
+/// the full set of sections (summary / triggers / apps / deployment /
+/// metadata); other kinds gracefully omit the irrelevant pieces (an agent
+/// has no SSOT symlink to chart, a CLI has no per-app toggle).
 struct InspectorPane: View {
     @Bindable var store: PopskillStore
-    let skill: Skill
+    let capability: MatrixCapability
     @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
@@ -21,11 +17,13 @@ struct InspectorPane: View {
                 if !primaryDescription.isEmpty {
                     summarySection
                 }
-                if let scenarios = skill.triggerScenarios, !scenarios.isEmpty {
+                if let scenarios = capability.triggerScenarios, !scenarios.isEmpty {
                     triggerSection(scenarios: scenarios)
                 }
                 appsSection
-                deploymentSection
+                if capability.kind == .skill {
+                    deploymentSection
+                }
                 metadataSection
             }
             .padding(.horizontal, 18)
@@ -38,13 +36,18 @@ struct InspectorPane: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 10) {
-            InitialAvatarView(name: skill.name, identifier: skill.id)
+            InitialAvatarView(name: capability.name, identifier: capability.id)
             VStack(alignment: .leading, spacing: 2) {
-                Text(skill.name)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(Color.popLabel)
-                    .lineLimit(2)
-                Text(skill.sourceLabel)
+                HStack(spacing: 6) {
+                    Text(capability.name)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(Color.popLabel)
+                        .lineLimit(2)
+                    if capability.kind != .skill {
+                        kindChip
+                    }
+                }
+                Text(capability.sourceLabel)
                     .font(.caption)
                     .foregroundStyle(Color.popSecondaryLabel)
                     .lineLimit(1)
@@ -64,14 +67,23 @@ struct InspectorPane: View {
         }
     }
 
+    private var kindChip: some View {
+        HStack(spacing: 3) {
+            Image(systemName: capability.kind.symbol)
+                .font(.system(size: 9, weight: .semibold))
+            Text(localization.string(capability.kind.titleKey).uppercased())
+                .font(.system(size: 9.5, weight: .bold))
+        }
+        .foregroundStyle(Color.accentColor)
+        .padding(.horizontal, 5)
+        .padding(.vertical, 1.5)
+        .background(Color.accentColor.opacity(0.12), in: Capsule())
+    }
+
     // MARK: Sections
 
     private var primaryDescription: String {
-        if let summary = skill.capabilitySummary?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !summary.isEmpty {
-            return summary
-        }
-        return skill.description
+        capability.summary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
     private var summarySection: some View {
@@ -110,13 +122,19 @@ struct InspectorPane: View {
                 appToggleButton(.codex)
                 Spacer()
             }
+            if !capability.isToggleable {
+                Text(localization.string("matrix.inspector.readOnly"))
+                    .font(.caption2)
+                    .foregroundStyle(Color.popTertiaryLabel)
+            }
         }
     }
 
     private func appToggleButton(_ app: TargetApp) -> some View {
-        let isOn = skill.apps.isEnabled(app)
+        let isOn = capability.apps.isEnabled(app)
         let pending = store.pendingToggles.contains(toggleKey(app))
         return Button {
+            guard capability.isToggleable else { return }
             Task { await toggle(app: app, enabled: !isOn) }
         } label: {
             HStack(spacing: 8) {
@@ -138,13 +156,13 @@ struct InspectorPane: View {
             )
         }
         .buttonStyle(.plain)
-        .disabled(pending)
+        .disabled(pending || !capability.isToggleable)
     }
 
     private var deploymentSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeading(title: "matrix.inspector.section.deployment")
-            if let deployment = skill.deployment {
+            if let deployment = capability.deployment {
                 VStack(alignment: .leading, spacing: 6) {
                     deploymentRow(
                         title: localization.string("matrix.inspector.deployment.ssot"),
@@ -175,8 +193,6 @@ struct InspectorPane: View {
     }
 
     private func sortedAppLinks(_ links: [String: AppLinkStatus]) -> [(key: String, value: AppLinkStatus)] {
-        // Stable, claude-first ordering so the inspector doesn't shuffle on
-        // every refresh just because the sidecar swapped key order.
         let priority: [String: Int] = ["claude": 0, "codex": 1]
         return links.sorted { lhs, rhs in
             let l = priority[lhs.key] ?? 99
@@ -203,7 +219,7 @@ struct InspectorPane: View {
                 Text(title)
                     .font(.caption.weight(.medium))
                     .foregroundStyle(Color.popLabel)
-                Text(path.isEmpty ? "—" : path)
+                Text(path.isEmpty ? "—" : (path as NSString).abbreviatingWithTildeInPath)
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(Color.popSecondaryLabel)
                     .lineLimit(2)
@@ -241,21 +257,21 @@ struct InspectorPane: View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeading(title: "matrix.inspector.section.meta")
             VStack(alignment: .leading, spacing: 6) {
-                metaRow(label: localization.string("matrix.inspector.meta.directory"), value: skill.directory)
-                if let source = skill.sourceType, !source.isEmpty {
+                metaRow(label: localization.string("matrix.inspector.meta.directory"), value: capability.directory)
+                if let source = capability.sourceType, !source.isEmpty {
                     metaRow(label: localization.string("matrix.inspector.meta.sourceType"), value: source)
                 }
-                if let installedAt = skill.installedAt, installedAt > 0 {
+                if let installedAt = capability.installedAt, installedAt > 0 {
                     metaRow(label: localization.string("matrix.inspector.meta.installedAt"), value: Self.formatTimestamp(installedAt))
                 }
-                if let updatedAt = skill.updatedAt, updatedAt > 0 {
+                if let updatedAt = capability.updatedAt, updatedAt > 0 {
                     metaRow(label: localization.string("matrix.inspector.meta.updatedAt"), value: Self.formatTimestamp(updatedAt))
                 }
-                if let size = skill.sizeBytes, size > 0 {
+                if let size = capability.sizeBytes, size > 0 {
                     metaRow(label: localization.string("matrix.inspector.meta.size"), value: Self.formatBytes(size))
                 }
             }
-            if let url = skill.sourceURL {
+            if let url = capability.sourceURL {
                 Link(destination: url) {
                     Label(localization.string("matrix.inspector.meta.openSource"), systemImage: "arrow.up.right.square")
                         .font(.caption)
@@ -294,18 +310,19 @@ struct InspectorPane: View {
 
     // MARK: Toggle helpers
 
-    private func toggleKey(_ app: TargetApp) -> String { "\(skill.id)|\(app.rawValue)" }
+    private func toggleKey(_ app: TargetApp) -> String { "\(capability.id)|\(app.rawValue)" }
 
     @MainActor
     private func toggle(app: TargetApp, enabled: Bool) async {
+        guard let skillID = capability.underlyingSkillID else { return }
         let key = toggleKey(app)
         guard !store.pendingToggles.contains(key) else { return }
         store.pendingToggles.insert(key)
         defer { store.pendingToggles.remove(key) }
 
         do {
-            try await store.client.toggle(skillID: skill.id, app: app, enabled: enabled)
-            if let idx = store.skills.firstIndex(where: { $0.id == skill.id }) {
+            try await store.client.toggle(skillID: skillID, app: app, enabled: enabled)
+            if let idx = store.skills.firstIndex(where: { $0.id == skillID }) {
                 store.skills[idx].apps.setEnabled(enabled, for: app)
             }
         } catch {

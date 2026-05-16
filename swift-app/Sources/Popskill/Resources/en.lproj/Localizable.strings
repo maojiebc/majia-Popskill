@@ -315,6 +315,10 @@
 "matrix.type.agent" = "Agent";
 "matrix.type.cli" = "CLI";
 "matrix.type.mcp" = "MCP";
+"matrix.type.config" = "Config";
+
+"matrix.row.readOnly" = "Read-only (no per-app toggle yet)";
+"matrix.inspector.readOnly" = "Agents are Claude Code only — toggle not supported yet.";
 
 "matrix.group.ungrouped" = "Other";
 

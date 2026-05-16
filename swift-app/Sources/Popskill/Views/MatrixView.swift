@@ -21,8 +21,8 @@ struct MatrixView: View {
         .popPageBackground()
         .inspector(isPresented: $store.inspectorOpen) {
             if let id = store.selectedSkillID,
-               let skill = store.skills.first(where: { $0.id == id }) {
-                InspectorPane(store: store, skill: skill)
+               let capability = store.capabilities.first(where: { $0.id == id }) {
+                InspectorPane(store: store, capability: capability)
                     .inspectorColumnWidth(min: 300, ideal: 340, max: 480)
             } else {
                 emptyInspector
@@ -55,7 +55,7 @@ struct MatrixView: View {
     }
 
     private var subtitle: String {
-        let count = store.skills.count
+        let count = store.capabilities.count
         let active = store.enabledSkillCount
         return localization.string("matrix.subtitle", count, active)
     }
@@ -142,13 +142,18 @@ struct MatrixView: View {
                 Section {
                     matrixColumnHeader
                 }
-                ForEach(filteredGroups) { group in
-                    Section {
-                        MatrixGroupHeader(group: group, store: store)
-                        if !store.collapsedGroups.contains(group.id) {
-                            ForEach(group.skills, id: \.id) { skill in
-                                MatrixRow(skill: skill, store: store)
-                                Divider().opacity(0.4)
+                ForEach(filteredSections) { section in
+                    if filteredSections.count > 1 {
+                        kindSectionHeader(section)
+                    }
+                    ForEach(section.groups) { group in
+                        Section {
+                            MatrixGroupHeader(group: group, store: store)
+                            if !store.collapsedGroups.contains(group.id) {
+                                ForEach(group.capabilities, id: \.id) { capability in
+                                    MatrixRow(capability: capability, store: store)
+                                    Divider().opacity(0.4)
+                                }
                             }
                         }
                     }
@@ -164,6 +169,29 @@ struct MatrixView: View {
         )
         .padding(.horizontal, 16)
         .padding(.bottom, 16)
+    }
+
+    /// Big-band header that separates capability kinds in the matrix when
+    /// more than one kind is currently visible. Hidden in single-kind views
+    /// (e.g. when the user clicks the "Skill" type chip) to avoid noise.
+    private func kindSectionHeader(_ section: CapabilitySection) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: section.kind.symbol)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+            LocalizedText(section.kind.titleKey)
+                .font(.system(size: 11, weight: .bold))
+                .textCase(.uppercase)
+                .tracking(0.8)
+                .foregroundStyle(Color.accentColor)
+            Text("\(section.totalCount)")
+                .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                .foregroundStyle(Color.popSecondaryLabel)
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 6)
+        .background(Color.accentColor.opacity(0.06))
     }
 
     private var matrixColumnHeader: some View {
@@ -211,18 +239,17 @@ struct MatrixView: View {
 
     // MARK: Filtering & grouping
 
-    private var filteredGroups: [MatrixGroup] {
+    private var filteredSections: [CapabilitySection] {
         let q = store.trimmedSearch.lowercased()
-        let visible = store.skills.filter { skill in
-            store.matrixFilter.includes(skill: skill, store: store)
-                && store.matrixTypeFilter.includes(skill: skill)
+        let visible = store.capabilities.filter { capability in
+            store.matrixFilter.includes(capability: capability, store: store)
+                && store.matrixTypeFilter.includes(capability: capability)
                 && (q.isEmpty
-                    || skill.name.lowercased().contains(q)
-                    || skill.description.lowercased().contains(q)
-                    || (skill.capabilitySummary ?? "").lowercased().contains(q)
-                    || skill.directory.lowercased().contains(q))
+                    || capability.name.lowercased().contains(q)
+                    || (capability.summary ?? "").lowercased().contains(q)
+                    || capability.directory.lowercased().contains(q))
         }
-        return SkillGrouping.group(visible)
+        return SkillGrouping.sections(visible)
     }
 
     private var emptyState: some View {
@@ -280,18 +307,19 @@ enum MatrixFilter: String, CaseIterable, Identifiable {
     }
 
     @MainActor
-    func includes(skill: Skill, store: PopskillStore) -> Bool {
+    func includes(capability: MatrixCapability, store: PopskillStore) -> Bool {
         switch self {
         case .all:
             return true
         case .updates:
-            return store.updates.contains { $0.id == skill.id }
+            guard let skillID = capability.underlyingSkillID else { return false }
+            return store.updates.contains { $0.id == skillID }
         case .claudeOnly:
-            return skill.apps.claude && !skill.apps.codex
+            return capability.apps.claude && !capability.apps.codex
         case .codexOnly:
-            return skill.apps.codex && !skill.apps.claude
+            return capability.apps.codex && !capability.apps.claude
         case .inactive:
-            return !skill.apps.claude && !skill.apps.codex
+            return !capability.apps.claude && !capability.apps.codex
         }
     }
 }
@@ -315,17 +343,13 @@ enum MatrixTypeFilter: String, CaseIterable, Identifiable {
         }
     }
 
-    func includes(skill: Skill) -> Bool {
-        // v0.3: every InstalledSkill is a "skill"; CLI / MCP / agent are
-        // surfaced via Sources / Agents views and will get full matrix rows
-        // when the sidecar contract is extended. For now, only allTypes and
-        // skill ever return true.
+    func includes(capability: MatrixCapability) -> Bool {
         switch self {
         case .allTypes: return true
-        case .skill:    return true
-        case .agent:    return false
-        case .cli:      return false
-        case .mcp:      return false
+        case .skill:    return capability.kind == .skill
+        case .agent:    return capability.kind == .agent
+        case .cli:      return capability.kind == .cli
+        case .mcp:      return capability.kind == .mcp
         }
     }
 }

@@ -1,19 +1,23 @@
 import SwiftUI
 
-/// One skill row inside the matrix. Layout mirrors `matrixColumnHeader` in
-/// `MatrixView.swift`: capability column (flexible), Claude toggle (100pt),
-/// Codex toggle (100pt), source label (220pt), action menu (56pt).
+/// One capability row inside the matrix. Layout mirrors `matrixColumnHeader`
+/// in `MatrixView.swift`: capability column (flexible), Claude toggle
+/// (100pt), Codex toggle (100pt), source label (220pt), action menu (56pt).
+/// Renders Skill / Agent / CLI / MCP / Config via the unified
+/// `MatrixCapability` model; non-toggleable kinds (anything but skill) show
+/// a read-only "on" icon instead of the interactive switch.
 struct MatrixRow: View {
-    let skill: Skill
+    let capability: MatrixCapability
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization
 
     private var isSelected: Bool {
-        store.selectedSkillID == skill.id
+        store.selectedSkillID == capability.id
     }
 
     private var hasUpdate: Bool {
-        store.updates.contains { $0.id == skill.id }
+        guard let skillID = capability.underlyingSkillID else { return false }
+        return store.updates.contains { $0.id == skillID }
     }
 
     var body: some View {
@@ -37,10 +41,10 @@ struct MatrixRow: View {
         .contentShape(Rectangle())
         .background(rowBackground)
         .onTapGesture {
-            store.selectSkill(skill.id)
+            store.selectSkill(capability.id)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(skill.name))
+        .accessibilityLabel(Text(capability.name))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
@@ -48,14 +52,15 @@ struct MatrixRow: View {
 
     private var capabilityCell: some View {
         HStack(alignment: .center, spacing: 10) {
-            InitialAvatarView(name: skill.name, identifier: skill.id)
+            InitialAvatarView(name: capability.name, identifier: capability.id)
                 .frame(width: 28, height: 28)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
-                    Text(skill.name)
+                    Text(capability.name)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.popLabel)
                         .lineLimit(1)
+                    kindBadge
                     if hasUpdate {
                         Text(localization.string("matrix.row.updateBadge"))
                             .font(.system(size: 9.5, weight: .semibold))
@@ -65,7 +70,7 @@ struct MatrixRow: View {
                             .foregroundStyle(Color.accentColor)
                     }
                 }
-                Text(capabilitySummary)
+                Text(summary)
                     .font(.system(size: 11.5))
                     .foregroundStyle(Color.popSecondaryLabel)
                     .lineLimit(1)
@@ -73,40 +78,83 @@ struct MatrixRow: View {
         }
     }
 
-    private var capabilitySummary: String {
-        if let summary = skill.capabilitySummary, !summary.isEmpty { return summary }
-        if !skill.description.isEmpty { return skill.description }
+    /// Small chip next to the row name when the row isn't a Skill. Skill rows
+    /// stay un-badged because they're the matrix default and the chip would
+    /// just add noise.
+    @ViewBuilder
+    private var kindBadge: some View {
+        if capability.kind != .skill {
+            HStack(spacing: 2) {
+                Image(systemName: capability.kind.symbol)
+                    .font(.system(size: 8, weight: .semibold))
+                Text(localization.string(capability.kind.titleKey).uppercased())
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .foregroundStyle(Color.popSecondaryLabel)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1)
+            .background(Color.black.opacity(0.06), in: Capsule())
+        }
+    }
+
+    private var summary: String {
+        if let summary = capability.summary, !summary.isEmpty { return summary }
         return localization.string("matrix.row.noSummary")
     }
 
+    @ViewBuilder
     private func appToggleCell(for app: TargetApp) -> some View {
         HStack {
             Spacer(minLength: 0)
-            AppToggle(
-                app: app,
-                isOn: skill.apps.isEnabled(app),
-                isPending: store.pendingToggles.contains(toggleKey(app)),
-                onChange: { newValue in
-                    Task { await toggle(app: app, enabled: newValue) }
-                },
-                size: 26
-            )
+            if capability.isToggleable {
+                AppToggle(
+                    app: app,
+                    isOn: capability.apps.isEnabled(app),
+                    isPending: store.pendingToggles.contains(toggleKey(app)),
+                    onChange: { newValue in
+                        Task { await toggle(app: app, enabled: newValue) }
+                    },
+                    size: 26
+                )
+            } else {
+                readOnlyAppBadge(app: app, isOn: capability.apps.isEnabled(app))
+            }
             Spacer(minLength: 0)
         }
     }
 
-    private func toggleKey(_ app: TargetApp) -> String { "\(skill.id)|\(app.rawValue)" }
+    /// Non-skill capabilities (agents in v0.4) can't be toggled per-app yet.
+    /// Render a flat icon that conveys "this lives on Claude" without the
+    /// affordance of a button. Codex column shows a muted dash.
+    private func readOnlyAppBadge(app: TargetApp, isOn: Bool) -> some View {
+        Group {
+            if isOn {
+                Image(systemName: app.symbolName)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.popSecondaryLabel)
+            } else {
+                Text("—")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(Color.popTertiaryLabel)
+            }
+        }
+        .frame(width: 26, height: 26)
+        .help(localization.string("matrix.row.readOnly"))
+    }
+
+    private func toggleKey(_ app: TargetApp) -> String { "\(capability.id)|\(app.rawValue)" }
 
     @MainActor
     private func toggle(app: TargetApp, enabled: Bool) async {
+        guard let skillID = capability.underlyingSkillID else { return }
         let key = toggleKey(app)
         guard !store.pendingToggles.contains(key) else { return }
         store.pendingToggles.insert(key)
         defer { store.pendingToggles.remove(key) }
 
         do {
-            try await store.client.toggle(skillID: skill.id, app: app, enabled: enabled)
-            if let idx = store.skills.firstIndex(where: { $0.id == skill.id }) {
+            try await store.client.toggle(skillID: skillID, app: app, enabled: enabled)
+            if let idx = store.skills.firstIndex(where: { $0.id == skillID }) {
                 store.skills[idx].apps.setEnabled(enabled, for: app)
             }
         } catch {
@@ -119,7 +167,7 @@ struct MatrixRow: View {
             Image(systemName: sourceSymbol)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Color.popSecondaryLabel)
-            Text(skill.sourceLabel)
+            Text(capability.sourceLabel)
                 .font(.system(size: 11.5))
                 .foregroundStyle(Color.popSecondaryLabel)
                 .lineLimit(1)
@@ -128,7 +176,7 @@ struct MatrixRow: View {
     }
 
     private var sourceSymbol: String {
-        switch (skill.sourceType ?? "").lowercased() {
+        switch (capability.sourceType ?? "").lowercased() {
         case "github": return "chevron.left.forwardslash.chevron.right"
         case "npm": return "shippingbox"
         case "brew": return "mug"
@@ -138,6 +186,7 @@ struct MatrixRow: View {
         case "zip": return "doc.zipper"
         case "url": return "link"
         case "md": return "doc.text"
+        case "agent": return "person.crop.square"
         default: return "circle.grid.2x2"
         }
     }
@@ -145,16 +194,18 @@ struct MatrixRow: View {
     private var actionCell: some View {
         Menu {
             Button {
-                store.selectSkill(skill.id)
+                store.selectSkill(capability.id)
             } label: {
                 Label(localization.string("matrix.row.menu.inspect"), systemImage: "sidebar.right")
             }
-            if let url = skill.sourceURL {
+            if let url = capability.sourceURL {
                 Link(destination: url) {
                     Label(localization.string("matrix.row.menu.openSource"), systemImage: "arrow.up.right.square")
                 }
             }
-            if FileManager.default.fileExists(atPath: skill.localStoreURL.path) {
+            if let skillID = capability.underlyingSkillID,
+               let skill = store.skills.first(where: { $0.id == skillID }),
+               FileManager.default.fileExists(atPath: skill.localStoreURL.path) {
                 Button {
                     NSWorkspace.shared.activateFileViewerSelecting([skill.localStoreURL])
                 } label: {
@@ -185,8 +236,10 @@ struct MatrixRow: View {
 }
 
 /// Sticky header above each repo bucket. Clicking the chevron collapses /
-/// expands the bucket. The right side shows aggregate "%d enabled on Claude /
-/// Codex" so users can see coverage without scanning every row.
+/// expands the bucket. The right side shows aggregate "%d enabled on Claude
+/// / Codex" so users can see coverage without scanning every row. v0.4
+/// renders the same header for any capability kind — the kind-level banner
+/// in MatrixView provides the kind context.
 struct MatrixGroupHeader: View {
     let group: MatrixGroup
     @Bindable var store: PopskillStore
@@ -196,8 +249,8 @@ struct MatrixGroupHeader: View {
         store.collapsedGroups.contains(group.id)
     }
 
-    private var claudeOn: Int { group.skills.filter { $0.apps.claude }.count }
-    private var codexOn: Int { group.skills.filter { $0.apps.codex }.count }
+    private var claudeOn: Int { group.capabilities.filter { $0.apps.claude }.count }
+    private var codexOn: Int { group.capabilities.filter { $0.apps.codex }.count }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -217,7 +270,7 @@ struct MatrixGroupHeader: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
 
-            Text("\(group.skills.count)")
+            Text("\(group.capabilities.count)")
                 .font(.system(size: 10.5, weight: .semibold).monospacedDigit())
                 .foregroundStyle(Color.popSecondaryLabel)
                 .padding(.horizontal, 5)
@@ -226,8 +279,8 @@ struct MatrixGroupHeader: View {
 
             Spacer(minLength: 8)
 
-            coverageChip(symbol: "sparkles", label: "Claude", enabled: claudeOn, total: group.skills.count)
-            coverageChip(symbol: "chevron.left.forwardslash.chevron.right", label: "Codex", enabled: codexOn, total: group.skills.count)
+            coverageChip(symbol: "sparkles", label: "Claude", enabled: claudeOn, total: group.capabilities.count)
+            coverageChip(symbol: "chevron.left.forwardslash.chevron.right", label: "Codex", enabled: codexOn, total: group.capabilities.count)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 7)

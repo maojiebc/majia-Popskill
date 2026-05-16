@@ -315,6 +315,10 @@
 "matrix.type.agent" = "Agent";
 "matrix.type.cli" = "CLI";
 "matrix.type.mcp" = "MCP";
+"matrix.type.config" = "配置";
+
+"matrix.row.readOnly" = "只读（暂无逐应用开关）";
+"matrix.inspector.readOnly" = "Agent 仅 Claude Code 可用,暂不支持切换。";
 
 "matrix.group.ungrouped" = "其他";
 

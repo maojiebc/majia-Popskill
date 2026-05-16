@@ -106,6 +106,15 @@ final class PopskillStore {
         }
     }
 
+    /// Unified capability list the matrix renders against. Recomputed every
+    /// access — cheap, since `skills` / `localAgents` are pure value arrays
+    /// and `MatrixCapability.fromX` is just a struct re-pack. Kept derived
+    /// rather than stored so toggle / install / uninstall actions only need
+    /// to mutate `skills` / `localAgents` and the matrix follows.
+    var capabilities: [MatrixCapability] {
+        skills.map(MatrixCapability.fromSkill) + localAgents.map(MatrixCapability.fromAgent)
+    }
+
     var pendingUpdateCount: Int { updates.count }
     var brokenLinkCount: Int { linkHealth?.summary.broken ?? 0 }
     var okLinkCount: Int { linkHealth?.summary.ok ?? 0 }
