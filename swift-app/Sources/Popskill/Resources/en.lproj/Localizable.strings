@@ -478,3 +478,50 @@
 "settings.onboarding.body" = "Re-run the 5-step onboarding wizard";
 "settings.onboarding.hint" = "Re-detect tools, scan capabilities, choose storage + sync.";
 "settings.onboarding.openButton" = "Open";
+
+// S6 — Onboarding wizard
+"onboarding.title" = "Welcome to Popskill";
+"onboarding.back" = "Back";
+"onboarding.next" = "Next";
+"onboarding.skip" = "Skip";
+"onboarding.finish" = "Open matrix";
+
+"onboarding.welcome.title" = "One control surface for your AI tools";
+"onboarding.welcome.body" = "Popskill lines up every skill, CLI, and MCP against Claude Code and Codex so you can see what's wired, fix broken links, and sync across machines.";
+"onboarding.welcome.bullet1" = "Matrix of capabilities × tools";
+"onboarding.welcome.bullet2" = "SSOT + symlink health monitor";
+"onboarding.welcome.bullet3" = "iCloud / Git sync across Macs";
+
+"onboarding.detect.title" = "Detect your AI tools";
+"onboarding.detect.subtitle" = "We scan the standard paths for Claude Code and Codex.";
+"onboarding.detect.placeholderTitle" = "Run the scan to detect installed tools";
+"onboarding.detect.placeholderBody" = "Popskill will look at ~/.claude, ~/.codex, brew, and npm globals.";
+"onboarding.detect.found" = "FOUND";
+"onboarding.detect.missing" = "MISSING";
+"onboarding.detect.empty" = "Not yet";
+"onboarding.detect.cliEmpty" = "No common AI CLIs found in /opt/homebrew/bin.";
+"onboarding.detect.npmEmpty" = "No global @modelcontextprotocol / mcp- packages found.";
+
+"onboarding.scan.title" = "Scan capabilities";
+"onboarding.scan.subtitle" = "We list capabilities already present in ~/.agents/skills.";
+"onboarding.scan.placeholderTitle" = "Run the scan to read your capability tree";
+"onboarding.scan.placeholderBody" = "Sidecar reads ~/.agents/skills and Popskill's SSOT in seconds.";
+"onboarding.scan.empty" = "No capabilities";
+"onboarding.scan.now" = "Run scan";
+"onboarding.scan.installed" = "Tracked by Popskill";
+"onboarding.scan.totalAgents" = "Total in ~/.agents";
+"onboarding.scan.agentsRoot" = "Skills root";
+"onboarding.scan.ssotLabel" = "SSOT path";
+
+"onboarding.storage.title" = "Where to store and how to sync";
+"onboarding.storage.subtitle" = "Popskill keeps the real files at the standard agents skills root and symlinks them into each app.";
+"onboarding.storage.ssotLabel" = "SSOT";
+"onboarding.storage.ssotHint" = "The real, single source of truth. Each AI tool's skill folder symlinks here.";
+"onboarding.storage.providerLabel" = "Sync provider";
+"onboarding.storage.recommended" = "RECOMMENDED";
+
+"onboarding.done.title" = "You're set";
+"onboarding.done.body" = "Pick a row in the matrix to inspect, or hit ⌘K to jump anywhere.";
+"onboarding.done.tip1" = "⌘K opens the command palette";
+"onboarding.done.tip2" = "Link Health view shows broken symlinks";
+"onboarding.done.tip3" = "Updates view flags upstream changes";

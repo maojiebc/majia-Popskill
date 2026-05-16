@@ -35,6 +35,15 @@ struct RootView: View {
         .animation(.easeOut(duration: 0.14), value: store.spotlightOpen)
         .task {
             await store.bootstrap()
+            // First launch hook: open wizard if the user has never finished
+            // onboarding AND the bootstrap shows an empty world. Avoids
+            // re-prompting when a user already has the matrix populated.
+            if !OnboardingState.hasFinished() && store.skills.isEmpty {
+                store.onboardingOpen = true
+            }
+        }
+        .sheet(isPresented: $store.onboardingOpen) {
+            OnboardingWizardView(store: store)
         }
         .frame(minWidth: 1180, minHeight: 720)
     }

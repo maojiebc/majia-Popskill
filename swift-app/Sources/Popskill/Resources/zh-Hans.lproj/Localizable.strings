@@ -478,3 +478,50 @@
 "settings.onboarding.body" = "重新跑一遍 5 步引导";
 "settings.onboarding.hint" = "重新检测工具、扫描能力、挑存储 + 同步。";
 "settings.onboarding.openButton" = "打开";
+
+// S6 — 引导
+"onboarding.title" = "欢迎使用 Popskill";
+"onboarding.back" = "上一步";
+"onboarding.next" = "下一步";
+"onboarding.skip" = "跳过";
+"onboarding.finish" = "进入矩阵";
+
+"onboarding.welcome.title" = "一处看齐所有 AI 工具";
+"onboarding.welcome.body" = "Popskill 把每一个 skill / CLI / MCP 与 Claude Code、Codex 摆成矩阵,你一眼看清哪些已接、哪些链断了,还能跨设备同步。";
+"onboarding.welcome.bullet1" = "能力 × 工具矩阵";
+"onboarding.welcome.bullet2" = "SSOT + 链接健康监控";
+"onboarding.welcome.bullet3" = "iCloud / Git 跨设备同步";
+
+"onboarding.detect.title" = "检测已装的 AI 工具";
+"onboarding.detect.subtitle" = "扫描 Claude Code / Codex 的标准路径。";
+"onboarding.detect.placeholderTitle" = "运行扫描以检测已装工具";
+"onboarding.detect.placeholderBody" = "Popskill 会看 ~/.claude / ~/.codex / brew / npm 全局包。";
+"onboarding.detect.found" = "已找到";
+"onboarding.detect.missing" = "缺失";
+"onboarding.detect.empty" = "暂无";
+"onboarding.detect.cliEmpty" = "/opt/homebrew/bin 中没有常见的 AI CLI。";
+"onboarding.detect.npmEmpty" = "没有发现全局 @modelcontextprotocol / mcp- 包。";
+
+"onboarding.scan.title" = "扫描能力";
+"onboarding.scan.subtitle" = "列出 ~/.agents/skills 下已有的能力。";
+"onboarding.scan.placeholderTitle" = "运行扫描以读取能力树";
+"onboarding.scan.placeholderBody" = "sidecar 几秒内读 ~/.agents/skills 与 Popskill SSOT。";
+"onboarding.scan.empty" = "没有能力";
+"onboarding.scan.now" = "现在扫描";
+"onboarding.scan.installed" = "Popskill 已跟踪";
+"onboarding.scan.totalAgents" = "~/.agents 总数";
+"onboarding.scan.agentsRoot" = "能力根目录";
+"onboarding.scan.ssotLabel" = "SSOT 路径";
+
+"onboarding.storage.title" = "存哪里、怎么同步";
+"onboarding.storage.subtitle" = "Popskill 把真身放在 agents skills 根目录,各 AI 工具的 skill 目录都软链到它。";
+"onboarding.storage.ssotLabel" = "SSOT";
+"onboarding.storage.ssotHint" = "真身,单一真源。每个 AI 工具的 skill 目录都软链到这里。";
+"onboarding.storage.providerLabel" = "同步方式";
+"onboarding.storage.recommended" = "推荐";
+
+"onboarding.done.title" = "齐活了";
+"onboarding.done.body" = "去矩阵选一行查看详情,或 ⌘K 一键直达任何地方。";
+"onboarding.done.tip1" = "⌘K 打开命令面板";
+"onboarding.done.tip2" = "链接健康查断链";
+"onboarding.done.tip3" = "更新页看上游变更";
