@@ -153,7 +153,7 @@ name = "majia-guanyuan"
 version = "2.1.4"
 hash = "sha256:7f3a..."
 store = "majia-guanyuan@2.1.4-7f3a"
-source = "local:/Users/majia/projects/majia-guanyuan"
+source = "local:/Users/example/projects/some-skill"
 mutable = false
 aliases = ["guanyuan-majia"]
 ```

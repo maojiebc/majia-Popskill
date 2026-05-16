@@ -69,7 +69,7 @@ struct TranscriptUsageScannerTests {
         }
 
         let transcript = project.appendingPathComponent("session.jsonl")
-        let line = #"{"type":"user","sessionId":"s1","timestamp":"2026-05-12T01:00:00.000Z","cwd":"/Users/majia/projects/skill-creator","message":{"role":"user","content":"private text"}}"#
+        let line = #"{"type":"user","sessionId":"s1","timestamp":"2026-05-12T01:00:00.000Z","cwd":"/Users/example/projects/skill-creator","message":{"role":"user","content":"private text"}}"#
         try line.write(to: transcript, atomically: true, encoding: .utf8)
 
         let summary = try TranscriptUsageScanner(projectsURL: root).scan()

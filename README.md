@@ -1,328 +1,210 @@
 # Popskill
 
-> The Mac App Store for AI capabilities, starting with Claude Code Agent Skills.
-> Mac 上的 AI 能力 App Store，从 Claude Code Agent Skills 开始。
+> **Mac 上 AI 能力的统一控制台**。把 Claude Code 和 Codex 的 skill / agent / CLI / MCP 全摆成一个矩阵，一键开关、链接健康、iCloud 同步。
 
 <p align="center">
-  <strong>Status: v1.0.0 — first signed + notarized release. SwiftUI matrix UI, ⌘K spotlight, transcript-token insights, iCloud Drive sync, Sparkle auto-update all wired end-to-end. See <a href="./docs/release/v1.0.0.md">release notes</a>.</strong>
+  <a href="https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.0.1.dmg">
+    <img src="docs/screenshots/hero.jpg" alt="Popskill 能力 × 工具矩阵" width="900">
+  </a>
 </p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/macOS-14%2B-blue?logo=apple" alt="macOS 14+">
+  <img src="https://img.shields.io/github/v/release/maojiebc/majia-Popskill?color=orange" alt="Latest release">
+  <img src="https://img.shields.io/github/downloads/maojiebc/majia-Popskill/total?color=green" alt="Downloads">
+  <img src="https://img.shields.io/github/license/maojiebc/majia-Popskill" alt="MIT License">
+  <img src="https://img.shields.io/badge/Sparkle-auto--update-purple" alt="Sparkle">
+</p>
+
+> 中文 · [English README](./README.en.md)
 
 ---
 
-## English (TL;DR)
+## 下载安装
 
-Popskill aims to be the Mac App Store for AI capabilities, starting with the App Store experience that Claude Code skills deserve on Mac:
+[**↓ 下载 Popskill 1.0.1（16.3 MB，已签名 + 已公证）**](https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.0.1.dmg)
 
-- **Mac-native SwiftUI design** (inspired by Surge for Mac)
-- **Multi-app toggles** for Claude / Codex / Gemini / OpenCode / Hermes (quick row toggles for the common three, full controls in detail)
-- **Usage Insights** — token spend, top skills, hibernate candidates (parses `~/.claude/projects/*.jsonl`). No other tool does this.
-- **Stub state** — like App Store's "purchased but not downloaded"; reclaim disk without losing the card
-- **WebDAV sync** across devices (reuses [CC Switch](https://github.com/farion1231/cc-switch)'s implementation — zero re-implementation)
-- **Local Agent library** for `~/.claude/agents` role/persona files
-- **AgentShield security scan** for third-party skill installs (persisted Library badges; see [PLAN.md §11.8](./PLAN.md#118-第三方-skill-安全审计agentshield))
+要求 macOS 14 (Sonoma) 及以上。第一次装完之后，新版本会通过 Sparkle 应用内提醒，不需要再来 GitHub 手动下。
 
-**Architecture**: SwiftUI front-end → `skill-cli` Rust sidecar → `cc_switch_lib` (CC Switch as git submodule, **zero fork, zero patch**).
-
-**Current stage**: MVP feature verticals are implemented locally. `skill-cli` is wired to CC Switch for list/detail/toggle/discover/install-plan/install/update/uninstall/import/repository/backup/WebDAV status/config/remote-info/sync-plan flows, package-list/detail/install/config previews, plus read-only `agent-list`, `agent-targets`, `agent-catalog`, and `agent-install-plan` flows for local Claude Code agents, Agent-capable tools, and AgencyAgents content; SwiftUI Library + Discover now expose capability packages (composite + standalone) alongside the existing skill workflows; Agents + Repositories + Updates + Backups + Insights + Settings compile and pass tests. `scripts/ci-local.sh` verifies Rust/Swift builds, read-only sidecar/Agent/package smoke, native launch smoke, bundle smoke, screenshot asset smoke, and release artifact smoke. Release hardening remains available but paused for v0.3 self-use. See [PLAN.md](./PLAN.md), [DESIGN.md](./DESIGN.md), and [STYLE.md](./STYLE.md) for the full picture.
-
-## Where Popskill Fits
-
-Popskill is part of a growing AI tools ecosystem. It complements these excellent projects instead of pretending the category starts here:
-
-- **Cherry Studio**: a large Electron LLM chat client with 1000+ built-in assistants. Cherry Studio is great for talking to AI; Popskill manages the local Skill and Agent library those AI tools use.
-- **Anthropic MCP Registry**: the upstream DNS for MCP servers. Popskill consumes registry metadata; it is not a registry.
-- **Smithery, Glama, MCPHub, MyMCP**: strong MCP-focused discovery and management projects. Popskill goes broader by adding Skills, Agents, CLI tools, and Config.
-- **Dify**: the Bundle concept pioneer in web LLM platforms. Popskill brings the capability-package idea to native Mac and local AI clients.
-- **everything-claude-code (ECC)** and **agency-agents**: rich content sources for Skills and Agents. Popskill is a GUI consumer and local manager for that content.
-- **iamzhihuix/skills-manage** and **yibie/skills-manager**: skill-focused managers. Popskill's long-term direction is cross-form capability packages with Mac-native UX.
-
-The planned v0.2 Package model is therefore not "first ever"; it is Popskill's attempt to make the full combination work on Mac: **Skill + Agent + CLI + MCP + Config**, across AI tools, with App Store-level UX, Usage Insights, Stub, and AgentShield.
-
-## Why Now (May 2026)
-
-Two head Skills developers publicly framed the exact gap Popskill targets, in the same week as v0.1 release prep:
-
-- **[@dotey (宝玉)](https://x.com/dotey)**, author of `baoyu-skills` (~20K stars), in a [126K-view long-form post on 2026-05-11](https://x.com/dotey/status/2053940091970580736): *"My baoyu-skills is close to 20K stars, but the income from it is \$0. Skills are transparent... the moat is shallow. The most reasonable path is a plugin mechanism — App Store and Chrome plugin marketplaces have already proven a working revenue and copyright model."*
-- **[@op7418 (歸藏)](https://x.com/op7418)** on [2026-05-13](https://x.com/op7418/status/2054414353731109224), naming "藏师傅, 宝玉, 乔木, 一泽" as the four head Skills developers, said in his own reply #2: *"We need a focused public space for distribution, exposure, and connection — and to serve developers well, especially the best ones."*
-
-Popskill is one concrete answer to that call. Full reasoning and evidence chain in [docs/why-popskill.md](./docs/why-popskill.md).
-
-## Why Mac Native?
-
-Popskill is a local asset manager, so it should feel like a Mac utility instead of a web app in a desktop shell. We chose Swift + SwiftUI for instant launch, lower memory overhead, native sidebar/window behavior, and a design language that can follow macOS conventions closely.
-
-If you need a cross-platform LLM chat client, [Cherry Studio](https://github.com/CherryHQ/cherry-studio) is excellent. Popskill is for Mac users who want native polish around the AI capabilities installed on their machine.
-
-## Design System
-
-Popskill follows the Google Stitch-style [DESIGN.md](./DESIGN.md) structure for agent-readable product design rules. [STYLE.md](./STYLE.md) stays as the detailed Surge teardown and implementation reference.
-
-## Screenshots
-
-![Popskill Discover](./docs/assets/screenshots/popskill-discover.png)
-
-<p align="center">
-  <img src="./docs/assets/screenshots/popskill-library.png" alt="Popskill Library" width="48%">
-  <img src="./docs/assets/screenshots/popskill-usage.png" alt="Popskill Usage Insights" width="48%">
-</p>
-
-![Popskill Idle Candidates](./docs/assets/screenshots/popskill-idle-candidates.png)
+DMG 经过 Apple Developer ID 签名 + 公证 + 钉公证票，**双击不会跳"未识别开发者"警告**，Gatekeeper 直接放行。
 
 ---
 
-## 中文版
+## 我为什么做这个
 
-### 它是什么
+我每天在 Claude Code 和 Codex 之间来回切。两边都用 skill（`~/.claude/skills/` 和 `~/.codex/skills/`）。同一个 skill 想让两边都用上，得手工建软链 — 我经常忘。
 
-Claude Code 的 Agent Skills 生态在 GitHub 上已经爆炸（[anthropics/skills](https://github.com/anthropics/skills) 13万⭐、各种 awesome-list 60万+⭐ 总和），AgencyAgents 这类仓库也证明了 Agent 角色库正在变成中文圈高频入口；但**没有一个 Mac 客户端把"发现 / 安装 / 管理 / 统计"做成 App Store 那种体验**。
+```text
+~/.claude/skills/baoyu-comic/        ← Claude Code 能找到
+~/.codex/skills/baoyu-comic/         ← Codex 找不到（除非我手 ln -s 过）
+```
 
-Popskill 就是来填这个坑的。
+每次我打开 Codex 想用 baoyu-comic 都要重新做一次这个流程。烦的不是手动 — 烦的是**我不知道当前两边谁有谁没有**。
 
-### 为什么是现在（2026 年 5 月）
+Popskill 把所有 skill / agent / CLI / MCP 摆成一个矩阵，每一行是一个能力，每一列是一个 AI 工具，单元格是开关。一眼看清楚谁有谁没有，点一下就开关。
 
-v0.1 发布前一周，两位头部 Skills 开发者在 X 上公开点出了 popskill 想填的那个坑：
+---
 
-- **[@dotey（宝玉）](https://x.com/dotey)**，`baoyu-skills`（约 2 万⭐）作者，在 [2026-05-11 的 126K views 长推](https://x.com/dotey/status/2053940091970580736) 里说：「*我自己的 baoyu-skills 快 2 万 Star 了，但从中赚到的钱是 \$0。Skill 这东西几乎是透明的...护城河都很浅。最合理的路，是插件机制——App Store 和 Chrome 插件市场已经跑通了一套收费和版权保护机制。*」
-- **[@op7418（歸藏）](https://x.com/op7418)** 在 [2026-05-13](https://x.com/op7418/status/2054414353731109224) 钦点「藏师傅、宝玉、乔木、一泽」四位头部 Skills 开发者，自家评论 #2 给出方案：「*我们需要一个聚焦的公共空间，去分发、展示、曝光和连接。还有就是服务好开发者尤其是优质开发者。*」
+## 截图
 
-popskill 是这个呼吁的一个具体回答。完整论证和证据链见 [docs/why-popskill.md](./docs/why-popskill.md)。
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/matrix.jpg" alt="能力 × 工具矩阵"></td>
+<td width="50%"><img src="docs/screenshots/spotlight.jpg" alt="⌘K Spotlight"></td>
+</tr>
+<tr>
+<td><b>能力 × 工具矩阵</b> — 一键开关，每行一个 skill，每列一个 AI 工具</td>
+<td><b>⌘K Spotlight</b> — 任何地方按 ⌘K，搜能力、跑快捷动作、⌘1/⌘2 直切 Claude/Codex</td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/insights.jpg" alt="用量分析"></td>
+<td width="50%"><img src="docs/screenshots/settings.jpg" alt="设置 + 同步"></td>
+</tr>
+<tr>
+<td><b>用量分析</b> — 扫 ~/.claude/projects 算出 token 用量、Top 10 用得最多的能力</td>
+<td><b>同步设置</b> — iCloud Drive / Git 远端二选一,跨 Mac 自动同步</td>
+</tr>
+</table>
 
-### 它跟现有方案差在哪
+---
 
-| 工具 | 缺点 |
+## 它能做什么
+
+- **能力矩阵** — Skill / Agent / CLI / MCP 五类能力对 Claude Code 和 Codex 的覆盖一眼看清，一键开关
+- **⌘K 命令面板** — 不用翻菜单，任何地方按 ⌘K 搜索能力 + 运行快捷动作（刷新数据 / 链接健康 / 更新检查 / 设置）
+- **链接健康监控** — SSOT 真身 + 每个 AI 工具的 symlink 状态实时显示，断链一眼看见
+- **用量分析** — 扫描本地 Claude Code 会话记录算 token 总量、按 skill 排行 Top 10（数据完全留在本机）
+- **5 步引导式入门** — 第一次启动自动检测已装的 AI 工具 + 扫描已有能力 + 挑同步方式
+- **iCloud Drive 同步** — 一台 Mac 改了配置，其它 Mac 启动应用自动同步
+- **安全卸载** — 默认卸载先做快照备份，60+ 天没用的能力会被标记为闲置，可一键变 stub（占位但保留卡片）
+- **Sparkle 自动更新** — 应用内提示新版，EdDSA 签名校验，假更新一律拒绝
+
+---
+
+## 快速上手
+
+第一次启动会自动跳引导：
+
+1. **欢迎** — 介绍 Popskill 是干嘛的
+2. **检测工具** — 看你机器上装了哪些 AI 工具（Claude Code / Codex / brew CLI / npm 全局包）
+3. **扫描能力** — 列出你 `~/.agents/skills/`、`~/.claude/skills/`、`~/.codex/skills/` 里已经有的能力
+4. **存储 + 同步** — 选 iCloud Drive 还是 Git 远端做跨设备同步
+5. **完成** — 跳到矩阵主视图
+
+如果你已经有一堆 skill 在用，第一次打开就能直接看到它们；不需要再"配置 Popskill"。
+
+---
+
+## 它是怎么搭的
+
+```
+┌─────────────────────────────────────────┐
+│  SwiftUI 前端 (这个 app)                │
+│  • Matrix + Inspector                   │
+│  • ⌘K Spotlight                         │
+│  • Onboarding wizard                    │
+└────────────────────┬────────────────────┘
+                     │ JSON over stdin/stdout
+                     ▼
+┌─────────────────────────────────────────┐
+│  skill-cli (Rust sidecar)               │
+│  • 列出 / 切换 / 安装 / 卸载 skill      │
+│  • 扫 ~/.claude / ~/.codex / ~/.agents  │
+│  • link-health / sync (Git / iCloud)    │
+└────────────────────┬────────────────────┘
+                     │ git submodule（零 fork）
+                     ▼
+┌─────────────────────────────────────────┐
+│   CC Switch（上游 skill 存储引擎）       │
+└─────────────────────────────────────────┘
+```
+
+零 fork 接 [CC Switch](https://github.com/farion1231/cc-switch)，所有 skill 存储 / 切换逻辑复用上游。Popskill 自己只做 UI + 跨工具协调。
+
+---
+
+## 常见问题
+
+**为什么不上 Mac App Store？**
+App Store 的 sandbox 规则会挡住 Popskill 需要做的 symlink 管理。直接 Developer ID 分发能让能力跑通，代价是用户要从这里下而不是从 App Store 装。
+
+**会收集数据么？**
+不会。100% 本地运行 — 没有埋点、没有遥测。Token 用量分析是直接读你机器上的 Claude Code 会话文件（`~/.claude/projects/*.jsonl`）算出来的，不上传任何东西。
+
+**Sparkle 自动更新安全吗？**
+是的。每个 DMG 在签名时会用 EdDSA 私钥（在我本机 Keychain 里）做一次额外签名，应用内拿到更新会用 Info.plist 里固定的公钥（`SUPublicEDKey=h7HOqj21MlKe5UJFFa9GKBmV6MtdlcDSeJa9rmAguq8=`）校验。即使 GitHub 哪天被入侵，伪造的 DMG 也通不过这一关。
+
+**怎么卸载？**
+拖 `/Applications/Popskill.app` 到废纸篓。如果还想把数据也清掉：删 `~/.popskill/`（备份），保留 `~/.cc-switch/skills/`（真身，是你的 skill 本身，不属于 Popskill）。
+
+**数据存哪？**
+- SSOT（你 skill 的真身文件）：`~/.cc-switch/skills/`（CC Switch 的标准路径）
+- Popskill 备份：`~/.popskill/backups/`
+- Sparkle 更新缓存：`~/Library/Caches/Sparkle/`
+- 全部在你的 home 目录里，不动系统区。
+
+**支持 Windows / Linux 么？**
+暂时只支持 Mac。Rust sidecar 是跨平台的，但 SwiftUI 前端不是。如果有人愿意把 UI 移植到 GTK / Qt，sidecar 的 JSON IPC 接口是稳定的。
+
+---
+
+## 系统要求
+
+| macOS | 状态 | 备注 |
+|---|---|---|
+| 26 Tahoe | ✅ | 主测试目标 |
+| 14 Sonoma | ✅ | LSMinimumSystemVersion |
+| 13 Ventura | ❓ | 未测,可能能跑,不保证 |
+| 12 Monterey | ❌ | 低于最低版本 |
+
+---
+
+## 历史版本
+
+详见 [GitHub Releases](https://github.com/maojiebc/majia-Popskill/releases)。每版都附 release notes 和签名 DMG。
+
+最新版本：[v1.0.1](./docs/release/v1.0.1.md) — Sparkle 自动更新接通  
+往前一版：[v1.0.0](./docs/release/v1.0.0.md) — 第一次正式签名 + 公证 release
+
+---
+
+## 贡献
+
+欢迎 PR。有大改动建议先开 issue 讨论一下。
+
+Bug / 想法直接走 [GitHub Issues](https://github.com/maojiebc/majia-Popskill/issues),或者发邮件给我（见下方"作者 / 联系"）。
+
+---
+
+## 👤 作者 / 联系
+
+**马甲（@maojiebc）** · 超级马甲
+
+如果这款 Mac app 帮到你,欢迎在以下任意渠道找我交流踩坑实录、提需求、报 bug,也欢迎勾兑 Mac 自研 app / 用户运营 / AI 工具集成的实战经验:
+
+| 渠道 | 链接 |
 |---|---|
-| **[CC Switch](https://github.com/farion1231/cc-switch)** (6.8万⭐) | 功能太杂（6 种 CLI + Provider + Skill 全塞一起），新手找不到入口；多 app toggle 必须进详情页 |
-| **[skills-manage](https://github.com/iamzhihuix/skills-manage)** (1814⭐) | 同赛道头部，但不是 Mac 原生质感，公开包未 notarize，且没有 Usage Insights / Stub |
-| **[skills-manager](https://github.com/yibie/skills-manager)** (152⭐) | SwiftUI 技术栈撞车，但视觉偏标准控件，没有 Usage Insights / Stub / WebDAV |
-| **[agent-skills-guard](https://github.com/bruc3van/agent-skills-guard)** (354⭐) | 只做安全扫描，没有 App Store 发现/统计 |
-| **[vercel-labs/skills](https://github.com/vercel-labs/skills)** (1.8万⭐) | CLI 工具，无 GUI |
-| 一众 0-star `claude-skill-manager` | 没人做出 App Store 体验 |
+| 📧 Email | [m9224@163.com](mailto:m9224@163.com) |
+| 🐙 GitHub | [github.com/maojiebc](https://github.com/maojiebc) |
+| 🪝 ClawHub | [clawhub.ai/p/maojiebc](https://clawhub.ai/p/maojiebc) |
+| 🐦 X | [@maojiebc](https://x.com/maojiebc) |
+| 📕 小红书 | [超级马甲](https://xhslink.com/m/4fQMJeHHWKC) |
+| 📰 微信公众号 | **超级马甲** |
 
-**Popskill 的差异点**：
+> 这款 app 是 14 年用户运营 + AI 工具集成 + Mac 自研实战沉淀出来的,问题/合作随时聊。
 
-1. **Mac App Store 级别的视觉**——SwiftUI 原生，配 Surge for Mac 设计语言
-2. **使用统计 / Insights 页**（全网独家）——告诉你装的几十个 skill 里哪些值得保留
-3. **多 app toggle**——Library 列表行内切 Claude/Codex/Gemini，详情页支持 OpenCode/Hermes
-4. **Stub 状态**——60 天没用的 skill 本地清掉内容、留 metadata 卡片，要用一键再装
-5. **WebDAV 跨设备同步**——白嫖 CC Switch 已有能力，不重做
-6. **Agent 本地管理**——把 `~/.claude/agents` 里的角色/persona 文件纳入同一个 Library 视图，先只读列表，后续再接 AgencyAgents/ECC 来源
-7. **AgentShield 安全审计**——第三方 skill 安装后立即扫描，blocked 自动回滚，安全状态显示到列表和详情页
+---
 
-### 中文用户生态
+## 致谢
 
-Popskill 跟 [agency-agents](https://github.com/msitarzewski/agency-agents) 是上下游关系：agency-agents 提供 Agent 内容池，Popskill 负责本地管理体验。它已经覆盖小红书、知乎、抖音、B站、微信、百度 SEO、跨境电商、直播带货等中文圈角色；Popskill 先接本机 Agent 列表和工具 target 诊断，后续再把它作为首批 Agent 内容源。
+Popskill 站在巨人的肩膀上：
 
-### 技术架构（一句话）
+- [CC Switch](https://github.com/farion1231/cc-switch) — skill 存储引擎，零 fork 当 git submodule 接入
+- [Sparkle](https://sparkle-project.org/) — 自动更新框架
+- [@dotey (宝玉)](https://x.com/dotey)、[@op7418 (歸藏)](https://x.com/op7418) 等 Claude Skill 头部作者 — 推动整个 AI Skill 生态成立的人
 
-```
-SwiftUI 前端 (macOS 14+)
-    ↓ Process.run
-skill-cli (Rust sidecar)
-    ↓ pub use SkillService
-cc_switch_lib (CC Switch 当 git submodule，一行不改)
-```
+---
 
-我们**不 fork、不 patch CC Switch**，纯 Rust path 依赖。详见 [PLAN.md §4 技术架构](./PLAN.md#4-技术架构)。
+## License
 
-### 当前状态
-
-| 阶段 | 状态 |
-|---|---|
-| B. 摸 CC Switch 源码 | ✅ Done |
-| A. Sidecar 剥离可行性 | ✅ 静态分析通过（lib.rs:52-56 已 pub use SkillService） |
-| C. 产品形态 V1 | ✅ 5 个页面 wireframe + 状态机 + 16 条决策 |
-| D-prep. 视觉设计语言 | ✅ Surge.app 拆解 + 22 个 design token |
-| **D. MVP 主链路** | ✅ sidecar + SwiftUI Library/Agents/Discover/Repositories/Updates/Backups/Insights/Settings 已可编译并通过本地 CI |
-| **E. v0.1 发布收口** | 🚧 签名/公证、Sparkle public feed/key/signature 验证、WebDAV 手动同步；README 截图、主要页面截图级 polish、WebDAV 配置写入、Sparkle SDK link/readiness hooks 与 transcript skill attribution 已完成 |
-
-**这个仓库目前是 pre-alpha**：已有 Rust sidecar、SwiftUI Library/Agents/Discover/Repositories/Updates/Backups/Insights/Settings 页面、transcript scanner 单测和本地 CI。Stub 与 AgentShield 已有可用纵切；Agent 管理目前完成本机 `~/.claude/agents` 只读列表/搜索/分类详情、Agent-capable target 诊断、AgencyAgents catalog 预览和安装计划预览；WebDAV 目前完成状态/远端 snapshot 读取与配置写入，手动 Sync Now 仍受 CC Switch Tauri State/private module 边界阻塞。正式签名、公证、Sparkle 公开 feed/key/signature 实测和 App Store 分发还没完成；本地 DMG、release manifest、appcast 生成、Sparkle SDK link/配置守卫与 notarize 脚本骨架已先落位。
-
-### 已落地的 MVP 能力
-
-```bash
-./skill-cli/target/debug/skill-cli health --json
-./skill-cli/target/debug/skill-cli webdav-status --json
-POPSKILL_WEBDAV_PASSWORD='<password>' ./skill-cli/target/debug/skill-cli webdav-configure --base-url <url> --username <user> --password-env POPSKILL_WEBDAV_PASSWORD --remote-root cc-switch-sync --profile default --enabled true --auto-sync false --json
-./skill-cli/target/debug/skill-cli webdav-remote-info --json
-./skill-cli/target/debug/skill-cli webdav-sync-plan --json
-./skill-cli/target/debug/skill-cli list --json
-./skill-cli/target/debug/skill-cli package-list --json
-./skill-cli/target/debug/skill-cli package-detail pkg:lark --json
-./skill-cli/target/debug/skill-cli package-install pkg:lark --json
-POPSKILL_LARK_APP_SECRET='<secret>' ./skill-cli/target/debug/skill-cli package-config pkg:lark --key lark.app_secret --value-env POPSKILL_LARK_APP_SECRET --json
-./skill-cli/target/debug/skill-cli agent-list --json
-./skill-cli/target/debug/skill-cli agent-targets --json
-./skill-cli/target/debug/skill-cli agent-catalog --query xiaohongshu --limit 10 --json
-./skill-cli/target/debug/skill-cli agent-install-plan msitarzewski/agency-agents:marketing/marketing-xiaohongshu-specialist --target claude-code --json
-./skill-cli/target/debug/skill-cli detail <skill-id> --json
-./skill-cli/target/debug/skill-cli toggle <skill-id> --app codex --enabled true --json
-./skill-cli/target/debug/skill-cli scan-unmanaged --json
-./skill-cli/target/debug/skill-cli discover --query pdf --limit 20 --json
-./skill-cli/target/debug/skill-cli repo-list --json
-./skill-cli/target/debug/skill-cli repo-add --owner <owner> --name <repo> --branch main --enabled true --json
-./skill-cli/target/debug/skill-cli repo-toggle --owner <owner> --name <repo> --enabled false --json
-./skill-cli/target/debug/skill-cli repo-remove --owner <owner> --name <repo> --json
-./skill-cli/target/debug/skill-cli install-plan <skill-key> --app codex --json
-./skill-cli/target/debug/skill-cli install <skill-key> --app codex --json
-./skill-cli/target/debug/skill-cli check-updates --json
-./skill-cli/target/debug/skill-cli update <skill-id> --json
-./skill-cli/target/debug/skill-cli uninstall <skill-id> --json
-./skill-cli/target/debug/skill-cli stub-list --json
-./skill-cli/target/debug/skill-cli stub <skill-id> --json
-./skill-cli/target/debug/skill-cli rehydrate <skill-id> --app codex --json
-./skill-cli/target/debug/skill-cli security-scan /path/to/skill --skill-id <skill-id> --json
-./skill-cli/target/debug/skill-cli security-scan-list --json
-./skill-cli/target/debug/skill-cli backup-list --json
-./skill-cli/target/debug/skill-cli backup-restore <backup-id> --app codex --json
-./skill-cli/target/debug/skill-cli backup-delete <backup-id> --json
-./skill-cli/target/debug/skill-cli import-unmanaged <directory> --app codex --json
-```
-
-SwiftUI 端已接入：
-
-- Library：本机 skill 列表、All/Active/Inactive/Stubs 过滤、Claude/Codex/Gemini 行内 toggle、详情页 5 App toggle、stub/rehydrate、AgentShield 持久化角标与手动扫描、unmanaged import 前扫描
-- Agents：本机 Claude Code Agent 列表，读取 `~/.claude/agents/**/*.md` frontmatter，支持搜索、分类筛选、详情、打开源文件和 Agent target 诊断
-- Discover：搜索 CC Switch 启用的 skill repositories，行内 install-plan 预览，按 Claude/Codex/Gemini/OpenCode/Hermes 安装，安装后跑 AgentShield，blocked 自动回滚
-- Repositories：查看、启停、删除 CC Switch skill discovery sources
-- Updates：按需检查更新、逐条更新、Update All 批量更新、last checked 状态
-- Backups：查看、恢复、删除 CC Switch uninstall backups
-- Insights：本地扫描 `~/.claude/projects/**/*.jsonl`，聚合 token/session/file/model/skill 指标；skill 归因使用 Claude Code 顶层 `attributionSkill` 字段且忽略正文；Idle Candidates 会避开 60 天内有真实归因使用的 skill
-- Settings：sidecar 路径、`POPSKILL_CLI` override、CC Switch skill store、WebDAV 配置/状态/远端 snapshot 与密钥边界诊断
-
-### v0.1 发布门槛
-
-- ✅ 本地 CI：`./scripts/ci-local.sh` 覆盖 Rust/Swift build、单测、只读 sidecar/Agent smoke、App 启动、bundle 启动、screenshot asset smoke、release artifact smoke。
-- ✅ Release artifact smoke：可生成本地开发 DMG、release manifest、Sparkle appcast 骨架。
-- ✅ Release doctor：`scripts/release-doctor.sh` 可检查 Developer ID、notarytool/stapler、notary 凭据、bundle/DMG/release manifest 一致性、appcast 前置条件和 Sparkle framework/rpath/metadata。
-- ✅ Transcript attribution：Insights 本地聚合且忽略正文；真实 transcript 已验证 `attributionSkill` / `attributionPlugin` 字段，Usage / Token Spend 已展示 skill 级统计，Idle Candidates 已接入最近使用归因。
-- ✅ Discover/Library visual pass：Discover 行内 `Plan` / `Install` CTA 可读；带计数的 sidebar 导航可点；Library 行内 app toggle 不再挤压技能标题。
-- ✅ Settings/Updates visual pass：Settings 诊断字段更紧凑；Updates 空态不再显示不可点的主按钮。
-- ✅ Screenshot asset smoke：本地 CI 校验 README 截图存在、PNG 格式、尺寸、文件大小和基础像素方差。
-- ⏳ Apple Developer Program：确认 Developer ID 证书；不加入则需要明确 unsigned/ad-hoc 分发说明。
-- ⏳ Notarization：拿到证书后跑 `scripts/notarize.sh`，验证 `stapler validate` 和 Gatekeeper 打开路径。
-- ✅ Sparkle SDK link：App 已正式链接 Sparkle 2.9.1，`Check for Updates...` 配置守卫、bundle `Sparkle.framework` copy、`SUFeedURL` / `SUPublicEDKey` 注入与 appcast 生成路径可用；公开更新仍需真实 feed、public EdDSA key 和 signed notarized payload 验证。
-- ✅ WebDAV config：Settings 可写入 CC Switch WebDAV 配置；新密码通过环境变量进入 sidecar，状态输出继续脱敏。
-- ⏳ WebDAV Sync Now：upload/download 仍受 CC Switch Tauri State/private module 边界阻塞；`webdav-sync-plan` 已把不可用原因和安全只读动作结构化输出，暂不复制同步协议实现。
-- ✅ README 截图：Discover、Library、Usage Insights、Idle Candidates 真实界面截图已补到 `docs/assets/screenshots/`。
-- ⏳ 最终视觉验收：发布前再做一次全局截图 QA。
-
-### Roadmap
-
-**v0.3 is now formalizing the asset-control-plane model**：一个 Package 代表完整 AI 能力（例如飞书、GitHub、PDF），可打包 CLI、MCP、Skills、Agents 和 Config。Popskill 会从 "Claude Code skill manager" 进化为 "AI Capability App Store"。`skill-cli domain-schema --json` exposes the canonical `source -> package -> component -> deployment -> runtime` vocabulary for sidecar, UI, docs, and tests.
-
-### 文档导航
-
-- **[PLAN.md](./PLAN.md)** —— 产品 + 工程规划，自包含。新机器接手只需读这一份。
-  - §0-2：怎么用 + 16 条核心决策
-  - §3：产品形态（5 页 wireframe + 状态机）
-  - §4-8：技术架构 + 数据模型 + Sidecar 接口
-  - §9：第一周 Day 1-5 milestone（已完成）
-  - §10：Week 2-8 进度校准 + v0.1 收口清单
-  - §11：已知坑 / 风险预案
-  - §15：v0.2 Package 能力包重构
-  - 附录 A：新电脑接手 6 步 checklist
-
-- **[STYLE.md](./STYLE.md)**（~840 行）—— 视觉设计语言，含立即可用的 SwiftUI design token 代码。
-- **[CONTRIBUTING_FOR_AI.md](./CONTRIBUTING_FOR_AI.md)** —— AI-assisted development guardrails: domain first, typed commands, snapshots, no overwrite config writes.
-- **[docs/asset-control-plane.md](./docs/asset-control-plane.md)** —— Source / Package / Component / Deployment / Runtime model, adapter contract, transaction phases, and stable error codes.
-- **[docs/ipc.md](./docs/ipc.md)** —— SwiftUI ↔ `skill-cli` JSON 合约。
-- **[docs/transcript-parsing.md](./docs/transcript-parsing.md)** —— Claude transcript 字段观察和 Insights MVP 策略。
-- **[docs/security.md](./docs/security.md)** —— Keychain、skill 内容和 transcript insights 的安全边界。
-- **[docs/release-runbook.md](./docs/release-runbook.md)** —— v0.1 签名、公证、DMG 和 Sparkle appcast 发布步骤。
-- **[docs/v0.1-release-readiness.md](./docs/v0.1-release-readiness.md)** —— 当前 v0.1 dry-run 结果、通过项和剩余外部门槛。
-- **[docs/release-notes-v0.1.md](./docs/release-notes-v0.1.md)** —— v0.1 pre-alpha 发布说明草稿。
-- **[docs/v0.1-qa-checklist.md](./docs/v0.1-qa-checklist.md)** —— v0.1 发布前自动/视觉/隐私/发布产物 QA 清单。
-- **[docs/v0.1-launch-playbook.md](./docs/v0.1-launch-playbook.md)** —— v0.1 发布节奏、渠道选择和社区边界。
-
-### 在新机器上接手
-
-```bash
-# 装工具链
-xcode-select --install
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-brew install gh jq
-
-# 拉项目
-gh repo clone maojiebc/majia-Popskill ~/projects/popskill -- --recurse-submodules
-cd ~/projects/popskill
-
-# 一键开发构建
-./scripts/dev-build.sh
-
-# 本地 CI（构建、测试、只读 smoke、App 启动 smoke、bundle/release smoke）
-./scripts/ci-local.sh
-
-# 需要额外覆盖写入型 repo 命令时
-./scripts/ci-local.sh --mutating
-
-# 原生 app 启动烟测
-./scripts/smoke-app.sh
-
-# 显式写入型 sidecar smoke（会创建并删除一个临时 repo）
-./scripts/smoke-cli-mutating.sh
-
-# 生成本地开发 .app bundle（内含 skill-cli sidecar）
-./scripts/package-dev-app.sh
-
-# 验证 .app bundle 能使用内置 skill-cli 启动
-./scripts/smoke-bundle.sh
-
-# 生成本地开发 DMG（含 Applications 拖拽入口），并输出 sha256
-./scripts/package-dmg.sh
-
-# 检查 Developer ID / notarization / appcast 发布前置条件（不签名、不上传）
-./scripts/release-doctor.sh
-
-# 公开发布时，把 dev metadata 与缺失的 feed/key/download/signature/appcast 从 warning 提升为 failure
-POPSKILL_REQUIRE_RELEASE_METADATA=true POPSKILL_REQUIRE_SPARKLE=true ./scripts/release-doctor.sh
-
-# 生成 release metadata（version / build / dmg sha256 / size）
-./scripts/release-manifest.sh
-
-# 从 release metadata 生成 Sparkle appcast 骨架（正式发布时传真实下载 URL/签名）
-POPSKILL_APPCAST_DOWNLOAD_URL="https://<your-release-host>/Popskill.dmg" \
-./scripts/generate-appcast.sh
-
-# 查询/生成 Sparkle EdDSA public key，签名 DMG 并输出 POPSKILL_SPARKLE_ED_SIGNATURE
-./scripts/sparkle-generate-keys.sh
-./scripts/sparkle-sign-update.sh build/Popskill.dmg
-
-# v0.1 发布前的签名/公证骨架（需要 Apple Developer ID 凭据）
-POPSKILL_APP_VERSION="0.1.0" \
-POPSKILL_APP_BUILD="1" \
-POPSKILL_BUNDLE_IDENTIFIER="com.maojiebc.popskill" \
-POPSKILL_DEVELOPER_ID_APPLICATION="Developer ID Application: Name (TEAMID)" \
-POPSKILL_APPLE_ID="you@example.com" \
-POPSKILL_TEAM_ID="TEAMID" \
-POPSKILL_NOTARY_PASSWORD="app-specific-password" \
-./scripts/notarize.sh
-
-# 本地启动 SwiftUI app
-./scripts/run-app.sh
-```
-
-详见 [PLAN.md 附录 A](./PLAN.md#附录-a新电脑接手-checklist)。
-
-### 致谢 / Credits
-
-这个项目站在三类巨人肩膀上：
-
-- **[CC Switch](https://github.com/farion1231/cc-switch)** by Jason Young — services 层写得极其干净（0 处 Tauri 耦合在 3042 行业务逻辑里），让 sidecar 路线变成 1 周的活而不是 4 周
-- **[Surge for Mac](https://nssurge.com/)** — 视觉设计语言的主要灵感来源（仅参考设计，不复制资源）
-- **[Anthropic Skills](https://github.com/anthropics/skills)**、[vercel-labs/skills](https://github.com/vercel-labs/skills) 和 [awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills) 等一票 awesome-list — 内容生态的基础设施
-
-### 协作 / Contributing
-
-这是 pre-alpha，主仓库还在私有阶段的话不建议提 PR。等 v0.1 发布后会写 CONTRIBUTING.md。
-
-如果你对设计/架构有想法，欢迎在 Issues 讨论。
-
-### Maintainer Governance
-
-- Do not push, rewrite git history, drop stashes, or change the `cc-switch/` submodule without maintainer approval.
-- Small reversible exploration is allowed during v0.1 only when it stays behind an existing secondary view, documentation, or read-only preview.
-- Changing the primary product abstraction, sidebar structure, release path, or PLAN.md core positioning requires maintainer approval first.
-
-### License
-
-[MIT](./LICENSE)
+[MIT](./LICENSE) · Copyright © 2026 majia

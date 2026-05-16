@@ -1,0 +1,11 @@
+# PII / business-data deny list for audit-mac-app-release.py
+# One term per line. # comments allowed.
+
+# Personal identifiers from real life
+缪杰
+m9224
+
+# Real-machine paths (audit catches absolute /Users/<name>/ too)
+# /Users/majia is everywhere in builds — that's normal, NOT a deny-list match.
+
+# Client / business data — fill in if applicable
