@@ -7,10 +7,20 @@ CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 FRAMEWORKS_DIR="$CONTENTS_DIR/Frameworks"
-APP_VERSION="${POPSKILL_APP_VERSION:-1.0.0}"
-APP_BUILD="${POPSKILL_APP_BUILD:-100}"
+APP_VERSION="${POPSKILL_APP_VERSION:-1.0.1}"
+APP_BUILD="${POPSKILL_APP_BUILD:-101}"
 BUNDLE_IDENTIFIER="${POPSKILL_BUNDLE_IDENTIFIER:-com.majia.popskill}"
 ICON_SRC="$ROOT_DIR/swift-app/Resources/AppIcon.icns"
+# Sparkle defaults — every release after v1.0.0 carries these so the binary
+# can check the appcast for updates. The public key is the pair of the
+# private key stored in majia's Keychain (managed by Sparkle's generate_keys
+# tool; never committed). The feed URL is served by GitHub Pages from
+# `main:/docs/appcast.xml`.
+DEFAULT_SPARKLE_FEED_URL="https://maojiebc.github.io/majia-Popskill/appcast.xml"
+DEFAULT_SPARKLE_PUBLIC_ED_KEY="h7HOqj21MlKe5UJFFa9GKBmV6MtdlcDSeJa9rmAguq8="
+: "${POPSKILL_SPARKLE_FEED_URL:=$DEFAULT_SPARKLE_FEED_URL}"
+: "${POPSKILL_SPARKLE_PUBLIC_ED_KEY:=$DEFAULT_SPARKLE_PUBLIC_ED_KEY}"
+export POPSKILL_SPARKLE_FEED_URL POPSKILL_SPARKLE_PUBLIC_ED_KEY
 
 if [[ -f "$HOME/.cargo/env" ]]; then
   source "$HOME/.cargo/env"

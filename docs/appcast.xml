@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0"
+     xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"
+     xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>Popskill</title>
+    <link>https://maojiebc.github.io/majia-Popskill/appcast.xml</link>
+    <description>Popskill 自动更新源</description>
+    <language>zh-CN</language>
+    <item>
+      <title>v1.0.1</title>
+      <pubDate>Sat, 16 May 2026 16:00:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v1.0.1 — Sparkle 自动更新接通</h2>
+        <p>Popskill 现在能自动检查并提示新版本。第一次从 v1.0.0 升上来需要手工下载 DMG;之后 v1.0.2+ 都会从应用内提醒。</p>
+        <ul>
+          <li>Info.plist 内嵌 <code>SUFeedURL</code> + <code>SUPublicEDKey</code>,启动 + 每日定时检查 GitHub Pages 上的 appcast.xml</li>
+          <li>EdDSA 签名校验保证下载的 DMG 是 majia 本人签发,中间被替换会被 Sparkle 拒绝</li>
+          <li>体积与 v1.0.0 几乎一致(~16 MB)</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v1.0.1/Popskill-1.0.1.dmg"
+        sparkle:version="101"
+        sparkle:shortVersionString="1.0.1"
+        length="16281665"
+        type="application/octet-stream"
+        sparkle:edSignature="uewRXNWY9YDTAr7otIWyIuXJ/MKP/WqSZ3xmmA/y1NaOCaNuOCLDapuKwiGW5axAp3IjA38FKLbgy69GFr1xAQ==" />
+    </item>
+  </channel>
+</rss>
