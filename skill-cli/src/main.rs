@@ -2297,17 +2297,12 @@ fn run_uninstall_with_strategy(
 fn run_sync(action: &str, provider: &str) -> Result<serde_json::Value> {
     match provider {
         "git" => run_git_sync(action),
-        "icloud" => Ok(json!({
-            "provider": "icloud",
-            "action": action,
-            "implemented": false,
-            "message": "iCloud Drive 同步在 v0.4 真实实现 · 当前 UI 占位"
-        })),
+        "icloud" => run_icloud_sync(action),
         "webdav" => Ok(json!({
             "provider": "webdav",
             "action": action,
             "implemented": false,
-            "message": "WebDAV 同步在 v0.4 真实实现"
+            "message": "WebDAV 同步在 v0.5 真实实现 · 可走 Git 远端代替"
         })),
         "none" => Ok(json!({
             "provider": "none",
@@ -2316,6 +2311,117 @@ fn run_sync(action: &str, provider: &str) -> Result<serde_json::Value> {
             "message": "未启用同步"
         })),
         other => bail!("unknown sync provider '{other}'"),
+    }
+}
+
+/// iCloud Drive 同步。把 SSOT 目录与 `~/Library/Mobile Documents/com~apple~CloudDocs/Popskill/skills/`
+/// 之间做单向 rsync。push 是 local → iCloud，pull 是 iCloud → local。两端
+/// 都不进行删除（rsync 不带 `--delete`），保护用户手工放在目录里的额外文件。
+/// status 只检查两端目录存在 + 数到 entry 数量，不动文件。
+fn run_icloud_sync(action: &str) -> Result<serde_json::Value> {
+    let home = match home_dir() {
+        Ok(h) => h,
+        Err(err) => {
+            return Ok(json!({
+                "provider": "icloud",
+                "action": action,
+                "ok": false,
+                "message": format!("无法解析 HOME 目录: {err}")
+            }));
+        }
+    };
+
+    let local = match SkillService::get_ssot_dir() {
+        Ok(d) => d,
+        Err(_) => {
+            return Ok(json!({
+                "provider": "icloud",
+                "action": action,
+                "ok": false,
+                "message": "无法解析 SSOT 目录"
+            }));
+        }
+    };
+
+    let icloud_container = home
+        .join("Library")
+        .join("Mobile Documents")
+        .join("com~apple~CloudDocs");
+
+    if !icloud_container.exists() {
+        return Ok(json!({
+            "provider": "icloud",
+            "action": action,
+            "ok": false,
+            "message": "未检测到 iCloud Drive。请在 系统设置 → Apple ID → iCloud Drive 中启用后重试。"
+        }));
+    }
+
+    let remote = icloud_container.join("Popskill").join("skills");
+
+    // Ensure remote parent exists so the first push doesn't error.
+    if let Err(err) = fs::create_dir_all(&remote) {
+        return Ok(json!({
+            "provider": "icloud",
+            "action": action,
+            "ok": false,
+            "message": format!("无法创建 iCloud 目录: {err}")
+        }));
+    }
+
+    match action {
+        "status" => Ok(json!({
+            "provider": "icloud",
+            "action": "status",
+            "ok": true,
+            "localPath": local.to_string_lossy(),
+            "remotePath": remote.to_string_lossy(),
+            "localCount": count_entries(&local),
+            "remoteCount": count_entries(&remote)
+        })),
+        "push" => rsync_dirs(&local, &remote, "icloud", "push"),
+        "pull" => rsync_dirs(&remote, &local, "icloud", "pull"),
+        other => bail!("unknown icloud sync action '{other}'"),
+    }
+}
+
+/// Count immediate child directory entries in `path`. Returns 0 for missing /
+/// unreadable paths so status calls degrade gracefully.
+fn count_entries(path: &Path) -> usize {
+    fs::read_dir(path)
+        .ok()
+        .map(|rd| {
+            rd.filter_map(|e| e.ok())
+                .filter(|e| {
+                    e.file_type().ok().is_some_and(|t| t.is_dir() || t.is_file())
+                })
+                .count()
+        })
+        .unwrap_or(0)
+}
+
+fn rsync_dirs(src: &Path, dst: &Path, provider: &str, action: &str) -> Result<serde_json::Value> {
+    // Trailing slash on src tells rsync to copy contents, not the dir itself.
+    let src_arg = format!("{}/", src.to_string_lossy());
+    let dst_arg = dst.to_string_lossy().to_string();
+    let output = Command::new("rsync")
+        .args(["-a", "--exclude", ".DS_Store", "--exclude", ".git", &src_arg, &dst_arg])
+        .output();
+    match output {
+        Ok(out) => Ok(json!({
+            "provider": provider,
+            "action": action,
+            "ok": out.status.success(),
+            "exitCode": out.status.code(),
+            "stdout": String::from_utf8_lossy(&out.stdout).to_string(),
+            "stderr": String::from_utf8_lossy(&out.stderr).to_string(),
+        })),
+        Err(err) => Ok(json!({
+            "provider": provider,
+            "action": action,
+            "ok": false,
+            "message": format!("无法启动 rsync: {err}")
+        })),
     }
 }
 

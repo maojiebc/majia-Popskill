@@ -290,9 +290,11 @@ enum SyncProvider: String, CaseIterable, Identifiable, Codable {
         }
     }
 
-    /// Only `.git` is wired end-to-end in v0.3. Others land in v0.4.
+    /// `.git` shipped in v0.3, `.icloud` in v0.4 (rsync to iCloud Drive
+    /// container). WebDAV stays "SOON" until v0.5 — the v0.4 timebox
+    /// prioritized the native Mac sync path.
     var implemented: Bool {
-        self == .git
+        self == .git || self == .icloud
     }
 
     var actionable: Bool {
