@@ -287,3 +287,12 @@
 "skill.empty.message" = "选一个已安装的 skill，可以查看它的来源、最近活动，并切换在哪些 app 启用。";
 "stub.empty.title" = "挑一个 stub 恢复";
 "stub.empty.message" = "Stub 是原 skill 的可恢复快照。选中后挑一个目标 app，即可把它重新安装回去。";
+
+// S2 新增 — v0.3 三段 sidebar + 8 个 view
+"sidebar.matrix" = "能力 × 工具";
+"sidebar.sources" = "数据源";
+"sidebar.idle" = "闲置";
+"sidebar.health" = "链接健康";
+"sidebar.section.control" = "操控台";
+"sidebar.section.sources" = "来源";
+"sidebar.section.maintenance" = "维护";

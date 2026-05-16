@@ -1,221 +1,109 @@
 import SwiftUI
 
-enum SidebarSelection: String, CaseIterable, Identifiable {
-    case repositories
-    case installed
-    case agents
-    case backups
-    case usage
-    case idleCandidates
-    case settings
-
-    var id: String { rawValue }
-
-    var titleKey: String {
-        switch self {
-        case .repositories: "sidebar.repositories"
-        case .installed: "sidebar.installed"
-        case .agents: "sidebar.agents"
-        case .backups: "sidebar.backups"
-        case .usage: "sidebar.usage"
-        case .idleCandidates: "sidebar.idleCandidates"
-        case .settings: "sidebar.settings"
-        }
-    }
-
-    var symbolName: String {
-        switch self {
-        case .repositories: "folder.badge.gearshape"
-        case .installed: "shippingbox"
-        case .agents: "person.crop.circle"
-        case .backups: "clock.arrow.circlepath"
-        case .usage: "chart.xyaxis.line"
-        case .idleCandidates: "archivebox"
-        case .settings: "gearshape"
-        }
-    }
-}
-
+/// New v0.3 RootView — replaces the 11→7 sidebar single-flat list of v0.1-v0.2
+/// with 3 sectioned groups (操控台 / 来源 / 维护) + Settings + Spotlight trigger.
+/// Each detail-area view is its own file and pulls data straight off the
+/// shared `PopskillStore`.
 struct RootView: View {
-    @State private var selection: SidebarSelection?
-    @AppStorage("preferredLanguage") private var preferredLanguage = AppLanguage.system.rawValue
-    @State private var repositories = RepositoriesViewModel()
-    @State private var library = LibraryViewModel()
-    @State private var agents = AgentsViewModel()
-    @State private var backups = BackupsViewModel()
-    @State private var insights = InsightsViewModel()
-    @State private var settings = SettingsViewModel()
-
-    init() {
-        let rawSelection = ProcessInfo.processInfo.environment["POPSKILL_INITIAL_SIDEBAR"]
-        _selection = State(initialValue: rawSelection.flatMap(SidebarSelection.init(rawValue:)) ?? .installed)
-    }
+    @State private var store = PopskillStore()
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
-        let language = AppLanguage.fromStoredValue(preferredLanguage)
-
-        content
-            .environment(\.locale, language.locale)
-            .environment(\.popskillLocalization, PopskillLocalization(language: language))
+        NavigationSplitView {
+            sidebar
+        } detail: {
+            detailArea
+        }
+        .navigationSplitViewStyle(.balanced)
+        .task {
+            await store.bootstrap()
+        }
+        .background(PopskillCanvasBackground())
+        .frame(minWidth: 1180, minHeight: 720)
     }
 
-    private var content: some View {
-        NavigationSplitView {
-            List {
-                Section {
-                    sidebarLink(.repositories, badge: repositories.repositories.isEmpty ? nil : repositories.enabledCount)
-                } header: {
-                    LocalizedText("section.discover")
-                }
+    // MARK: Sidebar
 
-                Section {
-                    sidebarLink(
-                        .installed,
-                        badge: library.skills.count,
-                        updateBadge: library.updatableCount > 0 ? library.updatableCount : nil
-                    )
-                    sidebarLink(.agents, badge: agents.agents.isEmpty ? nil : agents.agents.count)
-                    sidebarLink(.backups, badge: backups.backups.isEmpty ? nil : backups.backups.count)
-                } header: {
-                    LocalizedText("section.myLibrary")
-                }
+    private var sidebar: some View {
+        List(selection: Binding(
+            get: { store.currentSelection },
+            set: { if let new = $0 { store.currentSelection = new } }
+        )) {
+            Section {
+                row(.matrix)
+            } header: { sectionHeader(.control) }
 
-                Section {
-                    sidebarLink(.usage)
-                    sidebarLink(.idleCandidates)
-                } header: {
-                    LocalizedText("section.insights")
-                }
+            Section {
+                row(.sources)
+            } header: { sectionHeader(.sources) }
 
-                Section {
-                    sidebarLink(.settings)
-                }
-            }
-            .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)
-        } detail: {
-            switch selection ?? .installed {
-            case .repositories:
-                RepositoriesView(viewModel: repositories) {
-                    await settings.load()
-                }
-            case .installed:
-                LibraryView(viewModel: library) {
-                    await backups.load()
-                    await settings.load()
-                }
-            case .agents:
-                AgentsView(viewModel: agents)
-            case .backups:
-                BackupsView(viewModel: backups) {
-                    await library.load()
-                    await settings.load()
-                } onBackupsChanged: {
-                    await settings.load()
-                }
-            case .usage:
-                InsightsView(viewModel: insights)
-            case .idleCandidates:
-                IdleCandidatesView(viewModel: library, insightsViewModel: insights)
-            case .settings:
-                SettingsView(viewModel: settings)
+            Section {
+                row(.updates, badge: store.pendingUpdateCount, warning: true)
+                row(.backups, badge: store.backups.count)
+                row(.idle)
+                row(.insights)
+                row(.health, badge: store.brokenLinkCount, warning: store.brokenLinkCount > 0)
+            } header: { sectionHeader(.maintenance) }
+
+            Section {
+                row(.settings)
             }
         }
-        .task {
-            await repositories.load()
-            await library.load()
-            library.startAutomaticUpdateMonitoring()
-            await agents.load()
+        .listStyle(.sidebar)
+        .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)
+    }
+
+    @ViewBuilder
+    private func sectionHeader(_ group: SidebarGroup) -> some View {
+        if let key = group.titleKey {
+            LocalizedText(key)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.popTertiaryLabel)
+                .textCase(.uppercase)
+                .tracking(0.5)
         }
     }
 
     @ViewBuilder
-    private func sidebarLink(_ item: SidebarSelection, badge: Int? = nil, updateBadge: Int? = nil) -> some View {
-        SidebarLink(
-            item: item,
-            isSelected: selection == item,
-            badge: badge,
-            updateBadge: updateBadge,
-            onSelect: { selection = item }
-        )
-        .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 2, trailing: 10))
-        .listRowSeparator(.hidden)
-        .listRowBackground(Color.clear)
-    }
-}
-
-private struct SidebarLink: View {
-    let item: SidebarSelection
-    let isSelected: Bool
-    let badge: Int?
-    let updateBadge: Int?
-    let onSelect: () -> Void
-
-    @State private var isHovering = false
-
-    var body: some View {
-        Button(action: onSelect) {
+    private func row(_ item: SidebarSelection, badge: Int? = nil, warning: Bool = false) -> some View {
+        NavigationLink(value: item) {
             HStack(spacing: 9) {
                 Image(systemName: item.symbolName)
-                    .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(iconForeground)
+                    .font(.system(size: 14, weight: .regular))
                     .frame(width: 18)
-
                 LocalizedText(item.titleKey)
-                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                    .font(.system(size: 13))
                     .lineLimit(1)
-
                 Spacer(minLength: 8)
-
-                if let badge {
+                if let badge, badge > 0 {
                     Text("\(badge)")
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                        .foregroundStyle(warning ? Color.popStatusWarning : Color.secondary)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(
                             Capsule().fill(
-                                isSelected ? Color.accentColor.opacity(0.14) : Color.secondary.opacity(0.12)
+                                (warning ? Color.popStatusWarning : Color.secondary).opacity(0.14)
                             )
                         )
                 }
-
-                if let updateBadge {
-                    Text("↓\(updateBadge)")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Color.popStatusWarning)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule().fill(Color.popStatusWarning.opacity(isSelected ? 0.18 : 0.12))
-                        )
-                }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .contentShape(RoundedRectangle(cornerRadius: 8))
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(backgroundFill)
-            )
-            .animation(.easeInOut(duration: 0.14), value: isHovering)
-            .animation(.easeInOut(duration: 0.18), value: isSelected)
         }
-        .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
     }
 
-    private var iconForeground: Color {
-        if isSelected {
-            return Color.accentColor
-        }
-        return isHovering ? Color.popLabel : Color.secondary
-    }
+    // MARK: Detail
 
-    private var backgroundFill: Color {
-        if isSelected {
-            return Color.accentColor.opacity(0.12)
+    @ViewBuilder
+    private var detailArea: some View {
+        switch store.currentSelection {
+        case .matrix:   MatrixView(store: store)
+        case .sources:  SourcesView(store: store)
+        case .updates:  UpdatesView(store: store)
+        case .backups:  BackupsView(store: store)
+        case .idle:     IdleView(store: store)
+        case .insights: InsightsView(store: store)
+        case .health:   LinkHealthView(store: store)
+        case .settings: SettingsView(store: store)
         }
-        return isHovering ? Color.accentColor.opacity(0.06) : Color.clear
     }
 }

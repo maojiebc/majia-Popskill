@@ -287,3 +287,12 @@
 "skill.empty.message" = "Choose an installed skill to inspect its source, last activity, and toggle apps.";
 "stub.empty.title" = "Pick a stub to rehydrate";
 "stub.empty.message" = "Stubs preserve a recovery snapshot of the original skill. Restore one by selecting it and choosing a target app.";
+
+// S2 新增 — v0.3 三段 sidebar + 8 个 view
+"sidebar.matrix" = "Skills × Tools";
+"sidebar.sources" = "Sources";
+"sidebar.idle" = "Idle";
+"sidebar.health" = "Link Health";
+"sidebar.section.control" = "CONTROL";
+"sidebar.section.sources" = "SOURCES";
+"sidebar.section.maintenance" = "MAINTENANCE";
