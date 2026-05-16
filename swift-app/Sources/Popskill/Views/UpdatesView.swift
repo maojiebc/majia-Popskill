@@ -55,6 +55,9 @@ struct UpdatesView: View {
     }
 
     private var subtitle: String {
+        if loading {
+            return localization.string("updates.subtitleScanning", store.updates.count)
+        }
         if let lastScanAt {
             let formatter = RelativeDateTimeFormatter()
             formatter.unitsStyle = .short

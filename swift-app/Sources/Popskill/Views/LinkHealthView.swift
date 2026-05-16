@@ -109,7 +109,7 @@ struct LinkHealthView: View {
                         .font(.callout.weight(.semibold))
                         .foregroundStyle(Color.popLabel)
                     if let path = row.deployment?.ssotPath, !path.isEmpty {
-                        Text(path)
+                        Text((path as NSString).abbreviatingWithTildeInPath)
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(Color.popSecondaryLabel)
                             .lineLimit(1)

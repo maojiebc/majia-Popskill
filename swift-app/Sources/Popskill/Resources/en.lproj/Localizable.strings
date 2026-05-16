@@ -292,6 +292,7 @@
 "sidebar.matrix" = "Skills × Tools";
 "sidebar.sources" = "Sources";
 "sidebar.idle" = "Idle";
+"sidebar.insights" = "Insights";
 "sidebar.health" = "Link Health";
 "sidebar.section.control" = "CONTROL";
 "sidebar.section.sources" = "SOURCES";
@@ -395,6 +396,7 @@
 // S5 — Updates view
 "updates.subtitle" = "%d pending · scanned %@";
 "updates.subtitleNoScan" = "%d pending · scan not run yet";
+"updates.subtitleScanning" = "%d pending · scanning…";
 "updates.rescan" = "Re-scan";
 "updates.updateAll" = "Update all";
 "updates.row.firstSync" = "First sync available";

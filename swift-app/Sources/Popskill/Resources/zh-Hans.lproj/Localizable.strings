@@ -292,6 +292,7 @@
 "sidebar.matrix" = "能力 × 工具";
 "sidebar.sources" = "数据源";
 "sidebar.idle" = "闲置";
+"sidebar.insights" = "用量";
 "sidebar.health" = "链接健康";
 "sidebar.section.control" = "操控台";
 "sidebar.section.sources" = "来源";
@@ -395,6 +396,7 @@
 // S5 — Updates
 "updates.subtitle" = "%d 项可更新 · %@ 扫描";
 "updates.subtitleNoScan" = "%d 项可更新 · 还没扫描";
+"updates.subtitleScanning" = "%d 项可更新 · 扫描中…";
 "updates.rescan" = "重新扫描";
 "updates.updateAll" = "全部更新";
 "updates.row.firstSync" = "首次拉取可用";

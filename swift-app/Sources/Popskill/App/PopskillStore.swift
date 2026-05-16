@@ -26,14 +26,28 @@ final class PopskillStore {
     var onboardScan: OnboardScanReport?
 
     // ===== UI state =====
-    var currentSelection: SidebarSelection = .matrix
+    /// Initial selection honors `POPSKILL_DEFAULT_VIEW` when set (used by
+    /// screenshot tooling). Defaults to the matrix.
+    var currentSelection: SidebarSelection = {
+        if let raw = ProcessInfo.processInfo.environment["POPSKILL_DEFAULT_VIEW"],
+           let v = SidebarSelection(rawValue: raw) {
+            return v
+        }
+        return .matrix
+    }()
     var searchText: String = ""
     var selectedSkillID: String? = nil
     var inspectorOpen: Bool = false
-    var spotlightOpen: Bool = false
+    /// Honors `POPSKILL_DEFAULT_OVERLAY=spotlight` for screenshot tooling.
+    var spotlightOpen: Bool = {
+        ProcessInfo.processInfo.environment["POPSKILL_DEFAULT_OVERLAY"] == "spotlight"
+    }()
     /// Toggled by Settings → "Re-run onboarding" and by the first-launch hook
-    /// in `RootView`. S6 binds the wizard sheet to this flag.
-    var onboardingOpen: Bool = false
+    /// in `RootView`. S6 binds the wizard sheet to this flag. Honors
+    /// `POPSKILL_DEFAULT_OVERLAY=onboarding` for screenshot tooling.
+    var onboardingOpen: Bool = {
+        ProcessInfo.processInfo.environment["POPSKILL_DEFAULT_OVERLAY"] == "onboarding"
+    }()
 
     // ===== Matrix state =====
     var matrixFilter: MatrixFilter = .all

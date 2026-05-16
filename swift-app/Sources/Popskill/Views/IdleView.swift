@@ -100,15 +100,21 @@ struct IdleView: View {
                 Label(localization.string("idle.row.uninstall"), systemImage: "trash")
             }
         } label: {
-            Text(localization.string("idle.row.action"))
-                .font(.caption.weight(.semibold))
+            HStack(spacing: 4) {
+                Text(localization.string("idle.row.action"))
+                    .font(.caption.weight(.semibold))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .foregroundStyle(Color.accentColor)
+            .background(Color.accentColor.opacity(0.12), in: Capsule())
         }
         .menuStyle(.borderlessButton)
-        .controlSize(.small)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(Color.accentColor.opacity(0.12), in: Capsule())
-        .foregroundStyle(Color.accentColor)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .buttonStyle(.plain)
     }
 
     private var emptyState: some View {
