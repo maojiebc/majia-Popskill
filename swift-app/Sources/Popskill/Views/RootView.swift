@@ -9,16 +9,33 @@ struct RootView: View {
     @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
-        NavigationSplitView {
-            sidebar
-        } detail: {
-            detailArea
+        ZStack {
+            NavigationSplitView {
+                sidebar
+            } detail: {
+                detailArea
+            }
+            .navigationSplitViewStyle(.balanced)
+            .background(PopskillCanvasBackground())
+
+            // Invisible button registers the ⌘K shortcut. Placing it inside the
+            // ZStack rather than .background keeps the shortcut active in every
+            // detail view (including ones that swallow keyboard via TextField).
+            Button("") { store.spotlightOpen.toggle() }
+                .keyboardShortcut("k", modifiers: .command)
+                .opacity(0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+
+            if store.spotlightOpen {
+                SpotlightView(store: store)
+                    .zIndex(1)
+            }
         }
-        .navigationSplitViewStyle(.balanced)
+        .animation(.easeOut(duration: 0.14), value: store.spotlightOpen)
         .task {
             await store.bootstrap()
         }
-        .background(PopskillCanvasBackground())
         .frame(minWidth: 1180, minHeight: 720)
     }
 

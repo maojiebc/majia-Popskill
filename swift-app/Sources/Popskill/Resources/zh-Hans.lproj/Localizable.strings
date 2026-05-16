@@ -353,3 +353,27 @@
 "matrix.inspector.meta.updatedAt" = "更新于";
 "matrix.inspector.meta.size" = "大小";
 "matrix.inspector.meta.openSource" = "打开来源页";
+
+// S4 新增 — ⌘K Spotlight
+"spotlight.title" = "Spotlight ⌘K";
+"spotlight.placeholder" = "搜索能力、运行操作…";
+"spotlight.clear" = "清空";
+
+"spotlight.section.capabilities" = "能力";
+"spotlight.section.actions" = "操作";
+
+"spotlight.empty.title" = "没有匹配";
+"spotlight.empty.body" = "试试名字、触发词,或按 ↑↓ 挑一条最近更新的能力。";
+
+"spotlight.hint.navigate" = "↑↓ 导航";
+"spotlight.hint.open" = "↩ 打开";
+"spotlight.hint.close" = "esc 关闭";
+
+"spotlight.action.refresh.title" = "刷新数据";
+"spotlight.action.refresh.subtitle" = "重新从 sidecar 拉 skills / 数据源 / agents";
+"spotlight.action.linkHealth.title" = "打开链接健康";
+"spotlight.action.linkHealth.subtitle" = "检查 SSOT 与 symlink 的健康";
+"spotlight.action.updates.title" = "打开更新列表";
+"spotlight.action.updates.subtitle" = "查看待更新的能力";
+"spotlight.action.settings.title" = "打开设置";
+"spotlight.action.settings.subtitle" = "存储 / 同步 / 数据源";
