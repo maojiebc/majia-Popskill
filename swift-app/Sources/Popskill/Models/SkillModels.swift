@@ -129,6 +129,11 @@ struct Skill: Identifiable, Codable, Equatable {
     let contentHash: String?
     var capabilitySummary: String? = nil
     var triggerScenarios: [String]? = nil
+    /// 来源类型（"github" | "npm" | "brew" | "pip" | "builtin"），sidecar 推断。
+    /// Swift 端在 ViewModel 里可做更精细的二次推断（如 sourceShort 解析）。
+    var sourceType: String? = nil
+    /// 真身 + 各 AI 工具 symlink 状态。喂给 Inspector "位置与链接" 与 链接健康 view。
+    var deployment: SkillDeployment? = nil
     var lastUsedAt: Int? = nil
     var sizeBytes: UInt64? = nil
 
@@ -1035,6 +1040,88 @@ struct SkillApps: Codable, Equatable {
         case .hermes: hermes = enabled
         }
     }
+}
+
+/// Deployment shape returned by `skill-cli list` (per skill) and
+/// `skill-cli link-health` (aggregated). Mirrors the sidecar `DeploymentInfo`
+/// struct 1:1.
+struct SkillDeployment: Codable, Equatable, Hashable {
+    /// "symlink" | "copy" | "path" | "mcp-config"
+    let strategy: String
+    let ssotPath: String
+    /// key = "claude" | "codex" | future "gemini" / "opencode" / ...
+    let appLinks: [String: AppLinkStatus]
+}
+
+struct AppLinkStatus: Codable, Equatable, Hashable {
+    let path: String
+    /// "ok" | "broken" | "inactive" | "na"
+    let status: String
+}
+
+/// Top-level envelope returned by `skill-cli link-health --json`.
+struct LinkHealthReport: Codable, Equatable {
+    let summary: LinkHealthSummary
+    let rows: [LinkHealthRow]
+}
+
+struct LinkHealthSummary: Codable, Equatable {
+    let ok: Int
+    let broken: Int
+    let inactive: Int
+}
+
+struct LinkHealthRow: Codable, Equatable {
+    let skillId: String
+    let skillName: String
+    let deployment: SkillDeployment?
+}
+
+/// Envelope returned by `skill-cli onboard-scan --json`. Powers onboarding
+/// wizard step 3.
+struct OnboardScanReport: Codable, Equatable {
+    let popskillSsot: String?
+    let popskillInstalledCount: Int
+    let agentsDir: OnboardScanDir
+    let claudeSkillsDir: OnboardScanDir
+    let codexSkillsDir: OnboardScanDir
+    let claudeAgentsDir: OnboardScanDir
+    let brewCli: [String]
+    let npmGlobalMcp: [String]
+    let iCloudDriveAvailable: Bool
+    let recommendedSyncProvider: String
+
+    enum CodingKeys: String, CodingKey {
+        case popskillSsot
+        case popskillInstalledCount
+        case agentsDir
+        case claudeSkillsDir
+        case codexSkillsDir
+        case claudeAgentsDir
+        case brewCli
+        case npmGlobalMcp
+        case iCloudDriveAvailable = "iCloudDriveAvailable"
+        case recommendedSyncProvider
+    }
+}
+
+struct OnboardScanDir: Codable, Equatable {
+    let path: String
+    let exists: Bool
+    let count: Int
+    let isGit: Bool
+}
+
+/// Envelope returned by `skill-cli sync <action> --provider <p>`.
+struct SyncResult: Codable, Equatable {
+    let provider: String
+    let action: String
+    let ok: Bool?
+    let exitCode: Int?
+    let stdout: String?
+    let stderr: String?
+    let message: String?
+    let implemented: Bool?
 }
 
 struct UnmanagedSkill: Identifiable, Codable, Equatable {

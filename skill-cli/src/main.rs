@@ -5,6 +5,7 @@ use cc_switch_lib::{
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -343,6 +344,32 @@ enum Commands {
         #[arg(long, action = clap::ArgAction::Set)]
         enabled: bool,
         /// Kept for the Swift client contract; output is JSON either way.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Inspect symlink health across every installed skill. Feeds Popskill's
+    /// "链接健康" view and the status-bar `♺ N/M` indicator. Returns per-skill
+    /// rows plus an aggregate summary.
+    LinkHealth {
+        #[arg(long)]
+        json: bool,
+    },
+    /// Trigger a sync operation through the chosen provider. v0.3 implements
+    /// `git`; `icloud` and `webdav` return a stubbed payload so Swift can wire
+    /// the UI without waiting for the backend.
+    Sync {
+        /// "push" | "pull" | "status"
+        action: String,
+        /// "git" | "icloud" | "webdav"
+        #[arg(long, default_value = "git")]
+        provider: String,
+        #[arg(long)]
+        json: bool,
+    },
+    /// First-run inventory of every place a skill / CLI / MCP / agent might
+    /// already live on this Mac. Popskill's onboarding wizard step 3 consumes
+    /// this — the user gets a single "全部接管" choice instead of N popups.
+    OnboardScan {
         #[arg(long)]
         json: bool,
     },
@@ -809,6 +836,50 @@ async fn run() -> Result<()> {
                 "app": app_type.as_str(),
                 "enabled": enabled
             })))
+        }
+        Commands::LinkHealth { json: _ } => {
+            let skills = SkillService::get_all_installed(&db)
+                .context("failed to list installed skills for link-health")?;
+            let mut ok = 0;
+            let mut broken = 0;
+            let mut inactive = 0;
+            let rows: Vec<serde_json::Value> = skills
+                .into_iter()
+                .map(|skill| {
+                    let dep = build_deployment_info(&skill).ok();
+                    if let Some(d) = &dep {
+                        for (_, link) in d.app_links.iter() {
+                            match link.status.as_str() {
+                                "ok" => ok += 1,
+                                "broken" => broken += 1,
+                                "inactive" => inactive += 1,
+                                _ => {}
+                            }
+                        }
+                    }
+                    json!({
+                        "skillId": skill.id,
+                        "skillName": skill.name,
+                        "deployment": dep,
+                    })
+                })
+                .collect();
+            print_json(&ApiResponse::ok(json!({
+                "summary": { "ok": ok, "broken": broken, "inactive": inactive },
+                "rows": rows,
+            })))
+        }
+        Commands::Sync {
+            action,
+            provider,
+            json: _,
+        } => {
+            let payload = run_sync(&action, &provider)?;
+            print_json(&ApiResponse::ok(payload))
+        }
+        Commands::OnboardScan { json: _ } => {
+            let payload = run_onboard_scan(&db)?;
+            print_json(&ApiResponse::ok(payload))
         }
     }
 }
@@ -2104,6 +2175,39 @@ struct EnrichedInstalledSkill {
     capability_summary: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     trigger_scenarios: Vec<String>,
+    /// 来源类型 — popskill UI 用此显示 source icon（🐙/📦/🍺/…）。
+    /// 当 cc-switch 不知道时返回 "builtin"。
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source_type: Option<String>,
+    /// 部署策略 + symlink 状态 — popskill UI 用此渲染 Inspector
+    /// "位置与链接" section 以及"链接健康" view。
+    #[serde(skip_serializing_if = "Option::is_none")]
+    deployment: Option<DeploymentInfo>,
+}
+
+/// 描述一个 skill 在中心仓（SSOT）和各 AI 工具目录之间的部署形态。
+/// v0.3 默认策略是 symlink，~/.agents/skills/{name} 是真身，
+/// ~/.claude/skills/{name} 与 ~/.codex/skills/{name} 是 symlink。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DeploymentInfo {
+    /// "symlink" | "copy" | "path"（CLI）| "mcp-config"（MCP 走 mcp.json 注入）
+    strategy: String,
+    /// SSOT 真身的绝对路径（agent 标准目录优先，回退 cc-switch 默认目录）。
+    ssot_path: String,
+    /// 各 AI 工具的 symlink / 配置位置和健康状态。
+    /// key = "claude" | "codex" | 未来可能 "gemini" / "opencode" 等。
+    app_links: BTreeMap<String, AppLinkStatus>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AppLinkStatus {
+    /// 该 AI 工具读取这个 skill 的路径（symlink 或 config 注入位置）。
+    path: String,
+    /// "ok"（symlink 健康）| "broken"（target 缺失 / dangling）|
+    /// "inactive"（用户在该工具关闭了此 skill）| "na"（该工具不支持此 type）
+    status: String,
 }
 
 /// Strategy passed to `Commands::Uninstall` to honor majia 13-项校准 #12
@@ -2186,6 +2290,198 @@ fn run_uninstall_with_strategy(
     }
 }
 
+/// Run a sync action (`push` | `pull` | `status`) through the chosen provider.
+/// v0.3 implements `git` (best-effort, shells out to `git`); `icloud` and
+/// `webdav` return a stubbed payload so the Swift UI can render and reach a
+/// "coming soon" toast without a missing-command failure.
+fn run_sync(action: &str, provider: &str) -> Result<serde_json::Value> {
+    match provider {
+        "git" => run_git_sync(action),
+        "icloud" => Ok(json!({
+            "provider": "icloud",
+            "action": action,
+            "implemented": false,
+            "message": "iCloud Drive 同步在 v0.4 真实实现 · 当前 UI 占位"
+        })),
+        "webdav" => Ok(json!({
+            "provider": "webdav",
+            "action": action,
+            "implemented": false,
+            "message": "WebDAV 同步在 v0.4 真实实现"
+        })),
+        "none" => Ok(json!({
+            "provider": "none",
+            "action": action,
+            "implemented": false,
+            "message": "未启用同步"
+        })),
+        other => bail!("unknown sync provider '{other}'"),
+    }
+}
+
+fn run_git_sync(action: &str) -> Result<serde_json::Value> {
+    let ssot = match SkillService::get_ssot_dir() {
+        Ok(d) => d,
+        Err(_) => {
+            return Ok(json!({
+                "provider": "git",
+                "action": action,
+                "ok": false,
+                "message": "无法解析 SSOT 目录"
+            }));
+        }
+    };
+    if !ssot.join(".git").exists() {
+        return Ok(json!({
+            "provider": "git",
+            "action": action,
+            "ok": false,
+            "message": format!("{} 不是 git 仓库，建议先 cd 进去 git init / git remote add", ssot.display())
+        }));
+    }
+    let args: &[&str] = match action {
+        "push" => &["push"],
+        "pull" => &["pull", "--ff-only"],
+        "status" => &["status", "--short"],
+        other => bail!("unknown git sync action '{other}'"),
+    };
+    let output = Command::new("git").current_dir(&ssot).args(args).output();
+    match output {
+        Ok(out) => Ok(json!({
+            "provider": "git",
+            "action": action,
+            "ok": out.status.success(),
+            "exitCode": out.status.code(),
+            "stdout": String::from_utf8_lossy(&out.stdout).to_string(),
+            "stderr": String::from_utf8_lossy(&out.stderr).to_string(),
+        })),
+        Err(err) => Ok(json!({
+            "provider": "git",
+            "action": action,
+            "ok": false,
+            "message": format!("无法启动 git: {err}")
+        })),
+    }
+}
+
+/// Scan every place a skill / CLI / MCP / agent might already live on this
+/// Mac. Powers onboarding wizard step 3.
+fn run_onboard_scan(db: &Arc<Database>) -> Result<serde_json::Value> {
+    let home = home_dir()?;
+
+    let ssot = SkillService::get_ssot_dir().ok();
+    let agents_dir = home.join(".agents").join("skills");
+    let claude_dir = home.join(".claude").join("skills");
+    let codex_dir = home.join(".codex").join("skills");
+    let agents_root_dir = home.join(".claude").join("agents");
+
+    let scan_dir = |path: &Path| -> serde_json::Value {
+        let exists = path.exists();
+        let count = if exists {
+            fs::read_dir(path)
+                .ok()
+                .map(|rd| {
+                    rd.filter_map(|e| e.ok())
+                        .filter(|e| {
+                            e.file_type().ok().is_some_and(|t| t.is_dir())
+                                && !e.file_name().to_string_lossy().starts_with('.')
+                        })
+                        .count()
+                })
+                .unwrap_or(0)
+        } else {
+            0
+        };
+        let is_git = path.join(".git").exists();
+        json!({
+            "path": path.to_string_lossy().to_string(),
+            "exists": exists,
+            "count": count,
+            "isGit": is_git,
+        })
+    };
+
+    let installed_count = db
+        .get_all_installed_skills()
+        .map(|v| v.len())
+        .unwrap_or(0);
+
+    // Best-effort detection of `brew` / `npm` global packages. Both are
+    // optional — if the command isn't on PATH we just report empty.
+    let brew_cli = which_list(&["lark-cli", "gh", "fzf", "rg", "ripgrep", "bun", "deno"]);
+    let npm_globals = npm_global_mcp_list();
+
+    let icloud_drive_dir = home
+        .join("Library")
+        .join("Mobile Documents")
+        .join("com~apple~CloudDocs");
+    let icloud_available = icloud_drive_dir.exists();
+
+    let recommended = if agents_dir.join(".git").exists() {
+        "git"
+    } else if icloud_available {
+        "icloud"
+    } else {
+        "none"
+    };
+
+    Ok(json!({
+        "popskillSsot": ssot.as_ref().map(|p| p.to_string_lossy().to_string()),
+        "popskillInstalledCount": installed_count,
+        "agentsDir": scan_dir(&agents_dir),
+        "claudeSkillsDir": scan_dir(&claude_dir),
+        "codexSkillsDir": scan_dir(&codex_dir),
+        "claudeAgentsDir": scan_dir(&agents_root_dir),
+        "brewCli": brew_cli,
+        "npmGlobalMcp": npm_globals,
+        "iCloudDriveAvailable": icloud_available,
+        "recommendedSyncProvider": recommended,
+    }))
+}
+
+fn which_list(bins: &[&str]) -> Vec<String> {
+    bins.iter()
+        .filter(|name| {
+            Command::new("which")
+                .arg(name)
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false)
+        })
+        .map(|s| (*s).to_string())
+        .collect()
+}
+
+fn npm_global_mcp_list() -> Vec<String> {
+    // best-effort: `npm ls -g --depth=0 --json` if npm is around. Filter to
+    // packages whose name contains "mcp" or namespace is a known MCP scope.
+    let output = Command::new("npm")
+        .args(["ls", "-g", "--depth=0", "--json"])
+        .output();
+    let Ok(out) = output else {
+        return Vec::new();
+    };
+    if !out.status.success() {
+        return Vec::new();
+    }
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(&stdout) else {
+        return Vec::new();
+    };
+    let Some(deps) = value.get("dependencies").and_then(|v| v.as_object()) else {
+        return Vec::new();
+    };
+    deps.keys()
+        .filter(|name| {
+            name.contains("mcp")
+                || name.starts_with("@modelcontextprotocol/")
+                || name.starts_with("@upstash/context7")
+                || name.starts_with("@microsoft/playwright")
+        })
+        .map(|s| s.to_string())
+        .collect()
+}
+
 fn enrich_installed_skill(skill: InstalledSkill) -> EnrichedInstalledSkill {
     // CC Switch already parses SKILL.md frontmatter description (including YAML
     // multi-line scalars), so reuse it for capability_summary. Only read SKILL.md
@@ -2197,11 +2493,98 @@ fn enrich_installed_skill(skill: InstalledSkill) -> EnrichedInstalledSkill {
         .unwrap_or_default();
 
     let capability_summary = skill.description.as_deref().and_then(first_sentence_of);
+    let source_type = Some(detect_source_type(&skill));
+    let deployment = build_deployment_info(&skill).ok();
 
     EnrichedInstalledSkill {
         inner: skill,
         capability_summary,
         trigger_scenarios,
+        source_type,
+        deployment,
+    }
+}
+
+/// Infer the source taxonomy bucket. v0.3 cc-switch only tracks GitHub-cloned
+/// skills, so most return "github". Future versions add npm / brew / pip / etc.
+/// Swift side does richer detection from sourceShort patterns.
+fn detect_source_type(skill: &InstalledSkill) -> String {
+    if skill.repo_owner.is_some() && skill.repo_name.is_some() {
+        "github".to_string()
+    } else if skill.directory.starts_with('@') {
+        "npm".to_string()
+    } else {
+        "builtin".to_string()
+    }
+}
+
+/// Build the deployment shape (SSOT path + per-AI-tool symlink status). This is
+/// the source-of-truth feeder for the Inspector "位置与链接" section and the
+/// dedicated "链接健康" view.
+fn build_deployment_info(skill: &InstalledSkill) -> Result<DeploymentInfo> {
+    let ssot = installed_skill_dir(skill)
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    let home = home_dir()
+        .map(|h| h.to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    let mut app_links = BTreeMap::new();
+
+    let claude_path = format!("{}/.claude/skills/{}", home, skill.directory);
+    app_links.insert(
+        "claude".to_string(),
+        AppLinkStatus {
+            status: check_link_status(Path::new(&claude_path), skill.apps.claude),
+            path: claude_path,
+        },
+    );
+
+    let codex_path = format!("{}/.codex/skills/{}", home, skill.directory);
+    app_links.insert(
+        "codex".to_string(),
+        AppLinkStatus {
+            status: check_link_status(Path::new(&codex_path), skill.apps.codex),
+            path: codex_path,
+        },
+    );
+
+    Ok(DeploymentInfo {
+        strategy: "symlink".to_string(),
+        ssot_path: ssot,
+        app_links,
+    })
+}
+
+/// Check a single symlink (or copy fallback) under an AI tool's skill dir.
+/// - "inactive": user has the skill turned off for this tool, link should not exist.
+/// - "ok": link/copy exists and target resolves.
+/// - "broken": active but missing OR dangling.
+fn check_link_status(path: &Path, active: bool) -> String {
+    if !active {
+        return "inactive".to_string();
+    }
+    match fs::symlink_metadata(path) {
+        Err(_) => "broken".to_string(),
+        Ok(metadata) if metadata.file_type().is_symlink() => match fs::read_link(path) {
+            Ok(target) => {
+                let resolved = if target.is_absolute() {
+                    target
+                } else {
+                    path.parent()
+                        .unwrap_or_else(|| Path::new("."))
+                        .join(&target)
+                };
+                if resolved.exists() {
+                    "ok".to_string()
+                } else {
+                    "broken".to_string()
+                }
+            }
+            Err(_) => "broken".to_string(),
+        },
+        Ok(_) => "ok".to_string(),
     }
 }
 
