@@ -32,6 +32,13 @@ final class PopskillStore {
     var inspectorOpen: Bool = false
     var spotlightOpen: Bool = false
 
+    // ===== Matrix state =====
+    var matrixFilter: MatrixFilter = .all
+    var matrixTypeFilter: MatrixTypeFilter = .allTypes
+    /// Repo groups the user has explicitly collapsed. Set is keyed by
+    /// `MatrixGroup.id` (== "owner/name" or "ungrouped").
+    var collapsedGroups: Set<String> = []
+
     // ===== System state =====
     var lastBootstrapAt: Date?
     var lastSyncAt: Date?

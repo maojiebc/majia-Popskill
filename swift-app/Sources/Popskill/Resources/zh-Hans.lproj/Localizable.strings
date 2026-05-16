@@ -296,3 +296,60 @@
 "sidebar.section.control" = "操控台";
 "sidebar.section.sources" = "来源";
 "sidebar.section.maintenance" = "维护";
+
+// S3 新增 — 矩阵主视图 + Inspector
+"matrix.subtitle" = "%d 项能力 · %d 个已启用开关";
+"matrix.search.placeholder" = "按名称、触发词或目录过滤";
+"matrix.col.capability" = "能力";
+"matrix.col.source" = "来源";
+
+"matrix.filter.all" = "全部";
+"matrix.filter.updates" = "可更新";
+"matrix.filter.claudeOnly" = "仅 Claude";
+"matrix.filter.codexOnly" = "仅 Codex";
+"matrix.filter.inactive" = "未启用";
+
+"matrix.type.all" = "所有类型";
+"matrix.type.skill" = "Skill";
+"matrix.type.agent" = "Agent";
+"matrix.type.cli" = "CLI";
+"matrix.type.mcp" = "MCP";
+
+"matrix.group.ungrouped" = "其他";
+
+"matrix.row.updateBadge" = "可更新";
+"matrix.row.noSummary" = "暂无说明";
+"matrix.row.menu.inspect" = "打开 Inspector";
+"matrix.row.menu.openSource" = "查看来源";
+"matrix.row.menu.revealInFinder" = "在 Finder 中显示";
+"matrix.row.menu.help" = "更多操作";
+
+"matrix.empty.title" = "还没有能力";
+"matrix.empty.body" = "从数据源安装第一个 skill,或等 sidecar 初始化完成。";
+"matrix.empty.refresh" = "刷新";
+
+"matrix.inspector.empty.title" = "选个能力看详情";
+"matrix.inspector.empty.body" = "点左边的能力,这里会显示描述、部署链接和来源。";
+"matrix.inspector.close" = "关闭面板";
+
+"matrix.inspector.section.summary" = "简介";
+"matrix.inspector.section.triggers" = "触发场景";
+"matrix.inspector.section.apps" = "应用启用";
+"matrix.inspector.section.deployment" = "位置与链接";
+"matrix.inspector.section.meta" = "元信息";
+
+"matrix.inspector.deployment.ssot" = "真身 (SSOT)";
+"matrix.inspector.deployment.strategy" = "部署策略 · %@";
+"matrix.inspector.deployment.empty" = "暂无部署信息 — 还没跑过链接健康。";
+
+"matrix.inspector.linkStatus.ok" = "正常";
+"matrix.inspector.linkStatus.broken" = "断链";
+"matrix.inspector.linkStatus.inactive" = "未启用";
+"matrix.inspector.linkStatus.na" = "无";
+
+"matrix.inspector.meta.directory" = "目录";
+"matrix.inspector.meta.sourceType" = "来源类型";
+"matrix.inspector.meta.installedAt" = "安装于";
+"matrix.inspector.meta.updatedAt" = "更新于";
+"matrix.inspector.meta.size" = "大小";
+"matrix.inspector.meta.openSource" = "打开来源页";

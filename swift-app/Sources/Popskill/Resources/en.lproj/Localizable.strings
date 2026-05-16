@@ -296,3 +296,60 @@
 "sidebar.section.control" = "CONTROL";
 "sidebar.section.sources" = "SOURCES";
 "sidebar.section.maintenance" = "MAINTENANCE";
+
+// S3 新增 — Matrix + Inspector
+"matrix.subtitle" = "%d capabilities · %d active toggles";
+"matrix.search.placeholder" = "Filter by name, trigger, or directory";
+"matrix.col.capability" = "Capability";
+"matrix.col.source" = "Source";
+
+"matrix.filter.all" = "All";
+"matrix.filter.updates" = "Updates";
+"matrix.filter.claudeOnly" = "Claude only";
+"matrix.filter.codexOnly" = "Codex only";
+"matrix.filter.inactive" = "Inactive";
+
+"matrix.type.all" = "All types";
+"matrix.type.skill" = "Skill";
+"matrix.type.agent" = "Agent";
+"matrix.type.cli" = "CLI";
+"matrix.type.mcp" = "MCP";
+
+"matrix.group.ungrouped" = "Other";
+
+"matrix.row.updateBadge" = "UPDATE";
+"matrix.row.noSummary" = "No summary";
+"matrix.row.menu.inspect" = "Open Inspector";
+"matrix.row.menu.openSource" = "Open Source";
+"matrix.row.menu.revealInFinder" = "Reveal in Finder";
+"matrix.row.menu.help" = "More actions";
+
+"matrix.empty.title" = "No capabilities yet";
+"matrix.empty.body" = "Install your first skill from a source, or wait for bootstrap to finish.";
+"matrix.empty.refresh" = "Refresh";
+
+"matrix.inspector.empty.title" = "Select a capability";
+"matrix.inspector.empty.body" = "Pick a row to see its description, deployment links, and source.";
+"matrix.inspector.close" = "Close inspector";
+
+"matrix.inspector.section.summary" = "SUMMARY";
+"matrix.inspector.section.triggers" = "TRIGGERS";
+"matrix.inspector.section.apps" = "APPS";
+"matrix.inspector.section.deployment" = "DEPLOYMENT";
+"matrix.inspector.section.meta" = "METADATA";
+
+"matrix.inspector.deployment.ssot" = "SSOT (real file)";
+"matrix.inspector.deployment.strategy" = "Strategy · %@";
+"matrix.inspector.deployment.empty" = "Deployment info not available — link health hasn't run yet.";
+
+"matrix.inspector.linkStatus.ok" = "OK";
+"matrix.inspector.linkStatus.broken" = "BROKEN";
+"matrix.inspector.linkStatus.inactive" = "OFF";
+"matrix.inspector.linkStatus.na" = "N/A";
+
+"matrix.inspector.meta.directory" = "Directory";
+"matrix.inspector.meta.sourceType" = "Source type";
+"matrix.inspector.meta.installedAt" = "Installed";
+"matrix.inspector.meta.updatedAt" = "Updated";
+"matrix.inspector.meta.size" = "Size";
+"matrix.inspector.meta.openSource" = "Open source page";
