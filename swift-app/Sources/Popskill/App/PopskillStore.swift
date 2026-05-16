@@ -24,6 +24,9 @@ final class PopskillStore {
     var stubs: [StubbedSkill] = []
     var linkHealth: LinkHealthReport?
     var onboardScan: OnboardScanReport?
+    var usageSummary: UsageSummary?
+    var usageScanError: String?
+    var usageScanInFlight: Bool = false
 
     // ===== UI state =====
     /// Initial selection honors `POPSKILL_DEFAULT_VIEW` when set (used by
@@ -133,5 +136,29 @@ final class PopskillStore {
     func closeInspector() {
         inspectorOpen = false
         selectedSkillID = nil
+    }
+
+    // MARK: Usage scanner
+
+    /// Walk `~/.claude/projects/**/*.jsonl` off the main thread and post the
+    /// `UsageSummary` back when done. Insights view drives this on first
+    /// appearance and via its refresh button. Errors land in `usageScanError`
+    /// — surfacing them lets the user know "I scanned but the dir was
+    /// missing" vs. "I haven't scanned yet".
+    func refreshUsageScan() async {
+        guard !usageScanInFlight else { return }
+        usageScanInFlight = true
+        usageScanError = nil
+        defer { usageScanInFlight = false }
+
+        let scanner = TranscriptUsageScanner()
+        do {
+            let summary = try await Task.detached(priority: .utility) {
+                try scanner.scan()
+            }.value
+            self.usageSummary = summary
+        } catch {
+            self.usageScanError = error.localizedDescription
+        }
     }
 }

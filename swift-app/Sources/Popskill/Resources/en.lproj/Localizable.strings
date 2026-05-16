@@ -441,6 +441,25 @@
 "insights.breakdown.codex" = "Codex coverage";
 "insights.breakdown.topSources" = "Top sources";
 
+// S9 — Token usage
+"insights.refresh" = "Re-scan";
+"insights.tokens.title" = "TRANSCRIPT TOKENS";
+"insights.tokens.scanFooter" = "%d sessions · %d files scanned";
+"insights.tokens.input" = "Input";
+"insights.tokens.output" = "Output";
+"insights.tokens.cacheCreation" = "Cache create";
+"insights.tokens.cacheRead" = "Cache read";
+"insights.tokens.total" = "Total";
+
+"insights.topSkills.title" = "TOP CAPABILITIES BY USAGE";
+"insights.topSkills.empty" = "No skill attributions found in this scan.";
+
+"insights.scan.scanning" = "Scanning ~/.claude/projects…";
+"insights.scan.scanningHint" = "Reads every .jsonl session file in the background.";
+"insights.scan.errorTitle" = "Couldn't read transcripts";
+"insights.scan.emptyTitle" = "No transcript data yet";
+"insights.scan.emptyBody" = "Use Claude Code at least once, then re-scan to see token usage here.";
+
 // S5 — Link Health view
 "health.subtitle" = "%d OK · %d broken · %d inactive";
 "health.subtitleNoScan" = "Scan hasn't run yet";

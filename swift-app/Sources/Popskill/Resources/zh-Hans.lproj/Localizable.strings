@@ -441,6 +441,25 @@
 "insights.breakdown.codex" = "Codex 覆盖";
 "insights.breakdown.topSources" = "Top 数据源";
 
+// S9 — Token 用量
+"insights.refresh" = "重新扫描";
+"insights.tokens.title" = "对话 token 用量";
+"insights.tokens.scanFooter" = "%d 个会话 · 扫了 %d 个文件";
+"insights.tokens.input" = "输入";
+"insights.tokens.output" = "输出";
+"insights.tokens.cacheCreation" = "缓存创建";
+"insights.tokens.cacheRead" = "缓存读取";
+"insights.tokens.total" = "总计";
+
+"insights.topSkills.title" = "Top 能力按用量";
+"insights.topSkills.empty" = "本次扫描没找到 skill 归因记录。";
+
+"insights.scan.scanning" = "正在扫描 ~/.claude/projects…";
+"insights.scan.scanningHint" = "在后台读每个 .jsonl 会话文件。";
+"insights.scan.errorTitle" = "读取 transcript 失败";
+"insights.scan.emptyTitle" = "还没有用量数据";
+"insights.scan.emptyBody" = "至少用一次 Claude Code,再重新扫描就能看到 token 用量。";
+
 // S5 — Link Health
 "health.subtitle" = "%d 正常 · %d 断 · %d 未启用";
 "health.subtitleNoScan" = "还没扫描";
