@@ -338,6 +338,6 @@ struct MatrixGroupHeader: View {
             (enabled > 0 ? Color.popAccentSoft : Color.popControlFill),
             in: Capsule()
         )
-        .help("\(label): \(enabled)/\(total)")
+        .help(localization.string("matrix.group.coverageHelp", label, enabled, total))
     }
 }

@@ -10,7 +10,8 @@ struct MatrixView: View {
     @FocusState private var searchIsFocused: Bool
 
     var body: some View {
-        let sections = filteredSections
+        let capabilities = store.capabilities
+        let sections = filteredSections(in: capabilities)
         VStack(spacing: 0) {
             header
             Divider()
@@ -21,7 +22,7 @@ struct MatrixView: View {
             // capabilities yet" while the matrix below was happily populated.
             // v1.0.3 also distinguishes "world is empty" from "filter is too
             // narrow" — the latter shows noResultsState with a reset button.
-            if store.capabilities.isEmpty {
+            if capabilities.isEmpty {
                 emptyState
             } else if sections.isEmpty {
                 noResultsState
@@ -271,9 +272,9 @@ struct MatrixView: View {
 
     // MARK: Filtering & grouping
 
-    private var filteredSections: [CapabilitySection] {
+    private func filteredSections(in capabilities: [MatrixCapability]) -> [CapabilitySection] {
         let q = store.trimmedSearch.lowercased()
-        let visible = store.capabilities.filter { capability in
+        let visible = capabilities.filter { capability in
             store.matrixFilter.includes(capability: capability, store: store)
                 && store.matrixTypeFilter.includes(capability: capability)
                 && (q.isEmpty

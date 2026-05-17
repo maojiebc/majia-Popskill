@@ -7,7 +7,7 @@ import SwiftUI
 /// Steps:
 ///   0. Welcome — value prop + Start.
 ///   1. Detect tools — show Claude / Codex / brew CLIs / npm globals.
-///   2. Scan capabilities — show ~/.agents/skills + per-app skill dirs.
+///   2. Scan capabilities — show ~/.cc-switch/skills + per-app skill dirs.
 ///   3. Storage + sync — confirm SSOT + pick provider (iCloud recommended on
 ///      Mac with iCloud Drive available, Git otherwise).
 ///   4. Done — open matrix.
@@ -62,7 +62,7 @@ struct OnboardingWizardView: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.popSecondaryLabel)
                     .frame(width: 22, height: 22)
-                    .background(Color.black.opacity(0.05), in: Circle())
+                    .background(Color.popSubtleFill, in: Circle())
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.escape)
@@ -325,7 +325,7 @@ struct OnboardingWizardView: View {
                         .foregroundStyle(Color.popLabel)
                         .padding(8)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.black.opacity(0.04), in: RoundedRectangle(cornerRadius: 6))
+                        .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 6))
                         .textSelection(.enabled)
                 }
             } else {

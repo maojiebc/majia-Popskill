@@ -60,7 +60,7 @@ struct InspectorPane: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.popSecondaryLabel)
                     .frame(width: 22, height: 22)
-                    .background(Color.black.opacity(0.05), in: Circle())
+                    .background(Color.popSubtleFill, in: Circle())
             }
             .buttonStyle(.plain)
             .help(localization.string("matrix.inspector.close"))
@@ -151,7 +151,7 @@ struct InspectorPane: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(
-                isOn ? Color.accentColor.opacity(0.14) : Color.black.opacity(0.05),
+                isOn ? Color.accentColor.opacity(0.14) : Color.popSubtleFill,
                 in: Capsule()
             )
         }
@@ -232,7 +232,7 @@ struct InspectorPane: View {
             }
         }
         .padding(8)
-        .background(Color.black.opacity(0.03), in: RoundedRectangle(cornerRadius: 6))
+        .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 6))
     }
 
     private func linkStatusBadge(_ status: String) -> some View {

@@ -145,10 +145,10 @@ struct RootView: View {
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Color.popSecondaryLabel)
+            .foregroundStyle(Color.popSecondaryLabel)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("Dismiss"))
+            .accessibilityLabel(Text(localization.string("common.dismiss")))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)

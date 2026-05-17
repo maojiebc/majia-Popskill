@@ -31,7 +31,7 @@ struct PopskillSelectableCard<Content: View>: View {
                         .fill(.regularMaterial)
                     if isHovering && !isSelected {
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .fill(Color.accentColor.opacity(0.035))
+                            .fill(Color.popSurfaceHover)
                     }
                     if isSelected {
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -42,11 +42,11 @@ struct PopskillSelectableCard<Content: View>: View {
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .strokeBorder(
-                        isSelected ? Color.accentColor.opacity(0.36) : Color.white.opacity(0.08),
+                        isSelected ? Color.accentColor.opacity(0.36) : Color.popCardStroke,
                         lineWidth: isSelected ? 1.25 : 0.7
                     )
             )
-            .shadow(color: .black.opacity(isSelected ? 0.055 : 0.032), radius: isSelected ? 12 : 8, x: 0, y: 3)
+            .shadow(color: Color.popShadow.opacity(isSelected ? 0.055 : 0.032), radius: isSelected ? 12 : 8, x: 0, y: 3)
             .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .onTapGesture(perform: action)
             .onHover { isHovering = $0 }
@@ -84,16 +84,16 @@ private struct PopMaterialCardModifier: ViewModifier {
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(Color.white.opacity(borderOpacity), lineWidth: 0.7)
+                    .strokeBorder(Color.popCardStroke.opacity(borderOpacity), lineWidth: 0.7)
             )
-            .shadow(color: .black.opacity(shadowOpacity), radius: 10, x: 0, y: 3)
+            .shadow(color: Color.popShadow.opacity(shadowOpacity), radius: 10, x: 0, y: 3)
     }
 }
 
 extension View {
     func popMaterialCard(
         cornerRadius: CGFloat = PopskillRadius.largeCard,
-        borderOpacity: Double = 0.08,
+        borderOpacity: Double = 1,
         shadowOpacity: Double = 0.032
     ) -> some View {
         modifier(

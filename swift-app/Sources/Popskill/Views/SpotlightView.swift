@@ -35,7 +35,7 @@ struct SpotlightView: View {
     // MARK: Scrim
 
     private var scrim: some View {
-        Color.black.opacity(0.30)
+        Color.popBackdropScrim
             .ignoresSafeArea()
             .contentShape(Rectangle())
             .onTapGesture { close() }
@@ -58,9 +58,9 @@ struct SpotlightView: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(Color.black.opacity(0.08), lineWidth: 0.5)
+                .strokeBorder(Color.popSubtleStroke, lineWidth: 0.5)
         )
-        .shadow(color: Color.black.opacity(0.30), radius: 30, y: 12)
+        .shadow(color: Color.popShadow.opacity(0.20), radius: 30, y: 12)
         .padding(.top, 80)
         .padding(.horizontal, 28)
         .frame(maxHeight: .infinity, alignment: .top)
@@ -273,12 +273,12 @@ struct SpotlightView: View {
             .padding(.horizontal, 5)
             .padding(.vertical, 2.5)
             .background(
-                isOn ? Color.accentColor.opacity(0.14) : Color.black.opacity(0.05),
+                isOn ? Color.accentColor.opacity(0.14) : Color.popSubtleFill,
                 in: Capsule()
             )
         }
         .buttonStyle(.plain)
-        .help("\(app.title) · ⌘\(shortcut)")
+        .help(localization.string("spotlight.quickToggle.help", app.title, shortcut))
     }
 
     private var footerRow: some View {
@@ -296,7 +296,7 @@ struct SpotlightView: View {
         .background(.thinMaterial)
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(Color.black.opacity(0.06))
+                .fill(Color.popSubtleStroke)
                 .frame(height: 0.5)
         }
     }
@@ -311,7 +311,7 @@ struct SpotlightView: View {
         .foregroundStyle(Color.popSecondaryLabel)
         .padding(.horizontal, 5)
         .padding(.vertical, 2)
-        .background(Color.black.opacity(0.05), in: Capsule())
+        .background(Color.popSubtleFill, in: Capsule())
     }
 
     // MARK: Derived
