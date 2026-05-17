@@ -20,7 +20,12 @@ final class PopskillStore {
     var agentTargets: [AgentTarget] = []
     var sources: [SkillRepository] = []
     var backups: [SkillBackup] = []
-    var updates: [SkillUpdateInfo] = []
+    var updates: [SkillUpdateInfo] = [] {
+        didSet {
+            updateSkillIDs = Self.makeUpdateSkillIDs(from: updates)
+        }
+    }
+    private(set) var updateSkillIDs: Set<String> = []
     var stubs: [StubbedSkill] = []
     var linkHealth: LinkHealthReport?
     var onboardScan: OnboardScanReport?
@@ -184,6 +189,28 @@ final class PopskillStore {
 
     var isSearchActive: Bool { !trimmedSearch.isEmpty }
 
+    /// O(1) update lookup for matrix rows and filters. `SkillUpdateInfo.id`
+    /// may be scoped ("owner/name:skill") or path-like, so both the full id
+    /// and its useful suffixes are indexed once when `updates` changes.
+    func hasPendingUpdate(for capability: MatrixCapability) -> Bool {
+        guard let skillID = capability.underlyingSkillID else { return false }
+        return updateIdentifierCandidates(for: skillID).contains { updateSkillIDs.contains($0) }
+    }
+
+    private func updateIdentifierCandidates(for skillID: String) -> Set<String> {
+        let normalizedID = skillID.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalizedID.isEmpty else { return [] }
+
+        var candidates: Set<String> = [normalizedID]
+        if let scopedSuffix = normalizedID.split(separator: ":").last {
+            candidates.insert(String(scopedSuffix))
+        }
+        if let pathSuffix = normalizedID.split(separator: "/").last {
+            candidates.insert(String(pathSuffix))
+        }
+        return candidates
+    }
+
     func selectSkill(_ id: String) {
         selectedSkillID = id
         inspectorOpen = true
@@ -216,5 +243,9 @@ final class PopskillStore {
         } catch {
             self.usageScanError = error.localizedDescription
         }
+    }
+
+    private static func makeUpdateSkillIDs(from updates: [SkillUpdateInfo]) -> Set<String> {
+        Set(updates.flatMap(\.normalizedIdentifierCandidates))
     }
 }
