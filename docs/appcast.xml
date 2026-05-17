@@ -8,6 +8,32 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v1.0.3</title>
+      <pubDate>Sun, 17 May 2026 03:30:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v1.0.3 — UI 打磨 + 更新查找 O(1)</h2>
+        <p>体验打磨版本。矩阵主视图加了一组 named design token 和真正的"无结果"状态。v1.0.2 用户会自动收到升级提示。</p>
+        <ul>
+          <li><b>Hover 反馈</b> —— 鼠标停在矩阵行上时,行背景轻微高亮(尊重 prefers-reduced-motion)</li>
+          <li><b>选中行左侧 3pt 蓝色指示条</b> —— 看哪行被选中再也不靠脑补</li>
+          <li><b>搜索框 focus state</b> —— 聚焦时变 accent 描边;有内容时出现 × 一键清空</li>
+          <li><b>无匹配页面</b> —— 搜了不存在的关键词,显示专属"无匹配"页 + 一键重置 filter,不再被"暂无能力"的全局空状态盖住</li>
+          <li><b>filter chip 描边</b> —— 暗模式下激活/非激活状态分得更清楚</li>
+          <li><b>Canvas 背景柔光</b> —— 顶右 accent / 底左 orange 两个 blur 圆球,氛围感不抢戏</li>
+          <li><b>Update 查找 O(1)</b> —— 切到"可更新"filter 不再触发 O(n²) 扫描;60+ 行的矩阵能感觉到滑动顺很多</li>
+          <li><b>VoiceOver 提示</b> —— 每行加 accessibilityHint 把 capability summary 念出来</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v1.0.3/Popskill-1.0.3.dmg"
+        sparkle:version="103"
+        sparkle:shortVersionString="1.0.3"
+        length="16330236"
+        type="application/octet-stream"
+        sparkle:edSignature="fx0vJbMAUuXfnO/97dTlyKXXNmUyDmTMjqAJMBDrGSgFccpARhCBwW2TOVhD80OVyxkO/QUDdv7bqqJ60q/2CQ==" />
+    </item>
+    <item>
       <title>v1.0.2</title>
       <pubDate>Sun, 17 May 2026 03:00:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
