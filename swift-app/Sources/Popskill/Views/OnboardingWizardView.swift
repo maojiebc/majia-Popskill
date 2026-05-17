@@ -366,7 +366,7 @@ struct OnboardingWizardView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.popSecondaryLabel)
             }
-            Text((NSHomeDirectory() as NSString).appendingPathComponent(".agents/skills"))
+            Text((NSHomeDirectory() as NSString).appendingPathComponent(".cc-switch/skills"))
                 .font(.system(size: 11.5, design: .monospaced))
                 .foregroundStyle(Color.popLabel)
                 .textSelection(.enabled)
