@@ -8,6 +8,29 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v1.0.2</title>
+      <pubDate>Sun, 17 May 2026 03:00:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v1.0.2 — UX 修复 + 落地页打磨</h2>
+        <p>体验修复版本,没新功能但补了几个看得见的 bug。v1.0.1 用户会自动收到升级提示。</p>
+        <ul>
+          <li>设置 → "打开能力根目录" 不再跳到不存在的 <code>~/.agents/skills</code>,而是真实的 <code>~/.cc-switch/skills</code></li>
+          <li>只装 agent 没装 skill 的用户,矩阵不再被"暂无能力"空状态盖住</li>
+          <li>sidecar 错误以前只写不读,现在主窗顶部冒出 toast,带 X 关掉</li>
+          <li>30 秒 refresh TTL —— 来回切 sidebar 不再每次 ping sidecar / GitHub</li>
+          <li>"全部更新" 按钮在扫描 / 单条更新进行中不可点,防止重复触发</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v1.0.2/Popskill-1.0.2.dmg"
+        sparkle:version="102"
+        sparkle:shortVersionString="1.0.2"
+        length="16278580"
+        type="application/octet-stream"
+        sparkle:edSignature="0iLxlnbDGO5qukBJdjXumnnrod7ZcmsfqErVaasYx+PY+LPn1/6qUcZVtiTj47te8C7GzrpvmYm1zf3gMfJFBA==" />
+    </item>
+    <item>
       <title>v1.0.1</title>
       <pubDate>Sat, 16 May 2026 16:00:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
