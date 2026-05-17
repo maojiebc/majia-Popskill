@@ -12,7 +12,12 @@ struct MatrixView: View {
         VStack(spacing: 0) {
             header
             Divider()
-            if store.skills.isEmpty {
+            // Empty check honors the unified `capabilities` view (skills +
+            // agents + future cli/mcp/config), not just raw skills. v0.4 added
+            // agents to the matrix but the empty-state guard still pointed at
+            // store.skills, so an agent-only install would render "no
+            // capabilities yet" while the matrix below was happily populated.
+            if store.capabilities.isEmpty {
                 emptyState
             } else {
                 matrixTable
