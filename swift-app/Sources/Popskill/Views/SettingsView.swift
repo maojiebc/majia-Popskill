@@ -88,7 +88,12 @@ struct SettingsView: View {
     }
 
     private var ssotPath: String {
-        (NSHomeDirectory() as NSString).appendingPathComponent(".agents/skills")
+        // The actual SSOT path sidecar uses, as reported by `skill-cli health`.
+        // v0.x ships on CC Switch's storage convention; the ~/.agents/skills
+        // migration is planned for v1.1.x. Earlier copies of this string read
+        // ".agents/skills" — that was aspirational, not real, and Reveal-in-
+        // Finder jumped to a non-existent directory.
+        (NSHomeDirectory() as NSString).appendingPathComponent(".cc-switch/skills")
     }
 
     private var backupsPath: String {
