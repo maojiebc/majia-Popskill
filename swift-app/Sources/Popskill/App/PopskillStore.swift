@@ -28,6 +28,13 @@ final class PopskillStore {
     var usageScanError: String?
     var usageScanInFlight: Bool = false
 
+    // Per-slice refresh timestamps. Views call refresh*(force: false) from
+    // .task on first appearance; if a recent refresh exists we skip the
+    // sidecar round-trip. Manual refresh buttons pass force: true to bypass.
+    var lastSourcesRefreshAt: Date?
+    var lastUpdatesRefreshAt: Date?
+    var lastBackupsRefreshAt: Date?
+
     // ===== UI state =====
     /// Initial selection honors `POPSKILL_DEFAULT_VIEW` when set (used by
     /// screenshot tooling). Defaults to the matrix.
@@ -92,13 +99,62 @@ final class PopskillStore {
         async let agentsTask = client.listAgents()
 
         do {
+            let now = Date()
             self.skills = try await skillsTask
             self.sources = try await sourcesTask
             self.localAgents = try await agentsTask
-            self.lastBootstrapAt = Date()
+            self.lastBootstrapAt = now
+            // Bootstrap counts as a fresh sources fetch — secondary views
+            // that .task into refreshSources won't double-pull immediately.
+            self.lastSourcesRefreshAt = now
         } catch {
             self.errorMessage = error.localizedDescription
         }
+    }
+
+    // MARK: Cached refresh helpers
+    //
+    // Each secondary view (Sources / Updates / Backups) hits sidecar on its
+    // first appearance, but switching back and forth between sidebar entries
+    // doesn't need a fresh round-trip every time. A 30-second TTL keeps the
+    // UI snappy without going stale; manual refresh buttons pass
+    // `force: true` to bypass.
+
+    private static let refreshTTL: TimeInterval = 30
+
+    func refreshSources(force: Bool = false) async {
+        guard !shouldSkipRefresh(lastSourcesRefreshAt, force: force) else { return }
+        do {
+            sources = try await client.listRepositories()
+            lastSourcesRefreshAt = Date()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func refreshUpdates(force: Bool = false) async {
+        guard !shouldSkipRefresh(lastUpdatesRefreshAt, force: force) else { return }
+        do {
+            updates = try await client.checkUpdates()
+            lastUpdatesRefreshAt = Date()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func refreshBackups(force: Bool = false) async {
+        guard !shouldSkipRefresh(lastBackupsRefreshAt, force: force) else { return }
+        do {
+            backups = try await client.listBackups()
+            lastBackupsRefreshAt = Date()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func shouldSkipRefresh(_ lastRefresh: Date?, force: Bool) -> Bool {
+        guard !force, let lastRefresh else { return false }
+        return Date().timeIntervalSince(lastRefresh) < Self.refreshTTL
     }
 
     // ===== Derived =====

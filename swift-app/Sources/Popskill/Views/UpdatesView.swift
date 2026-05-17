@@ -9,7 +9,6 @@ struct UpdatesView: View {
 
     @State private var loading: Bool = false
     @State private var pendingUpdate: Set<String> = []
-    @State private var lastScanAt: Date?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,7 +18,7 @@ struct UpdatesView: View {
             ) {
                 HStack(spacing: 8) {
                     Button {
-                        Task { await rescan() }
+                        Task { await rescan(force: true) }
                     } label: {
                         Label(localization.string("updates.rescan"), systemImage: "arrow.clockwise")
                     }
@@ -33,7 +32,10 @@ struct UpdatesView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
-                    .disabled(store.updates.isEmpty)
+                    // Also disable while a scan or per-row update is in
+                    // flight — clicking "全部更新" mid-scan stacks two
+                    // concurrent rescans and confuses pendingUpdate state.
+                    .disabled(store.updates.isEmpty || loading || !pendingUpdate.isEmpty)
                 }
             }
 
@@ -48,8 +50,10 @@ struct UpdatesView: View {
         }
         .popPageBackground()
         .task {
-            if store.updates.isEmpty && lastScanAt == nil {
-                await rescan()
+            // Cached helper short-circuits if last scan < 30s. The "Re-scan"
+            // button passes force: true to bypass.
+            if store.updates.isEmpty && store.lastUpdatesRefreshAt == nil {
+                await rescan(force: false)
             }
         }
     }
@@ -58,7 +62,7 @@ struct UpdatesView: View {
         if loading {
             return localization.string("updates.subtitleScanning", store.updates.count)
         }
-        if let lastScanAt {
+        if let lastScanAt = store.lastUpdatesRefreshAt {
             let formatter = RelativeDateTimeFormatter()
             formatter.unitsStyle = .short
             return localization.string(
@@ -146,17 +150,14 @@ struct UpdatesView: View {
     // MARK: Actions
 
     @MainActor
-    private func rescan() async {
+    private func rescan(force: Bool = false) async {
         guard !loading else { return }
         loading = true
         defer { loading = false }
-
-        do {
-            store.updates = try await store.client.checkUpdates()
-            lastScanAt = Date()
-        } catch {
-            store.errorMessage = error.localizedDescription
-        }
+        // Cached helper writes store.updates + store.lastUpdatesRefreshAt
+        // and reports errors via store.errorMessage (now shown by the global
+        // toast in RootView).
+        await store.refreshUpdates(force: force)
     }
 
     @MainActor

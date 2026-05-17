@@ -19,7 +19,7 @@ struct SourcesView: View {
             ) {
                 HStack(spacing: 8) {
                     Button {
-                        Task { await refresh() }
+                        Task { await refresh(force: true) }
                     } label: {
                         Label(localization.string("sources.refresh"), systemImage: "arrow.clockwise")
                     }
@@ -46,6 +46,11 @@ struct SourcesView: View {
             }
         }
         .popPageBackground()
+        .task {
+            // Cached helper short-circuits when last refresh < 30s ago. The
+            // manual refresh button above passes force: true to bypass.
+            await refresh(force: false)
+        }
     }
 
     private var subtitle: String {
@@ -156,12 +161,10 @@ struct SourcesView: View {
     // MARK: Actions
 
     @MainActor
-    private func refresh() async {
-        do {
-            store.sources = try await store.client.listRepositories()
-        } catch {
-            store.errorMessage = error.localizedDescription
-        }
+    private func refresh(force: Bool = false) async {
+        // Delegate to the cached helper on PopskillStore. `force: true` from
+        // the manual refresh button; `force: false` from .task on appearance.
+        await store.refreshSources(force: force)
     }
 
     @MainActor

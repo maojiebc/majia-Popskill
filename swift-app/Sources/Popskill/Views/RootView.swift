@@ -9,7 +9,7 @@ struct RootView: View {
     @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             NavigationSplitView {
                 sidebar
             } detail: {
@@ -31,8 +31,19 @@ struct RootView: View {
                 SpotlightView(store: store)
                     .zIndex(1)
             }
+
+            // Global error toast — pinned to top of the window. Before this
+            // existed, `store.errorMessage` was written by every sidecar
+            // failure but never displayed, so users hit silent breakage.
+            // Dismiss with the X button or by `store.errorMessage = nil`.
+            if let message = store.errorMessage {
+                errorToast(message: message)
+                    .zIndex(2)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
         }
         .animation(.easeOut(duration: 0.14), value: store.spotlightOpen)
+        .animation(.easeOut(duration: 0.14), value: store.errorMessage)
         .task {
             await store.bootstrap()
             // First launch hook: open wizard if the user has never finished
@@ -115,6 +126,39 @@ struct RootView: View {
                 }
             }
         }
+    }
+
+    // MARK: Error toast
+
+    private func errorToast(message: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(Color.popStatusWarning)
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(Color.popLabel)
+                .lineLimit(2)
+                .textSelection(.enabled)
+            Spacer(minLength: 10)
+            Button {
+                store.errorMessage = nil
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.popSecondaryLabel)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Dismiss"))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color.popBorder, lineWidth: 0.5)
+        )
+        .padding(.top, 12)
+        .padding(.horizontal, 24)
     }
 
     // MARK: Detail

@@ -20,7 +20,7 @@ struct BackupsView: View {
                 subtitle: localization.string("backups.subtitle", store.backups.count)
             ) {
                 Button {
-                    Task { await refresh() }
+                    Task { await refresh(force: true) }
                 } label: {
                     Label(localization.string("backups.refresh"), systemImage: "arrow.clockwise")
                 }
@@ -40,9 +40,10 @@ struct BackupsView: View {
         }
         .popPageBackground()
         .task {
-            if store.backups.isEmpty {
-                await refresh()
-            }
+            // Cached helper avoids redundant sidecar round-trips when the
+            // user toggles back and forth between sidebar entries within
+            // the 30s TTL window. Manual refresh button uses force: true.
+            await refresh(force: false)
         }
     }
 
@@ -161,15 +162,13 @@ struct BackupsView: View {
     // MARK: Actions
 
     @MainActor
-    private func refresh() async {
+    private func refresh(force: Bool = false) async {
         guard !loading else { return }
         loading = true
         defer { loading = false }
-        do {
-            store.backups = try await store.client.listBackups()
-        } catch {
-            store.errorMessage = error.localizedDescription
-        }
+        // Cached helper short-circuits within the TTL window and reports
+        // failures via store.errorMessage (now shown by the global toast).
+        await store.refreshBackups(force: force)
     }
 
     @MainActor
