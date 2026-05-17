@@ -16,6 +16,7 @@
 | v1.0.1 | 2026-05-16 | Sparkle 自动更新接通 |
 | v1.0.2 | 2026-05-17 | SSOT 路径修复 + error toast + 30s TTL |
 | v1.0.3 | 2026-05-17 | UI tokens + hover state + O(1) update lookup |
+| v1.0.4 | 2026-05-17 | 跳转修复 + 删除确认 + Insights streaming + 6 新单测 |
 
 ## 项目结构
 
@@ -74,6 +75,11 @@ popskill/
 ```bash
 cd /Users/majia/projects/popskill
 
+# 0. Pre-flight: 验 notarytool profile 还活着 (会被 macOS 锁屏 / 升级 / 其他什么清掉)
+xcrun notarytool history --keychain-profile popskill-notarize 2>&1 | head -2
+# 看到 "Successfully received submission history" 才继续。
+# 没有 → store-credentials 重存 (见 references/setup-notary.md)。
+
 # 1. 写 docs/release/v1.0.X.md
 # 2. 改 scripts/package-dev-app.sh 默认 fallback (可选)
 
@@ -116,10 +122,12 @@ gh release create v1.0.X "$POPSKILL_DMG_PATH" --title "Popskill v1.0.X" --notes-
 5. **磁盘满 / ENOSPC** — `swift-app/.build/` 经常 1.2GB，`skill-cli/target/` 200MB+，`build/` 累计 100MB+。改大代码前用 `rm -rf swift-app/.build/ skill-cli/target/ build/` 留 ≥2GB
 6. **v1.0.0 用户没 Sparkle** — 第一次升级必须手动下 v1.0.1+，从 v1.0.1 开始才用 Sparkle
 7. **外部 patch 大概率 base 不在 HEAD** — `git apply --3way` 而不是 `git apply --check`
+8. **notarytool keychain profile 会被清掉** — 大概率是锁屏 / macOS 升级 / 重启时被某个 helper 进程清掉。每次发版前必先跑 `xcrun notarytool history --keychain-profile popskill-notarize`,失败就 store-credentials 重存。Developer ID cert 和 Sparkle 私钥不受影响,只是 notary 凭证。
+9. **同名分支 push -u 直接复用** — PR #2 / PR #3 都用了 `agent-optimize-popskill-20260517` 分支名,合并完没删,下次推同名分支 git 会附加 commit 而不是新建。Codex / 其他外部 agent 似乎默认复用这个名字,正常合并就行,不必非要 unique。
 
 ## 测试基线
 
-- `swift test --package-path swift-app` = **88/88** (v1.0.3)
+- `swift test --package-path swift-app` = **94/94** (v1.0.4 — PR #3 加了 PopskillStoreTests + SettingsViewTests 共 6 个)
 - `cargo test --manifest-path skill-cli/Cargo.toml` = 44/44
 - `scripts/ci-local.sh` = 全绿
 - 实测机：majia 自己 Mac，59 skill / 71 active toggle / 13 GitHub sources / 189 transcript sessions
@@ -136,10 +144,11 @@ gh release create v1.0.X "$POPSKILL_DMG_PATH" --title "Popskill v1.0.X" --notes-
 
 ## 当前状态（2026-05-17）
 
-- v1.0.3 是 Latest，main 干净，无未推内容
-- 累计 commit ~30，从 v0.3 wipe 算起 ~70 个
+- v1.0.4 是 Latest，main 干净，无未推内容
+- 累计 commit ~40，从 v0.3 wipe 算起 ~75 个
 - README 是 landing page，docs/screenshots/ 6 张实拍
 - Sparkle 升级链 + GitHub Pages + GitHub Releases 全通
+- 外部 Codex agent 通过 PR (`agent-optimize-popskill-20260517` 分支)持续贡献 — 已经收 PR #2 (v1.0.3) 和 PR #3 (v1.0.4)
 
 ## 下一步候选（v1.1.x 范围）
 
@@ -183,4 +192,4 @@ python3 ~/.claude/skills/majia-ota-app/scripts/audit-mac-app-release.py .
 
 ---
 
-最后更新：2026-05-17，v1.0.3 发布后
+最后更新：2026-05-17，v1.0.4 发布后
