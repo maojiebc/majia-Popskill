@@ -10,14 +10,15 @@ struct MatrixRow: View {
     let capability: MatrixCapability
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isHovering = false
 
     private var isSelected: Bool {
         store.selectedSkillID == capability.id
     }
 
     private var hasUpdate: Bool {
-        guard let skillID = capability.underlyingSkillID else { return false }
-        return store.updates.contains { $0.id == skillID }
+        store.hasPendingUpdate(for: capability)
     }
 
     var body: some View {
@@ -38,13 +39,26 @@ struct MatrixRow: View {
             actionCell
                 .frame(width: 56)
         }
+        .padding(.trailing, 4)
         .contentShape(Rectangle())
         .background(rowBackground)
+        .overlay(alignment: .leading) {
+            if isSelected {
+                RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                    .fill(Color.accentColor)
+                    .frame(width: 3)
+                    .padding(.vertical, 6)
+            }
+        }
         .onTapGesture {
             store.selectSkill(capability.id)
         }
+        .onHover { isHovering = $0 }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.14), value: isHovering)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: isSelected)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(capability.name))
+        .accessibilityHint(Text(summary))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
@@ -93,7 +107,7 @@ struct MatrixRow: View {
             .foregroundStyle(Color.popSecondaryLabel)
             .padding(.horizontal, 4)
             .padding(.vertical, 1)
-            .background(Color.black.opacity(0.06), in: Capsule())
+            .background(Color.popControlFill, in: Capsule())
         }
     }
 
@@ -227,7 +241,9 @@ struct MatrixRow: View {
     private var rowBackground: some View {
         Group {
             if isSelected {
-                Color.accentColor.opacity(0.10)
+                Color.popSelectedRowFill
+            } else if isHovering {
+                Color.popSurfaceHover
             } else {
                 Color.clear
             }
@@ -275,7 +291,7 @@ struct MatrixGroupHeader: View {
                 .foregroundStyle(Color.popSecondaryLabel)
                 .padding(.horizontal, 5)
                 .padding(.vertical, 1)
-                .background(Color.black.opacity(0.05), in: Capsule())
+                .background(Color.popControlFill, in: Capsule())
 
             Spacer(minLength: 8)
 
@@ -284,10 +300,10 @@ struct MatrixGroupHeader: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 7)
-        .background(Color.black.opacity(0.025))
+        .background(Color.popSurface.opacity(0.52))
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(Color.black.opacity(0.06))
+                .fill(Color.popSeparator)
                 .frame(height: 0.5)
         }
         .contentShape(Rectangle())
@@ -319,7 +335,7 @@ struct MatrixGroupHeader: View {
         .padding(.horizontal, 6)
         .padding(.vertical, 2)
         .background(
-            (enabled > 0 ? Color.accentColor.opacity(0.10) : Color.black.opacity(0.04)),
+            (enabled > 0 ? Color.popAccentSoft : Color.popControlFill),
             in: Capsule()
         )
         .help("\(label): \(enabled)/\(total)")

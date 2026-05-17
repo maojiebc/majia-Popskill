@@ -7,6 +7,14 @@ extension Color {
     static let popSeparator = Color(.separatorColor)
     static let popBorder = Color(.separatorColor).opacity(0.58)
 
+    static let popSurface = Color(.controlBackgroundColor)
+    static let popSurfaceElevated = Color(.textBackgroundColor)
+    static let popSurfaceHover = Color(.controlAccentColor).opacity(0.055)
+    static let popSelectedRowFill = Color(.controlAccentColor).opacity(0.115)
+    static let popControlFill = Color(.controlBackgroundColor).opacity(0.72)
+    static let popControlStroke = Color(.separatorColor).opacity(0.46)
+    static let popCardStroke = Color(.separatorColor).opacity(0.36)
+
     static let popLabel = Color(.labelColor)
     static let popSecondaryLabel = Color(.secondaryLabelColor)
     static let popTertiaryLabel = Color(.tertiaryLabelColor)
@@ -15,6 +23,8 @@ extension Color {
 
     static let popHoverFill = Color(.controlAccentColor).opacity(0.08)
     static let popHighlightFill = Color(.controlAccentColor).opacity(0.16)
+    static let popAccentSoft = Color(.controlAccentColor).opacity(0.13)
+    static let popTableHeaderFill = Color(.unemphasizedSelectedContentBackgroundColor).opacity(0.55)
 
     static let popSectionOrange = Color.orange
     static let popSectionPurple = Color.purple
@@ -51,6 +61,11 @@ enum PopskillRadius {
     static let largeCard: CGFloat = 20
 }
 
+enum PopskillShadow {
+    static let cardRadius: CGFloat = 12
+    static let cardYOffset: CGFloat = 3
+}
+
 enum PopskillSectionAccent {
     static let colors: [Color] = [
         .popSectionOrange,
@@ -77,13 +92,27 @@ struct PopskillCanvasBackground: View {
             Color.popMainBackground
             LinearGradient(
                 colors: [
-                    Color.popHeaderBackground.opacity(0.30),
-                    Color.popSectionBlue.opacity(0.045),
-                    Color.popSectionOrange.opacity(0.030)
+                    Color.popSurfaceElevated.opacity(0.22),
+                    Color.accentColor.opacity(0.050),
+                    Color.popSectionOrange.opacity(0.026)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
+            .overlay(alignment: .topTrailing) {
+                Circle()
+                    .fill(Color.accentColor.opacity(0.035))
+                    .frame(width: 360, height: 360)
+                    .blur(radius: 80)
+                    .offset(x: 120, y: -160)
+            }
+            .overlay(alignment: .bottomLeading) {
+                Circle()
+                    .fill(Color.popSectionOrange.opacity(0.032))
+                    .frame(width: 300, height: 300)
+                    .blur(radius: 90)
+                    .offset(x: -130, y: 150)
+            }
         }
         .ignoresSafeArea()
     }
@@ -107,9 +136,9 @@ private struct PopCardModifier: ViewModifier {
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(Color.white.opacity(0.08 * borderOpacity), lineWidth: 0.7)
+                    .stroke(Color.popCardStroke.opacity(borderOpacity), lineWidth: 0.7)
             )
-            .shadow(color: .black.opacity(shadowOpacity), radius: 8, x: 0, y: 2)
+            .shadow(color: .black.opacity(shadowOpacity), radius: PopskillShadow.cardRadius, x: 0, y: PopskillShadow.cardYOffset)
     }
 }
 

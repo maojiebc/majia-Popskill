@@ -7,8 +7,10 @@ import SwiftUI
 struct MatrixView: View {
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization
+    @FocusState private var searchIsFocused: Bool
 
     var body: some View {
+        let sections = filteredSections
         VStack(spacing: 0) {
             header
             Divider()
@@ -17,10 +19,14 @@ struct MatrixView: View {
             // agents to the matrix but the empty-state guard still pointed at
             // store.skills, so an agent-only install would render "no
             // capabilities yet" while the matrix below was happily populated.
+            // v1.0.3 also distinguishes "world is empty" from "filter is too
+            // narrow" — the latter shows noResultsState with a reset button.
             if store.capabilities.isEmpty {
                 emptyState
+            } else if sections.isEmpty {
+                noResultsState
             } else {
-                matrixTable
+                matrixTable(sections: sections)
             }
         }
         .popPageBackground()
@@ -73,14 +79,29 @@ struct MatrixView: View {
             TextField(localization.string("matrix.search.placeholder"), text: $store.searchText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12.5))
+                .focused($searchIsFocused)
+            if !store.searchText.isEmpty {
+                Button {
+                    store.searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.popTertiaryLabel)
+                }
+                .buttonStyle(.plain)
+                .help(localization.string("spotlight.clear"))
+                .transition(.opacity.combined(with: .scale(scale: 0.88)))
+            }
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(Color.black.opacity(0.04), in: RoundedRectangle(cornerRadius: 6))
+        .padding(.vertical, 6)
+        .background(Color.popControlFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 6).strokeBorder(Color.black.opacity(0.08), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(searchIsFocused ? Color.accentColor.opacity(0.42) : Color.popControlStroke, lineWidth: 0.8)
         )
         .frame(maxWidth: 320)
+        .accessibilityLabel(Text(localization.string("matrix.search.placeholder")))
     }
 
     private var filterChips: some View {
@@ -114,11 +135,13 @@ struct MatrixView: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
             .background(
-                active ? Color.accentColor.opacity(0.14) : Color.black.opacity(0.04),
+                active ? Color.popAccentSoft : Color.popControlFill,
                 in: Capsule()
             )
+            .overlay(Capsule().strokeBorder(active ? Color.accentColor.opacity(0.30) : Color.popControlStroke, lineWidth: 0.7))
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(active ? .isSelected : [])
     }
 
     private func typeChipButton(filter: MatrixTypeFilter) -> some View {
@@ -132,23 +155,25 @@ struct MatrixView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
                 .background(
-                    active ? Color.accentColor.opacity(0.14) : Color.black.opacity(0.04),
+                    active ? Color.popAccentSoft : Color.popControlFill,
                     in: Capsule()
                 )
+                .overlay(Capsule().strokeBorder(active ? Color.accentColor.opacity(0.30) : Color.popControlStroke, lineWidth: 0.7))
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(active ? .isSelected : [])
     }
 
     // MARK: Matrix table
 
-    private var matrixTable: some View {
+    private func matrixTable(sections: [CapabilitySection]) -> some View {
         ScrollView {
             LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                 Section {
                     matrixColumnHeader
                 }
-                ForEach(filteredSections) { section in
-                    if filteredSections.count > 1 {
+                ForEach(sections) { section in
+                    if sections.count > 1 {
                         kindSectionHeader(section)
                     }
                     ForEach(section.groups) { group in
@@ -166,12 +191,14 @@ struct MatrixView: View {
                 Color.clear.frame(height: 24)
             }
         }
-        .background(Color.popCardBackground)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Color.popSurfaceElevated.opacity(0.18), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(Color.black.opacity(0.08), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.popBorder, lineWidth: 0.7)
         )
+        .shadow(color: .black.opacity(0.035), radius: 12, x: 0, y: 3)
         .padding(.horizontal, 16)
         .padding(.bottom, 16)
     }
@@ -196,7 +223,7 @@ struct MatrixView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 6)
-        .background(Color.accentColor.opacity(0.06))
+        .background(Color.popAccentSoft.opacity(0.72))
     }
 
     private var matrixColumnHeader: some View {
@@ -215,10 +242,10 @@ struct MatrixView: View {
         .font(.system(size: 11.5, weight: .medium))
         .foregroundStyle(Color.popSecondaryLabel)
         .padding(.vertical, 8)
-        .background(Color.black.opacity(0.02))
+        .background(Color.popTableHeaderFill)
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(Color.black.opacity(0.08))
+                .fill(Color.popSeparator)
                 .frame(height: 0.5)
         }
     }
@@ -255,6 +282,30 @@ struct MatrixView: View {
                     || capability.directory.lowercased().contains(q))
         }
         return SkillGrouping.sections(visible)
+    }
+
+    private var noResultsState: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .font(.system(size: 42, weight: .light))
+                .foregroundStyle(.tertiary)
+            LocalizedText("spotlight.empty.title")
+                .font(.title3.weight(.semibold))
+            LocalizedText("library.search.emptyHint")
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            Button {
+                store.searchText = ""
+                store.matrixFilter = .all
+                store.matrixTypeFilter = .allTypes
+            } label: {
+                Label(localization.string("spotlight.clear"), systemImage: "xmark.circle")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var emptyState: some View {
@@ -317,8 +368,7 @@ enum MatrixFilter: String, CaseIterable, Identifiable {
         case .all:
             return true
         case .updates:
-            guard let skillID = capability.underlyingSkillID else { return false }
-            return store.updates.contains { $0.id == skillID }
+            return store.hasPendingUpdate(for: capability)
         case .claudeOnly:
             return capability.apps.claude && !capability.apps.codex
         case .codexOnly:
