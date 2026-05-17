@@ -117,6 +117,34 @@ struct SkillModelsTests {
     }
 
     @Test
+    func matrixCapabilityIDsPreserveScopedSkillIdentifiers() {
+        let skill = Skill(
+            id: "owner/repo:demo-skill",
+            name: "Demo",
+            description: "Demo skill",
+            directory: "demo-skill",
+            repoOwner: "owner",
+            repoName: "repo",
+            readmeUrl: nil,
+            apps: SkillApps(
+                claude: true,
+                codex: false,
+                gemini: false,
+                opencode: false,
+                hermes: false
+            ),
+            installedAt: nil,
+            updatedAt: nil,
+            contentHash: nil
+        )
+
+        let capability = MatrixCapability.fromSkill(skill)
+
+        #expect(capability.id == "skill:owner/repo:demo-skill")
+        #expect(MatrixCapability.skillToggleKey(for: skill.id, app: .codex) == "skill:owner/repo:demo-skill|codex")
+    }
+
+    @Test
     func enabledAppCountCountsAllTargetApps() {
         var skill = installedSkill(directory: "demo-skill")
 

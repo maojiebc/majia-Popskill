@@ -51,7 +51,7 @@ struct MatrixRow: View {
             }
         }
         .onTapGesture {
-            store.selectSkill(capability.id)
+            store.selectCapability(capability.id)
         }
         .onHover { isHovering = $0 }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.14), value: isHovering)
@@ -156,7 +156,9 @@ struct MatrixRow: View {
         .help(localization.string("matrix.row.readOnly"))
     }
 
-    private func toggleKey(_ app: TargetApp) -> String { "\(capability.id)|\(app.rawValue)" }
+    private func toggleKey(_ app: TargetApp) -> String {
+        MatrixCapability.toggleKey(capabilityID: capability.id, app: app)
+    }
 
     @MainActor
     private func toggle(app: TargetApp, enabled: Bool) async {
@@ -208,7 +210,7 @@ struct MatrixRow: View {
     private var actionCell: some View {
         Menu {
             Button {
-                store.selectSkill(capability.id)
+                store.selectCapability(capability.id)
             } label: {
                 Label(localization.string("matrix.row.menu.inspect"), systemImage: "sidebar.right")
             }

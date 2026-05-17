@@ -76,12 +76,32 @@ struct MatrixCapability: Identifiable, Equatable {
         // read-only "active on Claude".
         kind == .skill
     }
+
+    static func capabilityID(kind: CapabilityKind, rawID: String) -> String {
+        "\(kind.rawValue):\(rawID)"
+    }
+
+    static func skillCapabilityID(for skillID: String) -> String {
+        capabilityID(kind: .skill, rawID: skillID)
+    }
+
+    static func agentCapabilityID(for agentID: String) -> String {
+        capabilityID(kind: .agent, rawID: agentID)
+    }
+
+    static func toggleKey(capabilityID: String, app: TargetApp) -> String {
+        "\(capabilityID)|\(app.rawValue)"
+    }
+
+    static func skillToggleKey(for skillID: String, app: TargetApp) -> String {
+        toggleKey(capabilityID: skillCapabilityID(for: skillID), app: app)
+    }
 }
 
 extension MatrixCapability {
     static func fromSkill(_ skill: Skill) -> MatrixCapability {
         MatrixCapability(
-            id: "skill:\(skill.id)",
+            id: skillCapabilityID(for: skill.id),
             kind: .skill,
             name: skill.name,
             summary: skill.capabilitySummary ?? (skill.description.isEmpty ? nil : skill.description),
@@ -108,7 +128,7 @@ extension MatrixCapability {
         // file (deferred to v0.5).
         let agentApps = SkillApps(claude: true, codex: false, gemini: false, opencode: false, hermes: false)
         return MatrixCapability(
-            id: "agent:\(agent.id)",
+            id: agentCapabilityID(for: agent.id),
             kind: .agent,
             name: agent.name,
             summary: agent.capabilitySummary ?? (agent.description.isEmpty ? nil : agent.description),

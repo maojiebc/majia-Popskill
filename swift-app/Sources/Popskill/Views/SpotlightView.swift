@@ -378,7 +378,7 @@ struct SpotlightView: View {
 
     @MainActor
     private func toggle(skill: Skill, app: TargetApp, enabled: Bool) async {
-        let key = "\(skill.id)|\(app.rawValue)"
+        let key = MatrixCapability.skillToggleKey(for: skill.id, app: app)
         guard !store.pendingToggles.contains(key) else { return }
         store.pendingToggles.insert(key)
         defer { store.pendingToggles.remove(key) }

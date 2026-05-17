@@ -310,7 +310,9 @@ struct InspectorPane: View {
 
     // MARK: Toggle helpers
 
-    private func toggleKey(_ app: TargetApp) -> String { "\(capability.id)|\(app.rawValue)" }
+    private func toggleKey(_ app: TargetApp) -> String {
+        MatrixCapability.toggleKey(capabilityID: capability.id, app: app)
+    }
 
     @MainActor
     private func toggle(app: TargetApp, enabled: Bool) async {
