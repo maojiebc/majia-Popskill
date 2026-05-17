@@ -8,6 +8,33 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v1.0.4</title>
+      <pubDate>Sun, 17 May 2026 05:00:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v1.0.4 — 跳转修复 + 删除确认 + Insights 流式扫描</h2>
+        <p>体验修复 + 性能提升。v1.0.3 用户会自动收到升级提示。</p>
+        <ul>
+          <li><b>Spotlight / Idle / Link Health 跳转修复</b> —— 从 ⌘K 选 skill、从闲置 view 点 "Inspect"、从链接健康点行,inspector 现在能可靠打开正确的 skill (修了 raw id 与 namespaced capability id 混淆 bug)</li>
+          <li><b>数据源删除前确认对话框</b> —— 不再误触即删,弹"确定删 owner/name?"</li>
+          <li><b>Loading guards + 同步状态正确化</b> —— 各 view 的 refresh / update 按钮在请求进行中真正 disabled;WebDAV / iCloud SOON 标签的同步按钮真正灰掉</li>
+          <li><b>"全部更新" 安全化</b> —— 扫描或单条更新进行中不可再次点击</li>
+          <li><b>Onboarding SSOT 文案再修</b> —— wizard "扫描能力" 说明从 .agents/skills 改成正确的 .cc-switch/skills</li>
+          <li><b>设计 token 统一</b> —— v1.0.3 加的 canvas glow blur 圆球撤了 (视觉收益有限 + GPU 成本),全部走 Popskill token 体系</li>
+          <li><b>Insights transcript 扫描重写成 streaming</b> —— 之前一次性读整个 .jsonl 进内存;新版按行 streaming。223 个文件几百 MB 总数据时,内存峰值从 ~600MB 降到 ~50MB</li>
+          <li><b>Hot UI path</b> —— Formatter 重复实例化挪出每帧路径</li>
+          <li><b>+6 个新单元测试</b> —— PopskillStoreTests + SettingsViewTests,swift test 88/88 → 94/94</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v1.0.4/Popskill-1.0.4.dmg"
+        sparkle:version="104"
+        sparkle:shortVersionString="1.0.4"
+        length="16360771"
+        type="application/octet-stream"
+        sparkle:edSignature="yAk7treHXtgA+PN6ZsucEjebJ6ojiYAljVCZvlg5D/j985czt38kC5FmYDPNUh+8Mya5wYObisWjm1XkEYe8Bw==" />
+    </item>
+    <item>
       <title>v1.0.3</title>
       <pubDate>Sun, 17 May 2026 03:30:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
