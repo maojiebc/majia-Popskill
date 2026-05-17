@@ -73,124 +73,164 @@ struct TranscriptUsageScanner {
         skillStats: inout [String: SkillUsageStat],
         sessionStats: inout [String: SessionUsageStat]
     ) throws {
-        let data = try Data(contentsOf: fileURL, options: [.mappedIfSafe])
-        guard let content = String(data: data, encoding: .utf8) else {
+        let projectName = projectName(for: fileURL)
+        let handle = try FileHandle(forReadingFrom: fileURL)
+        defer { try? handle.close() }
+
+        var buffer = Data()
+        while true {
+            let chunk = try handle.read(upToCount: Self.readChunkSize) ?? Data()
+            if chunk.isEmpty { break }
+
+            buffer.append(chunk)
+            while let newlineRange = buffer.firstRange(of: Self.newlineData) {
+                let lineData = buffer.subdata(in: buffer.startIndex..<newlineRange.lowerBound)
+                parseLine(
+                    lineData,
+                    projectName: projectName,
+                    summary: &summary,
+                    modelStats: &modelStats,
+                    skillStats: &skillStats,
+                    sessionStats: &sessionStats
+                )
+                buffer.removeSubrange(buffer.startIndex..<newlineRange.upperBound)
+            }
+        }
+
+        if !buffer.isEmpty {
+            parseLine(
+                buffer,
+                projectName: projectName,
+                summary: &summary,
+                modelStats: &modelStats,
+                skillStats: &skillStats,
+                sessionStats: &sessionStats
+            )
+        }
+    }
+
+    private func parseLine(
+        _ rawLineData: Data,
+        projectName: String,
+        summary: inout UsageSummary,
+        modelStats: inout [String: ModelUsageStat],
+        skillStats: inout [String: SkillUsageStat],
+        sessionStats: inout [String: SessionUsageStat]
+    ) {
+        if rawLineData.isEmpty { return }
+
+        var lineData = rawLineData
+        if lineData.last == Self.carriageReturnByte {
+            lineData.removeLast()
+        }
+
+        guard let object = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any] else {
             return
         }
 
-        let projectName = projectName(for: fileURL)
-
-        for line in content.split(separator: "\n", omittingEmptySubsequences: true) {
-            guard let lineData = String(line).data(using: .utf8),
-                  let object = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any]
-            else {
-                continue
-            }
-
-            let sessionID = object["sessionId"] as? String
-            let timestamp = dateValue(object["timestamp"])
-            let cwdProjectName = projectNameFromCWD(object["cwd"] as? String)
-            if let sessionID {
-                var session = sessionStats[sessionID] ?? SessionUsageStat(
-                    sessionID: sessionID,
-                    projectName: cwdProjectName ?? projectName,
-                    startedAt: nil,
-                    lastActivityAt: nil,
-                    usageEvents: 0,
-                    inputTokens: 0,
-                    outputTokens: 0,
-                    cacheCreationTokens: 0,
-                    cacheReadTokens: 0
-                )
-                if let cwdProjectName {
-                    session.projectName = cwdProjectName
-                }
-                session.observe(timestamp: timestamp)
-                sessionStats[sessionID] = session
-            }
-
-            guard let message = object["message"] as? [String: Any],
-                  let usage = message["usage"] as? [String: Any]
-            else {
-                continue
-            }
-
-            summary.usageEvents += 1
-            let inputTokens = int64Value(usage["input_tokens"])
-            let outputTokens = int64Value(usage["output_tokens"])
-            let cacheCreationTokens = int64Value(usage["cache_creation_input_tokens"])
-            let cacheReadTokens = int64Value(usage["cache_read_input_tokens"])
-
-            summary.inputTokens += inputTokens
-            summary.outputTokens += outputTokens
-            summary.cacheCreationTokens += cacheCreationTokens
-            summary.cacheReadTokens += cacheReadTokens
-
-            if let sessionID {
-                var session = sessionStats[sessionID] ?? SessionUsageStat(
-                    sessionID: sessionID,
-                    projectName: cwdProjectName ?? projectName,
-                    startedAt: timestamp,
-                    lastActivityAt: timestamp,
-                    usageEvents: 0,
-                    inputTokens: 0,
-                    outputTokens: 0,
-                    cacheCreationTokens: 0,
-                    cacheReadTokens: 0
-                )
-                if let cwdProjectName {
-                    session.projectName = cwdProjectName
-                }
-                session.observe(timestamp: timestamp)
-                session.addUsage(
-                    inputTokens: inputTokens,
-                    outputTokens: outputTokens,
-                    cacheCreationTokens: cacheCreationTokens,
-                    cacheReadTokens: cacheReadTokens
-                )
-                sessionStats[sessionID] = session
-            }
-
-            let model = (message["model"] as? String) ?? "unknown"
-            var stat = modelStats[model] ?? ModelUsageStat(
-                model: model,
+        let sessionID = object["sessionId"] as? String
+        let timestamp = dateValue(object["timestamp"])
+        let cwdProjectName = projectNameFromCWD(object["cwd"] as? String)
+        if let sessionID {
+            var session = sessionStats[sessionID] ?? SessionUsageStat(
+                sessionID: sessionID,
+                projectName: cwdProjectName ?? projectName,
+                startedAt: nil,
+                lastActivityAt: nil,
                 usageEvents: 0,
                 inputTokens: 0,
                 outputTokens: 0,
                 cacheCreationTokens: 0,
                 cacheReadTokens: 0
             )
-            stat.usageEvents += 1
-            stat.inputTokens += inputTokens
-            stat.outputTokens += outputTokens
-            stat.cacheCreationTokens += cacheCreationTokens
-            stat.cacheReadTokens += cacheReadTokens
-            modelStats[model] = stat
-
-            if let attributionSkill = attributionIdentifier(object["attributionSkill"]) {
-                summary.attributedSkillUsageEvents += 1
-                var skillStat = skillStats[attributionSkill] ?? SkillUsageStat(
-                    skillID: attributionSkill,
-                    sourcePlugin: stringValue(object["attributionPlugin"]),
-                    usageEvents: 0,
-                    inputTokens: 0,
-                    outputTokens: 0,
-                    cacheCreationTokens: 0,
-                    cacheReadTokens: 0,
-                    lastUsedAt: nil
-                )
-                if skillStat.sourcePlugin == nil {
-                    skillStat.sourcePlugin = stringValue(object["attributionPlugin"])
-                }
-                skillStat.addUsage(
-                    inputTokens: inputTokens,
-                    outputTokens: outputTokens,
-                    cacheCreationTokens: cacheCreationTokens,
-                    cacheReadTokens: cacheReadTokens,
-                    timestamp: timestamp
-                )
-                skillStats[attributionSkill] = skillStat
+            if let cwdProjectName {
+                session.projectName = cwdProjectName
             }
+            session.observe(timestamp: timestamp)
+            sessionStats[sessionID] = session
+        }
+
+        guard let message = object["message"] as? [String: Any],
+              let usage = message["usage"] as? [String: Any]
+        else {
+            return
+        }
+
+        summary.usageEvents += 1
+        let inputTokens = int64Value(usage["input_tokens"])
+        let outputTokens = int64Value(usage["output_tokens"])
+        let cacheCreationTokens = int64Value(usage["cache_creation_input_tokens"])
+        let cacheReadTokens = int64Value(usage["cache_read_input_tokens"])
+
+        summary.inputTokens += inputTokens
+        summary.outputTokens += outputTokens
+        summary.cacheCreationTokens += cacheCreationTokens
+        summary.cacheReadTokens += cacheReadTokens
+
+        if let sessionID {
+            var session = sessionStats[sessionID] ?? SessionUsageStat(
+                sessionID: sessionID,
+                projectName: cwdProjectName ?? projectName,
+                startedAt: timestamp,
+                lastActivityAt: timestamp,
+                usageEvents: 0,
+                inputTokens: 0,
+                outputTokens: 0,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0
+            )
+            if let cwdProjectName {
+                session.projectName = cwdProjectName
+            }
+            session.observe(timestamp: timestamp)
+            session.addUsage(
+                inputTokens: inputTokens,
+                outputTokens: outputTokens,
+                cacheCreationTokens: cacheCreationTokens,
+                cacheReadTokens: cacheReadTokens
+            )
+            sessionStats[sessionID] = session
+        }
+
+        let model = (message["model"] as? String) ?? "unknown"
+        var stat = modelStats[model] ?? ModelUsageStat(
+            model: model,
+            usageEvents: 0,
+            inputTokens: 0,
+            outputTokens: 0,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0
+        )
+        stat.usageEvents += 1
+        stat.inputTokens += inputTokens
+        stat.outputTokens += outputTokens
+        stat.cacheCreationTokens += cacheCreationTokens
+        stat.cacheReadTokens += cacheReadTokens
+        modelStats[model] = stat
+
+        if let attributionSkill = attributionIdentifier(object["attributionSkill"]) {
+            summary.attributedSkillUsageEvents += 1
+            var skillStat = skillStats[attributionSkill] ?? SkillUsageStat(
+                skillID: attributionSkill,
+                sourcePlugin: stringValue(object["attributionPlugin"]),
+                usageEvents: 0,
+                inputTokens: 0,
+                outputTokens: 0,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0,
+                lastUsedAt: nil
+            )
+            if skillStat.sourcePlugin == nil {
+                skillStat.sourcePlugin = stringValue(object["attributionPlugin"])
+            }
+            skillStat.addUsage(
+                inputTokens: inputTokens,
+                outputTokens: outputTokens,
+                cacheCreationTokens: cacheCreationTokens,
+                cacheReadTokens: cacheReadTokens,
+                timestamp: timestamp
+            )
+            skillStats[attributionSkill] = skillStat
         }
     }
 
@@ -281,4 +321,8 @@ struct TranscriptUsageScanner {
         formatter.formatOptions = [.withInternetDateTime]
         return formatter
     }()
+
+    private static let readChunkSize = 64 * 1024
+    private static let newlineData = Data([0x0A])
+    private static let carriageReturnByte: UInt8 = 0x0D
 }

@@ -298,11 +298,15 @@ struct InspectorPane: View {
 
     private static func formatTimestamp(_ ts: Int) -> String {
         let date = Date(timeIntervalSince1970: TimeInterval(ts))
+        return timestampFormatter.string(from: date)
+    }
+
+    private static let timestampFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
+        return formatter
+    }()
 
     private static func formatBytes(_ bytes: UInt64) -> String {
         ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)

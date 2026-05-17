@@ -13,7 +13,7 @@ struct MatrixView: View {
         let capabilities = store.capabilities
         let sections = filteredSections(in: capabilities)
         VStack(spacing: 0) {
-            header
+            header(capabilities: capabilities)
             Divider()
             // Empty check honors the unified `capabilities` view (skills +
             // agents + future cli/mcp/config), not just raw skills. v0.4 added
@@ -33,7 +33,7 @@ struct MatrixView: View {
         .popPageBackground()
         .inspector(isPresented: $store.inspectorOpen) {
             if let id = store.selectedSkillID,
-               let capability = store.capabilities.first(where: { $0.id == id }) {
+               let capability = capabilities.first(where: { $0.id == id }) {
                 InspectorPane(store: store, capability: capability)
                     .inspectorColumnWidth(min: 300, ideal: 340, max: 480)
             } else {
@@ -45,14 +45,14 @@ struct MatrixView: View {
 
     // MARK: Header
 
-    private var header: some View {
+    private func header(capabilities: [MatrixCapability]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     LocalizedText("sidebar.matrix")
                         .font(.popLargeTitle)
                         .foregroundStyle(Color.popLabel)
-                    Text(subtitle)
+                    Text(subtitle(capabilities: capabilities))
                         .font(.popSubheadline)
                         .foregroundStyle(Color.popSecondaryLabel)
                 }
@@ -66,8 +66,8 @@ struct MatrixView: View {
         .padding(.bottom, 14)
     }
 
-    private var subtitle: String {
-        let count = store.capabilities.count
+    private func subtitle(capabilities: [MatrixCapability]) -> String {
+        let count = capabilities.count
         let active = store.enabledSkillCount
         return localization.string("matrix.subtitle", count, active)
     }

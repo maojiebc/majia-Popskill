@@ -97,12 +97,8 @@ struct BackupsView: View {
     }
 
     private var groupedByDay: [BackupBucket] {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-
         let buckets = Dictionary(grouping: store.backups) { backup -> String in
-            formatter.string(from: Date(timeIntervalSince1970: TimeInterval(backup.createdAt)))
+            Self.dayFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(backup.createdAt)))
         }
         return buckets
             .map { key, value in BackupBucket(day: key, backups: value.sorted { $0.createdAt > $1.createdAt }) }
@@ -235,9 +231,20 @@ struct BackupsView: View {
 
     private static func formatTimestamp(_ ts: Int) -> String {
         let date = Date(timeIntervalSince1970: TimeInterval(ts))
+        return timestampFormatter.string(from: date)
+    }
+
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
+
+    private static let timestampFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
         formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
+        return formatter
+    }()
 }
