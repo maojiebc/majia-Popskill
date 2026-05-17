@@ -60,7 +60,7 @@ struct InspectorPane: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.popSecondaryLabel)
                     .frame(width: 22, height: 22)
-                    .background(Color.black.opacity(0.05), in: Circle())
+                    .background(Color.popSubtleFill, in: Circle())
             }
             .buttonStyle(.plain)
             .help(localization.string("matrix.inspector.close"))
@@ -151,7 +151,7 @@ struct InspectorPane: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(
-                isOn ? Color.accentColor.opacity(0.14) : Color.black.opacity(0.05),
+                isOn ? Color.accentColor.opacity(0.14) : Color.popSubtleFill,
                 in: Capsule()
             )
         }
@@ -232,7 +232,7 @@ struct InspectorPane: View {
             }
         }
         .padding(8)
-        .background(Color.black.opacity(0.03), in: RoundedRectangle(cornerRadius: 6))
+        .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 6))
     }
 
     private func linkStatusBadge(_ status: String) -> some View {
@@ -298,11 +298,15 @@ struct InspectorPane: View {
 
     private static func formatTimestamp(_ ts: Int) -> String {
         let date = Date(timeIntervalSince1970: TimeInterval(ts))
+        return timestampFormatter.string(from: date)
+    }
+
+    private static let timestampFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
+        return formatter
+    }()
 
     private static func formatBytes(_ bytes: UInt64) -> String {
         ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
@@ -310,7 +314,9 @@ struct InspectorPane: View {
 
     // MARK: Toggle helpers
 
-    private func toggleKey(_ app: TargetApp) -> String { "\(capability.id)|\(app.rawValue)" }
+    private func toggleKey(_ app: TargetApp) -> String {
+        MatrixCapability.toggleKey(capabilityID: capability.id, app: app)
+    }
 
     @MainActor
     private func toggle(app: TargetApp, enabled: Bool) async {

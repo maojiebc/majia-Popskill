@@ -91,6 +91,13 @@
 "Save WebDAV settings" = "Save WebDAV settings";
 "Refresh" = "Refresh";
 "Retry" = "Retry";
+"common.dismiss" = "Dismiss";
+"common.enabled" = "Enabled";
+"common.disabled" = "Disabled";
+"appToggle.help" = "%@ · %@";
+"appToggle.enabledSummary" = "Enabled apps";
+"appToggle.enabledValue" = "%d of %d";
+"appToggle.countHelp" = "%@: %d enabled";
 
 "Active" = "Active";
 "Partial" = "Partial";
@@ -328,6 +335,7 @@
 "matrix.row.menu.openSource" = "Open Source";
 "matrix.row.menu.revealInFinder" = "Reveal in Finder";
 "matrix.row.menu.help" = "More actions";
+"matrix.group.coverageHelp" = "%@: %d of %d enabled";
 
 "matrix.empty.title" = "No capabilities yet";
 "matrix.empty.body" = "Install your first skill from a source, or wait for bootstrap to finish.";
@@ -382,6 +390,7 @@
 "spotlight.action.updates.subtitle" = "See pending capability updates";
 "spotlight.action.settings.title" = "Open Settings";
 "spotlight.action.settings.subtitle" = "Storage, sync provider, sources";
+"spotlight.quickToggle.help" = "%@ · Command-%@";
 
 // S5 — Sources view
 "sources.subtitle" = "%d of %d enabled";
@@ -390,6 +399,9 @@
 "sources.row.branch" = "Branch · %@";
 "sources.row.openGithub" = "Open on GitHub";
 "sources.row.remove" = "Remove";
+"sources.row.remove.confirm.title" = "Remove source?";
+"sources.row.remove.confirm.message" = "Remove %@ from discovery sources? Installed skills stay in place.";
+"sources.row.remove.confirm.button" = "Remove source";
 "sources.empty.title" = "No sources yet";
 "sources.empty.body" = "Add a GitHub catalog repo to populate the matrix. npm / brew / folder sources land in v0.4.";
 "sources.add.title" = "Add source";
@@ -413,6 +425,9 @@
 "backups.refresh" = "Refresh";
 "backups.row.restore" = "Restore";
 "backups.row.delete" = "Delete permanently";
+"backups.row.delete.confirm.title" = "Delete backup?";
+"backups.row.delete.confirm.message" = "Delete the backup for %@ permanently? This recovery snapshot cannot be restored after deletion.";
+"backups.row.delete.confirm.button" = "Delete backup";
 "backups.empty.title" = "No backups";
 "backups.empty.body" = "Uninstalls with the default safe strategy create a backup here.";
 
@@ -528,18 +543,18 @@
 "onboarding.detect.npmEmpty" = "No global @modelcontextprotocol / mcp- packages found.";
 
 "onboarding.scan.title" = "Scan capabilities";
-"onboarding.scan.subtitle" = "We list capabilities already present in ~/.agents/skills.";
+"onboarding.scan.subtitle" = "We list capabilities already present in ~/.cc-switch/skills.";
 "onboarding.scan.placeholderTitle" = "Run the scan to read your capability tree";
-"onboarding.scan.placeholderBody" = "Sidecar reads ~/.agents/skills and Popskill's SSOT in seconds.";
+"onboarding.scan.placeholderBody" = "Sidecar reads ~/.cc-switch/skills and each target skill directory in seconds.";
 "onboarding.scan.empty" = "No capabilities";
 "onboarding.scan.now" = "Run scan";
 "onboarding.scan.installed" = "Tracked by Popskill";
-"onboarding.scan.totalAgents" = "Total in ~/.agents";
+"onboarding.scan.totalAgents" = "Total in SSOT";
 "onboarding.scan.agentsRoot" = "Skills root";
 "onboarding.scan.ssotLabel" = "SSOT path";
 
 "onboarding.storage.title" = "Where to store and how to sync";
-"onboarding.storage.subtitle" = "Popskill keeps the real files at the standard agents skills root and symlinks them into each app.";
+"onboarding.storage.subtitle" = "Popskill keeps the real files at the CC Switch skills root and projects them into each app.";
 "onboarding.storage.ssotLabel" = "SSOT";
 "onboarding.storage.ssotHint" = "The real, single source of truth. Each AI tool's skill folder symlinks here.";
 "onboarding.storage.providerLabel" = "Sync provider";

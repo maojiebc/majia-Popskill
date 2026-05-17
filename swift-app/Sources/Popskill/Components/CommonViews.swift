@@ -6,9 +6,14 @@ struct AppToggle: View {
     let isPending: Bool
     let onChange: (Bool) -> Void
     var size: CGFloat = 28
+    @Environment(\.popskillLocalization) private var localization
 
     private var cornerRadius: CGFloat {
         max(6, size * 0.34)
+    }
+
+    private var statusLabel: String {
+        localization.string(isOn ? "common.enabled" : "common.disabled")
     }
 
     var body: some View {
@@ -38,9 +43,9 @@ struct AppToggle: View {
                 .stroke(isOn ? app.accentColor.opacity(0.38) : Color.popBorder, lineWidth: 1)
         )
         .contentShape(RoundedRectangle(cornerRadius: cornerRadius))
-        .help("\(app.title) · \(isOn ? "Enabled" : "Disabled")")
+        .help(localization.string("appToggle.help", app.title, statusLabel))
         .accessibilityLabel(Text(app.title))
-        .accessibilityValue(Text(isOn ? "Enabled" : "Disabled"))
+        .accessibilityValue(Text(statusLabel))
     }
 }
 
@@ -51,6 +56,7 @@ struct AppToggleRow: View {
     let onToggle: (TargetApp, Bool) -> Void
     var showsEnabledSummary: Bool = true
     var toggleSize: CGFloat = 26
+    @Environment(\.popskillLocalization) private var localization
 
     private var enabledCount: Int {
         apps.filter { app in
@@ -81,9 +87,9 @@ struct AppToggleRow: View {
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2.5)
                     .background(Color.popCardBackground.opacity(0.52), in: Capsule())
-                    .help("Enabled apps")
-                    .accessibilityLabel(Text("Enabled apps"))
-                    .accessibilityValue(Text("\(enabledCount) of \(apps.count)"))
+                    .help(localization.string("appToggle.enabledSummary"))
+                    .accessibilityLabel(Text(localization.string("appToggle.enabledSummary")))
+                    .accessibilityValue(Text(localization.string("appToggle.enabledValue", enabledCount, apps.count)))
             }
         }
     }
@@ -92,6 +98,7 @@ struct AppToggleRow: View {
 struct AppCountBar: View {
     let apps: [TargetApp]
     let count: (TargetApp) -> Int
+    @Environment(\.popskillLocalization) private var localization
 
     var body: some View {
         HStack(spacing: 6) {
@@ -115,7 +122,7 @@ struct AppCountBar: View {
                     RoundedRectangle(cornerRadius: PopskillRadius.button, style: .continuous)
                         .stroke(enabled > 0 ? app.accentColor.opacity(0.25) : Color.popBorder, lineWidth: 1)
                 )
-                .help("\(app.title): \(enabled) enabled")
+                .help(localization.string("appToggle.countHelp", app.title, enabled))
             }
         }
     }

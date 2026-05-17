@@ -211,8 +211,12 @@ final class PopskillStore {
         return candidates
     }
 
-    func selectSkill(_ id: String) {
-        selectedSkillID = id
+    func selectSkill(_ skillID: String) {
+        selectCapability(MatrixCapability.skillCapabilityID(for: skillID))
+    }
+
+    func selectCapability(_ capabilityID: String) {
+        selectedSkillID = capabilityID
         inspectorOpen = true
     }
 

@@ -395,11 +395,8 @@ struct InsightsView: View {
     // MARK: Format
 
     private static func formatTokens(_ value: Int64) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.groupingSeparator = ","
         if value < 1_000 {
-            return formatter.string(from: NSNumber(value: value)) ?? "0"
+            return decimalFormatter.string(from: NSNumber(value: value)) ?? "0"
         }
         if value < 1_000_000 {
             return String(format: "%.1fK", Double(value) / 1_000.0)
@@ -409,4 +406,11 @@ struct InsightsView: View {
         }
         return String(format: "%.2fB", Double(value) / 1_000_000_000.0)
     }
+
+    private static let decimalFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = ","
+        return formatter
+    }()
 }

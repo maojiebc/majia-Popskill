@@ -63,12 +63,10 @@ struct UpdatesView: View {
             return localization.string("updates.subtitleScanning", store.updates.count)
         }
         if let lastScanAt = store.lastUpdatesRefreshAt {
-            let formatter = RelativeDateTimeFormatter()
-            formatter.unitsStyle = .short
             return localization.string(
                 "updates.subtitle",
                 store.updates.count,
-                formatter.localizedString(for: lastScanAt, relativeTo: Date())
+                Self.relativeScanFormatter.localizedString(for: lastScanAt, relativeTo: Date())
             )
         }
         return localization.string("updates.subtitleNoScan", store.updates.count)
@@ -179,8 +177,16 @@ struct UpdatesView: View {
 
     @MainActor
     private func updateAll() async {
-        for update in store.updates {
+        guard pendingUpdate.isEmpty else { return }
+        let pending = store.updates
+        for update in pending {
             await applyUpdate(update)
         }
     }
+
+    private static let relativeScanFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter
+    }()
 }

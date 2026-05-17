@@ -112,4 +112,31 @@ struct TranscriptUsageScannerTests {
         #expect(stat.totalTokens == 24)
         #expect(stat.lastUsedAt != nil)
     }
+
+    @Test
+    func streamsCRLFLinesAndSkipsMalformedRecords() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let project = root.appendingPathComponent("project", isDirectory: true)
+        try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: root)
+        }
+
+        let transcript = project.appendingPathComponent("session.jsonl")
+        let lines = [
+            #"{"type":"assistant","sessionId":"s1","timestamp":"2026-05-12T01:01:00.000Z","message":{"role":"assistant","model":"claude-opus","usage":{"input_tokens":2,"output_tokens":3}}}"#,
+            #"not json"#,
+            #"{"type":"assistant","sessionId":"s1","timestamp":"2026-05-12T01:02:00.000Z","message":{"role":"assistant","model":"claude-opus","usage":{"input_tokens":4,"output_tokens":5}}}"#,
+        ]
+        try lines.joined(separator: "\r\n").write(to: transcript, atomically: true, encoding: .utf8)
+
+        let summary = try TranscriptUsageScanner(projectsURL: root).scan()
+
+        #expect(summary.filesScanned == 1)
+        #expect(summary.sessions == 1)
+        #expect(summary.usageEvents == 2)
+        #expect(summary.inputTokens == 6)
+        #expect(summary.outputTokens == 8)
+    }
 }

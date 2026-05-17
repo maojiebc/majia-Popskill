@@ -14,6 +14,10 @@ extension Color {
     static let popControlFill = Color(.controlBackgroundColor).opacity(0.72)
     static let popControlStroke = Color(.separatorColor).opacity(0.46)
     static let popCardStroke = Color(.separatorColor).opacity(0.36)
+    static let popSubtleFill = Color(.separatorColor).opacity(0.16)
+    static let popSubtleStroke = Color(.separatorColor).opacity(0.42)
+    static let popBackdropScrim = Color.black.opacity(0.30)
+    static let popShadow = Color.black
 
     static let popLabel = Color(.labelColor)
     static let popSecondaryLabel = Color(.secondaryLabelColor)
@@ -88,32 +92,7 @@ enum PopskillSectionAccent {
 
 struct PopskillCanvasBackground: View {
     var body: some View {
-        ZStack {
-            Color.popMainBackground
-            LinearGradient(
-                colors: [
-                    Color.popSurfaceElevated.opacity(0.22),
-                    Color.accentColor.opacity(0.050),
-                    Color.popSectionOrange.opacity(0.026)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .overlay(alignment: .topTrailing) {
-                Circle()
-                    .fill(Color.accentColor.opacity(0.035))
-                    .frame(width: 360, height: 360)
-                    .blur(radius: 80)
-                    .offset(x: 120, y: -160)
-            }
-            .overlay(alignment: .bottomLeading) {
-                Circle()
-                    .fill(Color.popSectionOrange.opacity(0.032))
-                    .frame(width: 300, height: 300)
-                    .blur(radius: 90)
-                    .offset(x: -130, y: 150)
-            }
-        }
+        Color.popMainBackground
         .ignoresSafeArea()
     }
 }
@@ -138,7 +117,7 @@ private struct PopCardModifier: ViewModifier {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(Color.popCardStroke.opacity(borderOpacity), lineWidth: 0.7)
             )
-            .shadow(color: .black.opacity(shadowOpacity), radius: PopskillShadow.cardRadius, x: 0, y: PopskillShadow.cardYOffset)
+            .shadow(color: Color.popShadow.opacity(shadowOpacity), radius: PopskillShadow.cardRadius, x: 0, y: PopskillShadow.cardYOffset)
     }
 }
 

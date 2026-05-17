@@ -9,7 +9,9 @@ struct SourcesView: View {
     @Environment(\.popskillLocalization) private var localization
 
     @State private var addOpen: Bool = false
+    @State private var loading: Bool = false
     @State private var pendingMutation: Set<String> = []
+    @State private var pendingRemoval: SkillRepository?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -25,6 +27,12 @@ struct SourcesView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
+                    .disabled(loading)
+
+                    if loading {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
 
                     Button {
                         addOpen = true
@@ -39,7 +47,10 @@ struct SourcesView: View {
                 }
             }
 
-            if store.sources.isEmpty {
+            if loading && store.sources.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if store.sources.isEmpty {
                 emptyState
             } else {
                 list
@@ -50,6 +61,24 @@ struct SourcesView: View {
             // Cached helper short-circuits when last refresh < 30s ago. The
             // manual refresh button above passes force: true to bypass.
             await refresh(force: false)
+        }
+        .confirmationDialog(
+            localization.string("sources.row.remove.confirm.title"),
+            isPresented: removalDialogPresented,
+            titleVisibility: .visible
+        ) {
+            if let pendingRemoval {
+                Button(localization.string("sources.row.remove.confirm.button"), role: .destructive) {
+                    Task { await remove(pendingRemoval) }
+                }
+            }
+            Button(localization.string("sources.add.cancel"), role: .cancel) {
+                pendingRemoval = nil
+            }
+        } message: {
+            if let pendingRemoval {
+                Text(localization.string("sources.row.remove.confirm.message", pendingRemoval.label))
+            }
         }
     }
 
@@ -69,6 +98,17 @@ struct SourcesView: View {
             .padding(.horizontal, 28)
             .padding(.bottom, 24)
         }
+    }
+
+    private var removalDialogPresented: Binding<Bool> {
+        Binding(
+            get: { pendingRemoval != nil },
+            set: { isPresented in
+                if !isPresented {
+                    pendingRemoval = nil
+                }
+            }
+        )
     }
 
     private func sourceRow(_ repo: SkillRepository) -> some View {
@@ -114,7 +154,7 @@ struct SourcesView: View {
                     }
                 }
                 Button(role: .destructive) {
-                    Task { await remove(repo) }
+                    pendingRemoval = repo
                 } label: {
                     Label(localization.string("sources.row.remove"), systemImage: "trash")
                 }
@@ -162,6 +202,9 @@ struct SourcesView: View {
 
     @MainActor
     private func refresh(force: Bool = false) async {
+        guard !loading else { return }
+        loading = true
+        defer { loading = false }
         // Delegate to the cached helper on PopskillStore. `force: true` from
         // the manual refresh button; `force: false` from .task on appearance.
         await store.refreshSources(force: force)
@@ -192,6 +235,7 @@ struct SourcesView: View {
     private func remove(_ repo: SkillRepository) async {
         let key = repo.id
         guard !pendingMutation.contains(key) else { return }
+        pendingRemoval = nil
         pendingMutation.insert(key)
         defer { pendingMutation.remove(key) }
 
@@ -285,6 +329,7 @@ private struct AddSourcePopover: View {
                     isPresented = false
                 }
                 .keyboardShortcut(.escape)
+                .disabled(isAdding)
                 Button {
                     Task { await submit() }
                 } label: {

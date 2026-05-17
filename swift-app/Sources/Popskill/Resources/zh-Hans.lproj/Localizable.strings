@@ -91,6 +91,13 @@
 "Save WebDAV settings" = "保存 WebDAV 设置";
 "Refresh" = "刷新";
 "Retry" = "重试";
+"common.dismiss" = "关闭";
+"common.enabled" = "已启用";
+"common.disabled" = "已禁用";
+"appToggle.help" = "%@ · %@";
+"appToggle.enabledSummary" = "已启用应用";
+"appToggle.enabledValue" = "%d / %d";
+"appToggle.countHelp" = "%@：已启用 %d 个";
 
 "Active" = "活跃";
 "Partial" = "部分安装";
@@ -328,6 +335,7 @@
 "matrix.row.menu.openSource" = "查看来源";
 "matrix.row.menu.revealInFinder" = "在 Finder 中显示";
 "matrix.row.menu.help" = "更多操作";
+"matrix.group.coverageHelp" = "%@：已启用 %d / %d";
 
 "matrix.empty.title" = "还没有能力";
 "matrix.empty.body" = "从数据源安装第一个 skill,或等 sidecar 初始化完成。";
@@ -382,6 +390,7 @@
 "spotlight.action.updates.subtitle" = "查看待更新的能力";
 "spotlight.action.settings.title" = "打开设置";
 "spotlight.action.settings.subtitle" = "存储 / 同步 / 数据源";
+"spotlight.quickToggle.help" = "%@ · Command-%@";
 
 // S5 — Sources
 "sources.subtitle" = "%d / %d 启用中";
@@ -390,6 +399,9 @@
 "sources.row.branch" = "分支 · %@";
 "sources.row.openGithub" = "在 GitHub 上打开";
 "sources.row.remove" = "移除";
+"sources.row.remove.confirm.title" = "移除数据源?";
+"sources.row.remove.confirm.message" = "要从发现数据源中移除 %@ 吗? 已安装的 skill 会保留。";
+"sources.row.remove.confirm.button" = "移除数据源";
 "sources.empty.title" = "还没有数据源";
 "sources.empty.body" = "添加一个 GitHub catalog 仓库,矩阵就会被填上。npm / brew / 文件夹放到 v0.4。";
 "sources.add.title" = "添加数据源";
@@ -413,6 +425,9 @@
 "backups.refresh" = "刷新";
 "backups.row.restore" = "恢复";
 "backups.row.delete" = "永久删除";
+"backups.row.delete.confirm.title" = "删除备份?";
+"backups.row.delete.confirm.message" = "要永久删除 %@ 的备份吗? 删除后无法再用这个恢复快照。";
+"backups.row.delete.confirm.button" = "删除备份";
 "backups.empty.title" = "没有备份";
 "backups.empty.body" = "默认安全卸载会在这里留快照。";
 
@@ -528,18 +543,18 @@
 "onboarding.detect.npmEmpty" = "没有发现全局 @modelcontextprotocol / mcp- 包。";
 
 "onboarding.scan.title" = "扫描能力";
-"onboarding.scan.subtitle" = "列出 ~/.agents/skills 下已有的能力。";
+"onboarding.scan.subtitle" = "列出 ~/.cc-switch/skills 下已有的能力。";
 "onboarding.scan.placeholderTitle" = "运行扫描以读取能力树";
-"onboarding.scan.placeholderBody" = "sidecar 几秒内读 ~/.agents/skills 与 Popskill SSOT。";
+"onboarding.scan.placeholderBody" = "sidecar 几秒内读取 ~/.cc-switch/skills 和各目标应用目录。";
 "onboarding.scan.empty" = "没有能力";
 "onboarding.scan.now" = "现在扫描";
 "onboarding.scan.installed" = "Popskill 已跟踪";
-"onboarding.scan.totalAgents" = "~/.agents 总数";
+"onboarding.scan.totalAgents" = "SSOT 总数";
 "onboarding.scan.agentsRoot" = "能力根目录";
 "onboarding.scan.ssotLabel" = "SSOT 路径";
 
 "onboarding.storage.title" = "存哪里、怎么同步";
-"onboarding.storage.subtitle" = "Popskill 把真身放在 agents skills 根目录,各 AI 工具的 skill 目录都软链到它。";
+"onboarding.storage.subtitle" = "Popskill 把真身文件放在 CC Switch skills 根目录，再投影到各个应用。";
 "onboarding.storage.ssotLabel" = "SSOT";
 "onboarding.storage.ssotHint" = "真身,单一真源。每个 AI 工具的 skill 目录都软链到这里。";
 "onboarding.storage.providerLabel" = "同步方式";
