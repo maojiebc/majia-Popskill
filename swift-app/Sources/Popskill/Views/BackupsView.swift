@@ -12,6 +12,7 @@ struct BackupsView: View {
     @State private var loading: Bool = false
     @State private var pendingRestore: Set<String> = []
     @State private var pendingDelete: Set<String> = []
+    @State private var pendingDeleteConfirmation: SkillBackup?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -44,6 +45,24 @@ struct BackupsView: View {
             // user toggles back and forth between sidebar entries within
             // the 30s TTL window. Manual refresh button uses force: true.
             await refresh(force: false)
+        }
+        .confirmationDialog(
+            localization.string("backups.row.delete.confirm.title"),
+            isPresented: deleteDialogPresented,
+            titleVisibility: .visible
+        ) {
+            if let pendingDeleteConfirmation {
+                Button(localization.string("backups.row.delete.confirm.button"), role: .destructive) {
+                    Task { await deleteBackup(pendingDeleteConfirmation) }
+                }
+            }
+            Button(localization.string("sources.add.cancel"), role: .cancel) {
+                pendingDeleteConfirmation = nil
+            }
+        } message: {
+            if let pendingDeleteConfirmation {
+                Text(localization.string("backups.row.delete.confirm.message", pendingDeleteConfirmation.skill.name))
+            }
         }
     }
 
@@ -94,6 +113,17 @@ struct BackupsView: View {
             }
     }
 
+    private var deleteDialogPresented: Binding<Bool> {
+        Binding(
+            get: { pendingDeleteConfirmation != nil },
+            set: { isPresented in
+                if !isPresented {
+                    pendingDeleteConfirmation = nil
+                }
+            }
+        )
+    }
+
     private func row(_ backup: SkillBackup) -> some View {
         HStack(spacing: 12) {
             InitialAvatarView(name: backup.skill.name, identifier: backup.skill.id)
@@ -122,7 +152,7 @@ struct BackupsView: View {
 
                 Menu {
                     Button(role: .destructive) {
-                        Task { await deleteBackup(backup) }
+                        pendingDeleteConfirmation = backup
                     } label: {
                         Label(localization.string("backups.row.delete"), systemImage: "trash")
                     }
@@ -192,6 +222,7 @@ struct BackupsView: View {
     @MainActor
     private func deleteBackup(_ backup: SkillBackup) async {
         guard !pendingDelete.contains(backup.backupId) else { return }
+        pendingDeleteConfirmation = nil
         pendingDelete.insert(backup.backupId)
         defer { pendingDelete.remove(backup.backupId) }
         do {

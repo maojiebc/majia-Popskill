@@ -179,7 +179,9 @@ struct UpdatesView: View {
 
     @MainActor
     private func updateAll() async {
-        for update in store.updates {
+        guard pendingUpdate.isEmpty else { return }
+        let pending = store.updates
+        for update in pending {
             await applyUpdate(update)
         }
     }

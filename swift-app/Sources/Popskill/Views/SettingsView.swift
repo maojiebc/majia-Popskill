@@ -187,7 +187,7 @@ struct SettingsView: View {
 
     @MainActor
     private func runSync(_ action: SyncAction) async {
-        guard !pendingSync else { return }
+        guard !pendingSync, syncProvider.actionable else { return }
         pendingSync = true
         syncMessage = nil
         defer { pendingSync = false }
@@ -303,7 +303,7 @@ enum SyncProvider: String, CaseIterable, Identifiable, Codable {
     }
 
     var actionable: Bool {
-        self != .none
+        implemented
     }
 }
 
