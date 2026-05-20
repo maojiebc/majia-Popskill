@@ -471,6 +471,7 @@ struct InspectorPane: View {
     private func skillUsageSection(_ skill: Skill) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeading(title: "matrix.inspector.section.usage", accent: .accentColor)
+            usageWindowCaption
 
             if store.usageScanInFlight {
                 HStack(spacing: 8) {
@@ -622,6 +623,7 @@ struct InspectorPane: View {
     private func packageUsageSection(_ package: CapabilityPackage) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeading(title: "matrix.inspector.section.usage", accent: .accentColor)
+            usageWindowCaption
 
             if store.usageScanInFlight {
                 HStack(spacing: 8) {
@@ -730,6 +732,15 @@ struct InspectorPane: View {
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(tint.opacity(0.07), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    @ViewBuilder
+    private var usageWindowCaption: some View {
+        if let window = store.usageSummary?.recent30Days {
+            Text(localization.string("matrix.package.usage.window", window.days))
+                .font(.caption2)
+                .foregroundStyle(Color.popTertiaryLabel)
+        }
     }
 
     private func components(in kind: String, package: CapabilityPackage) -> [PackageComponent] {

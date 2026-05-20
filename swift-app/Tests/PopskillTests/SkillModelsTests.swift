@@ -408,6 +408,55 @@ struct SkillModelsTests {
     }
 
     @Test
+    func installedSkillUsageSnapshotPrefersRecentThirtyDayWindow() {
+        let skill = installedSkill(directory: "baoyu-comic")
+        let oldStat = SkillUsageStat(
+            skillID: "baoyu-comic",
+            sourcePlugin: nil,
+            usageEvents: 9,
+            inputTokens: 90,
+            outputTokens: 0,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            lastUsedAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+        let recentStat = SkillUsageStat(
+            skillID: "baoyu-comic",
+            sourcePlugin: nil,
+            usageEvents: 2,
+            inputTokens: 4,
+            outputTokens: 6,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            lastUsedAt: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+        var recentWindow = UsageWindowSummary(
+            days: 30,
+            startedAt: Date(timeIntervalSince1970: 1_799_000_000),
+            endedAt: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+        recentWindow.usageEvents = 2
+        recentWindow.inputTokens = 4
+        recentWindow.outputTokens = 6
+        recentWindow.attributedSkillUsageEvents = 2
+        recentWindow.skillStats = [recentStat]
+        let summary = UsageSummary(
+            usageEvents: 11,
+            inputTokens: 94,
+            outputTokens: 6,
+            attributedSkillUsageEvents: 11,
+            skillStats: [oldStat],
+            recent30Days: recentWindow
+        )
+
+        let snapshot = skill.usageSnapshot(using: summary)
+
+        #expect(snapshot?.usageEvents == 2)
+        #expect(snapshot?.totalTokens == 10)
+        #expect(snapshot?.lastUsedAt == recentStat.lastUsedAt)
+    }
+
+    @Test
     func installPlanDecodesPreviewPayload() throws {
         let data = """
         {
@@ -1050,6 +1099,56 @@ struct SkillModelsTests {
         #expect(snapshot?.componentStats.first?.componentName == "baoyu-comic")
         #expect(snapshot?.componentStats.first?.usageEvents == 2)
         #expect(snapshot?.componentStats.first?.totalTokens == 62)
+    }
+
+    @Test
+    func capabilityPackageUsageSnapshotPrefersRecentThirtyDayWindow() {
+        let package = self.package(components: [component(id: "baoyu-comic", installed: true)])
+        let skill = installedSkill(directory: "baoyu-comic")
+        let oldStat = SkillUsageStat(
+            skillID: "baoyu-comic",
+            sourcePlugin: nil,
+            usageEvents: 6,
+            inputTokens: 60,
+            outputTokens: 0,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            lastUsedAt: nil
+        )
+        let recentStat = SkillUsageStat(
+            skillID: "baoyu-comic",
+            sourcePlugin: nil,
+            usageEvents: 1,
+            inputTokens: 2,
+            outputTokens: 3,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            lastUsedAt: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+        var recentWindow = UsageWindowSummary(
+            days: 30,
+            startedAt: Date(timeIntervalSince1970: 1_799_000_000),
+            endedAt: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+        recentWindow.usageEvents = 1
+        recentWindow.inputTokens = 2
+        recentWindow.outputTokens = 3
+        recentWindow.attributedSkillUsageEvents = 1
+        recentWindow.skillStats = [recentStat]
+        let summary = UsageSummary(
+            usageEvents: 7,
+            inputTokens: 62,
+            outputTokens: 3,
+            attributedSkillUsageEvents: 7,
+            skillStats: [oldStat],
+            recent30Days: recentWindow
+        )
+
+        let snapshot = package.usageSnapshot(using: summary, skills: [skill])
+
+        #expect(snapshot?.usageEvents == 1)
+        #expect(snapshot?.totalTokens == 5)
+        #expect(snapshot?.componentStats.first?.componentID == "baoyu-comic")
     }
 
     @Test

@@ -176,7 +176,7 @@ struct MatrixView: View {
             ),
             MatrixSummaryMetric(
                 id: "tokens",
-                value: store.usageSummary.map { UsageDisplayFormatter.compactTokens($0.totalTokens) } ?? "—",
+                value: store.usageSummary.map { UsageDisplayFormatter.compactTokens($0.thirtyDayTotalTokens) } ?? "—",
                 title: localization.string("matrix.metric.tokenUsage"),
                 tint: .popLabel,
                 preferredWidth: 116

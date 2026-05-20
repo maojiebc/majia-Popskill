@@ -224,7 +224,7 @@ struct Skill: Identifiable, Codable, Equatable {
         }
 
         var snapshot = SkillUsageSnapshot()
-        for stat in summary.skillStats where matchesAttributionSkill(stat.skillID) {
+        for stat in summary.thirtyDaySkillStats where matchesAttributionSkill(stat.skillID) {
             snapshot.add(stat)
         }
         return snapshot
@@ -1448,7 +1448,7 @@ extension CapabilityPackage {
         let matchedSkills = matchingInstalledSkills(in: skills)
         var snapshot = PackageUsageSnapshot()
 
-        for stat in summary.skillStats {
+        for stat in summary.thirtyDaySkillStats {
             guard let component = usageComponent(for: stat, matchedSkills: matchedSkills) else {
                 continue
             }

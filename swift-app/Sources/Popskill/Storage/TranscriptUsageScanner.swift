@@ -2,12 +2,16 @@ import Foundation
 
 struct TranscriptUsageScanner {
     private let projectsURL: URL
+    private let referenceDate: Date
+    private let recentWindowDays: Int
 
-    init(projectsURL: URL? = nil) {
+    init(projectsURL: URL? = nil, referenceDate: Date = Date(), recentWindowDays: Int = 30) {
         self.projectsURL = projectsURL
             ?? URL(fileURLWithPath: NSHomeDirectory())
                 .appendingPathComponent(".claude")
                 .appendingPathComponent("projects")
+        self.referenceDate = referenceDate
+        self.recentWindowDays = max(1, recentWindowDays)
     }
 
     func scan() throws -> UsageSummary {
@@ -15,12 +19,21 @@ struct TranscriptUsageScanner {
         var modelStats: [String: ModelUsageStat] = [:]
         var skillStats: [String: SkillUsageStat] = [:]
         var sessionStats: [String: SessionUsageStat] = [:]
+        let recentStart = referenceDate.addingTimeInterval(-Double(recentWindowDays) * 24 * 60 * 60)
+        var recentSummary = UsageWindowSummary(
+            days: recentWindowDays,
+            startedAt: recentStart,
+            endedAt: referenceDate
+        )
+        var recentModelStats: [String: ModelUsageStat] = [:]
+        var recentSkillStats: [String: SkillUsageStat] = [:]
 
         guard let enumerator = FileManager.default.enumerator(
             at: projectsURL,
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles]
         ) else {
+            summary.recent30Days = recentSummary
             return summary
         }
 
@@ -31,23 +44,17 @@ struct TranscriptUsageScanner {
                 summary: &summary,
                 modelStats: &modelStats,
                 skillStats: &skillStats,
-                sessionStats: &sessionStats
+                sessionStats: &sessionStats,
+                recentSummary: &recentSummary,
+                recentModelStats: &recentModelStats,
+                recentSkillStats: &recentSkillStats,
+                recentStart: recentStart
             )
         }
 
         summary.sessions = sessionStats.count
-        summary.modelStats = modelStats.values.sorted {
-            if $0.totalTokens == $1.totalTokens {
-                return $0.model < $1.model
-            }
-            return $0.totalTokens > $1.totalTokens
-        }
-        summary.skillStats = skillStats.values.sorted {
-            if $0.totalTokens == $1.totalTokens {
-                return $0.skillID < $1.skillID
-            }
-            return $0.totalTokens > $1.totalTokens
-        }
+        summary.modelStats = sortedModelStats(modelStats)
+        summary.skillStats = sortedSkillStats(skillStats)
         summary.recentSessions = sessionStats.values.sorted {
             switch ($0.lastActivityAt, $1.lastActivityAt) {
             case let (left?, right?):
@@ -63,6 +70,9 @@ struct TranscriptUsageScanner {
                 return $0.sessionID < $1.sessionID
             }
         }
+        recentSummary.modelStats = sortedModelStats(recentModelStats)
+        recentSummary.skillStats = sortedSkillStats(recentSkillStats)
+        summary.recent30Days = recentSummary
         return summary
     }
 
@@ -71,7 +81,11 @@ struct TranscriptUsageScanner {
         summary: inout UsageSummary,
         modelStats: inout [String: ModelUsageStat],
         skillStats: inout [String: SkillUsageStat],
-        sessionStats: inout [String: SessionUsageStat]
+        sessionStats: inout [String: SessionUsageStat],
+        recentSummary: inout UsageWindowSummary,
+        recentModelStats: inout [String: ModelUsageStat],
+        recentSkillStats: inout [String: SkillUsageStat],
+        recentStart: Date
     ) throws {
         let projectName = projectName(for: fileURL)
         let handle = try FileHandle(forReadingFrom: fileURL)
@@ -91,7 +105,11 @@ struct TranscriptUsageScanner {
                     summary: &summary,
                     modelStats: &modelStats,
                     skillStats: &skillStats,
-                    sessionStats: &sessionStats
+                    sessionStats: &sessionStats,
+                    recentSummary: &recentSummary,
+                    recentModelStats: &recentModelStats,
+                    recentSkillStats: &recentSkillStats,
+                    recentStart: recentStart
                 )
                 buffer.removeSubrange(buffer.startIndex..<newlineRange.upperBound)
             }
@@ -104,7 +122,11 @@ struct TranscriptUsageScanner {
                 summary: &summary,
                 modelStats: &modelStats,
                 skillStats: &skillStats,
-                sessionStats: &sessionStats
+                sessionStats: &sessionStats,
+                recentSummary: &recentSummary,
+                recentModelStats: &recentModelStats,
+                recentSkillStats: &recentSkillStats,
+                recentStart: recentStart
             )
         }
     }
@@ -115,7 +137,11 @@ struct TranscriptUsageScanner {
         summary: inout UsageSummary,
         modelStats: inout [String: ModelUsageStat],
         skillStats: inout [String: SkillUsageStat],
-        sessionStats: inout [String: SessionUsageStat]
+        sessionStats: inout [String: SessionUsageStat],
+        recentSummary: inout UsageWindowSummary,
+        recentModelStats: inout [String: ModelUsageStat],
+        recentSkillStats: inout [String: SkillUsageStat],
+        recentStart: Date
     ) {
         if rawLineData.isEmpty { return }
 
@@ -193,6 +219,69 @@ struct TranscriptUsageScanner {
         }
 
         let model = (message["model"] as? String) ?? "unknown"
+        recordModelUsage(
+            model: model,
+            inputTokens: inputTokens,
+            outputTokens: outputTokens,
+            cacheCreationTokens: cacheCreationTokens,
+            cacheReadTokens: cacheReadTokens,
+            modelStats: &modelStats
+        )
+
+        let attributionSkill = attributionIdentifier(object["attributionSkill"])
+        let attributionPlugin = stringValue(object["attributionPlugin"])
+        if let attributionSkill {
+            summary.attributedSkillUsageEvents += 1
+            recordSkillUsage(
+                skillID: attributionSkill,
+                sourcePlugin: attributionPlugin,
+                timestamp: timestamp,
+                inputTokens: inputTokens,
+                outputTokens: outputTokens,
+                cacheCreationTokens: cacheCreationTokens,
+                cacheReadTokens: cacheReadTokens,
+                skillStats: &skillStats
+            )
+        }
+
+        if timestamp.map({ $0 >= recentStart && $0 <= referenceDate }) == true {
+            recentSummary.usageEvents += 1
+            recentSummary.inputTokens += inputTokens
+            recentSummary.outputTokens += outputTokens
+            recentSummary.cacheCreationTokens += cacheCreationTokens
+            recentSummary.cacheReadTokens += cacheReadTokens
+            recordModelUsage(
+                model: model,
+                inputTokens: inputTokens,
+                outputTokens: outputTokens,
+                cacheCreationTokens: cacheCreationTokens,
+                cacheReadTokens: cacheReadTokens,
+                modelStats: &recentModelStats
+            )
+            if let attributionSkill {
+                recentSummary.attributedSkillUsageEvents += 1
+                recordSkillUsage(
+                    skillID: attributionSkill,
+                    sourcePlugin: attributionPlugin,
+                    timestamp: timestamp,
+                    inputTokens: inputTokens,
+                    outputTokens: outputTokens,
+                    cacheCreationTokens: cacheCreationTokens,
+                    cacheReadTokens: cacheReadTokens,
+                    skillStats: &recentSkillStats
+                )
+            }
+        }
+    }
+
+    private func recordModelUsage(
+        model: String,
+        inputTokens: Int64,
+        outputTokens: Int64,
+        cacheCreationTokens: Int64,
+        cacheReadTokens: Int64,
+        modelStats: inout [String: ModelUsageStat]
+    ) {
         var stat = modelStats[model] ?? ModelUsageStat(
             model: model,
             usageEvents: 0,
@@ -207,30 +296,56 @@ struct TranscriptUsageScanner {
         stat.cacheCreationTokens += cacheCreationTokens
         stat.cacheReadTokens += cacheReadTokens
         modelStats[model] = stat
+    }
 
-        if let attributionSkill = attributionIdentifier(object["attributionSkill"]) {
-            summary.attributedSkillUsageEvents += 1
-            var skillStat = skillStats[attributionSkill] ?? SkillUsageStat(
-                skillID: attributionSkill,
-                sourcePlugin: stringValue(object["attributionPlugin"]),
-                usageEvents: 0,
-                inputTokens: 0,
-                outputTokens: 0,
-                cacheCreationTokens: 0,
-                cacheReadTokens: 0,
-                lastUsedAt: nil
-            )
-            if skillStat.sourcePlugin == nil {
-                skillStat.sourcePlugin = stringValue(object["attributionPlugin"])
+    private func recordSkillUsage(
+        skillID: String,
+        sourcePlugin: String?,
+        timestamp: Date?,
+        inputTokens: Int64,
+        outputTokens: Int64,
+        cacheCreationTokens: Int64,
+        cacheReadTokens: Int64,
+        skillStats: inout [String: SkillUsageStat]
+    ) {
+        var skillStat = skillStats[skillID] ?? SkillUsageStat(
+            skillID: skillID,
+            sourcePlugin: sourcePlugin,
+            usageEvents: 0,
+            inputTokens: 0,
+            outputTokens: 0,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            lastUsedAt: nil
+        )
+        if skillStat.sourcePlugin == nil {
+            skillStat.sourcePlugin = sourcePlugin
+        }
+        skillStat.addUsage(
+            inputTokens: inputTokens,
+            outputTokens: outputTokens,
+            cacheCreationTokens: cacheCreationTokens,
+            cacheReadTokens: cacheReadTokens,
+            timestamp: timestamp
+        )
+        skillStats[skillID] = skillStat
+    }
+
+    private func sortedModelStats(_ stats: [String: ModelUsageStat]) -> [ModelUsageStat] {
+        stats.values.sorted {
+            if $0.totalTokens == $1.totalTokens {
+                return $0.model < $1.model
             }
-            skillStat.addUsage(
-                inputTokens: inputTokens,
-                outputTokens: outputTokens,
-                cacheCreationTokens: cacheCreationTokens,
-                cacheReadTokens: cacheReadTokens,
-                timestamp: timestamp
-            )
-            skillStats[attributionSkill] = skillStat
+            return $0.totalTokens > $1.totalTokens
+        }
+    }
+
+    private func sortedSkillStats(_ stats: [String: SkillUsageStat]) -> [SkillUsageStat] {
+        stats.values.sorted {
+            if $0.totalTokens == $1.totalTokens {
+                return $0.skillID < $1.skillID
+            }
+            return $0.totalTokens > $1.totalTokens
         }
     }
 

@@ -12,6 +12,37 @@ struct UsageSummary: Equatable {
     var modelStats: [ModelUsageStat] = []
     var skillStats: [SkillUsageStat] = []
     var recentSessions: [SessionUsageStat] = []
+    var recent30Days: UsageWindowSummary?
+
+    var totalTokens: Int64 {
+        inputTokens + outputTokens + cacheCreationTokens + cacheReadTokens
+    }
+
+    var unattributedUsageEvents: Int {
+        max(0, usageEvents - attributedSkillUsageEvents)
+    }
+
+    var thirtyDayTotalTokens: Int64 {
+        recent30Days?.totalTokens ?? totalTokens
+    }
+
+    var thirtyDaySkillStats: [SkillUsageStat] {
+        recent30Days?.skillStats ?? skillStats
+    }
+}
+
+struct UsageWindowSummary: Equatable {
+    let days: Int
+    let startedAt: Date
+    let endedAt: Date
+    var usageEvents = 0
+    var inputTokens: Int64 = 0
+    var outputTokens: Int64 = 0
+    var cacheCreationTokens: Int64 = 0
+    var cacheReadTokens: Int64 = 0
+    var attributedSkillUsageEvents = 0
+    var modelStats: [ModelUsageStat] = []
+    var skillStats: [SkillUsageStat] = []
 
     var totalTokens: Int64 {
         inputTokens + outputTokens + cacheCreationTokens + cacheReadTokens

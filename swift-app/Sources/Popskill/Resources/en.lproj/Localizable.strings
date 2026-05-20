@@ -320,7 +320,7 @@
 "matrix.metric.codexActive" = "Codex active";
 "matrix.metric.stubs" = "Stubs";
 "matrix.metric.brokenLinks" = "Broken links";
-"matrix.metric.tokenUsage" = "Month tokens";
+"matrix.metric.tokenUsage" = "30d tokens";
 "matrix.sort.typeDescending" = "Sort: type";
 "matrix.sort.typeAscending" = "Sort: type reverse";
 "matrix.sort.nameAscending" = "Sort: name A-Z";
@@ -384,8 +384,9 @@
 "matrix.package.component.calls" = "%@ calls";
 "matrix.package.missingRequired" = "%d required missing";
 "matrix.package.config.secret" = "Keychain secret";
-"matrix.package.usage.tokens" = "Tokens";
-"matrix.package.usage.calls" = "Calls";
+"matrix.package.usage.tokens" = "30d tokens";
+"matrix.package.usage.calls" = "30d calls";
+"matrix.package.usage.window" = "Last %d days from local transcript attribution.";
 "matrix.package.usage.lastUsed" = "Last used %@";
 "matrix.package.usage.empty" = "Usage was scanned, but the %d local skills matched to this bundle have no attribution records yet.";
 "matrix.package.usage.notScanned" = "Transcript usage has not been scanned yet.";

@@ -320,7 +320,7 @@
 "matrix.metric.codexActive" = "Codex 已激活";
 "matrix.metric.stubs" = "占位 (stub)";
 "matrix.metric.brokenLinks" = "断链";
-"matrix.metric.tokenUsage" = "本月 token";
+"matrix.metric.tokenUsage" = "近30天 token";
 "matrix.sort.typeDescending" = "排序：类型 ↓";
 "matrix.sort.typeAscending" = "排序：类型 ↑";
 "matrix.sort.nameAscending" = "排序：名称 A-Z";
@@ -384,8 +384,9 @@
 "matrix.package.component.calls" = "%@ 次";
 "matrix.package.missingRequired" = "缺 %d 个必需";
 "matrix.package.config.secret" = "Keychain 密钥";
-"matrix.package.usage.tokens" = "Tokens";
-"matrix.package.usage.calls" = "调用";
+"matrix.package.usage.tokens" = "近30天 tokens";
+"matrix.package.usage.calls" = "近30天调用";
+"matrix.package.usage.window" = "最近 %d 天的本机 transcript 归因统计。";
 "matrix.package.usage.lastUsed" = "最近使用 %@";
 "matrix.package.usage.empty" = "已扫描用量，但这个套装匹配到的 %d 个本地 skill 暂无归因记录。";
 "matrix.package.usage.notScanned" = "还没有扫描 transcript，用量聚合暂不可用。";
