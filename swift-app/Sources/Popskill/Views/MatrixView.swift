@@ -468,6 +468,7 @@ private struct MatrixSummaryMetricView: View {
 enum MatrixFilter: String, CaseIterable, Identifiable {
     case all
     case updates
+    case brokenLinks = "broken-links"
     case claudeOnly = "claude-only"
     case codexOnly = "codex-only"
     case inactive
@@ -478,6 +479,7 @@ enum MatrixFilter: String, CaseIterable, Identifiable {
         switch self {
         case .all:        return "matrix.filter.all"
         case .updates:    return "matrix.filter.updates"
+        case .brokenLinks: return "matrix.filter.brokenLinks"
         case .claudeOnly: return "matrix.filter.claudeOnly"
         case .codexOnly:  return "matrix.filter.codexOnly"
         case .inactive:   return "matrix.filter.inactive"
@@ -487,8 +489,12 @@ enum MatrixFilter: String, CaseIterable, Identifiable {
     @MainActor
     func badge(store: PopskillStore) -> Int? {
         switch self {
-        case .updates: return store.pendingUpdateCount > 0 ? store.pendingUpdateCount : nil
-        default:       return nil
+        case .updates:
+            return store.pendingUpdateCount > 0 ? store.pendingUpdateCount : nil
+        case .brokenLinks:
+            return store.brokenLinkCount > 0 ? store.brokenLinkCount : nil
+        default:
+            return nil
         }
     }
 
@@ -499,6 +505,8 @@ enum MatrixFilter: String, CaseIterable, Identifiable {
             return true
         case .updates:
             return store.hasPendingUpdate(for: capability)
+        case .brokenLinks:
+            return capability.hasBrokenLink || capability.package?.hasBrokenLinks(in: store.skills) == true
         case .claudeOnly:
             return capability.apps.claude && !capability.apps.codex
         case .codexOnly:

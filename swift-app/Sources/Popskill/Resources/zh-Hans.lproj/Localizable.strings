@@ -322,6 +322,7 @@
 
 "matrix.filter.all" = "全部";
 "matrix.filter.updates" = "可更新";
+"matrix.filter.brokenLinks" = "断链";
 "matrix.filter.claudeOnly" = "仅 Claude";
 "matrix.filter.codexOnly" = "仅 Codex";
 "matrix.filter.inactive" = "未启用";

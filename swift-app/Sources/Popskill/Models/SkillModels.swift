@@ -157,6 +157,10 @@ struct Skill: Identifiable, Codable, Equatable {
         TargetApp.supported.filter { apps.isEnabled($0) }.count
     }
 
+    var hasBrokenLink: Bool {
+        deployment?.hasBrokenLink == true
+    }
+
     var localStoreURL: URL {
         URL(fileURLWithPath: NSHomeDirectory())
             .appendingPathComponent(".cc-switch")
@@ -1088,6 +1092,18 @@ struct AppLinkStatus: Codable, Equatable, Hashable {
     let status: String
 }
 
+extension SkillDeployment {
+    var hasBrokenLink: Bool {
+        appLinks.values.contains { $0.isBroken }
+    }
+}
+
+extension AppLinkStatus {
+    var isBroken: Bool {
+        status.caseInsensitiveCompare("broken") == .orderedSame
+    }
+}
+
 /// Top-level envelope returned by `skill-cli link-health --json`.
 struct LinkHealthReport: Codable, Equatable {
     let summary: LinkHealthSummary
@@ -1391,6 +1407,10 @@ extension CapabilityPackage {
         }
 
         return matches
+    }
+
+    func hasBrokenLinks(in skills: [Skill]) -> Bool {
+        matchingInstalledSkills(in: skills).contains { $0.hasBrokenLink }
     }
 
     func matchingInstalledSkill(for component: PackageComponent, in skills: [Skill]) -> Skill? {

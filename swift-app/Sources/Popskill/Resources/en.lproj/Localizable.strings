@@ -322,6 +322,7 @@
 
 "matrix.filter.all" = "All";
 "matrix.filter.updates" = "Updates";
+"matrix.filter.brokenLinks" = "Broken links";
 "matrix.filter.claudeOnly" = "Claude only";
 "matrix.filter.codexOnly" = "Codex only";
 "matrix.filter.inactive" = "Inactive";

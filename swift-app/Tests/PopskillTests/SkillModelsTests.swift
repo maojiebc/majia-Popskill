@@ -155,6 +155,43 @@ struct SkillModelsTests {
     }
 
     @Test
+    func skillBrokenLinkDetectionUsesDeploymentStatuses() {
+        var skill = installedSkill(directory: "demo-skill")
+
+        #expect(skill.hasBrokenLink == false)
+
+        skill.deployment = SkillDeployment(
+            strategy: "symlink",
+            ssotPath: "/Users/example/.cc-switch/skills/demo-skill",
+            appLinks: [
+                "claude": AppLinkStatus(path: "/Users/example/.claude/skills/demo-skill", status: "ok"),
+                "codex": AppLinkStatus(path: "/Users/example/.codex/skills/demo-skill", status: "BROKEN")
+            ]
+        )
+
+        #expect(skill.deployment?.hasBrokenLink == true)
+        #expect(skill.hasBrokenLink == true)
+    }
+
+    @Test
+    func capabilityPackageBrokenLinksAggregateMatchedSkills() {
+        let package = self.package(components: [component(id: "demo-skill", installed: true)])
+        let unrelatedPackage = self.package(components: [component(id: "healthy-skill", installed: true)])
+        var skill = installedSkill(directory: "demo-skill")
+
+        skill.deployment = SkillDeployment(
+            strategy: "symlink",
+            ssotPath: "/Users/example/.cc-switch/skills/demo-skill",
+            appLinks: [
+                "claude": AppLinkStatus(path: "/Users/example/.claude/skills/demo-skill", status: "broken")
+            ]
+        )
+
+        #expect(package.hasBrokenLinks(in: [skill]) == true)
+        #expect(unrelatedPackage.hasBrokenLinks(in: [skill]) == false)
+    }
+
+    @Test
     func targetAppRegistryCoversCurrentSkillTargets() {
         #expect(TargetAppRegistry.all.map(\.app) == TargetApp.supported)
         #expect(TargetApp.quickToggleSupported == [.claude, .codex, .gemini])
