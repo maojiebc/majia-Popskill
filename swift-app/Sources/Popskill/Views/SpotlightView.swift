@@ -243,12 +243,7 @@ struct SpotlightView: View {
                     hit.matchedComponents.joined(separator: " · ")
                 )
             }
-            return localization.string(
-                "package.componentSummary",
-                package.componentCount,
-                package.installedComponentCount,
-                package.requiredComponentCount
-            )
+            return PackageComponentCompositionFormatter.summary(for: package, localization: localization)
         case let .skill(skill, hit):
             if !hit.matchedTriggers.isEmpty {
                 return hit.matchedTriggers.prefix(2).joined(separator: " · ")

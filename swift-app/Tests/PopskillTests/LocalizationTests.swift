@@ -47,6 +47,7 @@ struct LocalizationTests {
         #expect(localization.string("matrix.skill.action.revealInFinder") == "在 Finder 中显示")
         #expect(localization.string("matrix.package.action.activateClaude") == "全部激活到 Claude")
         #expect(localization.string("matrix.package.activation.remaining", 2, 1) == "Claude 还差 2 个 · Codex 还差 1 个")
+        #expect(localization.string("package.componentComposition.skill.other", 6) == "6 项 Skill")
         #expect(localization.string("matrix.inspector.section.machine") == "这台机器")
         #expect(localization.string("matrix.machine.firstActivated") == "首次激活")
         #expect(localization.string("matrix.machine.tokens") == "近30天 tokens")

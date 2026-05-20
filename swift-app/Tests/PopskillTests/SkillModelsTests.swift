@@ -1026,6 +1026,49 @@ struct SkillModelsTests {
     }
 
     @Test
+    func packageComponentCompositionSummarizesKindsInStableOrder() {
+        let package = CapabilityPackage(
+            id: "pkg:lark",
+            type: .composite,
+            name: "Feishu / Lark",
+            vendor: "ByteDance",
+            summary: "Collaboration suite.",
+            source: PackageSource(
+                kind: "builtin",
+                location: "popskill/builtin/lark",
+                updateStrategy: "manual",
+                repoOwner: nil,
+                repoName: nil,
+                repoBranch: nil,
+                readmeUrl: nil
+            ),
+            components: PackageComponents(
+                cli: [
+                    PackageComponent(id: "lark-cli", name: "lark-cli", kind: "cli", required: true, installed: true, status: "detected", location: nil)
+                ],
+                skills: [
+                    PackageComponent(id: "lark-doc", name: "Lark Doc", kind: "skill", required: true, installed: true, status: "installed", location: "lark-doc"),
+                    PackageComponent(id: "lark-base", name: "Lark Base", kind: "skill", required: false, installed: true, status: "installed", location: "lark-base")
+                ],
+                mcp: [
+                    PackageComponent(id: "lark-mcp", name: "Lark MCP", kind: "mcp", required: false, installed: false, status: "registry-reference", location: nil)
+                ],
+                agents: [
+                    PackageComponent(id: "lark-agent", name: "Lark Agent", kind: "agent", required: false, installed: true, status: "installed", location: "~/.claude/agents/lark-agent.md")
+                ]
+            ),
+            configSchema: [],
+            installed: true,
+            lifecycle: nil
+        )
+
+        #expect(package.componentCompositionCounts.map { "\($0.kind):\($0.count)" } == ["cli:1", "mcp:1", "skill:2", "agent:1"])
+        #expect(PackageComponentCompositionFormatter.composition(for: package, localization: PopskillLocalization(language: .english)) == "1 CLI + 1 MCP + 2 Skills + 1 Agent")
+        #expect(PackageComponentCompositionFormatter.composition(for: package, localization: PopskillLocalization(language: .simplifiedChinese)) == "1 个 CLI + 1 个 MCP + 2 项 Skill + 1 个 Agent")
+        #expect(PackageComponentCompositionFormatter.summary(for: package, localization: PopskillLocalization(language: .english)) == "Collaboration suite. · 1 CLI + 1 MCP + 2 Skills + 1 Agent")
+    }
+
+    @Test
     func packageComponentMatchesInstalledSkillByScopedIdentifierAndLocation() {
         let component = PackageComponent(
             id: "lark-doc",

@@ -157,6 +157,15 @@
 "Installed Components" = "已安装组件";
 "Component Tree" = "组件树";
 "package.componentSummary" = "%d 个组件 · %d 个已安装 · %d 个必需";
+"package.componentComposition.cli.one" = "%d 个 CLI";
+"package.componentComposition.cli.other" = "%d 个 CLI";
+"package.componentComposition.mcp.one" = "%d 个 MCP";
+"package.componentComposition.mcp.other" = "%d 个 MCP";
+"package.componentComposition.skill.one" = "%d 项 Skill";
+"package.componentComposition.skill.other" = "%d 项 Skill";
+"package.componentComposition.agent.one" = "%d 个 Agent";
+"package.componentComposition.agent.other" = "%d 个 Agent";
+"package.componentComposition.empty" = "无组件";
 "Directory" = "目录";
 "Identifier" = "标识符";
 "Hash" = "哈希";

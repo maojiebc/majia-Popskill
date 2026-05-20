@@ -805,12 +805,7 @@ struct InspectorPane: View {
                     color: package.health.inspectorColor
                 )
                 packagePill(
-                    localization.string(
-                        "package.componentSummary",
-                        package.componentCount,
-                        package.installedComponentCount,
-                        package.requiredComponentCount
-                    ),
+                    PackageComponentCompositionFormatter.composition(for: package, localization: localization),
                     color: Color.popSecondaryLabel
                 )
             }
@@ -1867,12 +1862,7 @@ struct InspectorPane: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.popLabel)
                         .lineLimit(1)
-                    Text(localization.string(
-                        "package.componentSummary",
-                        package.componentCount,
-                        package.installedComponentCount,
-                        package.requiredComponentCount
-                    ))
+                    Text(PackageComponentCompositionFormatter.composition(for: package, localization: localization))
                     .font(.caption2)
                     .foregroundStyle(Color.popSecondaryLabel)
                     .lineLimit(1)

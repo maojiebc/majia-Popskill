@@ -751,6 +751,15 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
         ].filter { $0.total > 0 }
     }
 
+    var componentCompositionCounts: [PackageComponentCompositionCount] {
+        [
+            PackageComponentCompositionCount(kind: "cli", count: components.cli.count),
+            PackageComponentCompositionCount(kind: "mcp", count: components.mcp.count),
+            PackageComponentCompositionCount(kind: "skill", count: components.skills.count),
+            PackageComponentCompositionCount(kind: "agent", count: components.agents.count)
+        ].filter { $0.count > 0 }
+    }
+
     var lastLifecycleTimestamp: Int? {
         [lifecycle?.installedAt, lifecycle?.updatedAt]
             .compactMap { value -> Int? in
@@ -804,6 +813,41 @@ struct PackageComponentGroupSummary: Identifiable, Equatable {
         missing = max(0, total - installed)
         missingRequired = components.filter { !$0.installed && $0.required }.count
         recoverableMissing = components.filter { !$0.installed && $0.isRecoverable }.count
+    }
+}
+
+struct PackageComponentCompositionCount: Identifiable, Equatable {
+    let kind: String
+    let count: Int
+
+    var id: String { kind }
+}
+
+enum PackageComponentCompositionFormatter {
+    static func composition(for package: CapabilityPackage, localization: PopskillLocalization) -> String {
+        let parts = package.componentCompositionCounts.map { count in
+            localization.string(titleKey(kind: count.kind, count: count.count), count.count)
+        }
+        return parts.isEmpty ? localization.string("package.componentComposition.empty") : parts.joined(separator: " + ")
+    }
+
+    static func label(for package: CapabilityPackage, localization: PopskillLocalization) -> String {
+        composition(for: package, localization: localization)
+    }
+
+    static func summary(for package: CapabilityPackage, localization: PopskillLocalization) -> String {
+        let composition = composition(for: package, localization: localization)
+        let summary = package.summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        return summary.isEmpty ? composition : "\(summary) · \(composition)"
+    }
+
+    private static func titleKey(kind: String, count: Int) -> String {
+        switch kind.lowercased() {
+        case "cli": return count == 1 ? "package.componentComposition.cli.one" : "package.componentComposition.cli.other"
+        case "mcp": return count == 1 ? "package.componentComposition.mcp.one" : "package.componentComposition.mcp.other"
+        case "agent": return count == 1 ? "package.componentComposition.agent.one" : "package.componentComposition.agent.other"
+        default: return count == 1 ? "package.componentComposition.skill.one" : "package.componentComposition.skill.other"
+        }
     }
 }
 

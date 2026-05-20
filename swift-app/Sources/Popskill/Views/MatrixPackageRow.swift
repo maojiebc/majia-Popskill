@@ -163,12 +163,7 @@ struct MatrixPackageRow: View {
 
     private var packageSubtitle: String {
         guard let package else { return capability.summary ?? localization.string("matrix.row.noSummary") }
-        return localization.string(
-            "package.componentSummary",
-            package.componentCount,
-            package.installedComponentCount,
-            package.requiredComponentCount
-        )
+        return PackageComponentCompositionFormatter.summary(for: package, localization: localization)
     }
 
     private func coverageCell(for app: TargetApp) -> some View {
