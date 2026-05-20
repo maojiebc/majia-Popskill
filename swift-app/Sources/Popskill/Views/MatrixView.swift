@@ -368,18 +368,18 @@ struct MatrixView: View {
     // MARK: Filtering & grouping
 
     private func filteredSections(in capabilities: [MatrixCapability]) -> [CapabilitySection] {
-        let q = store.trimmedSearch.lowercased()
+        let q = SearchTextNormalizer.key(store.trimmedSearch)
         let visible = capabilities.filter { capability in
                 store.matrixFilter.includes(capability: capability, store: store)
                 && store.matrixTypeFilter.includes(capability: capability)
                 && (q.isEmpty
-                    || capability.name.lowercased().contains(q)
-                    || (capability.summary ?? "").lowercased().contains(q)
-                    || capability.directory.lowercased().contains(q)
+                    || SearchTextNormalizer.matches(capability.name, query: q)
+                    || SearchTextNormalizer.matches(capability.summary ?? "", query: q)
+                    || SearchTextNormalizer.matches(capability.directory, query: q)
                     || capability.package?.components.all.contains { component in
-                        component.name.lowercased().contains(q)
-                            || component.id.lowercased().contains(q)
-                            || (component.location ?? "").lowercased().contains(q)
+                        SearchTextNormalizer.matches(component.name, query: q)
+                            || SearchTextNormalizer.matches(component.id, query: q)
+                            || SearchTextNormalizer.matches(component.location ?? "", query: q)
                     } == true)
         }
         return SkillGrouping.sections(visible)

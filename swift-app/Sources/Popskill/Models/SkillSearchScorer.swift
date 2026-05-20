@@ -30,55 +30,57 @@ enum SkillSearchScorer {
     ///   sourceLabel contains     10
     ///   directory contains        5
     static func score(skill: Skill, query: String) -> SkillSearchHit? {
-        let q = query.lowercased()
+        let q = SearchTextNormalizer.key(query)
         guard !q.isEmpty else { return nil }
 
-        let name = skill.name.lowercased()
-        let summary = (skill.capabilitySummary ?? "").lowercased()
-        let description = skill.description.lowercased()
+        let name = SearchTextNormalizer.key(skill.name)
+        let summary = SearchTextNormalizer.key(skill.capabilitySummary ?? "")
+        let description = SearchTextNormalizer.key(skill.description)
         let triggers = skill.triggerScenarios ?? []
-        let source = skill.sourceLabel.lowercased()
-        let directory = skill.directory.lowercased()
+        let source = SearchTextNormalizer.key(skill.sourceLabel)
+        let directory = SearchTextNormalizer.key(skill.directory)
 
         var score = 0
         var matchedOnName = false
         var matchedTriggers: [String] = []
         var seenTriggers: Set<String> = []
 
-        if name == q {
+        if name.equals(q) {
             score += 1000
             matchedOnName = true
         } else if name.hasPrefix(q) {
             score += 500
             matchedOnName = true
-        } else if matches(name, query: q) {
+        } else if matches(skill.name, key: name, query: q, rawQuery: query) {
             score += 200
             matchedOnName = true
         }
 
         for trigger in triggers {
-            let lowerTrigger = trigger.lowercased()
-            guard matches(lowerTrigger, query: q), !seenTriggers.contains(lowerTrigger) else {
+            let triggerKey = SearchTextNormalizer.key(trigger)
+            guard matches(trigger, key: triggerKey, query: q, rawQuery: query),
+                  !seenTriggers.contains(triggerKey.compact)
+            else {
                 continue
             }
-            seenTriggers.insert(lowerTrigger)
+            seenTriggers.insert(triggerKey.compact)
             score += 100
             matchedTriggers.append(trigger)
         }
 
-        if !summary.isEmpty, matches(summary, query: q) {
+        if !summary.isEmpty, summary.contains(q) {
             score += 50
         }
 
-        if matches(description, query: q) {
+        if description.contains(q) {
             score += 20
         }
 
-        if matches(source, query: q) {
+        if source.contains(q) {
             score += 10
         }
 
-        if matches(directory, query: q) {
+        if directory.contains(q) {
             score += 5
         }
 
@@ -95,50 +97,52 @@ enum SkillSearchScorer {
     /// uses `categoryLabel` and `fileName` as auxiliary fields instead of
     /// `sourceLabel`/`directory`. Returns nil when no field matches.
     static func score(agent: LocalAgent, query: String) -> SkillSearchHit? {
-        let q = query.lowercased()
+        let q = SearchTextNormalizer.key(query)
         guard !q.isEmpty else { return nil }
 
-        let name = agent.name.lowercased()
-        let summary = (agent.capabilitySummary ?? "").lowercased()
-        let description = agent.description.lowercased()
+        let name = SearchTextNormalizer.key(agent.name)
+        let summary = SearchTextNormalizer.key(agent.capabilitySummary ?? "")
+        let description = SearchTextNormalizer.key(agent.description)
         let triggers = agent.triggerScenarios ?? []
-        let category = agent.categoryLabel.lowercased()
-        let fileName = agent.fileName.lowercased()
+        let category = SearchTextNormalizer.key(agent.categoryLabel)
+        let fileName = SearchTextNormalizer.key(agent.fileName)
 
         var score = 0
         var matchedOnName = false
         var matchedTriggers: [String] = []
         var seenTriggers: Set<String> = []
 
-        if name == q {
+        if name.equals(q) {
             score += 1000
             matchedOnName = true
         } else if name.hasPrefix(q) {
             score += 500
             matchedOnName = true
-        } else if matches(name, query: q) {
+        } else if matches(agent.name, key: name, query: q, rawQuery: query) {
             score += 200
             matchedOnName = true
         }
 
         for trigger in triggers {
-            let lower = trigger.lowercased()
-            guard matches(lower, query: q), !seenTriggers.contains(lower) else { continue }
-            seenTriggers.insert(lower)
+            let triggerKey = SearchTextNormalizer.key(trigger)
+            guard matches(trigger, key: triggerKey, query: q, rawQuery: query),
+                  !seenTriggers.contains(triggerKey.compact)
+            else { continue }
+            seenTriggers.insert(triggerKey.compact)
             score += 100
             matchedTriggers.append(trigger)
         }
 
-        if !summary.isEmpty, matches(summary, query: q) {
+        if !summary.isEmpty, summary.contains(q) {
             score += 50
         }
-        if matches(description, query: q) {
+        if description.contains(q) {
             score += 20
         }
-        if matches(category, query: q) {
+        if category.contains(q) {
             score += 10
         }
-        if matches(fileName, query: q) {
+        if fileName.contains(q) {
             score += 5
         }
 
@@ -151,15 +155,22 @@ enum SkillSearchScorer {
         )
     }
 
-    private static func matches(_ text: String, query: String) -> Bool {
+    private static func matches(
+        _ text: String,
+        key: SearchTextKey,
+        query: SearchTextKey,
+        rawQuery: String
+    ) -> Bool {
         guard !query.isEmpty else { return false }
-        if text.contains(query) {
+        if key.contains(query) {
             return true
         }
-        guard containsCJKScalar(query), containsCJKScalar(text) else {
+        let normalizedQuery = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedText = text.lowercased()
+        guard containsCJKScalar(normalizedQuery), containsCJKScalar(normalizedText) else {
             return false
         }
-        return text.containsCharactersInOrder(query)
+        return normalizedText.containsCharactersInOrder(normalizedQuery)
     }
 
     private static func containsCJKScalar(_ value: String) -> Bool {

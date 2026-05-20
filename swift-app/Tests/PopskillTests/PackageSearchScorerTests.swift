@@ -25,13 +25,40 @@ struct PackageSearchScorerTests {
     }
 
     @Test
+    func spaceSeparatedQueryMatchesDashedComponentName() {
+        let package = demoPackage()
+
+        let hit = PackageSearchScorer.score(package: package, query: "lark cli")
+
+        #expect(hit?.matchedComponents == ["lark-cli"])
+        #expect((hit?.score ?? 0) > 0)
+    }
+
+    @Test
+    func separatedQueryMatchesCompactRepositoryName() {
+        let package = demoPackage(
+            sourceLocation: "github.com/larksuite/cli",
+            repoOwner: "larksuite",
+            repoName: "cli"
+        )
+
+        let hit = PackageSearchScorer.score(package: package, query: "lark suite")
+
+        #expect(hit != nil)
+    }
+
+    @Test
     func unrelatedQueryReturnsNil() {
         let package = demoPackage()
 
         #expect(PackageSearchScorer.score(package: package, query: "pdf") == nil)
     }
 
-    private func demoPackage() -> CapabilityPackage {
+    private func demoPackage(
+        sourceLocation: String = "popskill/builtin/lark",
+        repoOwner: String = "larksuite",
+        repoName: String = "cli"
+    ) -> CapabilityPackage {
         CapabilityPackage(
             id: "pkg:lark",
             type: .composite,
@@ -40,10 +67,10 @@ struct PackageSearchScorerTests {
             summary: "Composite office package",
             source: PackageSource(
                 kind: "builtin",
-                location: "popskill/builtin/lark",
+                location: sourceLocation,
                 updateStrategy: "manual",
-                repoOwner: "larksuite",
-                repoName: "cli",
+                repoOwner: repoOwner,
+                repoName: repoName,
                 repoBranch: "main",
                 readmeUrl: nil
             ),

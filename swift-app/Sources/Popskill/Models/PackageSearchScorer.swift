@@ -10,7 +10,7 @@ struct PackageSearchHit: Equatable {
 
 enum PackageSearchScorer {
     static func score(package: CapabilityPackage, query: String) -> PackageSearchHit? {
-        let q = normalized(query)
+        let q = SearchTextNormalizer.key(query)
         guard !q.isEmpty else {
             return nil
         }
@@ -30,7 +30,7 @@ enum PackageSearchScorer {
         score += scoreText(package.source.location, query: q, exact: 360, prefix: 240, contains: 140)
         score += scoreText(package.summary, query: q, exact: 180, prefix: 120, contains: 70)
 
-        if ["bundle", "package", "suite", "套装"].contains(q) {
+        if ["bundle", "package", "suite", "套装"].contains(q.separated) {
             score += package.type == .composite ? 220 : 80
         }
 
@@ -41,8 +41,9 @@ enum PackageSearchScorer {
             score += component.installed ? componentScore : max(20, componentScore - 35)
 
             let label = component.name.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !label.isEmpty, !seenComponents.contains(label.lowercased()) {
-                seenComponents.insert(label.lowercased())
+            let normalizedLabel = SearchTextNormalizer.key(label).compact
+            if !label.isEmpty, !seenComponents.contains(normalizedLabel) {
+                seenComponents.insert(normalizedLabel)
                 matchedComponents.append(label)
             }
         }
@@ -58,7 +59,7 @@ enum PackageSearchScorer {
         )
     }
 
-    private static func scoreComponent(_ component: PackageComponent, query: String) -> Int {
+    private static func scoreComponent(_ component: PackageComponent, query: SearchTextKey) -> Int {
         scoreText(component.name, query: query, exact: 260, prefix: 190, contains: 120)
             + scoreText(component.id, query: query, exact: 220, prefix: 150, contains: 90)
             + scoreText(component.kind, query: query, exact: 140, prefix: 90, contains: 40)
@@ -68,20 +69,16 @@ enum PackageSearchScorer {
 
     private static func scoreText(
         _ text: String,
-        query: String,
+        query: SearchTextKey,
         exact: Int,
         prefix: Int,
         contains: Int
     ) -> Int {
-        let value = normalized(text)
+        let value = SearchTextNormalizer.key(text)
         guard !value.isEmpty else { return 0 }
-        if value == query { return exact }
+        if value.equals(query) { return exact }
         if value.hasPrefix(query) { return prefix }
         if value.contains(query) { return contains }
         return 0
-    }
-
-    private static func normalized(_ value: String) -> String {
-        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 }

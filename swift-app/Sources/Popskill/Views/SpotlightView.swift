@@ -383,12 +383,11 @@ struct SpotlightView: View {
     }
 
     private var actionHits: [SpotlightAction] {
-        let q = localQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let q = SearchTextNormalizer.key(localQuery)
         return SpotlightAction.all.filter { action in
             guard !q.isEmpty else { return true }
-            let title = localization.string(action.titleKey).lowercased()
-            let subtitle = localization.string(action.subtitleKey).lowercased()
-            return title.contains(q) || subtitle.contains(q)
+            return SearchTextNormalizer.matches(localization.string(action.titleKey), query: q)
+                || SearchTextNormalizer.matches(localization.string(action.subtitleKey), query: q)
         }
     }
 
