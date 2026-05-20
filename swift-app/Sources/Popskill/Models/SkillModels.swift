@@ -1237,6 +1237,30 @@ struct LinkHealthRow: Codable, Equatable {
     let deployment: SkillDeployment?
 }
 
+struct PackageLinkHealthSnapshot: Equatable {
+    let rows: [LinkHealthRow]
+
+    var okCount: Int {
+        statusCount("ok")
+    }
+
+    var brokenCount: Int {
+        statusCount("broken")
+    }
+
+    var inactiveCount: Int {
+        statusCount("inactive")
+    }
+
+    private func statusCount(_ status: String) -> Int {
+        rows.reduce(0) { count, row in
+            count + (row.deployment?.appLinks.values.filter {
+                $0.status.caseInsensitiveCompare(status) == .orderedSame
+            }.count ?? 0)
+        }
+    }
+}
+
 /// Envelope returned by `skill-cli onboard-scan --json`. Powers onboarding
 /// wizard step 3.
 struct OnboardScanReport: Codable, Equatable {
@@ -1542,6 +1566,40 @@ extension CapabilityPackage {
         matchingInstalledSkills(in: skills).contains { $0.hasBrokenLink }
     }
 
+    func linkHealthSnapshot(using report: LinkHealthReport?, skills: [Skill]) -> PackageLinkHealthSnapshot? {
+        guard let report else {
+            return nil
+        }
+
+        let matchedSkills = matchingInstalledSkills(in: skills)
+        let matchedSkillIdentifiers = Set(matchedSkills.flatMap { skill in
+            [
+                skill.id,
+                skill.name,
+                skill.directory,
+                skill.id.split(separator: ":", maxSplits: 1).last.map(String.init) ?? skill.id
+            ].map(Self.normalizedIdentifier).filter { !$0.isEmpty }
+        })
+
+        let rows = report.rows.filter { row in
+            let rowCandidates = [
+                row.skillId,
+                row.skillName,
+                row.skillId.split(separator: ":", maxSplits: 1).last.map(String.init) ?? row.skillId
+            ].map(Self.normalizedIdentifier).filter { !$0.isEmpty }
+
+            if !Set(rowCandidates).isDisjoint(with: matchedSkillIdentifiers) {
+                return true
+            }
+
+            return components.skills.contains { component in
+                component.matchesAttributionSkill(row.skillId) || component.matchesAttributionSkill(row.skillName)
+            }
+        }
+
+        return PackageLinkHealthSnapshot(rows: rows)
+    }
+
     func matchingInstalledSkill(for component: PackageComponent, in skills: [Skill]) -> Skill? {
         skills.first { component.matchesSkill($0) }
     }
@@ -1596,6 +1654,10 @@ extension CapabilityPackage {
         return components.skills.first { component in
             component.matchesAttributionSkill(stat.skillID)
         }
+    }
+
+    private static func normalizedIdentifier(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 }
 

@@ -481,6 +481,17 @@
 "matrix.skill.manifest.requires.missing" = "missing";
 "matrix.package.sync.upToDate" = "Up to date";
 "matrix.package.sync.pending" = "%d pending";
+"matrix.package.sync.status" = "Sync status";
+"matrix.package.sync.upstream" = "Upstream updates";
+"matrix.package.sync.source" = "Source";
+"matrix.package.sync.provider" = "Provider";
+"matrix.package.sync.lastSync" = "Last sync";
+"matrix.package.sync.linkHealth" = "Link health";
+"matrix.package.sync.linkHealthNotScanned" = "Not scanned";
+"matrix.package.sync.linkHealthSummary" = "%d OK · %d broken · %d off";
+"matrix.package.sync.linkHealthEmpty" = "No matching deployed skill links were found for this package.";
+"matrix.package.sync.linkHealthNotScannedDetail" = "Run link health to inspect package symlinks across Claude and Codex.";
+"matrix.package.sync.noDeployment" = "Deployment info unavailable";
 "matrix.package.sync.checking" = "Checking upstream updates...";
 "matrix.package.sync.checked" = "Checked %@";
 "matrix.package.sync.notChecked" = "Not checked yet";

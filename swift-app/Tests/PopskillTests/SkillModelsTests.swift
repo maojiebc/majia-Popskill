@@ -277,6 +277,63 @@ struct SkillModelsTests {
     }
 
     @Test
+    func capabilityPackageLinkHealthSnapshotMatchesInstalledComponents() {
+        let package = self.package(components: [
+            component(id: "demo-skill", installed: true),
+            component(id: "second-skill", installed: true)
+        ])
+        let demo = installedSkill(directory: "owner/repo:demo-skill")
+        let second = installedSkill(directory: "second-skill")
+        let report = LinkHealthReport(
+            summary: LinkHealthSummary(ok: 5, broken: 3, inactive: 2),
+            rows: [
+                LinkHealthRow(
+                    skillId: "owner/repo:demo-skill",
+                    skillName: "Demo",
+                    deployment: SkillDeployment(
+                        strategy: "symlink",
+                        ssotPath: "/Users/example/.cc-switch/skills/demo-skill",
+                        appLinks: [
+                            "claude": AppLinkStatus(path: "/Users/example/.claude/skills/demo-skill", status: "ok"),
+                            "codex": AppLinkStatus(path: "/Users/example/.codex/skills/demo-skill", status: "broken")
+                        ]
+                    )
+                ),
+                LinkHealthRow(
+                    skillId: "second-skill",
+                    skillName: "Second",
+                    deployment: SkillDeployment(
+                        strategy: "symlink",
+                        ssotPath: "/Users/example/.cc-switch/skills/second-skill",
+                        appLinks: [
+                            "claude": AppLinkStatus(path: "/Users/example/.claude/skills/second-skill", status: "inactive")
+                        ]
+                    )
+                ),
+                LinkHealthRow(
+                    skillId: "unrelated",
+                    skillName: "Unrelated",
+                    deployment: SkillDeployment(
+                        strategy: "symlink",
+                        ssotPath: "/Users/example/.cc-switch/skills/unrelated",
+                        appLinks: [
+                            "claude": AppLinkStatus(path: "/Users/example/.claude/skills/unrelated", status: "ok")
+                        ]
+                    )
+                )
+            ]
+        )
+
+        let snapshot = package.linkHealthSnapshot(using: report, skills: [demo, second])
+
+        #expect(snapshot?.rows.map(\.skillId) == ["owner/repo:demo-skill", "second-skill"])
+        #expect(snapshot?.okCount == 1)
+        #expect(snapshot?.brokenCount == 1)
+        #expect(snapshot?.inactiveCount == 1)
+        #expect(package.linkHealthSnapshot(using: nil, skills: [demo]) == nil)
+    }
+
+    @Test
     func matrixCapabilityBrokenLinksAggregateDirectAndPackageLinks() {
         let package = self.package(components: [component(id: "demo-skill", installed: true)])
         let unrelatedPackage = self.package(components: [component(id: "healthy-skill", installed: true)])

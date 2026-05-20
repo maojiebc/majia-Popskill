@@ -481,6 +481,17 @@
 "matrix.skill.manifest.requires.missing" = "缺失";
 "matrix.package.sync.upToDate" = "已是最新";
 "matrix.package.sync.pending" = "%d 个待更新";
+"matrix.package.sync.status" = "同步状态";
+"matrix.package.sync.upstream" = "上游更新";
+"matrix.package.sync.source" = "来源";
+"matrix.package.sync.provider" = "同步方式";
+"matrix.package.sync.lastSync" = "上次同步";
+"matrix.package.sync.linkHealth" = "链接健康";
+"matrix.package.sync.linkHealthNotScanned" = "未扫描";
+"matrix.package.sync.linkHealthSummary" = "%d 正常 · %d 断链 · %d 未启用";
+"matrix.package.sync.linkHealthEmpty" = "这个套装还没有匹配到已部署技能链接。";
+"matrix.package.sync.linkHealthNotScannedDetail" = "运行链接健康检查，查看这个套装在 Claude 和 Codex 两端的链接状态。";
+"matrix.package.sync.noDeployment" = "暂无部署信息";
 "matrix.package.sync.checking" = "正在检查上游更新...";
 "matrix.package.sync.checked" = "已检查 %@";
 "matrix.package.sync.notChecked" = "尚未检查";

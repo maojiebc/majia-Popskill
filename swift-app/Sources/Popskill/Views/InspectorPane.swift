@@ -12,6 +12,7 @@ struct InspectorPane: View {
     let capability: MatrixCapability
     @Environment(\.popskillLocalization) private var localization
     @State private var selectedTab: InspectorTab = .overview
+    @State private var linkHealthScanInFlight: Bool = false
 
     var body: some View {
         ScrollView {
@@ -193,6 +194,7 @@ struct InspectorPane: View {
             packageLocalPathsSection(package)
         case .sync:
             packageActionsSection(package)
+            packageSyncStatusSection(package)
             packageSyncSection(package)
         case .metadata:
             packageMetadataSection(package)
@@ -1463,7 +1465,7 @@ struct InspectorPane: View {
     private func packageSyncSection(_ package: CapabilityPackage) -> some View {
         let pendingUpdates = packagePendingUpdates(package)
         return VStack(alignment: .leading, spacing: 8) {
-            SectionHeading(title: "matrix.inspector.section.sync")
+            SectionHeading(title: "matrix.package.sync.upstream")
             HStack(spacing: 8) {
                 syncStatusPill(for: pendingUpdates)
                 if store.updatesRefreshInFlight {
@@ -1500,6 +1502,209 @@ struct InspectorPane: View {
                     }
                 }
             }
+        }
+    }
+
+    private func packageSyncStatusSection(_ package: CapabilityPackage) -> some View {
+        let snapshot = package.linkHealthSnapshot(using: store.linkHealth, skills: store.skills)
+        return VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "matrix.package.sync.status", accent: .popSectionGreen)
+            LazyVGrid(columns: Self.syncFactColumns, alignment: .leading, spacing: 8) {
+                syncFactCard(
+                    titleKey: "matrix.package.sync.source",
+                    value: package.source.location,
+                    systemImage: "chevron.left.forwardslash.chevron.right",
+                    tint: Color.accentColor
+                )
+                syncFactCard(
+                    titleKey: "matrix.package.sync.provider",
+                    value: syncProviderLabel,
+                    systemImage: syncProviderSymbol,
+                    tint: Color.popSectionPurple
+                )
+                syncFactCard(
+                    titleKey: "matrix.package.sync.lastSync",
+                    value: lastSyncLabel,
+                    systemImage: "clock.arrow.circlepath",
+                    tint: Color.popSecondaryLabel
+                )
+                syncFactCard(
+                    titleKey: "matrix.package.sync.linkHealth",
+                    value: packageLinkHealthLabel(snapshot),
+                    systemImage: packageLinkHealthSymbol(snapshot),
+                    tint: packageLinkHealthTint(snapshot)
+                )
+            }
+
+            packageLinkHealthRows(snapshot)
+        }
+    }
+
+    private var syncProviderLabel: String {
+        if let provider = SyncProvider(rawValue: store.lastSyncProvider) {
+            return localization.string(provider.titleKey)
+        }
+        return store.lastSyncProvider
+    }
+
+    private var syncProviderSymbol: String {
+        SyncProvider(rawValue: store.lastSyncProvider)?.symbol ?? "arrow.triangle.2.circlepath"
+    }
+
+    private var lastSyncLabel: String {
+        if let lastSyncAt = store.lastSyncAt {
+            return Self.relativeFormatter.localizedString(for: lastSyncAt, relativeTo: Date())
+        }
+        return localization.string("sidebar.sync.never")
+    }
+
+    private func packageLinkHealthLabel(_ snapshot: PackageLinkHealthSnapshot?) -> String {
+        guard let snapshot else {
+            return localization.string("matrix.package.sync.linkHealthNotScanned")
+        }
+        return localization.string(
+            "matrix.package.sync.linkHealthSummary",
+            snapshot.okCount,
+            snapshot.brokenCount,
+            snapshot.inactiveCount
+        )
+    }
+
+    private func packageLinkHealthSymbol(_ snapshot: PackageLinkHealthSnapshot?) -> String {
+        guard let snapshot else { return "checkmark.shield" }
+        if snapshot.brokenCount > 0 { return "exclamationmark.triangle.fill" }
+        if snapshot.okCount > 0 { return "link" }
+        return "circle.dashed"
+    }
+
+    private func packageLinkHealthTint(_ snapshot: PackageLinkHealthSnapshot?) -> Color {
+        guard let snapshot else { return Color.popTertiaryLabel }
+        if snapshot.brokenCount > 0 { return Color.popStatusError }
+        if snapshot.okCount > 0 { return Color.popStatusOK }
+        return Color.popTertiaryLabel
+    }
+
+    private func syncFactCard(titleKey: String, value: String, systemImage: String, tint: Color) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 2) {
+                LocalizedText(titleKey)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Color.popSecondaryLabel)
+                Text(value.isEmpty ? "—" : value)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(Color.popLabel)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+            }
+            Spacer(minLength: 4)
+        }
+        .padding(9)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(tint.opacity(0.07), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func packageLinkHealthRows(_ snapshot: PackageLinkHealthSnapshot?) -> some View {
+        if let snapshot {
+            if snapshot.rows.isEmpty {
+                Text(localization.string("matrix.package.sync.linkHealthEmpty"))
+                    .font(.caption)
+                    .foregroundStyle(Color.popTertiaryLabel)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(snapshot.rows.prefix(4), id: \.skillId) { row in
+                        packageLinkHealthRow(row)
+                    }
+                    if snapshot.rows.count > 4 {
+                        Text(localization.string("matrix.package.paths.more", snapshot.rows.count - 4))
+                            .font(.caption2)
+                            .foregroundStyle(Color.popTertiaryLabel)
+                    }
+                }
+            }
+        } else {
+            HStack(alignment: .center, spacing: 8) {
+                Text(localization.string("matrix.package.sync.linkHealthNotScannedDetail"))
+                    .font(.caption)
+                    .foregroundStyle(Color.popSecondaryLabel)
+                Spacer(minLength: 8)
+                Button {
+                    Task { await refreshPackageLinkHealth() }
+                } label: {
+                    if linkHealthScanInFlight {
+                        ProgressView().controlSize(.mini)
+                    } else {
+                        Label(localization.string("health.empty.runScan"), systemImage: "play.circle")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+                .disabled(linkHealthScanInFlight)
+            }
+        }
+    }
+
+    private func packageLinkHealthRow(_ row: LinkHealthRow) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: row.deployment?.hasBrokenLink == true ? "exclamationmark.triangle.fill" : "link")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(row.deployment?.hasBrokenLink == true ? Color.popStatusError : Color.popStatusOK)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(row.skillName)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.popLabel)
+                    .lineLimit(1)
+                Text(row.deployment?.ssotPath.abbreviatingWithTilde ?? localization.string("matrix.package.sync.noDeployment"))
+                    .font(.system(size: 10.5, design: .monospaced))
+                    .foregroundStyle(Color.popSecondaryLabel)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+            }
+            Spacer(minLength: 8)
+            HStack(spacing: 4) {
+                ForEach(sortedAppLinks(row.deployment?.appLinks ?? [:]), id: \.key) { key, link in
+                    packageLinkStatusBadge(appKey: key, status: link.status)
+                }
+            }
+        }
+        .padding(8)
+        .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func packageLinkStatusBadge(appKey: String, status: String) -> some View {
+        let (label, color): (String, Color) = {
+            switch status.lowercased() {
+            case "ok":       return (localization.string("matrix.inspector.linkStatus.ok"), Color.popStatusOK)
+            case "broken":   return (localization.string("matrix.inspector.linkStatus.broken"), Color.popStatusError)
+            case "inactive": return (localization.string("matrix.inspector.linkStatus.inactive"), Color.popTertiaryLabel)
+            case "na":       return (localization.string("matrix.inspector.linkStatus.na"), Color.popTertiaryLabel)
+            default:         return (status, Color.popSecondaryLabel)
+            }
+        }()
+        return HStack(spacing: 3) {
+            Text(packageLinkAppShortLabel(for: appKey))
+                .font(.system(size: 8.5, weight: .bold))
+            Text(label)
+                .font(.system(size: 9.5, weight: .semibold))
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 5)
+        .padding(.vertical, 2)
+        .background(color.opacity(0.10), in: Capsule())
+    }
+
+    private func packageLinkAppShortLabel(for key: String) -> String {
+        switch key.lowercased() {
+        case "claude": return "CC"
+        case "codex": return "CDX"
+        default: return key.prefix(3).uppercased()
         }
     }
 
@@ -1960,6 +2165,10 @@ struct InspectorPane: View {
         GridItem(.adaptive(minimum: 96), spacing: 8, alignment: .leading)
     ]
 
+    private static let syncFactColumns: [GridItem] = [
+        GridItem(.adaptive(minimum: 132), spacing: 8, alignment: .leading)
+    ]
+
     private static let companionGridColumns: [GridItem] = [
         GridItem(.adaptive(minimum: 84), spacing: 5, alignment: .leading)
     ]
@@ -2041,6 +2250,19 @@ struct InspectorPane: View {
 
         if let firstError {
             store.errorMessage = firstError.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func refreshPackageLinkHealth() async {
+        guard !linkHealthScanInFlight else { return }
+        linkHealthScanInFlight = true
+        defer { linkHealthScanInFlight = false }
+
+        do {
+            store.linkHealth = try await store.client.linkHealth()
+        } catch {
+            store.errorMessage = error.localizedDescription
         }
     }
 }
