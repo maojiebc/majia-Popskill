@@ -479,6 +479,17 @@ struct SpotlightAction: Identifiable {
             }
         ),
         SpotlightAction(
+            id: "usage-scan",
+            titleKey: "spotlight.action.usageScan.title",
+            subtitleKey: "spotlight.action.usageScan.subtitle",
+            symbol: "chart.bar.doc.horizontal",
+            tint: .green,
+            perform: { store in
+                store.currentSelection = .insights
+                Task { await store.refreshUsageScan() }
+            }
+        ),
+        SpotlightAction(
             id: "link-health",
             titleKey: "spotlight.action.linkHealth.title",
             subtitleKey: "spotlight.action.linkHealth.subtitle",

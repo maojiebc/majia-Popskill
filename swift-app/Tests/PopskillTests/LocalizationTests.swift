@@ -64,4 +64,12 @@ struct LocalizationTests {
         #expect(localization.string("matrix.skill.manifest.requires.available") == "可用")
         #expect(localization.string("matrix.skill.manifest.requires.missing") == "缺失")
     }
+
+    @Test
+    func spotlightUsageScanActionIsLocalized() {
+        let localization = PopskillLocalization(language: .simplifiedChinese)
+
+        #expect(localization.string("spotlight.action.usageScan.title") == "重新扫描用量")
+        #expect(localization.string("spotlight.action.usageScan.subtitle") == "扫描最近 transcript，刷新调用与 tokens")
+    }
 }

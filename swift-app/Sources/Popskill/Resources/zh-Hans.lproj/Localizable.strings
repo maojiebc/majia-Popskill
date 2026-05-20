@@ -549,6 +549,8 @@
 
 "spotlight.action.refresh.title" = "刷新数据";
 "spotlight.action.refresh.subtitle" = "重新从 sidecar 拉 skills / 数据源 / agents";
+"spotlight.action.usageScan.title" = "重新扫描用量";
+"spotlight.action.usageScan.subtitle" = "扫描最近 transcript，刷新调用与 tokens";
 "spotlight.action.linkHealth.title" = "打开链接健康";
 "spotlight.action.linkHealth.subtitle" = "检查 SSOT 与 symlink 的健康";
 "spotlight.action.updates.title" = "打开更新列表";

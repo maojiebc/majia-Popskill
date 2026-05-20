@@ -549,6 +549,8 @@
 
 "spotlight.action.refresh.title" = "Refresh data";
 "spotlight.action.refresh.subtitle" = "Re-bootstrap skills, sources, and agents from sidecar";
+"spotlight.action.usageScan.title" = "Re-scan usage";
+"spotlight.action.usageScan.subtitle" = "Scan recent transcripts for calls and tokens";
 "spotlight.action.linkHealth.title" = "Open Link Health";
 "spotlight.action.linkHealth.subtitle" = "Inspect SSOT ↔ symlink integrity";
 "spotlight.action.updates.title" = "Open Updates";
