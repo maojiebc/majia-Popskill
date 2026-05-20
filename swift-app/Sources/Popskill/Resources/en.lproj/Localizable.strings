@@ -428,6 +428,7 @@
 
 "spotlight.section.capabilities" = "CAPABILITIES";
 "spotlight.section.actions" = "ACTIONS";
+"spotlight.bundle.matchedComponents" = "Matched components: %@";
 
 "spotlight.empty.title" = "No matches";
 "spotlight.empty.body" = "Try a name, trigger word, or use ↑↓ to pick a recent capability.";

@@ -428,6 +428,7 @@
 
 "spotlight.section.capabilities" = "能力";
 "spotlight.section.actions" = "操作";
+"spotlight.bundle.matchedComponents" = "匹配组件：%@";
 
 "spotlight.empty.title" = "没有匹配";
 "spotlight.empty.body" = "试试名字、触发词,或按 ↑↓ 挑一条最近更新的能力。";
