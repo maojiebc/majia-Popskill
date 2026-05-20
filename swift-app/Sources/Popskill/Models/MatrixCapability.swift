@@ -145,6 +145,26 @@ struct MatrixCapability: Identifiable, Equatable {
         hasBrokenLink || package?.hasBrokenLinks(in: skills) == true
     }
 
+    func matchesSearch(query: SearchTextKey) -> Bool {
+        guard !query.isEmpty else { return true }
+
+        if Self.matches(searchFields, query: query) {
+            return true
+        }
+
+        guard let package else {
+            return false
+        }
+
+        return Self.matches(package.searchFields, query: query)
+            || package.components.all.contains { component in
+                Self.matches(component.searchFields, query: query)
+            }
+            || package.configSchema.contains { field in
+                Self.matches(field.searchFields, query: query)
+            }
+    }
+
     static func capabilityID(kind: CapabilityKind, rawID: String) -> String {
         "\(kind.rawValue):\(rawID)"
     }
@@ -167,6 +187,30 @@ struct MatrixCapability: Identifiable, Equatable {
 
     static func skillToggleKey(for skillID: String, app: TargetApp) -> String {
         toggleKey(capabilityID: skillCapabilityID(for: skillID), app: app)
+    }
+
+    private var searchFields: [String] {
+        var fields = [
+            id,
+            kind.rawValue,
+            name,
+            summary ?? "",
+            sourceLabel,
+            sourceType ?? "",
+            repoOwner ?? "",
+            repoName ?? "",
+            directory
+        ]
+        fields.append(contentsOf: kind.searchAliases)
+        fields.append(contentsOf: triggerScenarios ?? [])
+        fields.append(contentsOf: TargetApp.supported.flatMap { app in
+            apps.isEnabled(app) ? app.searchAliases : []
+        })
+        return fields
+    }
+
+    private static func matches(_ fields: [String], query: SearchTextKey) -> Bool {
+        fields.contains { SearchTextNormalizer.matches($0, query: query) }
     }
 }
 
@@ -252,5 +296,93 @@ extension MatrixCapability {
             underlyingSkillID: nil,
             underlyingAgentID: agent.id
         )
+    }
+}
+
+private extension CapabilityKind {
+    var searchAliases: [String] {
+        switch self {
+        case .bundle: ["bundle", "package", "suite", "套装", "能力包"]
+        case .skill: ["skill", "技能", "能力"]
+        case .agent: ["agent", "智能体"]
+        case .cli: ["cli", "command line", "命令行"]
+        case .mcp: ["mcp", "server", "服务"]
+        case .config: ["config", "settings", "配置", "设置"]
+        }
+    }
+}
+
+private extension TargetApp {
+    var searchAliases: [String] {
+        switch self {
+        case .claude: ["Claude", "Claude Code", "CC"]
+        case .codex: ["Codex", "CDX"]
+        case .gemini: ["Gemini"]
+        case .opencode: ["OpenCode"]
+        case .hermes: ["Hermes"]
+        }
+    }
+}
+
+private extension CapabilityPackage {
+    var searchFields: [String] {
+        [
+            id,
+            type.rawValue,
+            type.title,
+            health.rawValue,
+            health.title,
+            name,
+            vendor ?? "",
+            summary,
+            source.kind,
+            source.location,
+            source.updateStrategy,
+            source.repoOwner ?? "",
+            source.repoName ?? "",
+            source.repoBranch ?? "",
+            source.readmeUrl ?? "",
+            installed ? "installed 已装 active" : "missing 未装 inactive",
+            "components 组件"
+        ]
+    }
+}
+
+private extension PackageComponent {
+    var searchFields: [String] {
+        [
+            id,
+            name,
+            kind,
+            status,
+            statusAliases,
+            required ? "required 必需" : "optional 可选",
+            installed ? "installed 已装" : "missing 未装",
+            location ?? ""
+        ]
+    }
+
+    private var statusAliases: String {
+        switch status.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "stub": "stub 占位"
+        case "registry-reference": "registry reference 注册表"
+        case "detected": "detected 检测到"
+        case "installed": "installed 已装"
+        case "declared": "declared 声明"
+        case "available": "available 可用"
+        default: ""
+        }
+    }
+}
+
+private extension PackageConfigField {
+    var searchFields: [String] {
+        [
+            id,
+            label,
+            storage,
+            required ? "required 必需" : "optional 可选",
+            secret ? "secret 密钥" : ""
+        ]
     }
 }

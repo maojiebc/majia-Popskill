@@ -211,6 +211,76 @@ struct SkillModelsTests {
     }
 
     @Test
+    func matrixCapabilitySearchMatchesSourceTriggersAndAppTargets() {
+        var skill = Skill(
+            id: "dotey/prompt-engineering:baoyu-comic",
+            name: "baoyu-comic",
+            description: "Comic generator",
+            directory: "baoyu-comic",
+            repoOwner: "dotey",
+            repoName: "prompt-engineering",
+            readmeUrl: nil,
+            apps: SkillApps(claude: false, codex: true, gemini: false, opencode: false, hermes: false),
+            installedAt: nil,
+            updatedAt: nil,
+            contentHash: nil
+        )
+        skill.capabilitySummary = "Turns topics into four-panel comics."
+        skill.triggerScenarios = ["用 baoyu-comic 把 X 画成四格"]
+        skill.sourceType = "github"
+        let capability = MatrixCapability.fromSkill(skill)
+
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("dotey")))
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("prompt engineering")))
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("四格")))
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("codex")))
+        #expect(!capability.matchesSearch(query: SearchTextNormalizer.key("feishu")))
+    }
+
+    @Test
+    func matrixCapabilitySearchMatchesPackageSourceComponentsAndConfig() {
+        let package = CapabilityPackage(
+            id: "pkg:feishu-suite",
+            type: .composite,
+            name: "Feishu Suite",
+            vendor: "ByteDance",
+            summary: "Office automation suite",
+            source: PackageSource(
+                kind: "github",
+                location: "github.com/feishu/lark-suite",
+                updateStrategy: "manual",
+                repoOwner: "feishu",
+                repoName: "lark-suite",
+                repoBranch: "main",
+                readmeUrl: nil
+            ),
+            components: PackageComponents(
+                cli: [
+                    PackageComponent(id: "lark-cli", name: "lark-cli", kind: "cli", required: true, installed: false, status: "stub", location: "feishu-suite/lark-cli")
+                ],
+                skills: [],
+                mcp: [
+                    PackageComponent(id: "lark-openapi-mcp", name: "Lark OpenAPI MCP", kind: "mcp", required: false, installed: false, status: "registry-reference", location: nil)
+                ],
+                agents: []
+            ),
+            configSchema: [
+                PackageConfigField(id: "lark.app_secret", label: "App Secret", required: true, secret: true, storage: "keychain")
+            ],
+            installed: false,
+            lifecycle: nil
+        )
+        let capability = MatrixCapability.fromPackage(package, skills: [])
+
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("bytedance")))
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("lark suite")))
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("套装")))
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("占位")))
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("keychain")))
+        #expect(!capability.matchesSearch(query: SearchTextNormalizer.key("baoyu comic")))
+    }
+
+    @Test
     func targetAppRegistryCoversCurrentSkillTargets() {
         #expect(TargetAppRegistry.all.map(\.app) == TargetApp.supported)
         #expect(TargetApp.quickToggleSupported == [.claude, .codex, .gemini])

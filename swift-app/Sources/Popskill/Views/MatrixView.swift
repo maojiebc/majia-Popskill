@@ -411,15 +411,7 @@ struct MatrixView: View {
         let visible = capabilities.filter { capability in
                 store.matrixFilter.includes(capability: capability, store: store)
                 && store.matrixTypeFilter.includes(capability: capability)
-                && (q.isEmpty
-                    || SearchTextNormalizer.matches(capability.name, query: q)
-                    || SearchTextNormalizer.matches(capability.summary ?? "", query: q)
-                    || SearchTextNormalizer.matches(capability.directory, query: q)
-                    || capability.package?.components.all.contains { component in
-                        SearchTextNormalizer.matches(component.name, query: q)
-                            || SearchTextNormalizer.matches(component.id, query: q)
-                            || SearchTextNormalizer.matches(component.location ?? "", query: q)
-                    } == true)
+                && capability.matchesSearch(query: q)
         }
         return SkillGrouping.sections(visible, sort: store.matrixSortMode, usageIndex: usageIndex)
     }
