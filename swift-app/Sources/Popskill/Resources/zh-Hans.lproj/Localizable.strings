@@ -430,6 +430,7 @@
 "matrix.inspector.section.usage" = "用量";
 "matrix.inspector.section.components" = "组件";
 "matrix.inspector.section.bundle" = "所属套装";
+"matrix.inspector.section.activation" = "批量启用";
 "matrix.inspector.section.config" = "配置";
 "matrix.inspector.section.paths" = "本地路径";
 "matrix.inspector.section.version" = "版本";
@@ -440,6 +441,12 @@
 "matrix.package.action.checkUpdates" = "检查更新";
 "matrix.package.action.openSource" = "打开来源";
 "matrix.package.action.revealInFinder" = "定位本地 Skill";
+"matrix.package.action.activateClaude" = "全部激活到 Claude";
+"matrix.package.action.activateCodex" = "全部激活到 Codex";
+"matrix.package.action.activateApp" = "全部激活";
+"matrix.package.activation.empty" = "这个套装没有可批量启用的本地 skill。";
+"matrix.package.activation.complete" = "匹配到的本地 skill 已全部激活到 Claude 和 Codex。";
+"matrix.package.activation.remaining" = "Claude 还差 %d 个 · Codex 还差 %d 个";
 "matrix.skill.action.openReadme" = "编辑 prompt";
 "matrix.skill.action.checkUpdates" = "检查更新";
 "matrix.skill.action.openSource" = "打开来源";

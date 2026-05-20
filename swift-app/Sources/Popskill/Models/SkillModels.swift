@@ -1402,6 +1402,11 @@ extension CapabilityPackage {
             .filter { $0.id != skill.id }
     }
 
+    func installedSkillsRequiringEnablement(for app: TargetApp, in skills: [Skill]) -> [Skill] {
+        matchingInstalledSkills(in: skills)
+            .filter { !$0.apps.isEnabled(app) }
+    }
+
     func matchingInstalledSkills(in skills: [Skill]) -> [Skill] {
         var seen: Set<String> = []
         var matches: [Skill] = []

@@ -170,6 +170,7 @@ struct InspectorPane: View {
         case .overview:
             packageSummarySection(package)
             packageCoverageSection
+            packageActivationSection(package)
             packageComponentsSection(package)
         case .readme:
             if let skill = readmeSkill(for: package) {
@@ -642,6 +643,53 @@ struct InspectorPane: View {
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func packageActivationSection(_ package: CapabilityPackage) -> some View {
+        let matchedSkills = package.matchingInstalledSkills(in: store.skills)
+        let claudeTargets = package.installedSkillsRequiringEnablement(for: .claude, in: store.skills)
+        let codexTargets = package.installedSkillsRequiringEnablement(for: .codex, in: store.skills)
+
+        return VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "matrix.inspector.section.activation", accent: .accentColor)
+            LazyVGrid(columns: Self.actionGridColumns, alignment: .leading, spacing: 8) {
+                packageActivationButton(app: .claude, package: package, targets: claudeTargets)
+                packageActivationButton(app: .codex, package: package, targets: codexTargets)
+            }
+            if matchedSkills.isEmpty {
+                Text(localization.string("matrix.package.activation.empty"))
+                    .font(.caption2)
+                    .foregroundStyle(Color.popTertiaryLabel)
+            } else if claudeTargets.isEmpty && codexTargets.isEmpty {
+                Text(localization.string("matrix.package.activation.complete"))
+                    .font(.caption2)
+                    .foregroundStyle(Color.popTertiaryLabel)
+            } else {
+                Text(localization.string("matrix.package.activation.remaining", claudeTargets.count, codexTargets.count))
+                    .font(.caption2)
+                    .foregroundStyle(Color.popTertiaryLabel)
+            }
+        }
+    }
+
+    private func packageActivationButton(app: TargetApp, package: CapabilityPackage, targets: [Skill]) -> some View {
+        let inFlight = packageActivationInFlight(for: targets, app: app)
+        return inspectorActionButton(
+            titleKey: packageActivationTitleKey(for: app),
+            systemImage: app.symbolName,
+            inFlight: inFlight,
+            disabled: targets.isEmpty || inFlight
+        ) {
+            Task { await activatePackage(package, app: app) }
+        }
+    }
+
+    private func packageActivationTitleKey(for app: TargetApp) -> String {
+        switch app {
+        case .claude: return "matrix.package.action.activateClaude"
+        case .codex: return "matrix.package.action.activateCodex"
+        default: return "matrix.package.action.activateApp"
+        }
     }
 
     private func packageComponentsSection(_ package: CapabilityPackage) -> some View {
@@ -1662,6 +1710,14 @@ struct InspectorPane: View {
         MatrixCapability.toggleKey(capabilityID: capability.id, app: app)
     }
 
+    private func packageToggleKey(skillID: String, app: TargetApp) -> String {
+        MatrixCapability.toggleKey(capabilityID: MatrixCapability.skillCapabilityID(for: skillID), app: app)
+    }
+
+    private func packageActivationInFlight(for targets: [Skill], app: TargetApp) -> Bool {
+        targets.contains { store.pendingToggles.contains(packageToggleKey(skillID: $0.id, app: app)) }
+    }
+
     @MainActor
     private func toggle(app: TargetApp, enabled: Bool) async {
         guard let skillID = capability.underlyingSkillID else { return }
@@ -1677,6 +1733,35 @@ struct InspectorPane: View {
             }
         } catch {
             store.errorMessage = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func activatePackage(_ package: CapabilityPackage, app: TargetApp) async {
+        let targets = package.installedSkillsRequiringEnablement(for: app, in: store.skills)
+        guard !targets.isEmpty else { return }
+
+        let keys = Set(targets.map { packageToggleKey(skillID: $0.id, app: app) })
+        guard keys.isDisjoint(with: store.pendingToggles) else { return }
+        store.pendingToggles.formUnion(keys)
+        defer { store.pendingToggles.subtract(keys) }
+
+        var firstError: Error?
+        for target in targets {
+            do {
+                try await store.client.toggle(skillID: target.id, app: app, enabled: true)
+                if let idx = store.skills.firstIndex(where: { $0.id == target.id }) {
+                    store.skills[idx].apps.setEnabled(true, for: app)
+                }
+            } catch {
+                if firstError == nil {
+                    firstError = error
+                }
+            }
+        }
+
+        if let firstError {
+            store.errorMessage = firstError.localizedDescription
         }
     }
 }

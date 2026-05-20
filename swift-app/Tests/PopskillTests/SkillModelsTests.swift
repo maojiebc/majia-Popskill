@@ -1192,6 +1192,8 @@ struct SkillModelsTests {
         #expect(package.containsSkill(translate))
         #expect(!package.containsSkill(unrelated))
         #expect(package.companionInstalledSkills(for: comic, in: [comic, translate, unrelated]).map(\.id) == ["baoyu-translate"])
+        #expect(package.installedSkillsRequiringEnablement(for: .claude, in: [comic, translate, unrelated]).isEmpty)
+        #expect(package.installedSkillsRequiringEnablement(for: .codex, in: [comic, translate, unrelated]).map(\.id) == ["baoyu-comic", "baoyu-translate"])
     }
 
     @Test

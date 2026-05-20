@@ -45,5 +45,7 @@ struct LocalizationTests {
         #expect(localization.string("matrix.skill.action.checkUpdates") == "检查更新")
         #expect(localization.string("matrix.skill.action.openSource") == "打开来源")
         #expect(localization.string("matrix.skill.action.revealInFinder") == "在 Finder 中显示")
+        #expect(localization.string("matrix.package.action.activateClaude") == "全部激活到 Claude")
+        #expect(localization.string("matrix.package.activation.remaining", 2, 1) == "Claude 还差 2 个 · Codex 还差 1 个")
     }
 }

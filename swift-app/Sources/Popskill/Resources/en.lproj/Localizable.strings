@@ -430,6 +430,7 @@
 "matrix.inspector.section.usage" = "USAGE";
 "matrix.inspector.section.components" = "COMPONENTS";
 "matrix.inspector.section.bundle" = "BUNDLE";
+"matrix.inspector.section.activation" = "ACTIVATION";
 "matrix.inspector.section.config" = "CONFIG";
 "matrix.inspector.section.paths" = "LOCAL PATHS";
 "matrix.inspector.section.version" = "VERSION";
@@ -440,6 +441,12 @@
 "matrix.package.action.checkUpdates" = "Check updates";
 "matrix.package.action.openSource" = "Open source";
 "matrix.package.action.revealInFinder" = "Reveal local skill";
+"matrix.package.action.activateClaude" = "Activate all for Claude";
+"matrix.package.action.activateCodex" = "Activate all for Codex";
+"matrix.package.action.activateApp" = "Activate all";
+"matrix.package.activation.empty" = "No matched local skills can be activated from this bundle.";
+"matrix.package.activation.complete" = "All matched local skills are active on Claude and Codex.";
+"matrix.package.activation.remaining" = "%d Claude gaps · %d Codex gaps";
 "matrix.skill.action.openReadme" = "Edit prompt";
 "matrix.skill.action.checkUpdates" = "Check updates";
 "matrix.skill.action.openSource" = "Open source";
