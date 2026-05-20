@@ -69,6 +69,7 @@ struct RootView: View {
         )) {
             Section {
                 row(.matrix)
+                matrixShortcutRows
             } header: { sectionHeader(.control) }
 
             Section {
@@ -126,6 +127,127 @@ struct RootView: View {
                         )
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var matrixShortcutRows: some View {
+        let statusFilters: [MatrixFilter] = [.claudeOnly, .codexOnly, .brokenLinks]
+        let typeFilters: [MatrixTypeFilter] = [.bundle, .skill, .agent, .mcp, .cli]
+        if !store.capabilities.isEmpty {
+            VStack(alignment: .leading, spacing: 7) {
+                shortcutHeader("sidebar.matrixFilters")
+                ForEach(statusFilters) { filter in
+                    let count = store.matrixFilterCount(filter)
+                    if count > 0 {
+                        sidebarShortcutButton(
+                            titleKey: filter.titleKey,
+                            count: count,
+                            symbolName: sidebarSymbol(for: filter),
+                            warning: filter == .brokenLinks,
+                            active: store.currentSelection == .matrix
+                                && store.matrixFilter == filter
+                                && store.matrixTypeFilter == .allTypes
+                        ) {
+                            store.showMatrix(filter: filter)
+                        }
+                    }
+                }
+
+                shortcutHeader("sidebar.matrixTypes")
+                    .padding(.top, 4)
+                ForEach(typeFilters) { filter in
+                    let count = store.matrixTypeFilterCount(filter)
+                    if count > 0 {
+                        sidebarShortcutButton(
+                            titleKey: filter.titleKey,
+                            count: count,
+                            symbolName: sidebarSymbol(for: filter),
+                            active: store.currentSelection == .matrix
+                                && store.matrixFilter == .all
+                                && store.matrixTypeFilter == filter
+                        ) {
+                            store.showMatrix(typeFilter: filter)
+                        }
+                    }
+                }
+            }
+            .padding(.top, 2)
+            .padding(.bottom, 4)
+            .listRowInsets(EdgeInsets(top: 2, leading: 18, bottom: 6, trailing: 12))
+        }
+    }
+
+    private func shortcutHeader(_ key: String) -> some View {
+        Text(localization.string(key))
+            .font(.system(size: 10.5, weight: .semibold))
+            .foregroundStyle(Color.popTertiaryLabel)
+            .textCase(.uppercase)
+            .tracking(0.4)
+            .padding(.leading, 4)
+    }
+
+    private func sidebarShortcutButton(
+        titleKey: String,
+        count: Int,
+        symbolName: String,
+        warning: Bool = false,
+        active: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Image(systemName: symbolName)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(active ? Color.accentColor : Color.popSecondaryLabel)
+                    .frame(width: 16)
+                Text(localization.string(titleKey))
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.popSidebarTitle)
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                Text("\(count)")
+                    .font(.system(size: 10.5, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(warning && count > 0 ? Color.popStatusWarning : Color.popSecondaryLabel)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1.5)
+                    .background(
+                        Capsule().fill(
+                            (warning && count > 0 ? Color.popStatusWarning : Color.popSecondaryLabel).opacity(0.13)
+                        )
+                    )
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(
+                active ? Color.accentColor.opacity(0.12) : Color.clear,
+                in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(active ? .isSelected : [])
+    }
+
+    private func sidebarSymbol(for filter: MatrixFilter) -> String {
+        switch filter {
+        case .all:         return "square.grid.3x3"
+        case .updates:     return "arrow.triangle.2.circlepath"
+        case .brokenLinks: return "exclamationmark.triangle"
+        case .claudeOnly:  return TargetApp.claude.symbolName
+        case .codexOnly:   return TargetApp.codex.symbolName
+        case .inactive:    return "moon"
+        }
+    }
+
+    private func sidebarSymbol(for filter: MatrixTypeFilter) -> String {
+        switch filter {
+        case .allTypes: return "square.stack.3d.up"
+        case .bundle:   return CapabilityKind.bundle.symbol
+        case .skill:    return CapabilityKind.skill.symbol
+        case .agent:    return CapabilityKind.agent.symbol
+        case .cli:      return CapabilityKind.cli.symbol
+        case .mcp:      return CapabilityKind.mcp.symbol
         }
     }
 

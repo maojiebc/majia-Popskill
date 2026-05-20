@@ -36,6 +36,95 @@ struct PopskillStoreTests {
     }
 
     @Test
+    func showMatrixShortcutSetsFiltersAndClearsTransientContext() {
+        let store = PopskillStore()
+        store.currentSelection = .settings
+        store.searchText = "baoyu"
+        store.matrixFilter = .claudeOnly
+        store.matrixTypeFilter = .skill
+        store.selectedSkillID = "skill:demo"
+        store.inspectorOpen = true
+
+        store.showMatrix(filter: .brokenLinks)
+
+        #expect(store.currentSelection == .matrix)
+        #expect(store.searchText == "")
+        #expect(store.matrixFilter == .brokenLinks)
+        #expect(store.matrixTypeFilter == .allTypes)
+        #expect(store.selectedSkillID == nil)
+        #expect(store.inspectorOpen == false)
+
+        store.searchText = "keep"
+        store.showMatrix(typeFilter: .bundle, clearSearch: false)
+
+        #expect(store.searchText == "keep")
+        #expect(store.matrixFilter == .all)
+        #expect(store.matrixTypeFilter == .bundle)
+    }
+
+    @Test
+    func matrixShortcutCountsUseCurrentCapabilities() {
+        let store = PopskillStore()
+        var claudeOnly = skillFixture(
+            id: "claude-only",
+            apps: SkillApps(claude: true, codex: false, gemini: false, opencode: false, hermes: false)
+        )
+        claudeOnly.deployment = SkillDeployment(
+            strategy: "symlink",
+            ssotPath: "/Users/example/.cc-switch/skills/claude-only",
+            appLinks: [
+                "claude": AppLinkStatus(path: "/Users/example/.claude/skills/claude-only", status: "broken")
+            ]
+        )
+        store.skills = [
+            claudeOnly,
+            skillFixture(
+                id: "codex-only",
+                apps: SkillApps(claude: false, codex: true, gemini: false, opencode: false, hermes: false)
+            ),
+            skillFixture(
+                id: "both",
+                apps: SkillApps(claude: true, codex: true, gemini: false, opencode: false, hermes: false)
+            )
+        ]
+        store.localAgents = [
+            LocalAgent(
+                id: "agent:demo",
+                name: "Demo Agent",
+                description: "Agent",
+                fileName: "demo.md",
+                path: "/tmp/demo.md",
+                category: "ops",
+                tools: [],
+                model: nil,
+                lastModifiedAt: nil,
+                sizeBytes: 100
+            )
+        ]
+        store.packages = [
+            CapabilityPackage(
+                id: "pkg:empty",
+                type: .composite,
+                name: "Empty Bundle",
+                vendor: nil,
+                summary: "Bundle",
+                source: PackageSource(kind: "builtin", location: "empty", updateStrategy: "manual", repoOwner: nil, repoName: nil, repoBranch: nil, readmeUrl: nil),
+                components: PackageComponents(cli: [], skills: [], mcp: [], agents: []),
+                configSchema: [],
+                installed: false,
+                lifecycle: nil
+            )
+        ]
+
+        #expect(store.matrixFilterCount(.claudeOnly) == 2)
+        #expect(store.matrixFilterCount(.codexOnly) == 1)
+        #expect(store.matrixFilterCount(.brokenLinks) == 1)
+        #expect(store.matrixTypeFilterCount(.bundle) == 1)
+        #expect(store.matrixTypeFilterCount(.skill) == 3)
+        #expect(store.matrixTypeFilterCount(.agent) == 1)
+    }
+
+    @Test
     func capabilitiesExposeCompositePackagesBeforeAtomicRows() {
         let store = PopskillStore()
         store.packages = [
@@ -164,22 +253,34 @@ struct PopskillStoreTests {
 
     private func stubFixture(id: String, stubbedAt: Int) -> StubbedSkill {
         StubbedSkill(
-            skill: Skill(
+            skill: skillFixture(
                 id: id,
-                name: id,
                 description: "Stub fixture",
-                directory: id,
-                repoOwner: nil,
-                repoName: nil,
-                readmeUrl: nil,
-                apps: SkillApps(claude: false, codex: false, gemini: false, opencode: false, hermes: false),
-                installedAt: nil,
-                updatedAt: nil,
-                contentHash: nil
+                apps: SkillApps(claude: false, codex: false, gemini: false, opencode: false, hermes: false)
             ),
             backupId: "backup-\(id)",
             backupPath: "/tmp/backup-\(id)",
             stubbedAt: stubbedAt
+        )
+    }
+
+    private func skillFixture(
+        id: String,
+        description: String = "Skill",
+        apps: SkillApps
+    ) -> Skill {
+        Skill(
+            id: id,
+            name: id,
+            description: description,
+            directory: id,
+            repoOwner: nil,
+            repoName: nil,
+            readmeUrl: nil,
+            apps: apps,
+            installedAt: nil,
+            updatedAt: nil,
+            contentHash: nil
         )
     }
 }

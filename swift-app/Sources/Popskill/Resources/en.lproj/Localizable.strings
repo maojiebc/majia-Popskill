@@ -304,6 +304,8 @@
 "sidebar.section.control" = "CONTROL";
 "sidebar.section.sources" = "SOURCES";
 "sidebar.section.maintenance" = "MAINTENANCE";
+"sidebar.matrixFilters" = "Filters";
+"sidebar.matrixTypes" = "Types";
 
 // S3 新增 — Matrix + Inspector
 "matrix.subtitle" = "%d bundles · %d capabilities · %d active toggles";

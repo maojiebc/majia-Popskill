@@ -243,6 +243,29 @@ final class PopskillStore {
 
     var isSearchActive: Bool { !trimmedSearch.isEmpty }
 
+    func showMatrix(
+        filter: MatrixFilter = .all,
+        typeFilter: MatrixTypeFilter = .allTypes,
+        clearSearch: Bool = true
+    ) {
+        currentSelection = .matrix
+        matrixFilter = filter
+        matrixTypeFilter = typeFilter
+        inspectorOpen = false
+        selectedSkillID = nil
+        if clearSearch {
+            searchText = ""
+        }
+    }
+
+    func matrixFilterCount(_ filter: MatrixFilter) -> Int {
+        capabilities.filter { filter.includes(capability: $0, store: self) }.count
+    }
+
+    func matrixTypeFilterCount(_ typeFilter: MatrixTypeFilter) -> Int {
+        capabilities.filter { typeFilter.includes(capability: $0) }.count
+    }
+
     /// O(1) update lookup for matrix rows and filters. `SkillUpdateInfo.id`
     /// may be scoped ("owner/name:skill") or path-like, so both the full id
     /// and its useful suffixes are indexed once when `updates` changes.
