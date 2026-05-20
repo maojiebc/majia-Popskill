@@ -358,6 +358,12 @@
 "matrix.package.component.enabledHelp" = "%@ enabled";
 "matrix.package.component.partialHelp" = "%@ is stubbed or recoverable";
 "matrix.package.component.offHelp" = "%@ not enabled";
+"matrix.package.component.unsupportedHelp" = "%@ is not supported for this component";
+"matrix.package.component.state.active" = "Active";
+"matrix.package.component.state.stub" = "Stub";
+"matrix.package.component.state.off" = "Off";
+"matrix.package.component.state.unsupported" = "N/A";
+"matrix.package.component.calls" = "%@ calls";
 "matrix.package.missingRequired" = "%d required missing";
 "matrix.package.config.secret" = "Keychain secret";
 "matrix.package.usage.tokens" = "Tokens";

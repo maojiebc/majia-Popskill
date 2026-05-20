@@ -358,6 +358,12 @@
 "matrix.package.component.enabledHelp" = "%@ 已启用";
 "matrix.package.component.partialHelp" = "%@ 是占位或待恢复";
 "matrix.package.component.offHelp" = "%@ 未启用";
+"matrix.package.component.unsupportedHelp" = "%@ 暂不支持这个组件";
+"matrix.package.component.state.active" = "已激活";
+"matrix.package.component.state.stub" = "占位";
+"matrix.package.component.state.off" = "未启用";
+"matrix.package.component.state.unsupported" = "不可用";
+"matrix.package.component.calls" = "%@ 次";
 "matrix.package.missingRequired" = "缺 %d 个必需";
 "matrix.package.config.secret" = "Keychain 密钥";
 "matrix.package.usage.tokens" = "Tokens";

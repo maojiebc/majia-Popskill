@@ -489,7 +489,14 @@ struct InspectorPane: View {
     }
 
     private func packageComponentsSection(_ package: CapabilityPackage) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let usageStatsByComponentID = Dictionary(
+            uniqueKeysWithValues: package
+                .usageSnapshot(using: store.usageSummary, skills: store.skills)?
+                .componentStats
+                .map { ($0.componentID, $0) } ?? []
+        )
+
+        return VStack(alignment: .leading, spacing: 10) {
             SectionHeading(title: "matrix.inspector.section.components", accent: .popSectionPurple)
             ForEach(package.componentGroupSummaries) { group in
                 VStack(alignment: .leading, spacing: 6) {
@@ -508,7 +515,11 @@ struct InspectorPane: View {
                         Spacer()
                     }
                     ForEach(components(in: group.kind, package: package), id: \.displayKey) { component in
-                        packageComponentDetailRow(component)
+                        packageComponentDetailRow(
+                            component,
+                            package: package,
+                            usageStat: usageStatsByComponentID[component.id]
+                        )
                     }
                 }
                 .padding(8)
@@ -640,8 +651,14 @@ struct InspectorPane: View {
         }
     }
 
-    private func packageComponentDetailRow(_ component: PackageComponent) -> some View {
-        HStack(alignment: .top, spacing: 8) {
+    private func packageComponentDetailRow(
+        _ component: PackageComponent,
+        package: CapabilityPackage,
+        usageStat: PackageComponentUsageStat?
+    ) -> some View {
+        let matchedSkill = package.matchingInstalledSkill(for: component, in: store.skills)
+
+        return HStack(alignment: .top, spacing: 8) {
             Image(systemName: component.inspectorKindSymbol)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(component.installed ? Color.popStatusOK : Color.popTertiaryLabel)
@@ -663,11 +680,81 @@ struct InspectorPane: View {
                     .textSelection(.enabled)
             }
             Spacer(minLength: 8)
-            Text(component.status)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(component.installed ? Color.popStatusOK : Color.popStatusWarning)
+            VStack(alignment: .trailing, spacing: 5) {
+                HStack(spacing: 4) {
+                    packageComponentAppStateBadge(
+                        component.appState(for: .claude, matching: matchedSkill),
+                        app: .claude
+                    )
+                    packageComponentAppStateBadge(
+                        component.appState(for: .codex, matching: matchedSkill),
+                        app: .codex
+                    )
+                }
+                HStack(spacing: 5) {
+                    Text(component.status)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(component.installed ? Color.popStatusOK : Color.popStatusWarning)
+                    Text(localization.string(
+                        "matrix.package.component.calls",
+                        usageStat.map { UsageDisplayFormatter.compactCount($0.usageEvents) } ?? "—"
+                    ))
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(Color.popSecondaryLabel)
+                }
+            }
         }
         .padding(.vertical, 2)
+    }
+
+    private func packageComponentAppStateBadge(_ state: PackageComponentAppState, app: TargetApp) -> some View {
+        let color = packageComponentAppStateColor(state)
+        return HStack(spacing: 3) {
+            Text(packageComponentAppShortLabel(app))
+                .font(.system(size: 8.5, weight: .bold))
+            Text(localization.string(packageComponentAppStateTitleKey(state)))
+                .font(.system(size: 9.5, weight: .semibold))
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 5)
+        .padding(.vertical, 2)
+        .background(color.opacity(0.10), in: Capsule())
+        .help(localization.string(packageComponentAppStateHelpKey(state), app.title))
+    }
+
+    private func packageComponentAppShortLabel(_ app: TargetApp) -> String {
+        switch app {
+        case .claude: return "CC"
+        case .codex: return "CDX"
+        default: return app.title.uppercased()
+        }
+    }
+
+    private func packageComponentAppStateTitleKey(_ state: PackageComponentAppState) -> String {
+        switch state {
+        case .active: return "matrix.package.component.state.active"
+        case .stub: return "matrix.package.component.state.stub"
+        case .off: return "matrix.package.component.state.off"
+        case .unsupported: return "matrix.package.component.state.unsupported"
+        }
+    }
+
+    private func packageComponentAppStateHelpKey(_ state: PackageComponentAppState) -> String {
+        switch state {
+        case .active: return "matrix.package.component.enabledHelp"
+        case .stub: return "matrix.package.component.partialHelp"
+        case .off: return "matrix.package.component.offHelp"
+        case .unsupported: return "matrix.package.component.unsupportedHelp"
+        }
+    }
+
+    private func packageComponentAppStateColor(_ state: PackageComponentAppState) -> Color {
+        switch state {
+        case .active: return Color.popStatusOK
+        case .stub: return Color.popStatusWarning
+        case .off: return Color.popTertiaryLabel
+        case .unsupported: return Color.popSecondaryLabel
+        }
     }
 
     private func packageConfigSection(_ package: CapabilityPackage) -> some View {

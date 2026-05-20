@@ -784,6 +784,48 @@ struct SkillModelsTests {
     }
 
     @Test
+    func packageComponentAppStateUsesInstalledSkillTogglesAndStubStatus() {
+        let skill = installedSkill(
+            directory: "baoyu-comic",
+            apps: SkillApps(claude: true, codex: false, gemini: false, opencode: false, hermes: false)
+        )
+        let skillComponent = PackageComponent(
+            id: "baoyu-comic",
+            name: "baoyu-comic",
+            kind: "skill",
+            required: true,
+            installed: true,
+            status: "installed",
+            location: "skills/baoyu-comic"
+        )
+        let stubbedAgent = PackageComponent(
+            id: "base-analyst",
+            name: "base-analyst",
+            kind: "agent",
+            required: false,
+            installed: false,
+            status: "stub",
+            location: "~/.claude/agents/base-analyst.md"
+        )
+        let installedCLI = PackageComponent(
+            id: "lark-cli",
+            name: "lark-cli",
+            kind: "cli",
+            required: true,
+            installed: true,
+            status: "detected",
+            location: nil
+        )
+
+        #expect(skillComponent.appState(for: .claude, matching: skill) == .active)
+        #expect(skillComponent.appState(for: .codex, matching: skill) == .off)
+        #expect(stubbedAgent.appState(for: .claude, matching: nil) == .stub)
+        #expect(stubbedAgent.appState(for: .codex, matching: nil) == .off)
+        #expect(installedCLI.appState(for: .codex, matching: nil) == .active)
+        #expect(installedCLI.appState(for: .gemini, matching: nil) == .unsupported)
+    }
+
+    @Test
     func capabilityPackageUsageSnapshotAggregatesMatchedSkillStats() {
         let package = CapabilityPackage(
             id: "pkg:baoyu",

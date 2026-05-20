@@ -759,6 +759,23 @@ struct PackageComponent: Codable, Equatable {
             return false
         }
     }
+
+    var isStubbed: Bool {
+        status.trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .contains("stub")
+    }
+}
+
+enum PackageComponentAppState: Equatable {
+    case active
+    case stub
+    case off
+    case unsupported
+
+    var isEnabled: Bool {
+        self == .active
+    }
 }
 
 struct PackageConfigField: Identifiable, Codable, Equatable {
@@ -1435,18 +1452,48 @@ extension CapabilityPackage {
 
 private extension PackageComponent {
     func isEnabled(for app: TargetApp, matching skill: Skill?) -> Bool {
+        appState(for: app, matching: skill).isEnabled
+    }
+}
+
+extension PackageComponent {
+    func appState(for app: TargetApp, matching skill: Skill?) -> PackageComponentAppState {
         switch kind.lowercased() {
         case "skill":
             if let skill {
-                return skill.apps.isEnabled(app)
+                if skill.apps.isEnabled(app) {
+                    return .active
+                }
+                return isStubbed ? .stub : .off
             }
-            return installed && (app == .claude || app == .codex)
+            guard app == .claude || app == .codex else {
+                return .unsupported
+            }
+            if installed {
+                return .active
+            }
+            return isStubbed ? .stub : .off
         case "agent":
-            return installed && app == .claude
+            guard app == .claude || app == .codex else {
+                return .unsupported
+            }
+            guard app == .claude else {
+                return .off
+            }
+            if installed {
+                return .active
+            }
+            return isStubbed ? .stub : .off
         case "cli", "mcp":
-            return installed && (app == .claude || app == .codex)
+            guard app == .claude || app == .codex else {
+                return .unsupported
+            }
+            if installed {
+                return .active
+            }
+            return isStubbed ? .stub : .off
         default:
-            return false
+            return .unsupported
         }
     }
 }
