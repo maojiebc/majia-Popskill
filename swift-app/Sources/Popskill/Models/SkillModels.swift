@@ -767,6 +767,13 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .nilIfEmpty
     }
+
+    func installedSizeBytes(in skills: [Skill]) -> UInt64? {
+        let total = matchingInstalledSkills(in: skills)
+            .compactMap(\.sizeBytes)
+            .reduce(UInt64(0), +)
+        return total > 0 ? total : nil
+    }
 }
 
 struct PackageComponentGroupSummary: Identifiable, Equatable {

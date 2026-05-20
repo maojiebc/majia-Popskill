@@ -453,6 +453,7 @@
 "matrix.machine.lastUsed" = "Last used";
 "matrix.machine.tokens" = "30d tokens";
 "matrix.machine.calls" = "30d calls";
+"matrix.machine.topComponent" = "Top component";
 "matrix.machine.size" = "Disk size";
 "matrix.source.repository" = "Repository";
 "matrix.source.directory" = "Directory";

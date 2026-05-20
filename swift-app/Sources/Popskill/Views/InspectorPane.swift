@@ -170,6 +170,7 @@ struct InspectorPane: View {
         case .overview:
             packageSummarySection(package)
             packageCoverageSection
+            packageMachineSection(package)
             packageActivationSection(package)
             packageComponentsSection(package)
         case .readme:
@@ -844,6 +845,60 @@ struct InspectorPane: View {
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func packageMachineSection(_ package: CapabilityPackage) -> some View {
+        let metrics = packageMachineMetrics(package)
+        if !metrics.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                SectionHeading(title: "matrix.inspector.section.machine", accent: .popSectionGreen)
+                LazyVGrid(columns: Self.machineMetricColumns, alignment: .leading, spacing: 8) {
+                    ForEach(metrics) { metric in
+                        machineMetricCard(metric)
+                    }
+                }
+            }
+        }
+    }
+
+    private func packageMachineMetrics(_ package: CapabilityPackage) -> [InspectorMachineMetric] {
+        var metrics: [InspectorMachineMetric] = []
+        let snapshot = package.usageSnapshot(using: store.usageSummary, skills: store.skills)
+
+        if let snapshot, snapshot.hasUsage {
+            metrics.append(InspectorMachineMetric(
+                id: "tokens",
+                title: localization.string("matrix.machine.tokens"),
+                value: UsageDisplayFormatter.compactTokens(snapshot.totalTokens),
+                tint: Color.accentColor
+            ))
+            metrics.append(InspectorMachineMetric(
+                id: "calls",
+                title: localization.string("matrix.machine.calls"),
+                value: UsageDisplayFormatter.compactCount(snapshot.usageEvents),
+                tint: Color.popLabel
+            ))
+            if let topComponent = snapshot.componentStats.first {
+                metrics.append(InspectorMachineMetric(
+                    id: "top-component",
+                    title: localization.string("matrix.machine.topComponent"),
+                    value: topComponent.componentName,
+                    tint: Color.popSectionGreen
+                ))
+            }
+        }
+
+        if let size = package.installedSizeBytes(in: store.skills) {
+            metrics.append(InspectorMachineMetric(
+                id: "size",
+                title: localization.string("matrix.machine.size"),
+                value: Self.formatBytes(size),
+                tint: Color.popSecondaryLabel
+            ))
+        }
+
+        return metrics
     }
 
     private func packageActivationSection(_ package: CapabilityPackage) -> some View {

@@ -453,6 +453,7 @@
 "matrix.machine.lastUsed" = "最近使用";
 "matrix.machine.tokens" = "近30天 tokens";
 "matrix.machine.calls" = "近30天调用";
+"matrix.machine.topComponent" = "最常用组件";
 "matrix.machine.size" = "磁盘占用";
 "matrix.source.repository" = "仓库";
 "matrix.source.directory" = "目录";

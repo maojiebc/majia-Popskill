@@ -1200,6 +1200,20 @@ struct SkillModelsTests {
     }
 
     @Test
+    func capabilityPackageInstalledSizeBytesAggregatesMatchedSkills() {
+        let package = self.package(components: [
+            component(id: "baoyu-comic", installed: true),
+            component(id: "baoyu-translate", installed: true)
+        ])
+        let comic = installedSkill(directory: "baoyu-comic", sizeBytes: 1_024)
+        let translate = installedSkill(directory: "baoyu-translate", sizeBytes: 2_048)
+        let unrelated = installedSkill(directory: "unrelated", sizeBytes: 8_192)
+
+        #expect(package.installedSizeBytes(in: [comic, translate, unrelated]) == 3_072)
+        #expect(package.installedSizeBytes(in: [installedSkill(directory: "baoyu-comic")]) == nil)
+    }
+
+    @Test
     func capabilityPackageUsageSnapshotPrefersRecentThirtyDayWindow() {
         let package = self.package(components: [component(id: "baoyu-comic", installed: true)])
         let skill = installedSkill(directory: "baoyu-comic")
@@ -1681,6 +1695,7 @@ struct SkillModelsTests {
         directory: String,
         installedAt: Int? = nil,
         updatedAt: Int? = nil,
+        sizeBytes: UInt64? = nil,
         apps: SkillApps = SkillApps(
             claude: true,
             codex: false,
@@ -1700,7 +1715,8 @@ struct SkillModelsTests {
             apps: apps,
             installedAt: installedAt,
             updatedAt: updatedAt,
-            contentHash: nil
+            contentHash: nil,
+            sizeBytes: sizeBytes
         )
     }
 
