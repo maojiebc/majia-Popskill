@@ -236,6 +236,7 @@ struct TranscriptUsageScanner {
                 skillID: attributionSkill,
                 sourcePlugin: attributionPlugin,
                 timestamp: timestamp,
+                dayStart: nil,
                 inputTokens: inputTokens,
                 outputTokens: outputTokens,
                 cacheCreationTokens: cacheCreationTokens,
@@ -245,11 +246,14 @@ struct TranscriptUsageScanner {
         }
 
         if timestamp.map({ $0 >= recentStart && $0 <= referenceDate }) == true {
-            recentSummary.usageEvents += 1
-            recentSummary.inputTokens += inputTokens
-            recentSummary.outputTokens += outputTokens
-            recentSummary.cacheCreationTokens += cacheCreationTokens
-            recentSummary.cacheReadTokens += cacheReadTokens
+            let dayStart = timestamp.map(normalizedDayStart) ?? normalizedDayStart(referenceDate)
+            recentSummary.addUsage(
+                inputTokens: inputTokens,
+                outputTokens: outputTokens,
+                cacheCreationTokens: cacheCreationTokens,
+                cacheReadTokens: cacheReadTokens,
+                dayStart: dayStart
+            )
             recordModelUsage(
                 model: model,
                 inputTokens: inputTokens,
@@ -264,6 +268,7 @@ struct TranscriptUsageScanner {
                     skillID: attributionSkill,
                     sourcePlugin: attributionPlugin,
                     timestamp: timestamp,
+                    dayStart: dayStart,
                     inputTokens: inputTokens,
                     outputTokens: outputTokens,
                     cacheCreationTokens: cacheCreationTokens,
@@ -302,6 +307,7 @@ struct TranscriptUsageScanner {
         skillID: String,
         sourcePlugin: String?,
         timestamp: Date?,
+        dayStart: Date?,
         inputTokens: Int64,
         outputTokens: Int64,
         cacheCreationTokens: Int64,
@@ -326,9 +332,14 @@ struct TranscriptUsageScanner {
             outputTokens: outputTokens,
             cacheCreationTokens: cacheCreationTokens,
             cacheReadTokens: cacheReadTokens,
-            timestamp: timestamp
+            timestamp: timestamp,
+            dayStart: dayStart
         )
         skillStats[skillID] = skillStat
+    }
+
+    private func normalizedDayStart(_ timestamp: Date) -> Date {
+        Self.utcCalendar.startOfDay(for: timestamp)
     }
 
     private func sortedModelStats(_ stats: [String: ModelUsageStat]) -> [ModelUsageStat] {
@@ -440,4 +451,9 @@ struct TranscriptUsageScanner {
     private static let readChunkSize = 64 * 1024
     private static let newlineData = Data([0x0A])
     private static let carriageReturnByte: UInt8 = 0x0D
+    private static let utcCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? TimeZone.current
+        return calendar
+    }()
 }

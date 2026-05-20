@@ -420,7 +420,8 @@ struct SkillModelsTests {
             cacheReadTokens: 0,
             lastUsedAt: Date(timeIntervalSince1970: 1_700_000_000)
         )
-        let recentStat = SkillUsageStat(
+        let recentDay = Date(timeIntervalSince1970: 1_799_971_200)
+        var recentStat = SkillUsageStat(
             skillID: "baoyu-comic",
             sourcePlugin: nil,
             usageEvents: 2,
@@ -430,6 +431,16 @@ struct SkillModelsTests {
             cacheReadTokens: 0,
             lastUsedAt: Date(timeIntervalSince1970: 1_800_000_000)
         )
+        recentStat.dailyStats = [
+            UsageBucketStat(
+                dayStart: recentDay,
+                usageEvents: 2,
+                inputTokens: 4,
+                outputTokens: 6,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0
+            )
+        ]
         var recentWindow = UsageWindowSummary(
             days: 30,
             startedAt: Date(timeIntervalSince1970: 1_799_000_000),
@@ -454,6 +465,8 @@ struct SkillModelsTests {
         #expect(snapshot?.usageEvents == 2)
         #expect(snapshot?.totalTokens == 10)
         #expect(snapshot?.lastUsedAt == recentStat.lastUsedAt)
+        #expect(snapshot?.dailyStats.map(\.dayStart) == [recentDay])
+        #expect(snapshot?.dailyStats.first?.usageEvents == 2)
     }
 
     @Test
@@ -1115,7 +1128,8 @@ struct SkillModelsTests {
             cacheReadTokens: 0,
             lastUsedAt: nil
         )
-        let recentStat = SkillUsageStat(
+        let recentDay = Date(timeIntervalSince1970: 1_799_971_200)
+        var recentStat = SkillUsageStat(
             skillID: "baoyu-comic",
             sourcePlugin: nil,
             usageEvents: 1,
@@ -1125,6 +1139,16 @@ struct SkillModelsTests {
             cacheReadTokens: 0,
             lastUsedAt: Date(timeIntervalSince1970: 1_800_000_000)
         )
+        recentStat.dailyStats = [
+            UsageBucketStat(
+                dayStart: recentDay,
+                usageEvents: 1,
+                inputTokens: 2,
+                outputTokens: 3,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0
+            )
+        ]
         var recentWindow = UsageWindowSummary(
             days: 30,
             startedAt: Date(timeIntervalSince1970: 1_799_000_000),
@@ -1149,6 +1173,8 @@ struct SkillModelsTests {
         #expect(snapshot?.usageEvents == 1)
         #expect(snapshot?.totalTokens == 5)
         #expect(snapshot?.componentStats.first?.componentID == "baoyu-comic")
+        #expect(snapshot?.dailyStats.map(\.dayStart) == [recentDay])
+        #expect(snapshot?.componentStats.first?.dailyStats.map(\.usageEvents) == [1])
     }
 
     @Test

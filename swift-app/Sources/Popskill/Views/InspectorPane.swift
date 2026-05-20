@@ -499,6 +499,9 @@ struct InspectorPane: View {
                             .font(.caption2)
                             .foregroundStyle(Color.popTertiaryLabel)
                     }
+                    if !snapshot.dailyStats.isEmpty {
+                        usageTrend(snapshot.dailyStats)
+                    }
                 } else {
                     Text(localization.string("matrix.skill.usage.empty"))
                         .font(.caption)
@@ -651,6 +654,9 @@ struct InspectorPane: View {
                             .font(.caption2)
                             .foregroundStyle(Color.popTertiaryLabel)
                     }
+                    if !snapshot.dailyStats.isEmpty {
+                        usageTrend(snapshot.dailyStats)
+                    }
                     if !snapshot.componentStats.isEmpty {
                         packageUsageBreakdown(snapshot.componentStats)
                     }
@@ -674,6 +680,79 @@ struct InspectorPane: View {
                     .controlSize(.mini)
                 }
             }
+        }
+    }
+
+    private func usageTrend(_ stats: [UsageBucketStat]) -> some View {
+        let buckets = usageTrendBuckets(stats, window: store.usageSummary?.recent30Days)
+        let peak = buckets.max { lhs, rhs in
+            if lhs.usageEvents == rhs.usageEvents {
+                return lhs.dayStart < rhs.dayStart
+            }
+            return lhs.usageEvents < rhs.usageEvents
+        }
+
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                LocalizedText("matrix.package.usage.trend")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Color.popSecondaryLabel)
+                Spacer(minLength: 8)
+                if let peak, peak.usageEvents > 0 {
+                    Text(localization.string(
+                        "matrix.package.usage.peak",
+                        UsageDisplayFormatter.compactCount(peak.usageEvents),
+                        Self.usageDayFormatter.string(from: peak.dayStart)
+                    ))
+                    .font(.caption2)
+                    .foregroundStyle(Color.popTertiaryLabel)
+                }
+            }
+
+            UsageTrendBars(buckets: buckets, tint: .accentColor)
+
+            if let first = buckets.first?.dayStart, let last = buckets.last?.dayStart {
+                HStack {
+                    Text(Self.usageDayFormatter.string(from: first))
+                    Spacer()
+                    Text(Self.usageDayFormatter.string(from: last))
+                }
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(Color.popTertiaryLabel)
+            }
+        }
+        .padding(9)
+        .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func usageTrendBuckets(_ stats: [UsageBucketStat], window: UsageWindowSummary?) -> [UsageBucketStat] {
+        let indexed = Dictionary(uniqueKeysWithValues: stats.map {
+            (Self.usageCalendar.startOfDay(for: $0.dayStart), $0)
+        })
+
+        guard let window else {
+            return stats.sorted { $0.dayStart < $1.dayStart }
+        }
+
+        let endDay = Self.usageCalendar.startOfDay(for: window.endedAt)
+        let startDay = Self.usageCalendar.date(
+            byAdding: .day,
+            value: -(max(1, window.days) - 1),
+            to: endDay
+        ) ?? endDay
+
+        return (0..<max(1, window.days)).compactMap { offset in
+            guard let day = Self.usageCalendar.date(byAdding: .day, value: offset, to: startDay) else {
+                return nil
+            }
+            return indexed[day] ?? UsageBucketStat(
+                dayStart: day,
+                usageEvents: 0,
+                inputTokens: 0,
+                outputTokens: 0,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0
+            )
         }
     }
 
@@ -1398,6 +1477,19 @@ struct InspectorPane: View {
         return formatter
     }()
 
+    private static let usageDayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M-d"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        return formatter
+    }()
+
+    private static let usageCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? TimeZone.current
+        return calendar
+    }()
+
     private static let actionGridColumns: [GridItem] = [
         GridItem(.adaptive(minimum: 132), spacing: 8, alignment: .leading)
     ]
@@ -1452,6 +1544,36 @@ private struct InspectorHeaderChip: Identifiable {
     let id: String
     let title: String
     let tint: Color
+}
+
+private struct UsageTrendBars: View {
+    let buckets: [UsageBucketStat]
+    let tint: Color
+
+    private var maxEvents: Int {
+        max(buckets.map(\.usageEvents).max() ?? 0, 1)
+    }
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 2) {
+            ForEach(buckets) { bucket in
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(bucket.usageEvents > 0 ? tint.opacity(0.72) : Color.popControlFill)
+                    .frame(height: barHeight(for: bucket))
+                    .frame(maxWidth: .infinity, alignment: .bottom)
+                    .help("\(bucket.usageEvents)")
+            }
+        }
+        .frame(height: 42, alignment: .bottom)
+    }
+
+    private func barHeight(for bucket: UsageBucketStat) -> CGFloat {
+        guard bucket.usageEvents > 0 else {
+            return 4
+        }
+        let ratio = CGFloat(bucket.usageEvents) / CGFloat(maxEvents)
+        return max(7, ratio * 42)
+    }
 }
 
 private enum InspectorTab: String, CaseIterable, Identifiable {

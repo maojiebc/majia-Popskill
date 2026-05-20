@@ -388,6 +388,8 @@
 "matrix.package.usage.calls" = "30d calls";
 "matrix.package.usage.window" = "Last %d days from local transcript attribution.";
 "matrix.package.usage.lastUsed" = "Last used %@";
+"matrix.package.usage.trend" = "30d call trend";
+"matrix.package.usage.peak" = "Peak %@ calls on %@";
 "matrix.package.usage.empty" = "Usage was scanned, but the %d local skills matched to this bundle have no attribution records yet.";
 "matrix.package.usage.notScanned" = "Transcript usage has not been scanned yet.";
 "matrix.package.usage.scanning" = "Scanning local transcripts…";

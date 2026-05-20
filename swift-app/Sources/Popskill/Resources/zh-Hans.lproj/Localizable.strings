@@ -388,6 +388,8 @@
 "matrix.package.usage.calls" = "近30天调用";
 "matrix.package.usage.window" = "最近 %d 天的本机 transcript 归因统计。";
 "matrix.package.usage.lastUsed" = "最近使用 %@";
+"matrix.package.usage.trend" = "近30天调用趋势";
+"matrix.package.usage.peak" = "峰值 %@ 次 · %@";
 "matrix.package.usage.empty" = "已扫描用量，但这个套装匹配到的 %d 个本地 skill 暂无归因记录。";
 "matrix.package.usage.notScanned" = "还没有扫描 transcript，用量聚合暂不可用。";
 "matrix.package.usage.scanning" = "正在扫描本机 transcript…";

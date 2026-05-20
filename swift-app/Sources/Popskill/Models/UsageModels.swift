@@ -43,6 +43,7 @@ struct UsageWindowSummary: Equatable {
     var attributedSkillUsageEvents = 0
     var modelStats: [ModelUsageStat] = []
     var skillStats: [SkillUsageStat] = []
+    var dailyStats: [UsageBucketStat] = []
 
     var totalTokens: Int64 {
         inputTokens + outputTokens + cacheCreationTokens + cacheReadTokens
@@ -50,6 +51,63 @@ struct UsageWindowSummary: Equatable {
 
     var unattributedUsageEvents: Int {
         max(0, usageEvents - attributedSkillUsageEvents)
+    }
+
+    mutating func addUsage(
+        inputTokens: Int64,
+        outputTokens: Int64,
+        cacheCreationTokens: Int64,
+        cacheReadTokens: Int64,
+        dayStart: Date
+    ) {
+        usageEvents += 1
+        self.inputTokens += inputTokens
+        self.outputTokens += outputTokens
+        self.cacheCreationTokens += cacheCreationTokens
+        self.cacheReadTokens += cacheReadTokens
+        Self.mergeDailyStat(
+            UsageBucketStat(
+                dayStart: dayStart,
+                usageEvents: 1,
+                inputTokens: inputTokens,
+                outputTokens: outputTokens,
+                cacheCreationTokens: cacheCreationTokens,
+                cacheReadTokens: cacheReadTokens
+            ),
+            into: &dailyStats
+        )
+    }
+
+    static func mergeDailyStat(_ stat: UsageBucketStat, into stats: inout [UsageBucketStat]) {
+        if let index = stats.firstIndex(where: { $0.dayStart == stat.dayStart }) {
+            stats[index].add(stat)
+        } else {
+            stats.append(stat)
+        }
+        stats.sort { $0.dayStart < $1.dayStart }
+    }
+}
+
+struct UsageBucketStat: Identifiable, Equatable {
+    var id: Date { dayStart }
+
+    let dayStart: Date
+    var usageEvents: Int
+    var inputTokens: Int64
+    var outputTokens: Int64
+    var cacheCreationTokens: Int64
+    var cacheReadTokens: Int64
+
+    var totalTokens: Int64 {
+        inputTokens + outputTokens + cacheCreationTokens + cacheReadTokens
+    }
+
+    mutating func add(_ stat: UsageBucketStat) {
+        usageEvents += stat.usageEvents
+        inputTokens += stat.inputTokens
+        outputTokens += stat.outputTokens
+        cacheCreationTokens += stat.cacheCreationTokens
+        cacheReadTokens += stat.cacheReadTokens
     }
 }
 
@@ -123,6 +181,7 @@ struct SkillUsageStat: Identifiable, Equatable {
     var cacheCreationTokens: Int64
     var cacheReadTokens: Int64
     var lastUsedAt: Date?
+    var dailyStats: [UsageBucketStat] = []
 
     var totalTokens: Int64 {
         inputTokens + outputTokens + cacheCreationTokens + cacheReadTokens
@@ -133,13 +192,28 @@ struct SkillUsageStat: Identifiable, Equatable {
         outputTokens: Int64,
         cacheCreationTokens: Int64,
         cacheReadTokens: Int64,
-        timestamp: Date?
+        timestamp: Date?,
+        dayStart: Date? = nil
     ) {
         usageEvents += 1
         self.inputTokens += inputTokens
         self.outputTokens += outputTokens
         self.cacheCreationTokens += cacheCreationTokens
         self.cacheReadTokens += cacheReadTokens
+
+        if let dayStart {
+            UsageWindowSummary.mergeDailyStat(
+                UsageBucketStat(
+                    dayStart: dayStart,
+                    usageEvents: 1,
+                    inputTokens: inputTokens,
+                    outputTokens: outputTokens,
+                    cacheCreationTokens: cacheCreationTokens,
+                    cacheReadTokens: cacheReadTokens
+                ),
+                into: &dailyStats
+            )
+        }
 
         guard let timestamp else {
             return
@@ -157,6 +231,7 @@ struct SkillUsageSnapshot: Equatable {
     var cacheCreationTokens: Int64 = 0
     var cacheReadTokens: Int64 = 0
     var lastUsedAt: Date?
+    var dailyStats: [UsageBucketStat] = []
 
     var totalTokens: Int64 {
         inputTokens + outputTokens + cacheCreationTokens + cacheReadTokens
@@ -172,12 +247,19 @@ struct SkillUsageSnapshot: Equatable {
         outputTokens += stat.outputTokens
         cacheCreationTokens += stat.cacheCreationTokens
         cacheReadTokens += stat.cacheReadTokens
+        mergeDailyStats(stat.dailyStats)
 
         guard let date = stat.lastUsedAt else {
             return
         }
         if lastUsedAt.map({ date > $0 }) ?? true {
             lastUsedAt = date
+        }
+    }
+
+    mutating func mergeDailyStats(_ stats: [UsageBucketStat]) {
+        for stat in stats {
+            UsageWindowSummary.mergeDailyStat(stat, into: &dailyStats)
         }
     }
 }
@@ -272,6 +354,7 @@ struct PackageUsageSnapshot: Equatable {
     var cacheReadTokens: Int64 = 0
     var lastUsedAt: Date?
     var componentStats: [PackageComponentUsageStat] = []
+    var dailyStats: [UsageBucketStat] = []
 
     var totalTokens: Int64 {
         inputTokens + outputTokens + cacheCreationTokens + cacheReadTokens
@@ -288,6 +371,9 @@ struct PackageUsageSnapshot: Equatable {
         outputTokens += stat.outputTokens
         cacheCreationTokens += stat.cacheCreationTokens
         cacheReadTokens += stat.cacheReadTokens
+        for bucket in stat.dailyStats {
+            UsageWindowSummary.mergeDailyStat(bucket, into: &dailyStats)
+        }
         upsertComponentStat(stat, component: component)
 
         guard let date = stat.lastUsedAt else {
@@ -326,6 +412,7 @@ struct PackageComponentUsageStat: Identifiable, Equatable {
     var cacheCreationTokens: Int64
     var cacheReadTokens: Int64
     var lastUsedAt: Date?
+    var dailyStats: [UsageBucketStat]
 
     var totalTokens: Int64 {
         inputTokens + outputTokens + cacheCreationTokens + cacheReadTokens
@@ -342,6 +429,7 @@ struct PackageComponentUsageStat: Identifiable, Equatable {
         cacheCreationTokens = stat.cacheCreationTokens
         cacheReadTokens = stat.cacheReadTokens
         lastUsedAt = stat.lastUsedAt
+        dailyStats = stat.dailyStats
     }
 
     mutating func add(_ stat: SkillUsageStat) {
@@ -350,6 +438,9 @@ struct PackageComponentUsageStat: Identifiable, Equatable {
         outputTokens += stat.outputTokens
         cacheCreationTokens += stat.cacheCreationTokens
         cacheReadTokens += stat.cacheReadTokens
+        for bucket in stat.dailyStats {
+            UsageWindowSummary.mergeDailyStat(bucket, into: &dailyStats)
+        }
 
         guard let date = stat.lastUsedAt else {
             return

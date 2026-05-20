@@ -126,6 +126,7 @@ struct TranscriptUsageScannerTests {
         let transcript = project.appendingPathComponent("session.jsonl")
         let lines = [
             #"{"type":"assistant","sessionId":"recent","timestamp":"2026-05-12T01:01:00.000Z","attributionSkill":"recent-skill","message":{"role":"assistant","model":"claude-opus","usage":{"input_tokens":10,"output_tokens":5}}}"#,
+            #"{"type":"assistant","sessionId":"recent","timestamp":"2026-05-13T02:01:00.000Z","attributionSkill":"recent-skill","message":{"role":"assistant","model":"claude-opus","usage":{"input_tokens":1,"output_tokens":1}}}"#,
             #"{"type":"assistant","sessionId":"old","timestamp":"2026-03-01T01:01:00.000Z","attributionSkill":"old-skill","message":{"role":"assistant","model":"claude-sonnet","usage":{"input_tokens":90,"output_tokens":10}}}"#
         ]
         try lines.joined(separator: "\n").write(to: transcript, atomically: true, encoding: .utf8)
@@ -133,14 +134,22 @@ struct TranscriptUsageScannerTests {
         let referenceDate = try #require(Self.iso8601.date(from: "2026-05-20T00:00:00Z"))
         let summary = try TranscriptUsageScanner(projectsURL: root, referenceDate: referenceDate).scan()
 
-        #expect(summary.usageEvents == 2)
-        #expect(summary.totalTokens == 115)
+        #expect(summary.usageEvents == 3)
+        #expect(summary.totalTokens == 117)
         #expect(summary.skillStats.map(\.skillID) == ["old-skill", "recent-skill"])
         #expect(summary.recent30Days?.days == 30)
-        #expect(summary.recent30Days?.usageEvents == 1)
-        #expect(summary.recent30Days?.totalTokens == 15)
+        #expect(summary.recent30Days?.usageEvents == 2)
+        #expect(summary.recent30Days?.totalTokens == 17)
         #expect(summary.recent30Days?.skillStats.map(\.skillID) == ["recent-skill"])
         #expect(summary.recent30Days?.modelStats.map(\.model) == ["claude-opus"])
+
+        let dailyStats = try #require(summary.recent30Days?.dailyStats)
+        #expect(dailyStats.map(\.usageEvents) == [1, 1])
+        #expect(dailyStats.map(\.totalTokens) == [15, 2])
+
+        let skillDailyStats = try #require(summary.recent30Days?.skillStats.first?.dailyStats)
+        #expect(skillDailyStats.map(\.usageEvents) == [1, 1])
+        #expect(skillDailyStats.map(\.totalTokens) == [15, 2])
     }
 
     @Test
