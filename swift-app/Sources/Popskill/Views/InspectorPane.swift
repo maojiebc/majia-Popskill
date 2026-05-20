@@ -11,52 +11,30 @@ struct InspectorPane: View {
     @Bindable var store: PopskillStore
     let capability: MatrixCapability
     @Environment(\.popskillLocalization) private var localization
+    @State private var selectedTab: InspectorTab = .overview
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
+                tabPicker
                 if let package = capability.package {
-                    packageSummarySection(package)
-                    if let skill = readmeSkill(for: package) {
-                        readmePreviewSection(
-                            skill: skill,
-                            context: localization.string("matrix.readme.showing", skill.name)
-                        )
-                    }
-                    packageActionsSection(package)
-                    packageCoverageSection
-                    packageUsageSection(package)
-                    packageComponentsSection(package)
-                    if !package.configSchema.isEmpty {
-                        packageConfigSection(package)
-                    }
-                    packageLocalPathsSection(package)
-                    packageVersionSection(package)
-                    packageSyncSection(package)
-                    packageMetadataSection(package)
+                    packageContent(package)
                 } else {
-                    if !primaryDescription.isEmpty {
-                        summarySection
-                    }
-                    if let skill = selectedSkill {
-                        readmePreviewSection(skill: skill)
-                        skillUsageSection(skill)
-                    }
-                    if let scenarios = capability.triggerScenarios, !scenarios.isEmpty {
-                        triggerSection(scenarios: scenarios)
-                    }
-                    appsSection
-                    if capability.kind == .skill {
-                        deploymentSection
-                    }
-                    metadataSection
+                    capabilityContent
                 }
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 18)
         }
         .background(Color.popCardBackground.opacity(0.72))
+        .onAppear {
+            normalizeSelectedTab()
+        }
+        .onChange(of: capability.id) { _, _ in
+            selectedTab = .overview
+            normalizeSelectedTab()
+        }
     }
 
     // MARK: Header
@@ -92,6 +70,103 @@ struct InspectorPane: View {
             .buttonStyle(.plain)
             .help(localization.string("matrix.inspector.close"))
         }
+    }
+
+    private var tabPicker: some View {
+        Picker("", selection: $selectedTab) {
+            ForEach(availableTabs) { tab in
+                Text(localization.string(tab.titleKey)).tag(tab)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .controlSize(.small)
+        .onChange(of: selectedTab) { _, _ in
+            normalizeSelectedTab()
+        }
+    }
+
+    @ViewBuilder
+    private func packageContent(_ package: CapabilityPackage) -> some View {
+        switch selectedTab {
+        case .overview:
+            packageSummarySection(package)
+            packageCoverageSection
+            packageComponentsSection(package)
+        case .readme:
+            if let skill = readmeSkill(for: package) {
+                readmePreviewSection(
+                    skill: skill,
+                    context: localization.string("matrix.readme.showing", skill.name)
+                )
+            }
+        case .usage:
+            packageUsageSection(package)
+        case .version:
+            if !package.configSchema.isEmpty {
+                packageConfigSection(package)
+            }
+            packageLocalPathsSection(package)
+            packageVersionSection(package)
+            packageMetadataSection(package)
+        case .sync:
+            packageActionsSection(package)
+            packageSyncSection(package)
+        case .metadata:
+            packageMetadataSection(package)
+        }
+    }
+
+    @ViewBuilder
+    private var capabilityContent: some View {
+        switch selectedTab {
+        case .overview:
+            if !primaryDescription.isEmpty {
+                summarySection
+            }
+            if let scenarios = capability.triggerScenarios, !scenarios.isEmpty {
+                triggerSection(scenarios: scenarios)
+            }
+            appsSection
+            if capability.kind == .skill {
+                deploymentSection
+            }
+        case .readme:
+            if let skill = selectedSkill {
+                readmePreviewSection(skill: skill)
+            }
+        case .usage:
+            if let skill = selectedSkill {
+                skillUsageSection(skill)
+            }
+        case .metadata:
+            metadataSection
+        case .version, .sync:
+            metadataSection
+        }
+    }
+
+    private var availableTabs: [InspectorTab] {
+        if let package = capability.package {
+            var tabs: [InspectorTab] = [.overview]
+            if readmeSkill(for: package) != nil {
+                tabs.append(.readme)
+            }
+            tabs.append(contentsOf: [.usage, .version, .sync])
+            return tabs
+        }
+
+        var tabs: [InspectorTab] = [.overview]
+        if selectedSkill != nil {
+            tabs.append(contentsOf: [.readme, .usage])
+        }
+        tabs.append(.metadata)
+        return tabs
+    }
+
+    private func normalizeSelectedTab() {
+        guard !availableTabs.contains(selectedTab) else { return }
+        selectedTab = .overview
     }
 
     private func packageActionsSection(_ package: CapabilityPackage) -> some View {
@@ -1106,6 +1181,28 @@ struct InspectorPane: View {
 private extension String {
     var abbreviatingWithTilde: String {
         (self as NSString).abbreviatingWithTildeInPath
+    }
+}
+
+private enum InspectorTab: String, CaseIterable, Identifiable {
+    case overview
+    case readme
+    case usage
+    case version
+    case sync
+    case metadata
+
+    var id: String { rawValue }
+
+    var titleKey: String {
+        switch self {
+        case .overview: "matrix.inspector.tab.overview"
+        case .readme: "matrix.inspector.tab.readme"
+        case .usage: "matrix.inspector.tab.usage"
+        case .version: "matrix.inspector.tab.version"
+        case .sync: "matrix.inspector.tab.sync"
+        case .metadata: "matrix.inspector.tab.metadata"
+        }
     }
 }
 

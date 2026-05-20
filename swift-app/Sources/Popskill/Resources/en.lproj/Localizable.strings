@@ -380,6 +380,12 @@
 "matrix.inspector.empty.title" = "Select a capability";
 "matrix.inspector.empty.body" = "Pick a row to see its description, deployment links, and source.";
 "matrix.inspector.close" = "Close inspector";
+"matrix.inspector.tab.overview" = "Overview";
+"matrix.inspector.tab.readme" = "README";
+"matrix.inspector.tab.usage" = "Usage";
+"matrix.inspector.tab.version" = "Version";
+"matrix.inspector.tab.sync" = "Sync";
+"matrix.inspector.tab.metadata" = "Metadata";
 
 "matrix.inspector.section.summary" = "SUMMARY";
 "matrix.inspector.section.actions" = "ACTIONS";

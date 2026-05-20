@@ -25,4 +25,13 @@ struct LocalizationTests {
 
         #expect(localization.string("library.summary", 2, 61, 24) == "2 个能力包 · 61 个 Skill · 24 个已启用")
     }
+
+    @Test
+    func inspectorTabLabelsAreLocalized() {
+        let localization = PopskillLocalization(language: .simplifiedChinese)
+
+        #expect(localization.string("matrix.inspector.tab.overview") == "概览")
+        #expect(localization.string("matrix.inspector.tab.usage") == "用量")
+        #expect(localization.string("matrix.inspector.tab.sync") == "同步")
+    }
 }

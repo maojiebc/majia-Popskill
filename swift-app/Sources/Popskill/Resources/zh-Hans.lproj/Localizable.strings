@@ -380,6 +380,12 @@
 "matrix.inspector.empty.title" = "选个能力看详情";
 "matrix.inspector.empty.body" = "点左边的能力,这里会显示描述、部署链接和来源。";
 "matrix.inspector.close" = "关闭面板";
+"matrix.inspector.tab.overview" = "概览";
+"matrix.inspector.tab.readme" = "README";
+"matrix.inspector.tab.usage" = "用量";
+"matrix.inspector.tab.version" = "版本";
+"matrix.inspector.tab.sync" = "同步";
+"matrix.inspector.tab.metadata" = "元信息";
 
 "matrix.inspector.section.summary" = "简介";
 "matrix.inspector.section.actions" = "操作";
