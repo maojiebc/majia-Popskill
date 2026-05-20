@@ -348,6 +348,8 @@
 
 "matrix.group.ungrouped" = "其他";
 
+"matrix.row.brokenLinkBadge" = "断链";
+"matrix.row.brokenLinkHelp" = "至少一个应用链接已断开";
 "matrix.row.updateBadge" = "可更新";
 "matrix.row.noSummary" = "暂无说明";
 "matrix.row.menu.inspect" = "打开 Inspector";

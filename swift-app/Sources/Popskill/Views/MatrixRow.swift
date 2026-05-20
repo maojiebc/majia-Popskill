@@ -83,6 +83,9 @@ struct MatrixRow: View {
                         .foregroundStyle(Color.popLabel)
                         .lineLimit(1)
                     kindBadge
+                    if capability.hasBrokenLinks(in: store.skills) {
+                        MatrixBrokenLinkBadge()
+                    }
                     if hasUpdate {
                         Text(localization.string("matrix.row.updateBadge"))
                             .font(.system(size: 9.5, weight: .semibold))

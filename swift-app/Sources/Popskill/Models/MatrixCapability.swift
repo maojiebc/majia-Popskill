@@ -141,6 +141,10 @@ struct MatrixCapability: Identifiable, Equatable {
         deployment?.hasBrokenLink == true
     }
 
+    func hasBrokenLinks(in skills: [Skill]) -> Bool {
+        hasBrokenLink || package?.hasBrokenLinks(in: skills) == true
+    }
+
     static func capabilityID(kind: CapabilityKind, rawID: String) -> String {
         "\(kind.rawValue):\(rawID)"
     }

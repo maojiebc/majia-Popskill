@@ -348,6 +348,8 @@
 
 "matrix.group.ungrouped" = "Other";
 
+"matrix.row.brokenLinkBadge" = "Broken";
+"matrix.row.brokenLinkHelp" = "One or more app links are broken";
 "matrix.row.updateBadge" = "UPDATE";
 "matrix.row.noSummary" = "No summary";
 "matrix.row.menu.inspect" = "Open Inspector";

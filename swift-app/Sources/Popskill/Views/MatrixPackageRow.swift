@@ -116,6 +116,9 @@ struct MatrixPackageRow: View {
                     if let package {
                         healthBadge(package.health)
                     }
+                    if capability.hasBrokenLinks(in: store.skills) {
+                        MatrixBrokenLinkBadge()
+                    }
                     if store.hasPendingUpdate(for: capability) {
                         Text(localization.string("matrix.row.updateBadge"))
                             .font(.system(size: 9.5, weight: .semibold))
@@ -371,6 +374,9 @@ private struct MatrixPackageComponentRow: View {
                         Text(localization.string(requirement.key))
                             .font(.system(size: 8.5, weight: .semibold))
                             .foregroundStyle(requirement.color)
+                    }
+                    if matchingSkill?.hasBrokenLink == true {
+                        MatrixBrokenLinkBadge()
                     }
                 }
                 Text(component.status)

@@ -192,6 +192,25 @@ struct SkillModelsTests {
     }
 
     @Test
+    func matrixCapabilityBrokenLinksAggregateDirectAndPackageLinks() {
+        let package = self.package(components: [component(id: "demo-skill", installed: true)])
+        let unrelatedPackage = self.package(components: [component(id: "healthy-skill", installed: true)])
+        var skill = installedSkill(directory: "demo-skill")
+
+        skill.deployment = SkillDeployment(
+            strategy: "symlink",
+            ssotPath: "/Users/example/.cc-switch/skills/demo-skill",
+            appLinks: [
+                "codex": AppLinkStatus(path: "/Users/example/.codex/skills/demo-skill", status: "broken")
+            ]
+        )
+
+        #expect(MatrixCapability.fromSkill(skill).hasBrokenLinks(in: []) == true)
+        #expect(MatrixCapability.fromPackage(package, skills: [skill]).hasBrokenLinks(in: [skill]) == true)
+        #expect(MatrixCapability.fromPackage(unrelatedPackage, skills: [skill]).hasBrokenLinks(in: [skill]) == false)
+    }
+
+    @Test
     func targetAppRegistryCoversCurrentSkillTargets() {
         #expect(TargetAppRegistry.all.map(\.app) == TargetApp.supported)
         #expect(TargetApp.quickToggleSupported == [.claude, .codex, .gemini])
