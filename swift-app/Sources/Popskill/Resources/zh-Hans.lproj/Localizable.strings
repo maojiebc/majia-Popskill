@@ -377,12 +377,25 @@
 "matrix.inspector.section.components" = "组件";
 "matrix.inspector.section.config" = "配置";
 "matrix.inspector.section.paths" = "本地路径";
+"matrix.inspector.section.version" = "版本";
+"matrix.inspector.section.sync" = "同步";
 "matrix.inspector.section.deployment" = "位置与链接";
 "matrix.inspector.section.meta" = "元信息";
 "matrix.package.action.rescanUsage" = "重新扫描用量";
 "matrix.package.action.checkUpdates" = "检查更新";
 "matrix.package.action.openSource" = "打开来源";
 "matrix.package.action.revealInFinder" = "定位本地 Skill";
+"matrix.package.version.strategy" = "策略";
+"matrix.package.version.branch" = "分支";
+"matrix.package.version.hash" = "Hash";
+"matrix.package.version.untracked" = "未跟踪";
+"matrix.package.sync.upToDate" = "已是最新";
+"matrix.package.sync.pending" = "%d 个待更新";
+"matrix.package.sync.checking" = "正在检查上游更新...";
+"matrix.package.sync.checked" = "已检查 %@";
+"matrix.package.sync.notChecked" = "尚未检查";
+"matrix.package.sync.clean" = "没有检测到套装组件更新。";
+"matrix.package.sync.more" = "还有 %d 个更新未展开。";
 
 "matrix.inspector.deployment.ssot" = "真身 (SSOT)";
 "matrix.inspector.deployment.strategy" = "部署策略 · %@";

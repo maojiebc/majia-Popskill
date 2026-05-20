@@ -377,12 +377,25 @@
 "matrix.inspector.section.components" = "COMPONENTS";
 "matrix.inspector.section.config" = "CONFIG";
 "matrix.inspector.section.paths" = "LOCAL PATHS";
+"matrix.inspector.section.version" = "VERSION";
+"matrix.inspector.section.sync" = "SYNC";
 "matrix.inspector.section.deployment" = "DEPLOYMENT";
 "matrix.inspector.section.meta" = "METADATA";
 "matrix.package.action.rescanUsage" = "Re-scan usage";
 "matrix.package.action.checkUpdates" = "Check updates";
 "matrix.package.action.openSource" = "Open source";
 "matrix.package.action.revealInFinder" = "Reveal local skill";
+"matrix.package.version.strategy" = "Strategy";
+"matrix.package.version.branch" = "Branch";
+"matrix.package.version.hash" = "Hash";
+"matrix.package.version.untracked" = "Untracked";
+"matrix.package.sync.upToDate" = "Up to date";
+"matrix.package.sync.pending" = "%d pending";
+"matrix.package.sync.checking" = "Checking upstream updates...";
+"matrix.package.sync.checked" = "Checked %@";
+"matrix.package.sync.notChecked" = "Not checked yet";
+"matrix.package.sync.clean" = "No package component updates detected.";
+"matrix.package.sync.more" = "%d more updates hidden.";
 
 "matrix.inspector.deployment.ssot" = "SSOT (real file)";
 "matrix.inspector.deployment.strategy" = "Strategy · %@";

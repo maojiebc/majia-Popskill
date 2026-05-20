@@ -25,6 +25,8 @@ struct InspectorPane: View {
                         packageConfigSection(package)
                     }
                     packageLocalPathsSection(package)
+                    packageVersionSection(package)
+                    packageSyncSection(package)
                     packageMetadataSection(package)
                 } else {
                     if !primaryDescription.isEmpty {
@@ -483,6 +485,106 @@ struct InspectorPane: View {
         .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
+    private func packageVersionSection(_ package: CapabilityPackage) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "matrix.inspector.section.version")
+            VStack(alignment: .leading, spacing: 6) {
+                metaRow(label: localization.string("matrix.package.version.strategy"), value: package.source.updateStrategy)
+                if let branch = package.source.repoBranch, !branch.isEmpty {
+                    metaRow(label: localization.string("matrix.package.version.branch"), value: branch)
+                }
+                if let installedAt = package.lifecycle?.installedAt, installedAt > 0 {
+                    metaRow(label: localization.string("matrix.inspector.meta.installedAt"), value: Self.formatTimestamp(installedAt))
+                }
+                if let updatedAt = package.lifecycle?.updatedAt, updatedAt > 0 {
+                    metaRow(label: localization.string("matrix.inspector.meta.updatedAt"), value: Self.formatTimestamp(updatedAt))
+                }
+                metaRow(
+                    label: localization.string("matrix.package.version.hash"),
+                    value: package.trackedContentHash.map(Self.shortHash) ?? localization.string("matrix.package.version.untracked")
+                )
+            }
+        }
+    }
+
+    private func packageSyncSection(_ package: CapabilityPackage) -> some View {
+        let pendingUpdates = packagePendingUpdates(package)
+        return VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "matrix.inspector.section.sync")
+            HStack(spacing: 8) {
+                syncStatusPill(for: pendingUpdates)
+                if store.updatesRefreshInFlight {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.mini)
+                        Text(localization.string("matrix.package.sync.checking"))
+                    }
+                    .font(.caption)
+                    .foregroundStyle(Color.popSecondaryLabel)
+                } else if let lastCheckedAt = store.lastUpdatesRefreshAt {
+                    Text(localization.string("matrix.package.sync.checked", Self.relativeFormatter.localizedString(for: lastCheckedAt, relativeTo: Date())))
+                        .font(.caption)
+                        .foregroundStyle(Color.popSecondaryLabel)
+                } else {
+                    Text(localization.string("matrix.package.sync.notChecked"))
+                        .font(.caption)
+                        .foregroundStyle(Color.popSecondaryLabel)
+                }
+            }
+
+            if pendingUpdates.isEmpty {
+                Text(localization.string("matrix.package.sync.clean"))
+                    .font(.caption)
+                    .foregroundStyle(Color.popTertiaryLabel)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(pendingUpdates.prefix(4)) { update in
+                        packageSyncUpdateRow(update)
+                    }
+                    if pendingUpdates.count > 4 {
+                        Text(localization.string("matrix.package.sync.more", pendingUpdates.count - 4))
+                            .font(.caption2)
+                            .foregroundStyle(Color.popTertiaryLabel)
+                    }
+                }
+            }
+        }
+    }
+
+    private func syncStatusPill(for pendingUpdates: [SkillUpdateInfo]) -> some View {
+        let hasPending = !pendingUpdates.isEmpty
+        let color = hasPending ? Color.accentColor : Color.popStatusOK
+        let title = hasPending
+            ? localization.string("matrix.package.sync.pending", pendingUpdates.count)
+            : localization.string("matrix.package.sync.upToDate")
+
+        return Text(title)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(color.opacity(0.10), in: Capsule())
+    }
+
+    private func packageSyncUpdateRow(_ update: SkillUpdateInfo) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "arrow.down.circle")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(update.name)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.popLabel)
+                Text(update.currentHash.map { "\(Self.shortHash($0)) -> \(Self.shortHash(update.remoteHash))" } ?? localization.string("updates.row.firstSync"))
+                    .font(.system(size: 10.5, design: .monospaced))
+                    .foregroundStyle(Color.popSecondaryLabel)
+            }
+            Spacer(minLength: 8)
+        }
+        .padding(8)
+        .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
     private func packageMetadataSection(_ package: CapabilityPackage) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeading(title: "matrix.inspector.section.meta")
@@ -745,6 +847,10 @@ struct InspectorPane: View {
         return String(format: "%.2fB", Double(value) / 1_000_000_000.0)
     }
 
+    private static func shortHash(_ hash: String) -> String {
+        String(hash.trimmingCharacters(in: .whitespacesAndNewlines).prefix(8))
+    }
+
     private static let decimalFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
@@ -766,6 +872,10 @@ struct InspectorPane: View {
         package.matchingInstalledSkills(in: store.skills)
             .first { FileManager.default.fileExists(atPath: $0.localStoreURL.path) }?
             .localStoreURL
+    }
+
+    private func packagePendingUpdates(_ package: CapabilityPackage) -> [SkillUpdateInfo] {
+        store.updates.filter { package.matchingSkillComponent(for: $0) != nil }
     }
 
     // MARK: Toggle helpers
