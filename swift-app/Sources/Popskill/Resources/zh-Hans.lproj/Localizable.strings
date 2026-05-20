@@ -359,6 +359,8 @@
 "matrix.package.usage.scanning" = "正在扫描本机 transcript…";
 "matrix.package.usage.topComponents" = "最常用组件";
 "matrix.package.usage.componentCalls" = "%d 次调用";
+"matrix.skill.usage.empty" = "已扫描用量，但这个 skill 暂无归因记录。";
+"matrix.skill.usage.notScanned" = "还没有扫描 transcript，用量暂不可用。";
 "matrix.package.paths.empty" = "没有匹配到本地 skill 真身。";
 "matrix.package.paths.more" = "还有 %d 个匹配 skill 未展开。";
 

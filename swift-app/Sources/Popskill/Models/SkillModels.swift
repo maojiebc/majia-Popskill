@@ -213,6 +213,18 @@ struct Skill: Identifiable, Codable, Equatable {
     private static func normalizedAttributionIdentifier(_ value: String) -> String {
         value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
+
+    func usageSnapshot(using summary: UsageSummary?) -> SkillUsageSnapshot? {
+        guard let summary else {
+            return nil
+        }
+
+        var snapshot = SkillUsageSnapshot()
+        for stat in summary.skillStats where matchesAttributionSkill(stat.skillID) {
+            snapshot.add(stat)
+        }
+        return snapshot
+    }
 }
 
 struct LocalAgent: Identifiable, Codable, Equatable {

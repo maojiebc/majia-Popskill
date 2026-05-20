@@ -40,6 +40,7 @@ struct InspectorPane: View {
                     }
                     if let skill = selectedSkill {
                         readmePreviewSection(skill: skill)
+                        skillUsageSection(skill)
                     }
                     if let scenarios = capability.triggerScenarios, !scenarios.isEmpty {
                         triggerSection(scenarios: scenarios)
@@ -297,6 +298,59 @@ struct InspectorPane: View {
             Text(localization.string("matrix.readme.loading"))
                 .font(.caption)
                 .foregroundStyle(Color.popSecondaryLabel)
+        }
+    }
+
+    private func skillUsageSection(_ skill: Skill) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "matrix.inspector.section.usage", accent: .accentColor)
+
+            if store.usageScanInFlight {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.mini)
+                    LocalizedText("matrix.package.usage.scanning")
+                        .font(.caption)
+                        .foregroundStyle(Color.popSecondaryLabel)
+                }
+            } else if let snapshot = skill.usageSnapshot(using: store.usageSummary) {
+                if snapshot.hasUsage {
+                    HStack(spacing: 10) {
+                        packageUsageMetric(
+                            titleKey: "matrix.package.usage.tokens",
+                            value: Self.formatTokens(snapshot.totalTokens),
+                            tint: .accentColor
+                        )
+                        packageUsageMetric(
+                            titleKey: "matrix.package.usage.calls",
+                            value: "\(snapshot.usageEvents)",
+                            tint: .popSectionGreen
+                        )
+                    }
+                    if let lastUsedAt = snapshot.lastUsedAt {
+                        Text(localization.string("matrix.package.usage.lastUsed", Self.relativeFormatter.localizedString(for: lastUsedAt, relativeTo: Date())))
+                            .font(.caption2)
+                            .foregroundStyle(Color.popTertiaryLabel)
+                    }
+                } else {
+                    Text(localization.string("matrix.skill.usage.empty"))
+                        .font(.caption)
+                        .foregroundStyle(Color.popSecondaryLabel)
+                }
+            } else {
+                HStack(alignment: .center, spacing: 8) {
+                    Text(localization.string("matrix.skill.usage.notScanned"))
+                        .font(.caption)
+                        .foregroundStyle(Color.popSecondaryLabel)
+                    Spacer(minLength: 8)
+                    Button {
+                        Task { await store.refreshUsageScan() }
+                    } label: {
+                        Label(localization.string("insights.refresh"), systemImage: "chart.bar.doc.horizontal")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                }
+            }
         }
     }
 

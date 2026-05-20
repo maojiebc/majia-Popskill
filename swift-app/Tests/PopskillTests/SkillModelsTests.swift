@@ -226,6 +226,62 @@ struct SkillModelsTests {
     }
 
     @Test
+    func installedSkillUsageSnapshotAggregatesAttributionStats() {
+        let skill = installedSkill(directory: "baoyu-comic")
+        let lastUsed = Date(timeIntervalSince1970: 1_800_000_000)
+        let summary = UsageSummary(
+            filesScanned: 2,
+            sessions: 2,
+            usageEvents: 3,
+            inputTokens: 100,
+            outputTokens: 80,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            attributedSkillUsageEvents: 2,
+            modelStats: [],
+            skillStats: [
+                SkillUsageStat(
+                    skillID: "baoyu-comic",
+                    sourcePlugin: nil,
+                    usageEvents: 2,
+                    inputTokens: 20,
+                    outputTokens: 30,
+                    cacheCreationTokens: 5,
+                    cacheReadTokens: 7,
+                    lastUsedAt: lastUsed
+                ),
+                SkillUsageStat(
+                    skillID: "jimliu/baoyu-skills:baoyu-comic",
+                    sourcePlugin: nil,
+                    usageEvents: 1,
+                    inputTokens: 10,
+                    outputTokens: 12,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 0,
+                    lastUsedAt: Date(timeIntervalSince1970: 1_700_000_000)
+                ),
+                SkillUsageStat(
+                    skillID: "unrelated",
+                    sourcePlugin: nil,
+                    usageEvents: 9,
+                    inputTokens: 999,
+                    outputTokens: 999,
+                    cacheCreationTokens: 999,
+                    cacheReadTokens: 999,
+                    lastUsedAt: nil
+                )
+            ],
+            recentSessions: []
+        )
+
+        let snapshot = skill.usageSnapshot(using: summary)
+
+        #expect(snapshot?.usageEvents == 3)
+        #expect(snapshot?.totalTokens == 84)
+        #expect(snapshot?.lastUsedAt == lastUsed)
+    }
+
+    @Test
     func installPlanDecodesPreviewPayload() throws {
         let data = """
         {
