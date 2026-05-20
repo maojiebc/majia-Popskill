@@ -48,14 +48,13 @@ struct InspectorPane: View {
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(Color.popLabel)
                         .lineLimit(2)
-                    if capability.kind != .skill {
-                        kindChip
-                    }
+                    kindChip
                 }
                 Text(capability.sourceLabel)
                     .font(.caption)
                     .foregroundStyle(Color.popSecondaryLabel)
                     .lineLimit(1)
+                headerChipStrip
             }
             Spacer()
             Button {
@@ -70,6 +69,85 @@ struct InspectorPane: View {
             .buttonStyle(.plain)
             .help(localization.string("matrix.inspector.close"))
         }
+    }
+
+    @ViewBuilder
+    private var headerChipStrip: some View {
+        let chips = inspectorHeaderChips()
+        if !chips.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 5) {
+                    ForEach(chips) { chip in
+                        Text(chip.title)
+                            .font(.system(size: 10.5, weight: .semibold))
+                            .foregroundStyle(chip.tint)
+                            .lineLimit(1)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2.5)
+                            .background(chip.tint.opacity(0.10), in: Capsule())
+                    }
+                }
+            }
+            .padding(.top, 3)
+        }
+    }
+
+    private func inspectorHeaderChips() -> [InspectorHeaderChip] {
+        if let package = capability.package {
+            return packageHeaderChips(package)
+        }
+        if let skill = selectedSkill {
+            return skillHeaderChips(skill)
+        }
+        return []
+    }
+
+    private func packageHeaderChips(_ package: CapabilityPackage) -> [InspectorHeaderChip] {
+        var chips: [InspectorHeaderChip] = []
+        for app in [TargetApp.claude, .codex] {
+            if let coverage = capability.appCoverage[app], coverage.total > 0 {
+                chips.append(InspectorHeaderChip(
+                    id: "\(app.rawValue)-coverage",
+                    title: "\(app.title) \(coverage.label)",
+                    tint: coverage.enabled > 0 ? app.inspectorAccentColor : Color.popTertiaryLabel
+                ))
+            }
+        }
+        if let snapshot = package.usageSnapshot(using: store.usageSummary, skills: store.skills), snapshot.hasUsage {
+            chips.append(contentsOf: usageHeaderChips(calls: snapshot.usageEvents, tokens: snapshot.totalTokens))
+        }
+        return chips
+    }
+
+    private func skillHeaderChips(_ skill: Skill) -> [InspectorHeaderChip] {
+        var chips = TargetApp.quickToggleSupported.map { app in
+            let isOn = skill.apps.isEnabled(app)
+            let stateKey = isOn ? "matrix.package.component.state.active" : "matrix.package.component.state.off"
+            return InspectorHeaderChip(
+                id: "\(app.rawValue)-state",
+                title: "\(app.title) \(localization.string(stateKey))",
+                tint: isOn ? app.inspectorAccentColor : Color.popTertiaryLabel
+            )
+        }
+        if let snapshot = skill.usageSnapshot(using: store.usageSummary), snapshot.hasUsage {
+            chips.append(contentsOf: usageHeaderChips(calls: snapshot.usageEvents, tokens: snapshot.totalTokens))
+        }
+        return chips
+    }
+
+    private func usageHeaderChips(calls: Int, tokens: Int64) -> [InspectorHeaderChip] {
+        [
+            InspectorHeaderChip(
+                id: "calls",
+                title: localization.string("matrix.inspector.header.calls", UsageDisplayFormatter.compactCount(calls)),
+                tint: Color.popSectionGreen
+            ),
+            InspectorHeaderChip(
+                id: "tokens",
+                title: localization.string("matrix.inspector.header.tokens", UsageDisplayFormatter.compactTokens(tokens)),
+                tint: Color.accentColor
+            )
+        ]
     }
 
     private var tabPicker: some View {
@@ -1357,6 +1435,12 @@ private extension String {
     var abbreviatingWithTilde: String {
         (self as NSString).abbreviatingWithTildeInPath
     }
+}
+
+private struct InspectorHeaderChip: Identifiable {
+    let id: String
+    let title: String
+    let tint: Color
 }
 
 private enum InspectorTab: String, CaseIterable, Identifiable {

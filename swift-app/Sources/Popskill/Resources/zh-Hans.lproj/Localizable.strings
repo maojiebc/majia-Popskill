@@ -394,6 +394,9 @@
 "matrix.inspector.tab.sync" = "同步";
 "matrix.inspector.tab.metadata" = "元信息";
 
+"matrix.inspector.header.calls" = "%@ 次调用";
+"matrix.inspector.header.tokens" = "%@ tokens";
+
 "matrix.inspector.section.summary" = "简介";
 "matrix.inspector.section.actions" = "操作";
 "matrix.inspector.section.readme" = "README";

@@ -394,6 +394,9 @@
 "matrix.inspector.tab.sync" = "Sync";
 "matrix.inspector.tab.metadata" = "Metadata";
 
+"matrix.inspector.header.calls" = "%@ calls";
+"matrix.inspector.header.tokens" = "%@ tokens";
+
 "matrix.inspector.section.summary" = "SUMMARY";
 "matrix.inspector.section.actions" = "ACTIONS";
 "matrix.inspector.section.readme" = "README";
