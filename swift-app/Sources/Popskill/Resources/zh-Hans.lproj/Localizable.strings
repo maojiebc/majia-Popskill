@@ -369,6 +369,7 @@
 "matrix.inspector.close" = "关闭面板";
 
 "matrix.inspector.section.summary" = "简介";
+"matrix.inspector.section.actions" = "操作";
 "matrix.inspector.section.triggers" = "触发场景";
 "matrix.inspector.section.apps" = "应用启用";
 "matrix.inspector.section.coverage" = "覆盖";
@@ -378,6 +379,10 @@
 "matrix.inspector.section.paths" = "本地路径";
 "matrix.inspector.section.deployment" = "位置与链接";
 "matrix.inspector.section.meta" = "元信息";
+"matrix.package.action.rescanUsage" = "重新扫描用量";
+"matrix.package.action.checkUpdates" = "检查更新";
+"matrix.package.action.openSource" = "打开来源";
+"matrix.package.action.revealInFinder" = "定位本地 Skill";
 
 "matrix.inspector.deployment.ssot" = "真身 (SSOT)";
 "matrix.inspector.deployment.strategy" = "部署策略 · %@";

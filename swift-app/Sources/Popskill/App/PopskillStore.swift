@@ -33,6 +33,7 @@ final class PopskillStore {
     var usageSummary: UsageSummary?
     var usageScanError: String?
     var usageScanInFlight: Bool = false
+    var updatesRefreshInFlight: Bool = false
 
     // Per-slice refresh timestamps. Views call refresh*(force: false) from
     // .task on first appearance; if a recent refresh exists we skip the
@@ -153,7 +154,11 @@ final class PopskillStore {
     }
 
     func refreshUpdates(force: Bool = false) async {
+        guard !updatesRefreshInFlight else { return }
         guard !shouldSkipRefresh(lastUpdatesRefreshAt, force: force) else { return }
+        updatesRefreshInFlight = true
+        defer { updatesRefreshInFlight = false }
+
         do {
             updates = try await client.checkUpdates()
             lastUpdatesRefreshAt = Date()

@@ -369,6 +369,7 @@
 "matrix.inspector.close" = "Close inspector";
 
 "matrix.inspector.section.summary" = "SUMMARY";
+"matrix.inspector.section.actions" = "ACTIONS";
 "matrix.inspector.section.triggers" = "TRIGGERS";
 "matrix.inspector.section.apps" = "APPS";
 "matrix.inspector.section.coverage" = "COVERAGE";
@@ -378,6 +379,10 @@
 "matrix.inspector.section.paths" = "LOCAL PATHS";
 "matrix.inspector.section.deployment" = "DEPLOYMENT";
 "matrix.inspector.section.meta" = "METADATA";
+"matrix.package.action.rescanUsage" = "Re-scan usage";
+"matrix.package.action.checkUpdates" = "Check updates";
+"matrix.package.action.openSource" = "Open source";
+"matrix.package.action.revealInFinder" = "Reveal local skill";
 
 "matrix.inspector.deployment.ssot" = "SSOT (real file)";
 "matrix.inspector.deployment.strategy" = "Strategy · %@";

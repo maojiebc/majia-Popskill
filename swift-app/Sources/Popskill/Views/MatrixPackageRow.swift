@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Composite package row in the capability matrix. The row is read-only at the
@@ -213,6 +214,13 @@ struct MatrixPackageRow: View {
                         systemImage: isCollapsed ? "chevron.down" : "chevron.up"
                     )
                 }
+                if let url = revealableSkillURL(for: package) {
+                    Button {
+                        NSWorkspace.shared.activateFileViewerSelecting([url])
+                    } label: {
+                        Label(localization.string("matrix.row.menu.revealInFinder"), systemImage: "folder")
+                    }
+                }
             }
         } label: {
             Image(systemName: "ellipsis")
@@ -224,6 +232,12 @@ struct MatrixPackageRow: View {
         .menuIndicator(.hidden)
         .fixedSize()
         .help(localization.string("matrix.row.menu.help"))
+    }
+
+    private func revealableSkillURL(for package: CapabilityPackage) -> URL? {
+        package.matchingInstalledSkills(in: store.skills)
+            .first { FileManager.default.fileExists(atPath: $0.localStoreURL.path) }?
+            .localStoreURL
     }
 
     private var rowBackground: some View {

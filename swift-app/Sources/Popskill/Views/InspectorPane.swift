@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Right-pane inspector for the matrix. Renders a single
@@ -16,6 +17,7 @@ struct InspectorPane: View {
                 header
                 if let package = capability.package {
                     packageSummarySection(package)
+                    packageActionsSection(package)
                     packageCoverageSection
                     packageUsageSection(package)
                     packageComponentsSection(package)
@@ -77,6 +79,99 @@ struct InspectorPane: View {
             .buttonStyle(.plain)
             .help(localization.string("matrix.inspector.close"))
         }
+    }
+
+    private func packageActionsSection(_ package: CapabilityPackage) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "matrix.inspector.section.actions", accent: .accentColor)
+            LazyVGrid(columns: Self.actionGridColumns, alignment: .leading, spacing: 8) {
+                packageActionButton(
+                    titleKey: "matrix.package.action.rescanUsage",
+                    systemImage: "chart.bar.doc.horizontal",
+                    inFlight: store.usageScanInFlight,
+                    disabled: store.usageScanInFlight
+                ) {
+                    Task { await store.refreshUsageScan() }
+                }
+
+                packageActionButton(
+                    titleKey: "matrix.package.action.checkUpdates",
+                    systemImage: "arrow.clockwise",
+                    inFlight: store.updatesRefreshInFlight,
+                    disabled: store.updatesRefreshInFlight
+                ) {
+                    Task { await store.refreshUpdates(force: true) }
+                }
+
+                sourceAction(for: package)
+
+                packageActionButton(
+                    titleKey: "matrix.package.action.revealInFinder",
+                    systemImage: "folder",
+                    disabled: firstRevealableSkillURL(for: package) == nil
+                ) {
+                    if let url = firstRevealableSkillURL(for: package) {
+                        NSWorkspace.shared.activateFileViewerSelecting([url])
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func sourceAction(for package: CapabilityPackage) -> some View {
+        if let url = package.sourceURL {
+            Link(destination: url) {
+                packageActionLabel(
+                    titleKey: "matrix.package.action.openSource",
+                    systemImage: "arrow.up.right.square"
+                )
+            }
+            .buttonStyle(.plain)
+        } else {
+            packageActionButton(
+                titleKey: "matrix.package.action.openSource",
+                systemImage: "arrow.up.right.square",
+                disabled: true
+            ) {}
+        }
+    }
+
+    private func packageActionButton(
+        titleKey: String,
+        systemImage: String,
+        inFlight: Bool = false,
+        disabled: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            packageActionLabel(titleKey: titleKey, systemImage: systemImage, inFlight: inFlight)
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .opacity(disabled ? 0.52 : 1)
+    }
+
+    private func packageActionLabel(titleKey: String, systemImage: String, inFlight: Bool = false) -> some View {
+        HStack(spacing: 7) {
+            if inFlight {
+                ProgressView()
+                    .controlSize(.mini)
+                    .frame(width: 14, height: 14)
+            } else {
+                Image(systemName: systemImage)
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(width: 14)
+            }
+            Text(localization.string(titleKey))
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+        }
+        .foregroundStyle(Color.popLabel)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     private var kindChip: some View {
@@ -371,6 +466,18 @@ struct InspectorPane: View {
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(Color.popStatusOK)
             }
+            if FileManager.default.fileExists(atPath: skill.localStoreURL.path) {
+                Button {
+                    NSWorkspace.shared.activateFileViewerSelecting([skill.localStoreURL])
+                } label: {
+                    Image(systemName: "folder")
+                        .font(.system(size: 11, weight: .semibold))
+                        .frame(width: 18, height: 18)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.popSecondaryLabel)
+                .help(localization.string("matrix.row.menu.revealInFinder"))
+            }
         }
         .padding(8)
         .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -650,6 +757,16 @@ struct InspectorPane: View {
         formatter.unitsStyle = .short
         return formatter
     }()
+
+    private static let actionGridColumns: [GridItem] = [
+        GridItem(.adaptive(minimum: 132), spacing: 8, alignment: .leading)
+    ]
+
+    private func firstRevealableSkillURL(for package: CapabilityPackage) -> URL? {
+        package.matchingInstalledSkills(in: store.skills)
+            .first { FileManager.default.fileExists(atPath: $0.localStoreURL.path) }?
+            .localStoreURL
+    }
 
     // MARK: Toggle helpers
 
