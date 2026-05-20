@@ -321,7 +321,14 @@
 "matrix.metric.stubs" = "占位 (stub)";
 "matrix.metric.brokenLinks" = "断链";
 "matrix.metric.tokenUsage" = "本月 token";
-"matrix.sort.typeDescending" = "排序：类型";
+"matrix.sort.typeDescending" = "排序：类型 ↓";
+"matrix.sort.typeAscending" = "排序：类型 ↑";
+"matrix.sort.nameAscending" = "排序：名称 A-Z";
+"matrix.sort.nameDescending" = "排序：名称 Z-A";
+"matrix.sort.callsDescending" = "排序：调用 ↓";
+"matrix.sort.tokensDescending" = "排序：Tokens ↓";
+"matrix.sort.recentDescending" = "排序：最近使用 ↓";
+"matrix.sort.help" = "选择矩阵行排序方式";
 "matrix.col.capability" = "能力";
 "matrix.col.source" = "来源";
 "matrix.col.version" = "版本";

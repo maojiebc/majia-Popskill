@@ -322,6 +322,13 @@
 "matrix.metric.brokenLinks" = "Broken links";
 "matrix.metric.tokenUsage" = "Month tokens";
 "matrix.sort.typeDescending" = "Sort: type";
+"matrix.sort.typeAscending" = "Sort: type reverse";
+"matrix.sort.nameAscending" = "Sort: name A-Z";
+"matrix.sort.nameDescending" = "Sort: name Z-A";
+"matrix.sort.callsDescending" = "Sort: calls";
+"matrix.sort.tokensDescending" = "Sort: tokens";
+"matrix.sort.recentDescending" = "Sort: recent";
+"matrix.sort.help" = "Choose matrix row sort";
 "matrix.col.capability" = "Capability";
 "matrix.col.source" = "Source";
 "matrix.col.version" = "Version";

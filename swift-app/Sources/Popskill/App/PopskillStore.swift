@@ -70,6 +70,7 @@ final class PopskillStore {
     // ===== Matrix state =====
     var matrixFilter: MatrixFilter = .all
     var matrixTypeFilter: MatrixTypeFilter = .allTypes
+    var matrixSortMode: MatrixSortMode = .typeDescending
     /// Repo groups the user has explicitly collapsed. Set is keyed by
     /// `MatrixGroup.id` (== "owner/name" or "ungrouped").
     var collapsedGroups: Set<String> = []

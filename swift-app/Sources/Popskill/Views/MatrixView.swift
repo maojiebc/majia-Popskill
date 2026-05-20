@@ -26,7 +26,7 @@ struct MatrixView: View {
             skills: store.skills,
             packages: store.compositePackages
         )
-        let sections = filteredSections(in: capabilities)
+        let sections = filteredSections(in: capabilities, usageIndex: usageIndex)
         VStack(spacing: 0) {
             header(capabilities: capabilities)
             Divider()
@@ -78,10 +78,7 @@ struct MatrixView: View {
             HStack(spacing: 10) {
                 filterChips
                 Spacer(minLength: 8)
-                Label(localization.string("matrix.sort.typeDescending"), systemImage: "arrow.down")
-                    .font(.system(size: 11.5, weight: .medium))
-                    .foregroundStyle(Color.popSecondaryLabel)
-                    .labelStyle(.titleAndIcon)
+                sortMenu
             }
         }
         .padding(.horizontal, 28)
@@ -254,6 +251,42 @@ struct MatrixView: View {
         .accessibilityAddTraits(active ? .isSelected : [])
     }
 
+    private var sortMenu: some View {
+        Menu {
+            ForEach(MatrixSortMode.allCases) { mode in
+                Button {
+                    store.matrixSortMode = mode
+                } label: {
+                    Label(
+                        localization.string(mode.titleKey),
+                        systemImage: store.matrixSortMode == mode ? "checkmark" : mode.symbolName
+                    )
+                }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: store.matrixSortMode.symbolName)
+                    .font(.system(size: 10.5, weight: .semibold))
+                Text(localization.string(store.matrixSortMode.titleKey))
+                    .font(.system(size: 11.5, weight: .medium))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(Color.popTertiaryLabel)
+            }
+            .foregroundStyle(Color.popSecondaryLabel)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.popControlFill, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .strokeBorder(Color.popControlStroke, lineWidth: 0.7)
+            )
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(localization.string("matrix.sort.help"))
+    }
+
     // MARK: Matrix table
 
     private func matrixTable(sections: [CapabilitySection], usageIndex: MatrixUsageIndex) -> some View {
@@ -370,7 +403,10 @@ struct MatrixView: View {
 
     // MARK: Filtering & grouping
 
-    private func filteredSections(in capabilities: [MatrixCapability]) -> [CapabilitySection] {
+    private func filteredSections(
+        in capabilities: [MatrixCapability],
+        usageIndex: MatrixUsageIndex
+    ) -> [CapabilitySection] {
         let q = SearchTextNormalizer.key(store.trimmedSearch)
         let visible = capabilities.filter { capability in
                 store.matrixFilter.includes(capability: capability, store: store)
@@ -385,7 +421,7 @@ struct MatrixView: View {
                             || SearchTextNormalizer.matches(component.location ?? "", query: q)
                     } == true)
         }
-        return SkillGrouping.sections(visible)
+        return SkillGrouping.sections(visible, sort: store.matrixSortMode, usageIndex: usageIndex)
     }
 
     private var noResultsState: some View {
