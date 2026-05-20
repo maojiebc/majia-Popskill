@@ -50,5 +50,8 @@ struct LocalizationTests {
         #expect(localization.string("matrix.inspector.section.machine") == "这台机器")
         #expect(localization.string("matrix.machine.firstActivated") == "首次激活")
         #expect(localization.string("matrix.machine.tokens") == "近30天 tokens")
+        #expect(localization.string("matrix.inspector.section.source") == "来源与路径")
+        #expect(localization.string("matrix.source.repository") == "仓库")
+        #expect(localization.string("matrix.source.localStore") == "本地真身")
     }
 }

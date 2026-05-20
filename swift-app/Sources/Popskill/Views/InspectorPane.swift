@@ -208,6 +208,7 @@ struct InspectorPane: View {
             if let skill = selectedSkill {
                 skillActionsSection(skill)
                 skillMachineSection(skill)
+                skillSourceSection(skill)
             }
             if let scenarios = capability.triggerScenarios, !scenarios.isEmpty {
                 triggerSection(scenarios: scenarios)
@@ -437,6 +438,80 @@ struct InspectorPane: View {
         .padding(9)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(metric.tint.opacity(0.07), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func skillSourceSection(_ skill: Skill) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "matrix.inspector.section.source", accent: .popSectionPurple)
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(skillSourceFacts(skill)) { fact in
+                    sourceFactRow(fact)
+                }
+            }
+        }
+    }
+
+    private func skillSourceFacts(_ skill: Skill) -> [InspectorSourceFact] {
+        var facts: [InspectorSourceFact] = [
+            InspectorSourceFact(
+                id: "repository",
+                title: localization.string("matrix.source.repository"),
+                value: skill.sourceLabel,
+                icon: "chevron.left.forwardslash.chevron.right"
+            ),
+            InspectorSourceFact(
+                id: "directory",
+                title: localization.string("matrix.source.directory"),
+                value: skill.directory,
+                icon: "folder"
+            ),
+            InspectorSourceFact(
+                id: "local-store",
+                title: localization.string("matrix.source.localStore"),
+                value: skill.localStoreURL.path.abbreviatingWithTilde,
+                icon: "externaldrive"
+            )
+        ]
+        if let sourceType = skill.sourceType, !sourceType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            facts.append(InspectorSourceFact(
+                id: "source-type",
+                title: localization.string("matrix.source.type"),
+                value: sourceType,
+                icon: "tag"
+            ))
+        }
+        if let markdownURL = skill.markdownURL {
+            facts.append(InspectorSourceFact(
+                id: "readme",
+                title: localization.string("matrix.source.readme"),
+                value: markdownURL.path.abbreviatingWithTilde,
+                icon: "doc.text"
+            ))
+        }
+        return facts
+    }
+
+    private func sourceFactRow(_ fact: InspectorSourceFact) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: fact.icon)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.popSecondaryLabel)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(fact.title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Color.popSecondaryLabel)
+                Text(fact.value)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(Color.popLabel)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+            }
+            Spacer(minLength: 8)
+        }
+        .padding(8)
+        .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     @ViewBuilder
@@ -1867,6 +1942,13 @@ private struct InspectorMachineMetric: Identifiable {
     let title: String
     let value: String
     let tint: Color
+}
+
+private struct InspectorSourceFact: Identifiable {
+    let id: String
+    let title: String
+    let value: String
+    let icon: String
 }
 
 private struct UsageTrendBars: View {

@@ -432,6 +432,7 @@
 "matrix.inspector.section.bundle" = "BUNDLE";
 "matrix.inspector.section.activation" = "ACTIVATION";
 "matrix.inspector.section.machine" = "THIS MACHINE";
+"matrix.inspector.section.source" = "SOURCE & PATHS";
 "matrix.inspector.section.config" = "CONFIG";
 "matrix.inspector.section.paths" = "LOCAL PATHS";
 "matrix.inspector.section.version" = "VERSION";
@@ -453,6 +454,11 @@
 "matrix.machine.tokens" = "30d tokens";
 "matrix.machine.calls" = "30d calls";
 "matrix.machine.size" = "Disk size";
+"matrix.source.repository" = "Repository";
+"matrix.source.directory" = "Directory";
+"matrix.source.localStore" = "Local store";
+"matrix.source.type" = "Source type";
+"matrix.source.readme" = "SKILL.md";
 "matrix.skill.action.openReadme" = "Edit prompt";
 "matrix.skill.action.checkUpdates" = "Check updates";
 "matrix.skill.action.openSource" = "Open source";

@@ -432,6 +432,7 @@
 "matrix.inspector.section.bundle" = "所属套装";
 "matrix.inspector.section.activation" = "批量启用";
 "matrix.inspector.section.machine" = "这台机器";
+"matrix.inspector.section.source" = "来源与路径";
 "matrix.inspector.section.config" = "配置";
 "matrix.inspector.section.paths" = "本地路径";
 "matrix.inspector.section.version" = "版本";
@@ -453,6 +454,11 @@
 "matrix.machine.tokens" = "近30天 tokens";
 "matrix.machine.calls" = "近30天调用";
 "matrix.machine.size" = "磁盘占用";
+"matrix.source.repository" = "仓库";
+"matrix.source.directory" = "目录";
+"matrix.source.localStore" = "本地真身";
+"matrix.source.type" = "来源类型";
+"matrix.source.readme" = "SKILL.md";
 "matrix.skill.action.openReadme" = "编辑 prompt";
 "matrix.skill.action.checkUpdates" = "检查更新";
 "matrix.skill.action.openSource" = "打开来源";
