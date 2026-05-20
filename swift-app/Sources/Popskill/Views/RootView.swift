@@ -8,6 +8,11 @@ import SwiftUI
 struct RootView: View {
     @State private var store = PopskillStore()
     @Environment(\.popskillLocalization) private var localization
+    private static let sidebarRelativeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter
+    }()
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -70,6 +75,7 @@ struct RootView: View {
             Section {
                 row(.matrix)
                 matrixShortcutRows
+                sidebarSyncStatus
             } header: { sectionHeader(.control) }
 
             Section {
@@ -176,6 +182,72 @@ struct RootView: View {
             .padding(.bottom, 4)
             .listRowInsets(EdgeInsets(top: 2, leading: 18, bottom: 6, trailing: 12))
         }
+    }
+
+    private var sidebarSyncStatus: some View {
+        let provider = SyncProvider(rawValue: store.lastSyncProvider) ?? .git
+        let statusTint = provider.actionable ? Color.accentColor : Color.popStatusWarning
+        return Button {
+            store.showSettings()
+        } label: {
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(spacing: 6) {
+                    Text(localization.string("sidebar.sync"))
+                        .font(.system(size: 10.5, weight: .semibold))
+                        .foregroundStyle(Color.popTertiaryLabel)
+                        .textCase(.uppercase)
+                        .tracking(0.4)
+                    Spacer(minLength: 8)
+                    Label(localization.string("sidebar.sync.settings"), systemImage: "gearshape")
+                        .font(.system(size: 10.5, weight: .medium))
+                        .labelStyle(.titleAndIcon)
+                        .foregroundStyle(Color.popSecondaryLabel)
+                }
+                HStack(spacing: 8) {
+                    Image(systemName: provider.symbol)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(statusTint)
+                        .frame(width: 16)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(localization.string(provider.titleKey))
+                            .font(.system(size: 12.2, weight: .medium))
+                            .foregroundStyle(Color.popSidebarTitle)
+                            .lineLimit(1)
+                        Text(syncStatusSubtitle(provider: provider))
+                            .font(.system(size: 10.5))
+                            .foregroundStyle(Color.popSecondaryLabel)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 8)
+                    Circle()
+                        .fill(statusTint)
+                        .frame(width: 7, height: 7)
+                        .accessibilityHidden(true)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 9)
+            .background(Color.popControlFill.opacity(0.62), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(Color.popControlStroke.opacity(0.75), lineWidth: 0.7)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .help(localization.string("sidebar.sync.openSettings"))
+        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 6, trailing: 12))
+    }
+
+    private func syncStatusSubtitle(provider: SyncProvider) -> String {
+        if !provider.actionable {
+            return localization.string("settings.sync.soon")
+        }
+        guard let lastSyncAt = store.lastSyncAt else {
+            return localization.string("sidebar.sync.never")
+        }
+        let relative = Self.sidebarRelativeFormatter.localizedString(for: lastSyncAt, relativeTo: Date())
+        return localization.string("sidebar.sync.last", relative)
     }
 
     private func shortcutHeader(_ key: String) -> some View {

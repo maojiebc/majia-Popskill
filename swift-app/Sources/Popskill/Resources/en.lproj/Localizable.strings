@@ -306,6 +306,11 @@
 "sidebar.section.maintenance" = "MAINTENANCE";
 "sidebar.matrixFilters" = "Filters";
 "sidebar.matrixTypes" = "Types";
+"sidebar.sync" = "Sync";
+"sidebar.sync.settings" = "Settings";
+"sidebar.sync.openSettings" = "Open sync settings";
+"sidebar.sync.never" = "Not synced yet";
+"sidebar.sync.last" = "Last %@";
 
 // S3 新增 — Matrix + Inspector
 "matrix.subtitle" = "%d bundles · %d capabilities · %d active toggles";

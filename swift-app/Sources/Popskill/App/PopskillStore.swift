@@ -258,6 +258,10 @@ final class PopskillStore {
         }
     }
 
+    func showSettings() {
+        currentSelection = .settings
+    }
+
     func matrixFilterCount(_ filter: MatrixFilter) -> Int {
         capabilities.filter { filter.includes(capability: $0, store: self) }.count
     }

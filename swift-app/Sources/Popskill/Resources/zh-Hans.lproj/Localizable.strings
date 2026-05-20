@@ -306,6 +306,11 @@
 "sidebar.section.maintenance" = "维护";
 "sidebar.matrixFilters" = "筛选";
 "sidebar.matrixTypes" = "类型";
+"sidebar.sync" = "同步";
+"sidebar.sync.settings" = "设置";
+"sidebar.sync.openSettings" = "打开同步设置";
+"sidebar.sync.never" = "尚未同步";
+"sidebar.sync.last" = "上次 %@";
 
 // S3 新增 — 矩阵主视图 + Inspector
 "matrix.subtitle" = "%d 个套装 · %d 项能力 · %d 个已启用开关";

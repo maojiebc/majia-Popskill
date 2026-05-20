@@ -63,6 +63,20 @@ struct PopskillStoreTests {
     }
 
     @Test
+    func showSettingsSelectsSettingsWithoutChangingMatrixFilters() {
+        let store = PopskillStore()
+        store.currentSelection = .matrix
+        store.matrixFilter = .brokenLinks
+        store.matrixTypeFilter = .bundle
+
+        store.showSettings()
+
+        #expect(store.currentSelection == .settings)
+        #expect(store.matrixFilter == .brokenLinks)
+        #expect(store.matrixTypeFilter == .bundle)
+    }
+
+    @Test
     func matrixShortcutCountsUseCurrentCapabilities() {
         let store = PopskillStore()
         var claudeOnly = skillFixture(
