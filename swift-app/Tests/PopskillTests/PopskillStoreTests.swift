@@ -1,4 +1,5 @@
 @testable import Popskill
+import Foundation
 import Testing
 
 @MainActor
@@ -105,5 +106,80 @@ struct PopskillStoreTests {
         #expect(store.bundleCount == 1)
         #expect(store.capabilities.map(\.kind) == [.bundle, .skill])
         #expect(store.capabilities.first?.appCoverage[.claude]?.label == "1/1")
+    }
+
+    @Test
+    func bootstrapLoadsPersistedStubsFromSidecar() async throws {
+        let client = try fakeClient(stubbedAt: 123)
+        let store = PopskillStore(client: client)
+
+        await store.bootstrap()
+
+        #expect(store.stubs.map(\.id) == ["demo-stub"])
+        #expect(store.stubs.first?.backupId == "backup-demo-stub")
+        #expect(store.errorMessage == nil)
+    }
+
+    @Test
+    func upsertStubReplacesExistingSkillAndSortsNewestFirst() {
+        let store = PopskillStore()
+
+        store.upsertStub(stubFixture(id: "older", stubbedAt: 10))
+        store.upsertStub(stubFixture(id: "newer", stubbedAt: 30))
+        store.upsertStub(stubFixture(id: "older", stubbedAt: 40))
+
+        #expect(store.stubs.map(\.id) == ["older", "newer"])
+        #expect(store.stubs.map(\.stubbedAt) == [40, 30])
+    }
+
+    private func fakeClient(stubbedAt: Int) throws -> SkillCLIClient {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PopskillStoreTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let executable = root.appendingPathComponent("fake-skill-cli")
+        let script = """
+        #!/bin/sh
+        case "$1" in
+          list|repo-list|agent-list|package-list)
+            printf '{"ok":true,"data":[]}'
+            ;;
+          stub-list)
+            cat <<'JSON'
+        {"ok":true,"data":[{"skill":{"id":"demo-stub","name":"Demo Stub","description":"Persisted stub","directory":"demo-stub","repo_owner":null,"repo_name":null,"readme_url":null,"apps":{"claude":false,"codex":false,"gemini":false,"opencode":false,"hermes":false},"installed_at":null,"updated_at":null,"content_hash":null},"backup_id":"backup-demo-stub","backup_path":"/tmp/backup-demo-stub","stubbed_at":\(stubbedAt)}]}
+        JSON
+            ;;
+          *)
+            printf '{"ok":false,"error":{"code":"UNKNOWN","message":"unexpected command"}}'
+            exit 1
+            ;;
+        esac
+        """
+        try script.write(to: executable, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: NSNumber(value: Int16(0o755))],
+            ofItemAtPath: executable.path
+        )
+        return SkillCLIClient(executableURL: executable)
+    }
+
+    private func stubFixture(id: String, stubbedAt: Int) -> StubbedSkill {
+        StubbedSkill(
+            skill: Skill(
+                id: id,
+                name: id,
+                description: "Stub fixture",
+                directory: id,
+                repoOwner: nil,
+                repoName: nil,
+                readmeUrl: nil,
+                apps: SkillApps(claude: false, codex: false, gemini: false, opencode: false, hermes: false),
+                installedAt: nil,
+                updatedAt: nil,
+                contentHash: nil
+            ),
+            backupId: "backup-\(id)",
+            backupPath: "/tmp/backup-\(id)",
+            stubbedAt: stubbedAt
+        )
     }
 }

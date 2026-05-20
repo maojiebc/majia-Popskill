@@ -86,14 +86,16 @@ final class PopskillStore {
     var errorMessage: String?
 
     // ===== Services =====
-    let client = SkillCLIClient()
+    let client: SkillCLIClient
 
     // Per-skill toggle / uninstall in-flight tracking so the matrix can dim
     // controls during pending IO.
     var pendingToggles: Set<String> = []
     var pendingUninstalls: Set<String> = []
 
-    init() {}
+    init(client: SkillCLIClient = SkillCLIClient()) {
+        self.client = client
+    }
 
     // ===== Bootstrap =====
 
@@ -110,6 +112,7 @@ final class PopskillStore {
         async let sourcesTask = client.listRepositories()
         async let agentsTask = client.listAgents()
         async let packagesTask = loadPackagesBestEffort()
+        async let stubsTask = loadStubsBestEffort()
 
         do {
             let now = Date()
@@ -117,6 +120,7 @@ final class PopskillStore {
             self.sources = try await sourcesTask
             self.localAgents = try await agentsTask
             self.packages = await packagesTask
+            self.stubs = await stubsTask
             self.lastBootstrapAt = now
             // Bootstrap counts as a fresh sources fetch — secondary views
             // that .task into refreshSources won't double-pull immediately.
@@ -129,6 +133,14 @@ final class PopskillStore {
     private func loadPackagesBestEffort() async -> [CapabilityPackage] {
         do {
             return try await client.listPackages()
+        } catch {
+            return []
+        }
+    }
+
+    private func loadStubsBestEffort() async -> [StubbedSkill] {
+        do {
+            return try await client.listStubs()
         } catch {
             return []
         }
@@ -176,6 +188,20 @@ final class PopskillStore {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func refreshStubs() async {
+        do {
+            stubs = try await client.listStubs()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func upsertStub(_ stub: StubbedSkill) {
+        stubs.removeAll { $0.skill.id == stub.skill.id }
+        stubs.append(stub)
+        stubs.sort { $0.stubbedAt > $1.stubbedAt }
     }
 
     private func shouldSkipRefresh(_ lastRefresh: Date?, force: Bool) -> Bool {

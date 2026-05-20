@@ -144,7 +144,7 @@ struct IdleView: View {
 
         do {
             let stub = try await store.client.stub(skillID: skill.id)
-            store.stubs.append(stub)
+            store.upsertStub(stub)
             store.skills.removeAll { $0.id == skill.id }
         } catch {
             store.errorMessage = error.localizedDescription
