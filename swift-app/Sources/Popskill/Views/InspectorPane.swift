@@ -1205,6 +1205,7 @@ struct InspectorPane: View {
         usageStat: PackageComponentUsageStat?
     ) -> some View {
         let matchedSkill = package.matchingInstalledSkill(for: component, in: store.skills)
+        let versionLabel = package.componentVersionLabel(for: component, in: store.skills)
 
         return HStack(alignment: .top, spacing: 8) {
             Image(systemName: component.inspectorKindSymbol)
@@ -1243,6 +1244,9 @@ struct InspectorPane: View {
                     Text(component.status)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(component.installed ? Color.popStatusOK : Color.popStatusWarning)
+                    Text(versionLabel ?? "—")
+                        .font(.caption2.monospacedDigit().weight(.medium))
+                        .foregroundStyle(versionLabel == nil ? Color.popTertiaryLabel : Color.accentColor)
                     Text(localization.string(
                         "matrix.package.component.calls",
                         usageStat.map { UsageDisplayFormatter.compactCount($0.usageEvents) } ?? "—"
@@ -1409,7 +1413,53 @@ struct InspectorPane: View {
                     value: package.trackedContentHash.map(Self.shortHash) ?? localization.string("matrix.package.version.untracked")
                 )
             }
+            packageComponentVersionsSection(package)
         }
+    }
+
+    @ViewBuilder
+    private func packageComponentVersionsSection(_ package: CapabilityPackage) -> some View {
+        let summaries = package.componentVersionSummaries(in: store.skills)
+        if !summaries.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                LocalizedText("matrix.package.version.components")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Color.popSecondaryLabel)
+                ForEach(summaries.prefix(8)) { summary in
+                    packageComponentVersionRow(summary)
+                }
+                if summaries.count > 8 {
+                    Text(localization.string("matrix.package.paths.more", summaries.count - 8))
+                        .font(.caption2)
+                        .foregroundStyle(Color.popTertiaryLabel)
+                }
+            }
+            .padding(.top, 4)
+        }
+    }
+
+    private func packageComponentVersionRow(_ summary: PackageComponentVersionSummary) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: summary.kind.usageKindSymbol)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(summary.versionLabel == nil ? Color.popTertiaryLabel : Color.popSecondaryLabel)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(summary.name)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.popLabel)
+                    .lineLimit(1)
+                Text(summary.status)
+                    .font(.caption2)
+                    .foregroundStyle(Color.popSecondaryLabel)
+            }
+            Spacer(minLength: 8)
+            Text(summary.versionLabel ?? localization.string("matrix.package.version.untracked"))
+                .font(.caption2.monospacedDigit().weight(.semibold))
+                .foregroundStyle(summary.versionLabel == nil ? Color.popTertiaryLabel : Color.accentColor)
+        }
+        .padding(8)
+        .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     private func skillVersionSection(_ skill: Skill) -> some View {

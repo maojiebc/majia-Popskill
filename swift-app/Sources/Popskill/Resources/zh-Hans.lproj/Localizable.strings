@@ -473,6 +473,7 @@
 "matrix.package.version.branch" = "分支";
 "matrix.package.version.hash" = "Hash";
 "matrix.package.version.untracked" = "未跟踪";
+"matrix.package.version.components" = "组件版本";
 "matrix.skill.manifest.version" = "版本";
 "matrix.skill.manifest.author" = "作者";
 "matrix.skill.manifest.license" = "License";

@@ -473,6 +473,7 @@
 "matrix.package.version.branch" = "Branch";
 "matrix.package.version.hash" = "Hash";
 "matrix.package.version.untracked" = "Untracked";
+"matrix.package.version.components" = "Component versions";
 "matrix.skill.manifest.version" = "Version";
 "matrix.skill.manifest.author" = "Author";
 "matrix.skill.manifest.license" = "License";

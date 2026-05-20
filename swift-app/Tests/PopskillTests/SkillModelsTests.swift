@@ -1271,6 +1271,33 @@ struct SkillModelsTests {
     }
 
     @Test
+    func capabilityPackageComponentVersionSummariesPreferSemanticVersionThenHash() {
+        let package = self.package(components: [
+            component(id: "versioned-skill", installed: true),
+            component(id: "hashed-skill", installed: true),
+            component(id: "missing-skill", installed: false)
+        ])
+        let versioned = installedSkill(
+            directory: "versioned-skill",
+            contentHash: "abcdef123456",
+            manifest: SkillManifest(version: "2.4.1")
+        )
+        let hashed = installedSkill(
+            directory: "hashed-skill",
+            updatedAt: 1_700_000_000,
+            contentHash: "1234567890"
+        )
+
+        let summaries = package.componentVersionSummaries(in: [versioned, hashed])
+
+        #expect(summaries.map(\.name) == ["versioned-skill", "hashed-skill", "missing-skill"])
+        #expect(summaries[0].versionLabel == "v2.4.1")
+        #expect(summaries[1].versionLabel == "1234567")
+        #expect(summaries[2].versionLabel == nil)
+        #expect(package.componentVersionLabel(for: package.components.skills[0], in: [versioned]) == "v2.4.1")
+    }
+
+    @Test
     func capabilityPackageUsageSnapshotPrefersRecentThirtyDayWindow() {
         let package = self.package(components: [component(id: "baoyu-comic", installed: true)])
         let skill = installedSkill(directory: "baoyu-comic")
@@ -1752,7 +1779,9 @@ struct SkillModelsTests {
         directory: String,
         installedAt: Int? = nil,
         updatedAt: Int? = nil,
+        contentHash: String? = nil,
         sizeBytes: UInt64? = nil,
+        manifest: SkillManifest? = nil,
         apps: SkillApps = SkillApps(
             claude: true,
             codex: false,
@@ -1761,7 +1790,7 @@ struct SkillModelsTests {
             hermes: false
         )
     ) -> Skill {
-        Skill(
+        var skill = Skill(
             id: directory,
             name: "Demo",
             description: "Demo skill",
@@ -1772,9 +1801,11 @@ struct SkillModelsTests {
             apps: apps,
             installedAt: installedAt,
             updatedAt: updatedAt,
-            contentHash: nil,
+            contentHash: contentHash,
             sizeBytes: sizeBytes
         )
+        skill.manifest = manifest
+        return skill
     }
 
     private func package(components: [PackageComponent]) -> CapabilityPackage {

@@ -58,6 +58,7 @@ struct LocalizationTests {
         #expect(localization.string("matrix.source.requires") == "依赖命令")
         #expect(localization.string("matrix.package.sync.status") == "同步状态")
         #expect(localization.string("matrix.package.sync.linkHealthSummary", 2, 1, 3) == "2 正常 · 1 断链 · 3 未启用")
+        #expect(localization.string("matrix.package.version.components") == "组件版本")
         #expect(localization.string("matrix.skill.manifest.version") == "版本")
         #expect(localization.string("matrix.skill.manifest.requires.available") == "可用")
         #expect(localization.string("matrix.skill.manifest.requires.missing") == "缺失")

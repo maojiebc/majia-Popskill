@@ -774,6 +774,15 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
             .reduce(UInt64(0), +)
         return total > 0 ? total : nil
     }
+
+    func componentVersionSummaries(in skills: [Skill]) -> [PackageComponentVersionSummary] {
+        components.all.map { component in
+            PackageComponentVersionSummary(
+                component: component,
+                versionLabel: componentVersionLabel(for: component, in: skills)
+            )
+        }
+    }
 }
 
 struct PackageComponentGroupSummary: Identifiable, Equatable {
@@ -795,6 +804,22 @@ struct PackageComponentGroupSummary: Identifiable, Equatable {
         missing = max(0, total - installed)
         missingRequired = components.filter { !$0.installed && $0.required }.count
         recoverableMissing = components.filter { !$0.installed && $0.isRecoverable }.count
+    }
+}
+
+struct PackageComponentVersionSummary: Identifiable, Equatable {
+    let id: String
+    let name: String
+    let kind: String
+    let status: String
+    let versionLabel: String?
+
+    init(component: PackageComponent, versionLabel: String?) {
+        id = component.displayKey
+        name = component.name
+        kind = component.kind
+        status = component.status
+        self.versionLabel = versionLabel
     }
 }
 
@@ -1598,6 +1623,17 @@ extension CapabilityPackage {
         }
 
         return PackageLinkHealthSnapshot(rows: rows)
+    }
+
+    func componentVersionLabel(for component: PackageComponent, in skills: [Skill]) -> String? {
+        guard let skill = matchingInstalledSkill(for: component, in: skills) else {
+            return nil
+        }
+        return MatrixVersionFormatter.value(
+            manifestVersion: skill.manifest?.semanticVersion,
+            contentHash: skill.contentHash,
+            updatedAt: skill.updatedAt
+        )
     }
 
     func matchingInstalledSkill(for component: PackageComponent, in skills: [Skill]) -> Skill? {
