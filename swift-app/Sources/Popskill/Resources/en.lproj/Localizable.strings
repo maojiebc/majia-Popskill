@@ -324,6 +324,7 @@
 "matrix.sort.typeDescending" = "Sort: type";
 "matrix.col.capability" = "Capability";
 "matrix.col.source" = "Source";
+"matrix.col.version" = "Version";
 "matrix.col.tokens" = "Tokens";
 "matrix.col.calls" = "Calls";
 

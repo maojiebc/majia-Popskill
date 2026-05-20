@@ -324,6 +324,7 @@
 "matrix.sort.typeDescending" = "排序：类型";
 "matrix.col.capability" = "能力";
 "matrix.col.source" = "来源";
+"matrix.col.version" = "版本";
 "matrix.col.tokens" = "Tokens";
 "matrix.col.calls" = "调用";
 

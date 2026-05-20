@@ -3,6 +3,7 @@ import SwiftUI
 enum MatrixTableLayout {
     static let appColumnWidth: CGFloat = 92
     static let sourceColumnWidth: CGFloat = 184
+    static let versionColumnWidth: CGFloat = 86
     static let tokensColumnWidth: CGFloat = 78
     static let callsColumnWidth: CGFloat = 62
     static let actionColumnWidth: CGFloat = 52
@@ -328,6 +329,8 @@ struct MatrixView: View {
                 .frame(width: MatrixTableLayout.appColumnWidth, alignment: .center)
             Text(localization.string("matrix.col.source"))
                 .frame(width: MatrixTableLayout.sourceColumnWidth, alignment: .leading)
+            Text(localization.string("matrix.col.version"))
+                .frame(width: MatrixTableLayout.versionColumnWidth, alignment: .leading)
             Text(localization.string("matrix.col.tokens"))
                 .frame(width: MatrixTableLayout.tokensColumnWidth, alignment: .trailing)
             Text(localization.string("matrix.col.calls"))

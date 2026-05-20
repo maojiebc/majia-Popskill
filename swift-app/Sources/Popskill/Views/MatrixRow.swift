@@ -2,7 +2,7 @@ import SwiftUI
 
 /// One capability row inside the matrix. Layout mirrors `matrixColumnHeader`
 /// in `MatrixView.swift`: capability column (flexible), tool coverage,
-/// source, usage metrics, and action menu.
+/// source, version identity, usage metrics, and action menu.
 /// Renders Skill / Agent / CLI / MCP / Config via the unified
 /// `MatrixCapability` model; non-toggleable kinds (anything but skill) show
 /// a read-only "on" icon instead of the interactive switch.
@@ -37,6 +37,8 @@ struct MatrixRow: View {
 
             sourceCell
                 .frame(width: MatrixTableLayout.sourceColumnWidth, alignment: .leading)
+            versionCell
+                .frame(width: MatrixTableLayout.versionColumnWidth, alignment: .leading)
 
             tokensCell
                 .frame(width: MatrixTableLayout.tokensColumnWidth, alignment: .trailing)
@@ -201,6 +203,16 @@ struct MatrixRow: View {
         usageIndex.skillSnapshot(for: capability.underlyingSkillID)
     }
 
+    private var versionCell: some View {
+        let skill = capability.underlyingSkillID.flatMap { skillID in
+            store.skills.first { $0.id == skillID }
+        }
+        return MatrixVersionValueCell(value: MatrixVersionFormatter.value(
+            contentHash: skill?.contentHash,
+            updatedAt: capability.updatedAt
+        ))
+    }
+
     private var tokensCell: some View {
         MatrixUsageValueCell(value: usageText { snapshot in
             UsageDisplayFormatter.compactTokens(snapshot.totalTokens)
@@ -279,6 +291,21 @@ struct MatrixRow: View {
                 Color.clear
             }
         }
+    }
+}
+
+struct MatrixVersionValueCell: View {
+    let value: String?
+    var isSubtle = false
+
+    var body: some View {
+        Text(value ?? "—")
+            .font(.system(size: isSubtle ? 10.3 : 10.8, weight: .medium, design: .monospaced))
+            .foregroundStyle(value == nil ? Color.popTertiaryLabel : (isSubtle ? Color.popSecondaryLabel : Color.popLabel))
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.trailing, 8)
     }
 }
 

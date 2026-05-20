@@ -1215,6 +1215,13 @@ struct SkillModelsTests {
     }
 
     @Test
+    func matrixVersionFormatterPrefersHashThenUpdatedDate() {
+        #expect(MatrixVersionFormatter.value(contentHash: "  abcdef123456  ", updatedAt: 1_700_000_000) == "abcdef1")
+        #expect(MatrixVersionFormatter.value(contentHash: nil, updatedAt: 1_700_000_000) == "2023-11-14")
+        #expect(MatrixVersionFormatter.value(contentHash: "   ", updatedAt: 0) == nil)
+    }
+
+    @Test
     func capabilityPackageMatchesScopedSkillUpdateIdentifier() {
         let package = self.package(
             components: [

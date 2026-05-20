@@ -55,6 +55,8 @@ struct MatrixPackageRow: View {
 
             sourceCell
                 .frame(width: MatrixTableLayout.sourceColumnWidth, alignment: .leading)
+            versionCell
+                .frame(width: MatrixTableLayout.versionColumnWidth, alignment: .leading)
 
             tokensCell
                 .frame(width: MatrixTableLayout.tokensColumnWidth, alignment: .trailing)
@@ -209,6 +211,13 @@ struct MatrixPackageRow: View {
         usageIndex.packageSnapshot(for: package?.id)
     }
 
+    private var versionCell: some View {
+        MatrixVersionValueCell(value: MatrixVersionFormatter.value(
+            contentHash: package?.trackedContentHash,
+            updatedAt: package?.lifecycle?.updatedAt
+        ))
+    }
+
     private var tokensCell: some View {
         MatrixUsageValueCell(value: usageText { snapshot in
             UsageDisplayFormatter.compactTokens(snapshot.totalTokens)
@@ -314,6 +323,8 @@ private struct MatrixPackageComponentRow: View {
 
             sourceCell
                 .frame(width: MatrixTableLayout.sourceColumnWidth, alignment: .leading)
+            versionCell
+                .frame(width: MatrixTableLayout.versionColumnWidth, alignment: .leading)
 
             tokensCell
                 .frame(width: MatrixTableLayout.tokensColumnWidth, alignment: .trailing)
@@ -407,6 +418,16 @@ private struct MatrixPackageComponentRow: View {
 
     private var usageStat: PackageComponentUsageStat? {
         usageIndex.packageComponentStat(packageID: packageID, componentID: component.id)
+    }
+
+    private var versionCell: some View {
+        MatrixVersionValueCell(
+            value: MatrixVersionFormatter.value(
+                contentHash: matchingSkill?.contentHash,
+                updatedAt: matchingSkill?.updatedAt
+            ),
+            isSubtle: true
+        )
     }
 
     private var tokensCell: some View {
