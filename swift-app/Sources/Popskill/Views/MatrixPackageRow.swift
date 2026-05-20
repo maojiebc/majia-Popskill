@@ -28,10 +28,12 @@ struct MatrixPackageRow: View {
         VStack(spacing: 0) {
             packageHeader
             if let package, !isCollapsed {
-                ForEach(package.components.all, id: \.displayKey) { component in
+                let components = package.components.all
+                ForEach(Array(components.enumerated()), id: \.element.displayKey) { index, component in
                     MatrixPackageComponentRow(
                         component: component,
                         packageID: package.id,
+                        treePrefix: PackageComponentTreePrefix.value(index: index, count: components.count),
                         store: store,
                         usageIndex: usageIndex
                     )
@@ -304,6 +306,7 @@ struct MatrixPackageRow: View {
 private struct MatrixPackageComponentRow: View {
     let component: PackageComponent
     let packageID: String
+    let treePrefix: String
     @Bindable var store: PopskillStore
     let usageIndex: MatrixUsageIndex
     @Environment(\.popskillLocalization) private var localization
@@ -388,7 +391,7 @@ private struct MatrixPackageComponentRow: View {
     }
 
     private var componentTreePrefix: String {
-        "├─"
+        treePrefix
     }
 
     private var requirementBadge: (key: String, color: Color)? {
@@ -457,6 +460,15 @@ private struct MatrixPackageComponentRow: View {
             return "0"
         }
         return usageStat.usageEvents > 0 || usageStat.totalTokens > 0 ? format(usageStat) : "0"
+    }
+}
+
+enum PackageComponentTreePrefix {
+    static func value(index: Int, count: Int) -> String {
+        guard count > 0, index == count - 1 else {
+            return "├─"
+        }
+        return "└─"
     }
 }
 
