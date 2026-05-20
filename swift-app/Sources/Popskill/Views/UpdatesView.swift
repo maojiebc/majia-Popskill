@@ -3,6 +3,7 @@ import SwiftUI
 /// Updates — lists every skill whose remote content hash differs from local.
 /// On `.task` we re-run `client.checkUpdates()` so the badge in the sidebar
 /// reflects the latest scan; the user can also trigger a manual re-scan.
+@MainActor
 struct UpdatesView: View {
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization

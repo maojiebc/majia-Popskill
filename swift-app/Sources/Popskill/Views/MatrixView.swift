@@ -1,9 +1,18 @@
 import SwiftUI
 
+enum MatrixTableLayout {
+    static let appColumnWidth: CGFloat = 92
+    static let sourceColumnWidth: CGFloat = 184
+    static let tokensColumnWidth: CGFloat = 78
+    static let callsColumnWidth: CGFloat = 62
+    static let actionColumnWidth: CGFloat = 52
+}
+
 /// Skills × Tools — the matrix is Popskill's灵魂主视图: rows = capabilities
 /// (skill / cli / mcp / agent), columns = AI tools (Claude Code / Codex),
 /// the cell is a direct toggle. Selecting a row slides an Inspector pane in
 /// from the right showing the position-and-link section.
+@MainActor
 struct MatrixView: View {
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization
@@ -11,6 +20,11 @@ struct MatrixView: View {
 
     var body: some View {
         let capabilities = store.capabilities
+        let usageIndex = MatrixUsageIndex(
+            summary: store.usageSummary,
+            skills: store.skills,
+            packages: store.compositePackages
+        )
         let sections = filteredSections(in: capabilities)
         VStack(spacing: 0) {
             header(capabilities: capabilities)
@@ -27,7 +41,7 @@ struct MatrixView: View {
             } else if sections.isEmpty {
                 noResultsState
             } else {
-                matrixTable(sections: sections)
+                matrixTable(sections: sections, usageIndex: usageIndex)
             }
         }
         .popPageBackground()
@@ -167,7 +181,7 @@ struct MatrixView: View {
 
     // MARK: Matrix table
 
-    private func matrixTable(sections: [CapabilitySection]) -> some View {
+    private func matrixTable(sections: [CapabilitySection], usageIndex: MatrixUsageIndex) -> some View {
         ScrollView {
             LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                 Section {
@@ -183,9 +197,9 @@ struct MatrixView: View {
                             if !store.collapsedGroups.contains(group.id) {
                                 ForEach(group.capabilities, id: \.id) { capability in
                                     if capability.kind == .bundle {
-                                        MatrixPackageRow(capability: capability, store: store)
+                                        MatrixPackageRow(capability: capability, store: store, usageIndex: usageIndex)
                                     } else {
-                                        MatrixRow(capability: capability, store: store)
+                                        MatrixRow(capability: capability, store: store, usageIndex: usageIndex)
                                     }
                                     Divider().opacity(0.4)
                                 }
@@ -237,12 +251,16 @@ struct MatrixView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 14)
             Text("Claude Code")
-                .frame(width: 100, alignment: .center)
+                .frame(width: MatrixTableLayout.appColumnWidth, alignment: .center)
             Text("Codex")
-                .frame(width: 100, alignment: .center)
+                .frame(width: MatrixTableLayout.appColumnWidth, alignment: .center)
             Text(localization.string("matrix.col.source"))
-                .frame(width: 220, alignment: .leading)
-            Spacer().frame(width: 56)
+                .frame(width: MatrixTableLayout.sourceColumnWidth, alignment: .leading)
+            Text(localization.string("matrix.col.tokens"))
+                .frame(width: MatrixTableLayout.tokensColumnWidth, alignment: .trailing)
+            Text(localization.string("matrix.col.calls"))
+                .frame(width: MatrixTableLayout.callsColumnWidth, alignment: .trailing)
+            Spacer().frame(width: MatrixTableLayout.actionColumnWidth)
         }
         .font(.system(size: 11.5, weight: .medium))
         .foregroundStyle(Color.popSecondaryLabel)

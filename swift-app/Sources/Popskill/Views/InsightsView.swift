@@ -6,6 +6,7 @@ import SwiftUI
 /// token consumption inferred from `~/.claude/projects/**/*.jsonl`. The scan
 /// runs off the main thread; the section degrades gracefully when there's no
 /// `~/.claude/projects/` directory yet.
+@MainActor
 struct InsightsView: View {
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization

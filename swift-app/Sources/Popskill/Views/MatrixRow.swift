@@ -1,14 +1,16 @@
 import SwiftUI
 
 /// One capability row inside the matrix. Layout mirrors `matrixColumnHeader`
-/// in `MatrixView.swift`: capability column (flexible), Claude toggle
-/// (100pt), Codex toggle (100pt), source label (220pt), action menu (56pt).
+/// in `MatrixView.swift`: capability column (flexible), tool coverage,
+/// source, usage metrics, and action menu.
 /// Renders Skill / Agent / CLI / MCP / Config via the unified
 /// `MatrixCapability` model; non-toggleable kinds (anything but skill) show
 /// a read-only "on" icon instead of the interactive switch.
+@MainActor
 struct MatrixRow: View {
     let capability: MatrixCapability
     @Bindable var store: PopskillStore
+    let usageIndex: MatrixUsageIndex
     @Environment(\.popskillLocalization) private var localization
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovering = false
@@ -29,15 +31,20 @@ struct MatrixRow: View {
                 .padding(.vertical, 8)
 
             appToggleCell(for: .claude)
-                .frame(width: 100)
+                .frame(width: MatrixTableLayout.appColumnWidth)
             appToggleCell(for: .codex)
-                .frame(width: 100)
+                .frame(width: MatrixTableLayout.appColumnWidth)
 
             sourceCell
-                .frame(width: 220, alignment: .leading)
+                .frame(width: MatrixTableLayout.sourceColumnWidth, alignment: .leading)
+
+            tokensCell
+                .frame(width: MatrixTableLayout.tokensColumnWidth, alignment: .trailing)
+            callsCell
+                .frame(width: MatrixTableLayout.callsColumnWidth, alignment: .trailing)
 
             actionCell
-                .frame(width: 56)
+                .frame(width: MatrixTableLayout.actionColumnWidth)
         }
         .padding(.trailing, 4)
         .contentShape(Rectangle())
@@ -191,6 +198,29 @@ struct MatrixRow: View {
         }
     }
 
+    private var usageSnapshot: SkillUsageSnapshot? {
+        usageIndex.skillSnapshot(for: capability.underlyingSkillID)
+    }
+
+    private var tokensCell: some View {
+        MatrixUsageValueCell(value: usageText { snapshot in
+            UsageDisplayFormatter.compactTokens(snapshot.totalTokens)
+        })
+    }
+
+    private var callsCell: some View {
+        MatrixUsageValueCell(value: usageText { snapshot in
+            UsageDisplayFormatter.compactCount(snapshot.usageEvents)
+        })
+    }
+
+    private func usageText(_ format: (SkillUsageSnapshot) -> String) -> String? {
+        guard let snapshot = usageSnapshot else {
+            return nil
+        }
+        return snapshot.hasUsage ? format(snapshot) : "0"
+    }
+
     private var sourceSymbol: String {
         switch (capability.sourceType ?? "").lowercased() {
         case "github": return "chevron.left.forwardslash.chevron.right"
@@ -253,11 +283,26 @@ struct MatrixRow: View {
     }
 }
 
+struct MatrixUsageValueCell: View {
+    let value: String?
+    var isSubtle = false
+
+    var body: some View {
+        Text(value ?? "—")
+            .font(.system(size: isSubtle ? 10.8 : 11.5, weight: isSubtle ? .regular : .medium).monospacedDigit())
+            .foregroundStyle(value == nil ? Color.popTertiaryLabel : (isSubtle ? Color.popSecondaryLabel : Color.popLabel))
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.trailing, 8)
+    }
+}
+
 /// Sticky header above each repo bucket. Clicking the chevron collapses /
 /// expands the bucket. The right side shows aggregate "%d enabled on Claude
 /// / Codex" so users can see coverage without scanning every row. v0.4
 /// renders the same header for any capability kind — the kind-level banner
 /// in MatrixView provides the kind context.
+@MainActor
 struct MatrixGroupHeader: View {
     let group: MatrixGroup
     @Bindable var store: PopskillStore

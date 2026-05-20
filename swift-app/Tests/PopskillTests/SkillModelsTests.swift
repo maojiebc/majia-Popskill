@@ -885,6 +885,67 @@ struct SkillModelsTests {
     }
 
     @Test
+    func matrixUsageIndexCachesSkillPackageAndComponentUsage() {
+        let skill = installedSkill(directory: "baoyu-comic")
+        let package = self.package(components: [
+            component(id: "baoyu-comic", installed: true)
+        ])
+        let summary = UsageSummary(
+            filesScanned: 1,
+            sessions: 1,
+            usageEvents: 3,
+            inputTokens: 50,
+            outputTokens: 30,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            attributedSkillUsageEvents: 2,
+            modelStats: [],
+            skillStats: [
+                SkillUsageStat(
+                    skillID: "baoyu-comic",
+                    sourcePlugin: nil,
+                    usageEvents: 2,
+                    inputTokens: 20,
+                    outputTokens: 10,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 5,
+                    lastUsedAt: nil
+                ),
+                SkillUsageStat(
+                    skillID: "unrelated",
+                    sourcePlugin: nil,
+                    usageEvents: 1,
+                    inputTokens: 99,
+                    outputTokens: 99,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 0,
+                    lastUsedAt: nil
+                )
+            ],
+            recentSessions: []
+        )
+
+        let index = MatrixUsageIndex(summary: summary, skills: [skill], packages: [package])
+        let emptyIndex = MatrixUsageIndex(summary: nil, skills: [skill], packages: [package])
+
+        #expect(index.hasSummary)
+        #expect(index.skillSnapshot(for: "baoyu-comic")?.usageEvents == 2)
+        #expect(index.skillSnapshot(for: "baoyu-comic")?.totalTokens == 35)
+        #expect(index.packageSnapshot(for: "pkg:demo")?.usageEvents == 2)
+        #expect(index.packageComponentStat(packageID: "pkg:demo", componentID: "baoyu-comic")?.totalTokens == 35)
+        #expect(index.skillSnapshot(for: "missing")?.hasUsage == false)
+        #expect(!emptyIndex.hasSummary)
+        #expect(emptyIndex.skillSnapshot(for: "baoyu-comic") == nil)
+    }
+
+    @Test
+    func usageDisplayFormatterCompactsMatrixMetrics() {
+        #expect(UsageDisplayFormatter.compactTokens(999) == "999")
+        #expect(UsageDisplayFormatter.compactTokens(1_500) == "1.5K")
+        #expect(UsageDisplayFormatter.compactCount(2_500_000) == "2.5M")
+    }
+
+    @Test
     func capabilityPackageHealthSeparatesActivePartialBlockedAndInactive() {
         #expect(package(components: []).health == .inactive)
         #expect(package(components: [component(installed: true)]).health == .active)

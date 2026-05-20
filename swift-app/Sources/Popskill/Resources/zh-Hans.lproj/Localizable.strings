@@ -310,6 +310,8 @@
 "matrix.search.placeholder" = "按名称、触发词或目录过滤";
 "matrix.col.capability" = "能力";
 "matrix.col.source" = "来源";
+"matrix.col.tokens" = "Tokens";
+"matrix.col.calls" = "调用";
 
 "matrix.filter.all" = "全部";
 "matrix.filter.updates" = "可更新";

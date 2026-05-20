@@ -5,6 +5,7 @@ import SwiftUI
 /// with date headers and per-row restore / delete. Restore picks Claude by
 /// default since most users only have Claude wired; v0.4 will add a target
 /// chooser.
+@MainActor
 struct BackupsView: View {
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization

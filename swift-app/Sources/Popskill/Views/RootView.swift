@@ -4,6 +4,7 @@ import SwiftUI
 /// with 3 sectioned groups (操控台 / 来源 / 维护) + Settings + Spotlight trigger.
 /// Each detail-area view is its own file and pulls data straight off the
 /// shared `PopskillStore`.
+@MainActor
 struct RootView: View {
     @State private var store = PopskillStore()
     @Environment(\.popskillLocalization) private var localization

@@ -4,6 +4,7 @@ import SwiftUI
 /// summary + a flat table of every row. A row is just "skillName · status
 /// across N apps". Clicking a row jumps to the matrix and opens the inspector
 /// so the user can read the SSOT paths in context.
+@MainActor
 struct LinkHealthView: View {
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization

@@ -4,6 +4,7 @@ import SwiftUI
 /// enable/disable + remove + a small `addOpen` popover for adding a new
 /// `owner/name@branch`. Full multi-type wizard (npm / brew / folder / zip) is
 /// scheduled for v0.4 and surfaces as the disabled buttons here.
+@MainActor
 struct SourcesView: View {
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization
@@ -288,6 +289,7 @@ struct AddSourceInput: Equatable {
     }
 }
 
+@MainActor
 private struct AddSourcePopover: View {
     @Bindable var store: PopskillStore
     @Binding var isPresented: Bool

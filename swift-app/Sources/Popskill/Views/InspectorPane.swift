@@ -6,6 +6,7 @@ import SwiftUI
 /// the full set of sections (summary / triggers / apps / deployment /
 /// metadata); other kinds gracefully omit the irrelevant pieces (an agent
 /// has no SSOT symlink to chart, a CLI has no per-app toggle).
+@MainActor
 struct InspectorPane: View {
     @Bindable var store: PopskillStore
     let capability: MatrixCapability

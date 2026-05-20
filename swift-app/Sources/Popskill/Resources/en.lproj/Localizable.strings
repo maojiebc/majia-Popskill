@@ -310,6 +310,8 @@
 "matrix.search.placeholder" = "Filter by name, trigger, or directory";
 "matrix.col.capability" = "Capability";
 "matrix.col.source" = "Source";
+"matrix.col.tokens" = "Tokens";
+"matrix.col.calls" = "Calls";
 
 "matrix.filter.all" = "All";
 "matrix.filter.updates" = "Updates";

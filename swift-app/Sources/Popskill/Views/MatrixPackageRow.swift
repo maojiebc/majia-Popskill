@@ -4,9 +4,11 @@ import SwiftUI
 /// Composite package row in the capability matrix. The row is read-only at the
 /// package level for v1.1, but it exposes the component tree inline so Bundle
 /// coverage is visible without opening a detail page.
+@MainActor
 struct MatrixPackageRow: View {
     let capability: MatrixCapability
     @Bindable var store: PopskillStore
+    let usageIndex: MatrixUsageIndex
     @Environment(\.popskillLocalization) private var localization
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovering = false
@@ -27,7 +29,12 @@ struct MatrixPackageRow: View {
             packageHeader
             if let package, !isCollapsed {
                 ForEach(package.components.all, id: \.displayKey) { component in
-                    MatrixPackageComponentRow(component: component, store: store)
+                    MatrixPackageComponentRow(
+                        component: component,
+                        packageID: package.id,
+                        store: store,
+                        usageIndex: usageIndex
+                    )
                     Divider().opacity(0.28)
                 }
             }
@@ -42,15 +49,20 @@ struct MatrixPackageRow: View {
                 .padding(.vertical, 9)
 
             coverageCell(for: .claude)
-                .frame(width: 100)
+                .frame(width: MatrixTableLayout.appColumnWidth)
             coverageCell(for: .codex)
-                .frame(width: 100)
+                .frame(width: MatrixTableLayout.appColumnWidth)
 
             sourceCell
-                .frame(width: 220, alignment: .leading)
+                .frame(width: MatrixTableLayout.sourceColumnWidth, alignment: .leading)
+
+            tokensCell
+                .frame(width: MatrixTableLayout.tokensColumnWidth, alignment: .trailing)
+            callsCell
+                .frame(width: MatrixTableLayout.callsColumnWidth, alignment: .trailing)
 
             actionCell
-                .frame(width: 56)
+                .frame(width: MatrixTableLayout.actionColumnWidth)
         }
         .padding(.trailing, 4)
         .contentShape(Rectangle())
@@ -193,6 +205,29 @@ struct MatrixPackageRow: View {
         }
     }
 
+    private var usageSnapshot: PackageUsageSnapshot? {
+        usageIndex.packageSnapshot(for: package?.id)
+    }
+
+    private var tokensCell: some View {
+        MatrixUsageValueCell(value: usageText { snapshot in
+            UsageDisplayFormatter.compactTokens(snapshot.totalTokens)
+        })
+    }
+
+    private var callsCell: some View {
+        MatrixUsageValueCell(value: usageText { snapshot in
+            UsageDisplayFormatter.compactCount(snapshot.usageEvents)
+        })
+    }
+
+    private func usageText(_ format: (PackageUsageSnapshot) -> String) -> String? {
+        guard let snapshot = usageSnapshot else {
+            return nil
+        }
+        return snapshot.hasUsage ? format(snapshot) : "0"
+    }
+
     private var actionCell: some View {
         Menu {
             Button {
@@ -253,9 +288,12 @@ struct MatrixPackageRow: View {
     }
 }
 
+@MainActor
 private struct MatrixPackageComponentRow: View {
     let component: PackageComponent
+    let packageID: String
     @Bindable var store: PopskillStore
+    let usageIndex: MatrixUsageIndex
     @Environment(\.popskillLocalization) private var localization
 
     private var matchingSkill: Skill? {
@@ -270,14 +308,19 @@ private struct MatrixPackageComponentRow: View {
                 .padding(.vertical, 6)
 
             appStateCell(for: .claude)
-                .frame(width: 100)
+                .frame(width: MatrixTableLayout.appColumnWidth)
             appStateCell(for: .codex)
-                .frame(width: 100)
+                .frame(width: MatrixTableLayout.appColumnWidth)
 
             sourceCell
-                .frame(width: 220, alignment: .leading)
+                .frame(width: MatrixTableLayout.sourceColumnWidth, alignment: .leading)
 
-            Spacer().frame(width: 56)
+            tokensCell
+                .frame(width: MatrixTableLayout.tokensColumnWidth, alignment: .trailing)
+            callsCell
+                .frame(width: MatrixTableLayout.callsColumnWidth, alignment: .trailing)
+
+            Spacer().frame(width: MatrixTableLayout.actionColumnWidth)
         }
         .padding(.trailing, 4)
         .contentShape(Rectangle())
@@ -360,6 +403,32 @@ private struct MatrixPackageComponentRow: View {
             .foregroundStyle(Color.popSecondaryLabel)
             .lineLimit(1)
             .truncationMode(.middle)
+    }
+
+    private var usageStat: PackageComponentUsageStat? {
+        usageIndex.packageComponentStat(packageID: packageID, componentID: component.id)
+    }
+
+    private var tokensCell: some View {
+        MatrixUsageValueCell(value: usageText { stat in
+            UsageDisplayFormatter.compactTokens(stat.totalTokens)
+        }, isSubtle: true)
+    }
+
+    private var callsCell: some View {
+        MatrixUsageValueCell(value: usageText { stat in
+            UsageDisplayFormatter.compactCount(stat.usageEvents)
+        }, isSubtle: true)
+    }
+
+    private func usageText(_ format: (PackageComponentUsageStat) -> String) -> String? {
+        guard usageIndex.hasSummary else {
+            return nil
+        }
+        guard let usageStat else {
+            return "0"
+        }
+        return usageStat.usageEvents > 0 || usageStat.totalTokens > 0 ? format(usageStat) : "0"
     }
 }
 

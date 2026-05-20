@@ -6,6 +6,7 @@ import SwiftUI
 ///      The non-Git providers are placeholder buttons (sidecar gates them).
 ///   3. 数据源管理 — count + jump to Sources view.
 ///   4. 重新引导 — re-run the 5-step Onboarding (S6) explicitly.
+@MainActor
 struct SettingsView: View {
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization

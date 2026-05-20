@@ -3,6 +3,7 @@ import SwiftUI
 /// Idle — skills that are toggled off across every app **and** haven't been
 /// touched (install / update / use) for ≥ 60 days. Surfaces the standard
 /// majia "卸载也安全" three-strategy decision per row.
+@MainActor
 struct IdleView: View {
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization

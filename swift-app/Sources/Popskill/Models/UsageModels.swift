@@ -151,6 +151,87 @@ struct SkillUsageSnapshot: Equatable {
     }
 }
 
+struct MatrixUsageIndex: Equatable {
+    let hasSummary: Bool
+    private var skillSnapshotsByID: [String: SkillUsageSnapshot] = [:]
+    private var packageSnapshotsByID: [String: PackageUsageSnapshot] = [:]
+    private var packageComponentStatsByID: [String: [String: PackageComponentUsageStat]] = [:]
+
+    init(summary: UsageSummary?, skills: [Skill], packages: [CapabilityPackage]) {
+        guard let summary else {
+            hasSummary = false
+            return
+        }
+
+        hasSummary = true
+
+        for skill in skills {
+            skillSnapshotsByID[skill.id] = skill.usageSnapshot(using: summary)
+        }
+
+        for package in packages {
+            guard let snapshot = package.usageSnapshot(using: summary, skills: skills) else {
+                continue
+            }
+            packageSnapshotsByID[package.id] = snapshot
+            packageComponentStatsByID[package.id] = Dictionary(
+                uniqueKeysWithValues: snapshot.componentStats.map { ($0.componentID, $0) }
+            )
+        }
+    }
+
+    func skillSnapshot(for skillID: String?) -> SkillUsageSnapshot? {
+        guard hasSummary, let skillID else {
+            return nil
+        }
+        return skillSnapshotsByID[skillID] ?? SkillUsageSnapshot()
+    }
+
+    func packageSnapshot(for packageID: String?) -> PackageUsageSnapshot? {
+        guard hasSummary, let packageID else {
+            return nil
+        }
+        return packageSnapshotsByID[packageID] ?? PackageUsageSnapshot()
+    }
+
+    func packageComponentStat(packageID: String?, componentID: String) -> PackageComponentUsageStat? {
+        guard hasSummary, let packageID else {
+            return nil
+        }
+        return packageComponentStatsByID[packageID]?[componentID]
+    }
+}
+
+enum UsageDisplayFormatter {
+    static func compactTokens(_ value: Int64) -> String {
+        compact(Int(value))
+    }
+
+    static func compactCount(_ value: Int) -> String {
+        compact(value)
+    }
+
+    private static func compact(_ value: Int) -> String {
+        if value < 1_000 {
+            return integerFormatter.string(from: NSNumber(value: value)) ?? "0"
+        }
+        if value < 1_000_000 {
+            return String(format: "%.1fK", Double(value) / 1_000.0)
+        }
+        if value < 1_000_000_000 {
+            return String(format: "%.1fM", Double(value) / 1_000_000.0)
+        }
+        return String(format: "%.2fB", Double(value) / 1_000_000_000.0)
+    }
+
+    private static let integerFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 0
+        return formatter
+    }()
+}
+
 struct PackageUsageSnapshot: Equatable {
     var matchedSkillCount = 0
     var usageEvents = 0

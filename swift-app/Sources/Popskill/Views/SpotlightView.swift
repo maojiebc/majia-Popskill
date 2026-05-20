@@ -9,6 +9,7 @@ import SwiftUI
 /// Keyboard: ↑↓ moves highlight, Enter triggers the highlighted row, Esc
 /// closes. Clicking the scrim closes too. Pressing ⌘1 / ⌘2 on a skill row
 /// toggles Claude / Codex without leaving the palette.
+@MainActor
 struct SpotlightView: View {
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization
