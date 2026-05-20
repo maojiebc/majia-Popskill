@@ -397,6 +397,9 @@
 "matrix.package.usage.componentCalls" = "%d calls";
 "matrix.skill.usage.empty" = "Usage was scanned, but this skill has no attribution records yet.";
 "matrix.skill.usage.notScanned" = "Transcript usage has not been scanned yet.";
+"matrix.skill.bundle.open" = "Open bundle";
+"matrix.skill.bundle.companions" = "%d companion skills";
+"matrix.skill.bundle.openCompanion" = "Open %@";
 "matrix.package.paths.empty" = "No local skill files matched this bundle.";
 "matrix.package.paths.more" = "%d more matched skills hidden.";
 
@@ -426,6 +429,7 @@
 "matrix.inspector.section.coverage" = "COVERAGE";
 "matrix.inspector.section.usage" = "USAGE";
 "matrix.inspector.section.components" = "COMPONENTS";
+"matrix.inspector.section.bundle" = "BUNDLE";
 "matrix.inspector.section.config" = "CONFIG";
 "matrix.inspector.section.paths" = "LOCAL PATHS";
 "matrix.inspector.section.version" = "VERSION";

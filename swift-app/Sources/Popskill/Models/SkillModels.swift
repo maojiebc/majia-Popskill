@@ -1393,6 +1393,15 @@ extension PackageComponent {
 }
 
 extension CapabilityPackage {
+    func containsSkill(_ skill: Skill) -> Bool {
+        components.skills.contains { $0.matchesSkill(skill) }
+    }
+
+    func companionInstalledSkills(for skill: Skill, in skills: [Skill]) -> [Skill] {
+        matchingInstalledSkills(in: skills)
+            .filter { $0.id != skill.id }
+    }
+
     func matchingInstalledSkills(in skills: [Skill]) -> [Skill] {
         var seen: Set<String> = []
         var matches: [Skill] = []

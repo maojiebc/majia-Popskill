@@ -1178,6 +1178,23 @@ struct SkillModelsTests {
     }
 
     @Test
+    func capabilityPackageFindsContainedAndCompanionSkills() {
+        let package = self.package(components: [
+            component(id: "baoyu-comic", installed: true),
+            component(id: "baoyu-translate", installed: true),
+            component(id: "declared-only", installed: false)
+        ])
+        let comic = installedSkill(directory: "baoyu-comic")
+        let translate = installedSkill(directory: "baoyu-translate")
+        let unrelated = installedSkill(directory: "other-skill")
+
+        #expect(package.containsSkill(comic))
+        #expect(package.containsSkill(translate))
+        #expect(!package.containsSkill(unrelated))
+        #expect(package.companionInstalledSkills(for: comic, in: [comic, translate, unrelated]).map(\.id) == ["baoyu-translate"])
+    }
+
+    @Test
     func matrixUsageIndexCachesSkillPackageAndComponentUsage() {
         let skill = installedSkill(directory: "baoyu-comic")
         let package = self.package(components: [

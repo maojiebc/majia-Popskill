@@ -397,6 +397,9 @@
 "matrix.package.usage.componentCalls" = "%d 次调用";
 "matrix.skill.usage.empty" = "已扫描用量，但这个 skill 暂无归因记录。";
 "matrix.skill.usage.notScanned" = "还没有扫描 transcript，用量暂不可用。";
+"matrix.skill.bundle.open" = "打开套装";
+"matrix.skill.bundle.companions" = "%d 个同伴技能";
+"matrix.skill.bundle.openCompanion" = "打开 %@";
 "matrix.package.paths.empty" = "没有匹配到本地 skill 真身。";
 "matrix.package.paths.more" = "还有 %d 个匹配 skill 未展开。";
 
@@ -426,6 +429,7 @@
 "matrix.inspector.section.coverage" = "覆盖";
 "matrix.inspector.section.usage" = "用量";
 "matrix.inspector.section.components" = "组件";
+"matrix.inspector.section.bundle" = "所属套装";
 "matrix.inspector.section.config" = "配置";
 "matrix.inspector.section.paths" = "本地路径";
 "matrix.inspector.section.version" = "版本";

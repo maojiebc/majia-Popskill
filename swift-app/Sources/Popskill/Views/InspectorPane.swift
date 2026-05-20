@@ -207,6 +207,9 @@ struct InspectorPane: View {
             if let scenarios = capability.triggerScenarios, !scenarios.isEmpty {
                 triggerSection(scenarios: scenarios)
             }
+            if let skill = selectedSkill {
+                skillBundleSection(skill)
+            }
             appsSection
         case .readme:
             if let skill = selectedSkill {
@@ -1205,6 +1208,84 @@ struct InspectorPane: View {
         }
     }
 
+    @ViewBuilder
+    private func skillBundleSection(_ skill: Skill) -> some View {
+        let packages = containingPackages(for: skill)
+        if !packages.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                SectionHeading(title: "matrix.inspector.section.bundle", accent: .popSectionPurple)
+                ForEach(packages, id: \.id) { package in
+                    skillBundleCard(package, skill: skill)
+                }
+            }
+        }
+    }
+
+    private func skillBundleCard(_ package: CapabilityPackage, skill: Skill) -> some View {
+        let companions = package.companionInstalledSkills(for: skill, in: store.skills)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
+                PackageAvatar(name: package.name, identifier: package.id, size: 24)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(package.name)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.popLabel)
+                        .lineLimit(1)
+                    Text(localization.string(
+                        "package.componentSummary",
+                        package.componentCount,
+                        package.installedComponentCount,
+                        package.requiredComponentCount
+                    ))
+                    .font(.caption2)
+                    .foregroundStyle(Color.popSecondaryLabel)
+                    .lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                Button {
+                    store.selectCapability(MatrixCapability.packageCapabilityID(for: package.id))
+                } label: {
+                    Image(systemName: "arrow.right.circle")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.accentColor)
+                .help(localization.string("matrix.skill.bundle.open"))
+            }
+
+            if !companions.isEmpty {
+                Text(localization.string("matrix.skill.bundle.companions", companions.count))
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Color.popSecondaryLabel)
+
+                LazyVGrid(columns: Self.companionGridColumns, alignment: .leading, spacing: 5) {
+                    ForEach(companions.prefix(8), id: \.id) { companion in
+                        Button {
+                            store.selectCapability(MatrixCapability.skillCapabilityID(for: companion.id))
+                        } label: {
+                            Text(companion.name)
+                                .font(.caption2.weight(.semibold))
+                                .lineLimit(1)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Color.popControlFill, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Color.popSecondaryLabel)
+                        .help(localization.string("matrix.skill.bundle.openCompanion", companion.name))
+                    }
+                    if companions.count > 8 {
+                        Text(localization.string("matrix.package.paths.more", companions.count - 8))
+                            .font(.caption2)
+                            .foregroundStyle(Color.popTertiaryLabel)
+                    }
+                }
+            }
+        }
+        .padding(9)
+        .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
     private var appsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeading(title: "matrix.inspector.section.apps")
@@ -1494,6 +1575,10 @@ struct InspectorPane: View {
         GridItem(.adaptive(minimum: 132), spacing: 8, alignment: .leading)
     ]
 
+    private static let companionGridColumns: [GridItem] = [
+        GridItem(.adaptive(minimum: 84), spacing: 5, alignment: .leading)
+    ]
+
     private func firstRevealableSkillURL(for package: CapabilityPackage) -> URL? {
         package.matchingInstalledSkills(in: store.skills)
             .first { FileManager.default.fileExists(atPath: $0.localStoreURL.path) }?
@@ -1507,6 +1592,10 @@ struct InspectorPane: View {
 
     private func packagePendingUpdates(_ package: CapabilityPackage) -> [SkillUpdateInfo] {
         store.updates.filter { package.matchingSkillComponent(for: $0) != nil }
+    }
+
+    private func containingPackages(for skill: Skill) -> [CapabilityPackage] {
+        store.compositePackages.filter { $0.containsSkill(skill) }
     }
 
     // MARK: Toggle helpers
