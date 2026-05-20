@@ -109,6 +109,8 @@ struct InspectorPane: View {
             packageLocalPathsSection(package)
             packageVersionSection(package)
             packageMetadataSection(package)
+        case .paths:
+            packageLocalPathsSection(package)
         case .sync:
             packageActionsSection(package)
             packageSyncSection(package)
@@ -128,9 +130,6 @@ struct InspectorPane: View {
                 triggerSection(scenarios: scenarios)
             }
             appsSection
-            if capability.kind == .skill {
-                deploymentSection
-            }
         case .readme:
             if let skill = selectedSkill {
                 readmePreviewSection(skill: skill)
@@ -139,9 +138,21 @@ struct InspectorPane: View {
             if let skill = selectedSkill {
                 skillUsageSection(skill)
             }
+        case .version:
+            if let skill = selectedSkill {
+                skillVersionSection(skill)
+            } else {
+                metadataSection
+            }
+        case .paths:
+            if let skill = selectedSkill {
+                skillPathsSection(skill)
+            } else {
+                metadataSection
+            }
         case .metadata:
             metadataSection
-        case .version, .sync:
+        case .sync:
             metadataSection
         }
     }
@@ -158,9 +169,11 @@ struct InspectorPane: View {
 
         var tabs: [InspectorTab] = [.overview]
         if selectedSkill != nil {
-            tabs.append(contentsOf: [.readme, .usage])
+            tabs.append(contentsOf: [.readme, .usage, .version, .paths])
         }
-        tabs.append(.metadata)
+        if selectedSkill == nil {
+            tabs.append(.metadata)
+        }
         return tabs
     }
 
@@ -864,6 +877,37 @@ struct InspectorPane: View {
         }
     }
 
+    private func skillVersionSection(_ skill: Skill) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "matrix.inspector.section.version")
+            VStack(alignment: .leading, spacing: 6) {
+                metaRow(
+                    label: localization.string("matrix.package.version.hash"),
+                    value: skill.contentHash.map(Self.shortHash) ?? localization.string("matrix.package.version.untracked")
+                )
+                if let installedAt = skill.installedAt, installedAt > 0 {
+                    metaRow(label: localization.string("matrix.inspector.meta.installedAt"), value: Self.formatTimestamp(installedAt))
+                }
+                if let updatedAt = skill.updatedAt, updatedAt > 0 {
+                    metaRow(label: localization.string("matrix.inspector.meta.updatedAt"), value: Self.formatTimestamp(updatedAt))
+                }
+                if let size = skill.sizeBytes, size > 0 {
+                    metaRow(label: localization.string("matrix.inspector.meta.size"), value: Self.formatBytes(size))
+                }
+                if let source = skill.sourceType, !source.isEmpty {
+                    metaRow(label: localization.string("matrix.inspector.meta.sourceType"), value: source)
+                }
+            }
+            if let url = skill.sourceURL {
+                Link(destination: url) {
+                    Label(localization.string("matrix.inspector.meta.openSource"), systemImage: "arrow.up.right.square")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
     private func packageSyncSection(_ package: CapabilityPackage) -> some View {
         let pendingUpdates = packagePendingUpdates(package)
         return VStack(alignment: .leading, spacing: 8) {
@@ -1038,9 +1082,9 @@ struct InspectorPane: View {
         .disabled(pending || !capability.isToggleable)
     }
 
-    private var deploymentSection: some View {
+    private func skillPathsSection(_ skill: Skill) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionHeading(title: "matrix.inspector.section.deployment")
+            SectionHeading(title: "matrix.inspector.section.paths")
             if let deployment = capability.deployment {
                 VStack(alignment: .leading, spacing: 6) {
                     deploymentRow(
@@ -1056,6 +1100,13 @@ struct InspectorPane: View {
                         )
                     }
                 }
+                if let markdownURL = skill.markdownURL {
+                    deploymentRow(
+                        title: localization.string("matrix.skill.paths.readme"),
+                        path: markdownURL.path,
+                        status: "ok"
+                    )
+                }
                 HStack(spacing: 4) {
                     Image(systemName: "link")
                         .font(.system(size: 10, weight: .semibold))
@@ -1064,8 +1115,22 @@ struct InspectorPane: View {
                 }
                 .foregroundStyle(Color.popTertiaryLabel)
             } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    deploymentRow(
+                        title: localization.string("matrix.inspector.deployment.ssot"),
+                        path: skill.localStoreURL.path,
+                        status: FileManager.default.fileExists(atPath: skill.localStoreURL.path) ? "ok" : nil
+                    )
+                    if let markdownURL = skill.markdownURL {
+                        deploymentRow(
+                            title: localization.string("matrix.skill.paths.readme"),
+                            path: markdownURL.path,
+                            status: "ok"
+                        )
+                    }
+                }
                 Text(localization.string("matrix.inspector.deployment.empty"))
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundStyle(Color.popTertiaryLabel)
             }
         }
@@ -1109,9 +1174,32 @@ struct InspectorPane: View {
             if let status {
                 linkStatusBadge(status)
             }
+            if let url = revealableURL(for: path) {
+                Button {
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                } label: {
+                    Image(systemName: "folder")
+                        .font(.system(size: 11, weight: .semibold))
+                        .frame(width: 18, height: 18)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.popSecondaryLabel)
+                .help(localization.string("matrix.row.menu.revealInFinder"))
+            }
         }
         .padding(8)
         .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 6))
+    }
+
+    private func revealableURL(for path: String) -> URL? {
+        guard !path.isEmpty, path != "—" else {
+            return nil
+        }
+        let expanded = (path as NSString).expandingTildeInPath
+        guard FileManager.default.fileExists(atPath: expanded) else {
+            return nil
+        }
+        return URL(fileURLWithPath: expanded)
     }
 
     private func linkStatusBadge(_ status: String) -> some View {
@@ -1276,6 +1364,7 @@ private enum InspectorTab: String, CaseIterable, Identifiable {
     case readme
     case usage
     case version
+    case paths
     case sync
     case metadata
 
@@ -1287,6 +1376,7 @@ private enum InspectorTab: String, CaseIterable, Identifiable {
         case .readme: "matrix.inspector.tab.readme"
         case .usage: "matrix.inspector.tab.usage"
         case .version: "matrix.inspector.tab.version"
+        case .paths: "matrix.inspector.tab.paths"
         case .sync: "matrix.inspector.tab.sync"
         case .metadata: "matrix.inspector.tab.metadata"
         }

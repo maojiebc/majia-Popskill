@@ -32,6 +32,7 @@ struct LocalizationTests {
 
         #expect(localization.string("matrix.inspector.tab.overview") == "概览")
         #expect(localization.string("matrix.inspector.tab.usage") == "用量")
+        #expect(localization.string("matrix.inspector.tab.paths") == "路径")
         #expect(localization.string("matrix.inspector.tab.sync") == "同步")
     }
 }

@@ -390,6 +390,7 @@
 "matrix.inspector.tab.readme" = "README";
 "matrix.inspector.tab.usage" = "Usage";
 "matrix.inspector.tab.version" = "Version";
+"matrix.inspector.tab.paths" = "Paths";
 "matrix.inspector.tab.sync" = "Sync";
 "matrix.inspector.tab.metadata" = "Metadata";
 
@@ -411,6 +412,7 @@
 "matrix.package.action.checkUpdates" = "Check updates";
 "matrix.package.action.openSource" = "Open source";
 "matrix.package.action.revealInFinder" = "Reveal local skill";
+"matrix.skill.paths.readme" = "SKILL.md";
 "matrix.package.version.strategy" = "Strategy";
 "matrix.package.version.branch" = "Branch";
 "matrix.package.version.hash" = "Hash";
