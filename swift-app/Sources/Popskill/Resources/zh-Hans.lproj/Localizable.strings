@@ -308,6 +308,13 @@
 // S3 新增 — 矩阵主视图 + Inspector
 "matrix.subtitle" = "%d 个套装 · %d 项能力 · %d 个已启用开关";
 "matrix.search.placeholder" = "按名称、触发词或目录过滤";
+"matrix.metric.capabilities" = "能力总数";
+"matrix.metric.claudeActive" = "Claude 已激活";
+"matrix.metric.codexActive" = "Codex 已激活";
+"matrix.metric.stubs" = "占位 (stub)";
+"matrix.metric.brokenLinks" = "断链";
+"matrix.metric.tokenUsage" = "本月 token";
+"matrix.sort.typeDescending" = "排序：类型";
 "matrix.col.capability" = "能力";
 "matrix.col.source" = "来源";
 "matrix.col.tokens" = "Tokens";

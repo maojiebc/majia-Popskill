@@ -166,6 +166,7 @@ struct SummaryMetric: View {
 struct InitialAvatarView: View {
     let name: String
     let identifier: String
+    var size: CGFloat = 44
 
     private var initial: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines).first.map { String($0).uppercased() } ?? "S"
@@ -193,10 +194,10 @@ struct InitialAvatarView: View {
             RoundedRectangle(cornerRadius: PopskillRadius.smallCard)
                 .fill(color.gradient)
             Text(initial)
-                .font(.system(size: 20, weight: .bold))
+                .font(.system(size: max(10, size * 0.45), weight: .bold))
                 .foregroundStyle(.white)
         }
-        .frame(width: 44, height: 44)
+        .frame(width: size, height: size)
     }
 }
 

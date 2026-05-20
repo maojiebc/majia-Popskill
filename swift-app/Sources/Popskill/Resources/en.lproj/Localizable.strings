@@ -308,6 +308,13 @@
 // S3 新增 — Matrix + Inspector
 "matrix.subtitle" = "%d bundles · %d capabilities · %d active toggles";
 "matrix.search.placeholder" = "Filter by name, trigger, or directory";
+"matrix.metric.capabilities" = "Capabilities";
+"matrix.metric.claudeActive" = "Claude active";
+"matrix.metric.codexActive" = "Codex active";
+"matrix.metric.stubs" = "Stubs";
+"matrix.metric.brokenLinks" = "Broken links";
+"matrix.metric.tokenUsage" = "Month tokens";
+"matrix.sort.typeDescending" = "Sort: type";
 "matrix.col.capability" = "Capability";
 "matrix.col.source" = "Source";
 "matrix.col.tokens" = "Tokens";

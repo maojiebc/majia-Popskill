@@ -60,7 +60,7 @@ struct MatrixView: View {
     // MARK: Header
 
     private func header(capabilities: [MatrixCapability]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     LocalizedText("sidebar.matrix")
@@ -73,11 +73,19 @@ struct MatrixView: View {
                 Spacer(minLength: 16)
                 searchField
             }
-            filterChips
+            metricStrip(capabilities: capabilities)
+            HStack(spacing: 10) {
+                filterChips
+                Spacer(minLength: 8)
+                Label(localization.string("matrix.sort.typeDescending"), systemImage: "arrow.down")
+                    .font(.system(size: 11.5, weight: .medium))
+                    .foregroundStyle(Color.popSecondaryLabel)
+                    .labelStyle(.titleAndIcon)
+            }
         }
         .padding(.horizontal, 28)
-        .padding(.top, 24)
-        .padding(.bottom, 14)
+        .padding(.top, 22)
+        .padding(.bottom, 12)
     }
 
     private func subtitle(capabilities: [MatrixCapability]) -> String {
@@ -119,6 +127,65 @@ struct MatrixView: View {
         .accessibilityLabel(Text(localization.string("matrix.search.placeholder")))
     }
 
+    private func metricStrip(capabilities: [MatrixCapability]) -> some View {
+        let metrics = summaryMetrics(capabilities: capabilities)
+        return HStack(spacing: 0) {
+            ForEach(Array(metrics.enumerated()), id: \.element.id) { index, metric in
+                MatrixSummaryMetricView(metric: metric)
+                    .frame(minWidth: metric.preferredWidth, alignment: .leading)
+                if index < metrics.count - 1 {
+                    Rectangle()
+                        .fill(Color.popSeparator.opacity(0.65))
+                        .frame(width: 0.5, height: 32)
+                        .padding(.horizontal, 16)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func summaryMetrics(capabilities: [MatrixCapability]) -> [MatrixSummaryMetric] {
+        [
+            MatrixSummaryMetric(
+                id: "capabilities",
+                value: "\(capabilities.count)",
+                title: localization.string("matrix.metric.capabilities"),
+                tint: .popLabel
+            ),
+            MatrixSummaryMetric(
+                id: "claude",
+                value: "\(capabilities.filter { $0.apps.claude }.count)",
+                title: localization.string("matrix.metric.claudeActive"),
+                tint: .popLabel
+            ),
+            MatrixSummaryMetric(
+                id: "codex",
+                value: "\(capabilities.filter { $0.apps.codex }.count)",
+                title: localization.string("matrix.metric.codexActive"),
+                tint: .popLabel
+            ),
+            MatrixSummaryMetric(
+                id: "stubs",
+                value: "\(store.stubs.count)",
+                title: localization.string("matrix.metric.stubs"),
+                tint: store.stubs.isEmpty ? .popSecondaryLabel : .popStatusWarning
+            ),
+            MatrixSummaryMetric(
+                id: "broken-links",
+                value: "\(store.brokenLinkCount)",
+                title: localization.string("matrix.metric.brokenLinks"),
+                tint: store.brokenLinkCount > 0 ? .popStatusError : .popSecondaryLabel
+            ),
+            MatrixSummaryMetric(
+                id: "tokens",
+                value: store.usageSummary.map { UsageDisplayFormatter.compactTokens($0.totalTokens) } ?? "—",
+                title: localization.string("matrix.metric.tokenUsage"),
+                tint: .popLabel,
+                preferredWidth: 116
+            )
+        ]
+    }
+
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
@@ -131,6 +198,7 @@ struct MatrixView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func chipButton(filter: MatrixFilter) -> some View {
@@ -145,15 +213,18 @@ struct MatrixView: View {
                         .font(.system(size: 10.5, weight: .semibold).monospacedDigit())
                 }
             }
-            .font(.system(size: 12, weight: active ? .semibold : .regular))
-            .foregroundStyle(active ? Color.accentColor : Color.popSecondaryLabel)
-            .padding(.horizontal, 10)
+            .font(.system(size: 11.5, weight: active ? .semibold : .regular))
+            .foregroundStyle(active ? Color.popCardBackground : Color.popLabel)
+            .padding(.horizontal, 9)
             .padding(.vertical, 4)
             .background(
-                active ? Color.popAccentSoft : Color.popControlFill,
-                in: Capsule()
+                active ? Color.popLabel : Color.popControlFill,
+                in: RoundedRectangle(cornerRadius: 5, style: .continuous)
             )
-            .overlay(Capsule().strokeBorder(active ? Color.accentColor.opacity(0.30) : Color.popControlStroke, lineWidth: 0.7))
+            .overlay(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .strokeBorder(active ? Color.popLabel.opacity(0.10) : Color.popControlStroke, lineWidth: 0.7)
+            )
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(active ? .isSelected : [])
@@ -165,15 +236,18 @@ struct MatrixView: View {
             store.matrixTypeFilter = filter
         } label: {
             Text(localization.string(filter.titleKey))
-                .font(.system(size: 12, weight: active ? .semibold : .regular))
-                .foregroundStyle(active ? Color.accentColor : Color.popSecondaryLabel)
-                .padding(.horizontal, 10)
+                .font(.system(size: 11.5, weight: active ? .semibold : .regular))
+                .foregroundStyle(active ? Color.popCardBackground : Color.popLabel)
+                .padding(.horizontal, 9)
                 .padding(.vertical, 4)
                 .background(
-                    active ? Color.popAccentSoft : Color.popControlFill,
-                    in: Capsule()
+                    active ? Color.popLabel : Color.popControlFill,
+                    in: RoundedRectangle(cornerRadius: 5, style: .continuous)
                 )
-                .overlay(Capsule().strokeBorder(active ? Color.accentColor.opacity(0.30) : Color.popControlStroke, lineWidth: 0.7))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .strokeBorder(active ? Color.popLabel.opacity(0.10) : Color.popControlStroke, lineWidth: 0.7)
+                )
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(active ? .isSelected : [])
@@ -210,14 +284,12 @@ struct MatrixView: View {
                 Color.clear.frame(height: 24)
             }
         }
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .background(Color.popSurfaceElevated.opacity(0.18), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(Color.popSurfaceElevated.opacity(0.42), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.popBorder, lineWidth: 0.7)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(Color.popBorder.opacity(0.82), lineWidth: 0.7)
         )
-        .shadow(color: .black.opacity(0.035), radius: 12, x: 0, y: 3)
         .padding(.horizontal, 16)
         .padding(.bottom, 16)
     }
@@ -262,10 +334,11 @@ struct MatrixView: View {
                 .frame(width: MatrixTableLayout.callsColumnWidth, alignment: .trailing)
             Spacer().frame(width: MatrixTableLayout.actionColumnWidth)
         }
-        .font(.system(size: 11.5, weight: .medium))
-        .foregroundStyle(Color.popSecondaryLabel)
-        .padding(.vertical, 8)
-        .background(Color.popTableHeaderFill)
+        .font(.system(size: 10.5, weight: .semibold))
+        .foregroundStyle(Color.popTertiaryLabel)
+        .textCase(.uppercase)
+        .padding(.vertical, 7)
+        .background(Color.popTableHeaderFill.opacity(0.70))
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(Color.popSeparator)
@@ -358,6 +431,35 @@ struct MatrixView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct MatrixSummaryMetric: Identifiable {
+    let id: String
+    let value: String
+    let title: String
+    let tint: Color
+    var preferredWidth: CGFloat = 92
+}
+
+private struct MatrixSummaryMetricView: View {
+    let metric: MatrixSummaryMetric
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(metric.value)
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(metric.tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+            Text(metric.title)
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(Color.popSecondaryLabel)
+                .textCase(.uppercase)
+                .lineLimit(1)
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 

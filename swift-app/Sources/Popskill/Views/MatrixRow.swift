@@ -28,7 +28,7 @@ struct MatrixRow: View {
             capabilityCell
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 14)
-                .padding(.vertical, 8)
+                .padding(.vertical, 6)
 
             appToggleCell(for: .claude)
                 .frame(width: MatrixTableLayout.appColumnWidth)
@@ -73,12 +73,11 @@ struct MatrixRow: View {
 
     private var capabilityCell: some View {
         HStack(alignment: .center, spacing: 10) {
-            InitialAvatarView(name: capability.name, identifier: capability.id)
-                .frame(width: 28, height: 28)
+            InitialAvatarView(name: capability.name, identifier: capability.id, size: 24)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(capability.name)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(Color.popLabel)
                         .lineLimit(1)
                     kindBadge
@@ -135,7 +134,7 @@ struct MatrixRow: View {
                     onChange: { newValue in
                         Task { await toggle(app: app, enabled: newValue) }
                     },
-                    size: 26
+                    size: 22
                 )
             } else {
                 readOnlyAppBadge(app: app, isOn: capability.apps.isEnabled(app))
@@ -188,10 +187,10 @@ struct MatrixRow: View {
     private var sourceCell: some View {
         HStack(spacing: 6) {
             Image(systemName: sourceSymbol)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 10.5, weight: .semibold))
                 .foregroundStyle(Color.popSecondaryLabel)
             Text(capability.sourceLabel)
-                .font(.system(size: 11.5))
+                .font(.system(size: 11))
                 .foregroundStyle(Color.popSecondaryLabel)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -289,7 +288,7 @@ struct MatrixUsageValueCell: View {
 
     var body: some View {
         Text(value ?? "—")
-            .font(.system(size: isSubtle ? 10.8 : 11.5, weight: isSubtle ? .regular : .medium).monospacedDigit())
+            .font(.system(size: isSubtle ? 10.5 : 11, weight: isSubtle ? .regular : .medium).monospacedDigit())
             .foregroundStyle(value == nil ? Color.popTertiaryLabel : (isSubtle ? Color.popSecondaryLabel : Color.popLabel))
             .lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -346,8 +345,8 @@ struct MatrixGroupHeader: View {
             coverageChip(symbol: "chevron.left.forwardslash.chevron.right", label: "Codex", enabled: codexOn, total: group.capabilities.count)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 7)
-        .background(Color.popSurface.opacity(0.52))
+        .padding(.vertical, 6)
+        .background(Color.popSurface.opacity(0.36))
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(Color.popSeparator)

@@ -215,8 +215,7 @@ struct SpotlightView: View {
             case let .package(package, _):
                 PackageAvatar(name: package.name, identifier: package.id, size: 24)
             case let .skill(skill, _):
-                InitialAvatarView(name: skill.name, identifier: skill.id)
-                    .frame(width: 24, height: 24)
+                InitialAvatarView(name: skill.name, identifier: skill.id, size: 24)
             case let .action(action):
                 Image(systemName: action.symbol)
                     .font(.system(size: 13, weight: .semibold))

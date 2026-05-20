@@ -46,7 +46,7 @@ struct MatrixPackageRow: View {
             capabilityCell
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 14)
-                .padding(.vertical, 9)
+                .padding(.vertical, 7)
 
             coverageCell(for: .claude)
                 .frame(width: MatrixTableLayout.appColumnWidth)
@@ -102,12 +102,12 @@ struct MatrixPackageRow: View {
             .buttonStyle(.plain)
             .help(localization.string(isCollapsed ? "matrix.package.expand" : "matrix.package.collapse"))
 
-            PackageAvatar(name: capability.name, identifier: capability.id, size: 30)
+            PackageAvatar(name: capability.name, identifier: capability.id, size: 26)
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(capability.name)
-                        .font(.system(size: 13.5, weight: .semibold))
+                        .font(.system(size: 12.8, weight: .semibold))
                         .foregroundStyle(Color.popLabel)
                         .lineLimit(1)
                     kindBadge
@@ -124,7 +124,7 @@ struct MatrixPackageRow: View {
                     }
                 }
                 Text(packageSubtitle)
-                    .font(.system(size: 11.5))
+                    .font(.system(size: 11.2))
                     .foregroundStyle(Color.popSecondaryLabel)
                     .lineLimit(1)
             }
@@ -170,9 +170,9 @@ struct MatrixPackageRow: View {
             Spacer(minLength: 0)
             HStack(spacing: 4) {
                 Image(systemName: app.symbolName)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 9.5, weight: .semibold))
                 Text(coverage.label)
-                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    .font(.system(size: 10.8, weight: .semibold).monospacedDigit())
             }
             .foregroundStyle(coverage.enabled > 0 ? app.bundleAccentColor : Color.popTertiaryLabel)
             .padding(.horizontal, 7)
@@ -195,10 +195,10 @@ struct MatrixPackageRow: View {
     private var sourceCell: some View {
         HStack(spacing: 6) {
             Image(systemName: "shippingbox")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 10.5, weight: .semibold))
                 .foregroundStyle(Color.popSecondaryLabel)
             Text(capability.sourceLabel)
-                .font(.system(size: 11.5))
+                .font(.system(size: 11))
                 .foregroundStyle(Color.popSecondaryLabel)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -304,8 +304,8 @@ private struct MatrixPackageComponentRow: View {
         HStack(spacing: 0) {
             componentCell
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 56)
-                .padding(.vertical, 6)
+                .padding(.leading, 44)
+                .padding(.vertical, 5)
 
             appStateCell(for: .claude)
                 .frame(width: MatrixTableLayout.appColumnWidth)
@@ -329,25 +329,25 @@ private struct MatrixPackageComponentRow: View {
                 store.selectSkill(skill.id)
             }
         }
-        .background(Color.popCardBackground.opacity(0.20))
+        .background(Color.popCardBackground.opacity(0.14))
     }
 
     private var componentCell: some View {
         HStack(spacing: 9) {
             Text(componentTreePrefix)
-                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .font(.system(size: 11.5, weight: .medium, design: .monospaced))
                 .foregroundStyle(Color.popTertiaryLabel)
                 .frame(width: 18, alignment: .leading)
 
             Image(systemName: component.kindSymbol)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 10.5, weight: .semibold))
                 .foregroundStyle(component.installed ? Color.popSecondaryLabel : Color.popTertiaryLabel)
                 .frame(width: 14)
 
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(component.name)
-                        .font(.system(size: 12.5, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.popLabel)
                         .lineLimit(1)
                     Text(component.kind.uppercased())
@@ -363,7 +363,7 @@ private struct MatrixPackageComponentRow: View {
                     }
                 }
                 Text(component.status)
-                    .font(.system(size: 10.5))
+                    .font(.system(size: 10.2))
                     .foregroundStyle(Color.popSecondaryLabel)
                     .lineLimit(1)
             }
@@ -399,7 +399,7 @@ private struct MatrixPackageComponentRow: View {
 
     private var sourceCell: some View {
         Text(component.location ?? component.id)
-            .font(.system(size: 11, design: .monospaced))
+            .font(.system(size: 10.5, design: .monospaced))
             .foregroundStyle(Color.popSecondaryLabel)
             .lineLimit(1)
             .truncationMode(.middle)
