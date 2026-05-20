@@ -270,6 +270,21 @@ final class PopskillStore {
         capabilities.filter { typeFilter.includes(capability: $0) }.count
     }
 
+    func matrixShortcutCounts() -> MatrixShortcutCounts {
+        let currentCapabilities = capabilities
+        let filterCounts = Dictionary(uniqueKeysWithValues: MatrixFilter.allCases.map { filter in
+            (filter, currentCapabilities.filter { filter.includes(capability: $0, store: self) }.count)
+        })
+        let typeCounts = Dictionary(uniqueKeysWithValues: MatrixTypeFilter.allCases.map { filter in
+            (filter, currentCapabilities.filter { filter.includes(capability: $0) }.count)
+        })
+        return MatrixShortcutCounts(
+            capabilityCount: currentCapabilities.count,
+            filterCounts: filterCounts,
+            typeCounts: typeCounts
+        )
+    }
+
     /// O(1) update lookup for matrix rows and filters. `SkillUpdateInfo.id`
     /// may be scoped ("owner/name:skill") or path-like, so both the full id
     /// and its useful suffixes are indexed once when `updates` changes.
@@ -388,5 +403,29 @@ final class PopskillStore {
 
     private static func makeUpdateSkillIDs(from updates: [SkillUpdateInfo]) -> Set<String> {
         Set(updates.flatMap(\.normalizedIdentifierCandidates))
+    }
+}
+
+struct MatrixShortcutCounts: Equatable {
+    let capabilityCount: Int
+    private let filterCounts: [MatrixFilter: Int]
+    private let typeCounts: [MatrixTypeFilter: Int]
+
+    init(
+        capabilityCount: Int,
+        filterCounts: [MatrixFilter: Int],
+        typeCounts: [MatrixTypeFilter: Int]
+    ) {
+        self.capabilityCount = capabilityCount
+        self.filterCounts = filterCounts
+        self.typeCounts = typeCounts
+    }
+
+    func count(for filter: MatrixFilter) -> Int {
+        filterCounts[filter] ?? 0
+    }
+
+    func count(for filter: MatrixTypeFilter) -> Int {
+        typeCounts[filter] ?? 0
     }
 }

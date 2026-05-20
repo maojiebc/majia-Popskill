@@ -140,11 +140,12 @@ struct RootView: View {
     private var matrixShortcutRows: some View {
         let statusFilters: [MatrixFilter] = [.claudeOnly, .codexOnly, .brokenLinks]
         let typeFilters: [MatrixTypeFilter] = [.bundle, .skill, .agent, .mcp, .cli]
-        if !store.capabilities.isEmpty {
+        let counts = store.matrixShortcutCounts()
+        if counts.capabilityCount > 0 {
             VStack(alignment: .leading, spacing: 7) {
                 shortcutHeader("sidebar.matrixFilters")
                 ForEach(statusFilters) { filter in
-                    let count = store.matrixFilterCount(filter)
+                    let count = counts.count(for: filter)
                     if count > 0 {
                         sidebarShortcutButton(
                             titleKey: filter.titleKey,
@@ -163,7 +164,7 @@ struct RootView: View {
                 shortcutHeader("sidebar.matrixTypes")
                     .padding(.top, 4)
                 ForEach(typeFilters) { filter in
-                    let count = store.matrixTypeFilterCount(filter)
+                    let count = counts.count(for: filter)
                     if count > 0 {
                         sidebarShortcutButton(
                             titleKey: filter.titleKey,

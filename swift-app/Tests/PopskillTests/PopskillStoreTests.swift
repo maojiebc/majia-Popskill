@@ -130,12 +130,17 @@ struct PopskillStoreTests {
             )
         ]
 
-        #expect(store.matrixFilterCount(.claudeOnly) == 2)
-        #expect(store.matrixFilterCount(.codexOnly) == 1)
-        #expect(store.matrixFilterCount(.brokenLinks) == 1)
-        #expect(store.matrixTypeFilterCount(.bundle) == 1)
-        #expect(store.matrixTypeFilterCount(.skill) == 3)
-        #expect(store.matrixTypeFilterCount(.agent) == 1)
+        let counts = store.matrixShortcutCounts()
+
+        #expect(counts.capabilityCount == 5)
+        #expect(counts.count(for: .claudeOnly) == 2)
+        #expect(counts.count(for: .codexOnly) == 1)
+        #expect(counts.count(for: .brokenLinks) == 1)
+        #expect(counts.count(for: .bundle) == 1)
+        #expect(counts.count(for: .skill) == 3)
+        #expect(counts.count(for: .agent) == 1)
+        #expect(store.matrixFilterCount(.claudeOnly) == counts.count(for: .claudeOnly))
+        #expect(store.matrixTypeFilterCount(.bundle) == counts.count(for: .bundle))
     }
 
     @Test
