@@ -22,6 +22,14 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Select Xcode 16
+        timeout-minutes: 2
+        run: |
+          XCODE_PATH="$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort | tail -n 1)"
+          test -n "$XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          swift --version
+
       - name: Install Rust
         timeout-minutes: 5
         run: rustup toolchain install stable --profile minimal
