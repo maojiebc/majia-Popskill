@@ -36,4 +36,14 @@ struct LocalizationTests {
         #expect(localization.string("matrix.inspector.tab.sync") == "同步")
         #expect(localization.string("matrix.inspector.header.calls", "412") == "412 次调用")
     }
+
+    @Test
+    func inspectorSkillActionLabelsAreLocalized() {
+        let localization = PopskillLocalization(language: .simplifiedChinese)
+
+        #expect(localization.string("matrix.skill.action.openReadme") == "编辑 prompt")
+        #expect(localization.string("matrix.skill.action.checkUpdates") == "检查更新")
+        #expect(localization.string("matrix.skill.action.openSource") == "打开来源")
+        #expect(localization.string("matrix.skill.action.revealInFinder") == "在 Finder 中显示")
+    }
 }

@@ -440,6 +440,10 @@
 "matrix.package.action.checkUpdates" = "Check updates";
 "matrix.package.action.openSource" = "Open source";
 "matrix.package.action.revealInFinder" = "Reveal local skill";
+"matrix.skill.action.openReadme" = "Edit prompt";
+"matrix.skill.action.checkUpdates" = "Check updates";
+"matrix.skill.action.openSource" = "Open source";
+"matrix.skill.action.revealInFinder" = "Reveal in Finder";
 "matrix.skill.paths.readme" = "SKILL.md";
 "matrix.package.version.strategy" = "Strategy";
 "matrix.package.version.branch" = "Branch";

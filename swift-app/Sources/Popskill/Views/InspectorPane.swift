@@ -204,6 +204,9 @@ struct InspectorPane: View {
             if !primaryDescription.isEmpty {
                 summarySection
             }
+            if let skill = selectedSkill {
+                skillActionsSection(skill)
+            }
             if let scenarios = capability.triggerScenarios, !scenarios.isEmpty {
                 triggerSection(scenarios: scenarios)
             }
@@ -267,7 +270,7 @@ struct InspectorPane: View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeading(title: "matrix.inspector.section.actions", accent: .accentColor)
             LazyVGrid(columns: Self.actionGridColumns, alignment: .leading, spacing: 8) {
-                packageActionButton(
+                inspectorActionButton(
                     titleKey: "matrix.package.action.rescanUsage",
                     systemImage: "chart.bar.doc.horizontal",
                     inFlight: store.usageScanInFlight,
@@ -276,7 +279,7 @@ struct InspectorPane: View {
                     Task { await store.refreshUsageScan() }
                 }
 
-                packageActionButton(
+                inspectorActionButton(
                     titleKey: "matrix.package.action.checkUpdates",
                     systemImage: "arrow.clockwise",
                     inFlight: store.updatesRefreshInFlight,
@@ -287,7 +290,7 @@ struct InspectorPane: View {
 
                 sourceAction(for: package)
 
-                packageActionButton(
+                inspectorActionButton(
                     titleKey: "matrix.package.action.revealInFinder",
                     systemImage: "folder",
                     disabled: firstRevealableSkillURL(for: package) == nil
@@ -304,14 +307,14 @@ struct InspectorPane: View {
     private func sourceAction(for package: CapabilityPackage) -> some View {
         if let url = package.sourceURL {
             Link(destination: url) {
-                packageActionLabel(
+                inspectorActionLabel(
                     titleKey: "matrix.package.action.openSource",
                     systemImage: "arrow.up.right.square"
                 )
             }
             .buttonStyle(.plain)
         } else {
-            packageActionButton(
+            inspectorActionButton(
                 titleKey: "matrix.package.action.openSource",
                 systemImage: "arrow.up.right.square",
                 disabled: true
@@ -319,7 +322,62 @@ struct InspectorPane: View {
         }
     }
 
-    private func packageActionButton(
+    private func skillActionsSection(_ skill: Skill) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "matrix.inspector.section.actions", accent: .accentColor)
+            LazyVGrid(columns: Self.actionGridColumns, alignment: .leading, spacing: 8) {
+                inspectorActionButton(
+                    titleKey: "matrix.skill.action.openReadme",
+                    systemImage: "square.and.pencil",
+                    disabled: skill.markdownURL == nil
+                ) {
+                    if let url = skill.markdownURL {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+
+                inspectorActionButton(
+                    titleKey: "matrix.skill.action.checkUpdates",
+                    systemImage: "arrow.clockwise",
+                    inFlight: store.updatesRefreshInFlight,
+                    disabled: store.updatesRefreshInFlight
+                ) {
+                    Task { await store.refreshUpdates(force: true) }
+                }
+
+                sourceAction(for: skill)
+
+                inspectorActionButton(
+                    titleKey: "matrix.skill.action.revealInFinder",
+                    systemImage: "folder",
+                    disabled: !FileManager.default.fileExists(atPath: skill.localStoreURL.path)
+                ) {
+                    NSWorkspace.shared.activateFileViewerSelecting([skill.localStoreURL])
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func sourceAction(for skill: Skill) -> some View {
+        if let url = skill.sourceURL {
+            Link(destination: url) {
+                inspectorActionLabel(
+                    titleKey: "matrix.skill.action.openSource",
+                    systemImage: "arrow.up.right.square"
+                )
+            }
+            .buttonStyle(.plain)
+        } else {
+            inspectorActionButton(
+                titleKey: "matrix.skill.action.openSource",
+                systemImage: "arrow.up.right.square",
+                disabled: true
+            ) {}
+        }
+    }
+
+    private func inspectorActionButton(
         titleKey: String,
         systemImage: String,
         inFlight: Bool = false,
@@ -327,14 +385,14 @@ struct InspectorPane: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            packageActionLabel(titleKey: titleKey, systemImage: systemImage, inFlight: inFlight)
+            inspectorActionLabel(titleKey: titleKey, systemImage: systemImage, inFlight: inFlight)
         }
         .buttonStyle(.plain)
         .disabled(disabled)
         .opacity(disabled ? 0.52 : 1)
     }
 
-    private func packageActionLabel(titleKey: String, systemImage: String, inFlight: Bool = false) -> some View {
+    private func inspectorActionLabel(titleKey: String, systemImage: String, inFlight: Bool = false) -> some View {
         HStack(spacing: 7) {
             if inFlight {
                 ProgressView()
