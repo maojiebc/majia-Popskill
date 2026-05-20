@@ -306,7 +306,7 @@
 "sidebar.section.maintenance" = "维护";
 
 // S3 新增 — 矩阵主视图 + Inspector
-"matrix.subtitle" = "%d 项能力 · %d 个已启用开关";
+"matrix.subtitle" = "%d 个套装 · %d 项能力 · %d 个已启用开关";
 "matrix.search.placeholder" = "按名称、触发词或目录过滤";
 "matrix.col.capability" = "能力";
 "matrix.col.source" = "来源";
@@ -318,6 +318,7 @@
 "matrix.filter.inactive" = "未启用";
 
 "matrix.type.all" = "所有类型";
+"matrix.type.bundle" = "Bundle";
 "matrix.type.skill" = "Skill";
 "matrix.type.agent" = "Agent";
 "matrix.type.cli" = "CLI";
@@ -336,6 +337,20 @@
 "matrix.row.menu.revealInFinder" = "在 Finder 中显示";
 "matrix.row.menu.help" = "更多操作";
 "matrix.group.coverageHelp" = "%@：已启用 %d / %d";
+"matrix.package.coverageHelp" = "%@ 覆盖：%d / %d 个组件";
+"matrix.package.expand" = "展开组件";
+"matrix.package.collapse" = "收起组件";
+"matrix.package.health.active" = "完整";
+"matrix.package.health.partial" = "部分";
+"matrix.package.health.inactive" = "未安装";
+"matrix.package.health.blocked" = "缺必需";
+"matrix.package.component.required" = "必需";
+"matrix.package.component.optional" = "可选";
+"matrix.package.component.enabledHelp" = "%@ 已启用";
+"matrix.package.component.partialHelp" = "%@ 是占位或待恢复";
+"matrix.package.component.offHelp" = "%@ 未启用";
+"matrix.package.missingRequired" = "缺 %d 个必需";
+"matrix.package.config.secret" = "Keychain 密钥";
 
 "matrix.empty.title" = "还没有能力";
 "matrix.empty.body" = "从数据源安装第一个 skill,或等 sidecar 初始化完成。";
@@ -348,6 +363,9 @@
 "matrix.inspector.section.summary" = "简介";
 "matrix.inspector.section.triggers" = "触发场景";
 "matrix.inspector.section.apps" = "应用启用";
+"matrix.inspector.section.coverage" = "覆盖";
+"matrix.inspector.section.components" = "组件";
+"matrix.inspector.section.config" = "配置";
 "matrix.inspector.section.deployment" = "位置与链接";
 "matrix.inspector.section.meta" = "元信息";
 
@@ -362,6 +380,7 @@
 
 "matrix.inspector.meta.directory" = "目录";
 "matrix.inspector.meta.sourceType" = "来源类型";
+"matrix.inspector.meta.packageType" = "套装类型";
 "matrix.inspector.meta.installedAt" = "安装于";
 "matrix.inspector.meta.updatedAt" = "更新于";
 "matrix.inspector.meta.size" = "大小";

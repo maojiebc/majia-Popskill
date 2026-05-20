@@ -1160,6 +1160,32 @@ extension SkillUpdateInfo {
 }
 
 extension PackageComponent {
+    func matchesSkill(_ skill: Skill) -> Bool {
+        guard kind.caseInsensitiveCompare("skill") == .orderedSame else {
+            return false
+        }
+
+        let candidates = [
+            id,
+            name,
+            location ?? "",
+            location?.split(separator: "/").last.map(String.init) ?? ""
+        ]
+            .map(Self.normalizedIdentifier)
+            .filter { !$0.isEmpty }
+
+        let skillCandidates = [
+            skill.id,
+            skill.name,
+            skill.directory,
+            skill.id.split(separator: ":", maxSplits: 1).last.map(String.init) ?? skill.id
+        ]
+            .map(Self.normalizedIdentifier)
+            .filter { !$0.isEmpty }
+
+        return !Set(candidates).isDisjoint(with: Set(skillCandidates))
+    }
+
     func matchesSkillUpdate(_ update: SkillUpdateInfo) -> Bool {
         guard kind.caseInsensitiveCompare("skill") == .orderedSame else {
             return false
@@ -1179,11 +1205,56 @@ extension PackageComponent {
 
         return name.caseInsensitiveCompare(update.name) == .orderedSame
     }
+
+    private static func normalizedIdentifier(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
 }
 
 extension CapabilityPackage {
+    func matchingInstalledSkill(for component: PackageComponent, in skills: [Skill]) -> Skill? {
+        skills.first { component.matchesSkill($0) }
+    }
+
+    func appCoverage(using skills: [Skill]) -> [TargetApp: CapabilityAppCoverage] {
+        let components = components.all
+        let total = components.count
+        guard total > 0 else {
+            return Dictionary(
+                uniqueKeysWithValues: TargetApp.supported.map { app in
+                    (app, CapabilityAppCoverage(enabled: 0, total: 0))
+                }
+            )
+        }
+
+        return Dictionary(uniqueKeysWithValues: TargetApp.supported.map { app in
+            let enabled = components.filter { component in
+                component.isEnabled(for: app, matching: matchingInstalledSkill(for: component, in: skills))
+            }.count
+            return (app, CapabilityAppCoverage(enabled: enabled, total: total))
+        })
+    }
+
     func matchingSkillComponent(for update: SkillUpdateInfo) -> PackageComponent? {
         components.skills.first { $0.matchesSkillUpdate(update) }
+    }
+}
+
+private extension PackageComponent {
+    func isEnabled(for app: TargetApp, matching skill: Skill?) -> Bool {
+        switch kind.lowercased() {
+        case "skill":
+            if let skill {
+                return skill.apps.isEnabled(app)
+            }
+            return installed && (app == .claude || app == .codex)
+        case "agent":
+            return installed && app == .claude
+        case "cli", "mcp":
+            return installed && (app == .claude || app == .codex)
+        default:
+            return false
+        }
     }
 }
 

@@ -69,7 +69,7 @@ struct MatrixView: View {
     private func subtitle(capabilities: [MatrixCapability]) -> String {
         let count = capabilities.count
         let active = store.enabledSkillCount
-        return localization.string("matrix.subtitle", count, active)
+        return localization.string("matrix.subtitle", store.bundleCount, count, active)
     }
 
     private var searchField: some View {
@@ -182,7 +182,11 @@ struct MatrixView: View {
                             MatrixGroupHeader(group: group, store: store)
                             if !store.collapsedGroups.contains(group.id) {
                                 ForEach(group.capabilities, id: \.id) { capability in
-                                    MatrixRow(capability: capability, store: store)
+                                    if capability.kind == .bundle {
+                                        MatrixPackageRow(capability: capability, store: store)
+                                    } else {
+                                        MatrixRow(capability: capability, store: store)
+                                    }
                                     Divider().opacity(0.4)
                                 }
                             }
@@ -275,12 +279,17 @@ struct MatrixView: View {
     private func filteredSections(in capabilities: [MatrixCapability]) -> [CapabilitySection] {
         let q = store.trimmedSearch.lowercased()
         let visible = capabilities.filter { capability in
-            store.matrixFilter.includes(capability: capability, store: store)
+                store.matrixFilter.includes(capability: capability, store: store)
                 && store.matrixTypeFilter.includes(capability: capability)
                 && (q.isEmpty
                     || capability.name.lowercased().contains(q)
                     || (capability.summary ?? "").lowercased().contains(q)
-                    || capability.directory.lowercased().contains(q))
+                    || capability.directory.lowercased().contains(q)
+                    || capability.package?.components.all.contains { component in
+                        component.name.lowercased().contains(q)
+                            || component.id.lowercased().contains(q)
+                            || (component.location ?? "").lowercased().contains(q)
+                    } == true)
         }
         return SkillGrouping.sections(visible)
     }
@@ -382,6 +391,7 @@ enum MatrixFilter: String, CaseIterable, Identifiable {
 
 enum MatrixTypeFilter: String, CaseIterable, Identifiable {
     case allTypes
+    case bundle
     case skill
     case agent
     case cli
@@ -392,6 +402,7 @@ enum MatrixTypeFilter: String, CaseIterable, Identifiable {
     var titleKey: String {
         switch self {
         case .allTypes: return "matrix.type.all"
+        case .bundle:   return "matrix.type.bundle"
         case .skill:    return "matrix.type.skill"
         case .agent:    return "matrix.type.agent"
         case .cli:      return "matrix.type.cli"
@@ -402,6 +413,7 @@ enum MatrixTypeFilter: String, CaseIterable, Identifiable {
     func includes(capability: MatrixCapability) -> Bool {
         switch self {
         case .allTypes: return true
+        case .bundle:   return capability.kind == .bundle
         case .skill:    return capability.kind == .skill
         case .agent:    return capability.kind == .agent
         case .cli:      return capability.kind == .cli

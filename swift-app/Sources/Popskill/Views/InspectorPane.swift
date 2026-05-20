@@ -14,17 +14,27 @@ struct InspectorPane: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
-                if !primaryDescription.isEmpty {
-                    summarySection
+                if let package = capability.package {
+                    packageSummarySection(package)
+                    packageCoverageSection
+                    packageComponentsSection(package)
+                    if !package.configSchema.isEmpty {
+                        packageConfigSection(package)
+                    }
+                    packageMetadataSection(package)
+                } else {
+                    if !primaryDescription.isEmpty {
+                        summarySection
+                    }
+                    if let scenarios = capability.triggerScenarios, !scenarios.isEmpty {
+                        triggerSection(scenarios: scenarios)
+                    }
+                    appsSection
+                    if capability.kind == .skill {
+                        deploymentSection
+                    }
+                    metadataSection
                 }
-                if let scenarios = capability.triggerScenarios, !scenarios.isEmpty {
-                    triggerSection(scenarios: scenarios)
-                }
-                appsSection
-                if capability.kind == .skill {
-                    deploymentSection
-                }
-                metadataSection
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 18)
@@ -94,6 +104,190 @@ struct InspectorPane: View {
                 .foregroundStyle(Color.popLabel)
                 .textSelection(.enabled)
         }
+    }
+
+    private func packageSummarySection(_ package: CapabilityPackage) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "matrix.inspector.section.summary", accent: .popSectionPurple)
+            Text(package.summary)
+                .font(.callout)
+                .foregroundStyle(Color.popLabel)
+                .textSelection(.enabled)
+
+            HStack(spacing: 8) {
+                packagePill(
+                    localization.string(package.health.inspectorTitleKey),
+                    color: package.health.inspectorColor
+                )
+                packagePill(
+                    localization.string(
+                        "package.componentSummary",
+                        package.componentCount,
+                        package.installedComponentCount,
+                        package.requiredComponentCount
+                    ),
+                    color: Color.popSecondaryLabel
+                )
+            }
+        }
+    }
+
+    private var packageCoverageSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "matrix.inspector.section.coverage", accent: .popSectionPurple)
+            HStack(spacing: 10) {
+                packageCoverageCard(for: .claude)
+                packageCoverageCard(for: .codex)
+            }
+        }
+    }
+
+    private func packageCoverageCard(for app: TargetApp) -> some View {
+        let coverage = capability.appCoverage[app] ?? CapabilityAppCoverage(enabled: 0, total: 0)
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 5) {
+                Image(systemName: app.symbolName)
+                    .font(.system(size: 11, weight: .semibold))
+                Text(app.title)
+                    .font(.caption.weight(.medium))
+            }
+            .foregroundStyle(Color.popSecondaryLabel)
+            Text(coverage.label)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(coverage.enabled > 0 ? app.inspectorAccentColor : Color.popTertiaryLabel)
+            ProgressView(value: Double(coverage.enabled), total: Double(max(coverage.total, 1)))
+                .tint(app.inspectorAccentColor)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func packageComponentsSection(_ package: CapabilityPackage) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeading(title: "matrix.inspector.section.components", accent: .popSectionPurple)
+            ForEach(package.componentGroupSummaries) { group in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(group.title)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.popLabel)
+                        Text("\(group.installed)/\(group.total)")
+                            .font(.caption2.monospacedDigit().weight(.semibold))
+                            .foregroundStyle(Color.popSecondaryLabel)
+                        if group.missingRequired > 0 {
+                            Text(localization.string("matrix.package.missingRequired", group.missingRequired))
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(Color.popStatusError)
+                        }
+                        Spacer()
+                    }
+                    ForEach(components(in: group.kind, package: package), id: \.displayKey) { component in
+                        packageComponentDetailRow(component)
+                    }
+                }
+                .padding(8)
+                .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+        }
+    }
+
+    private func components(in kind: String, package: CapabilityPackage) -> [PackageComponent] {
+        switch kind {
+        case "skill": return package.components.skills
+        case "cli": return package.components.cli
+        case "mcp": return package.components.mcp
+        case "agent": return package.components.agents
+        default: return []
+        }
+    }
+
+    private func packageComponentDetailRow(_ component: PackageComponent) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: component.inspectorKindSymbol)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(component.installed ? Color.popStatusOK : Color.popTertiaryLabel)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
+                    Text(component.name)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.popLabel)
+                    Text(component.kind.uppercased())
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(Color.popSecondaryLabel)
+                }
+                Text(component.location ?? component.id)
+                    .font(.system(size: 10.5, design: .monospaced))
+                    .foregroundStyle(Color.popSecondaryLabel)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+            }
+            Spacer(minLength: 8)
+            Text(component.status)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(component.installed ? Color.popStatusOK : Color.popStatusWarning)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func packageConfigSection(_ package: CapabilityPackage) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "matrix.inspector.section.config", accent: .popSectionPurple)
+            ForEach(package.configSchema) { field in
+                HStack(spacing: 8) {
+                    Text(field.label)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.popLabel)
+                    if field.required {
+                        Text(localization.string("matrix.package.component.required"))
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Color.popStatusWarning)
+                    }
+                    Spacer()
+                    Text(field.secret ? localization.string("matrix.package.config.secret") : field.storage)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Color.popSecondaryLabel)
+                }
+                .padding(8)
+                .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+        }
+    }
+
+    private func packageMetadataSection(_ package: CapabilityPackage) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "matrix.inspector.section.meta")
+            VStack(alignment: .leading, spacing: 6) {
+                metaRow(label: localization.string("matrix.inspector.meta.directory"), value: package.source.location)
+                metaRow(label: localization.string("matrix.inspector.meta.sourceType"), value: package.source.kind)
+                metaRow(label: localization.string("matrix.inspector.meta.packageType"), value: package.typeLabel)
+                if let installedAt = package.lifecycle?.installedAt, installedAt > 0 {
+                    metaRow(label: localization.string("matrix.inspector.meta.installedAt"), value: Self.formatTimestamp(installedAt))
+                }
+                if let updatedAt = package.lifecycle?.updatedAt, updatedAt > 0 {
+                    metaRow(label: localization.string("matrix.inspector.meta.updatedAt"), value: Self.formatTimestamp(updatedAt))
+                }
+            }
+            if let url = package.sourceURL {
+                Link(destination: url) {
+                    Label(localization.string("matrix.inspector.meta.openSource"), systemImage: "arrow.up.right.square")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func packagePill(_ title: String, color: Color) -> some View {
+        Text(title)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(color.opacity(0.10), in: Capsule())
     }
 
     private func triggerSection(scenarios: [String]) -> some View {
@@ -333,6 +527,50 @@ struct InspectorPane: View {
             }
         } catch {
             store.errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private extension CapabilityPackageHealth {
+    var inspectorTitleKey: String {
+        switch self {
+        case .active: "matrix.package.health.active"
+        case .partial: "matrix.package.health.partial"
+        case .inactive: "matrix.package.health.inactive"
+        case .blocked: "matrix.package.health.blocked"
+        }
+    }
+
+    var inspectorColor: Color {
+        switch self {
+        case .active: Color.popStatusOK
+        case .partial: Color.popStatusWarning
+        case .inactive: Color.popTertiaryLabel
+        case .blocked: Color.popStatusError
+        }
+    }
+}
+
+private extension PackageComponent {
+    var inspectorKindSymbol: String {
+        switch kind.lowercased() {
+        case "skill": "square.grid.3x3.fill"
+        case "agent": "person.crop.square"
+        case "cli": "terminal"
+        case "mcp": "rectangle.connected.to.line.below"
+        default: "circle.grid.2x2"
+        }
+    }
+}
+
+private extension TargetApp {
+    var inspectorAccentColor: Color {
+        switch self {
+        case .claude: .orange
+        case .codex: .green
+        case .gemini: .blue
+        case .opencode: .indigo
+        case .hermes: .purple
         }
     }
 }

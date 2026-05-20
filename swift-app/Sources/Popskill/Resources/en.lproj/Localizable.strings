@@ -306,7 +306,7 @@
 "sidebar.section.maintenance" = "MAINTENANCE";
 
 // S3 新增 — Matrix + Inspector
-"matrix.subtitle" = "%d capabilities · %d active toggles";
+"matrix.subtitle" = "%d bundles · %d capabilities · %d active toggles";
 "matrix.search.placeholder" = "Filter by name, trigger, or directory";
 "matrix.col.capability" = "Capability";
 "matrix.col.source" = "Source";
@@ -318,6 +318,7 @@
 "matrix.filter.inactive" = "Inactive";
 
 "matrix.type.all" = "All types";
+"matrix.type.bundle" = "Bundle";
 "matrix.type.skill" = "Skill";
 "matrix.type.agent" = "Agent";
 "matrix.type.cli" = "CLI";
@@ -336,6 +337,20 @@
 "matrix.row.menu.revealInFinder" = "Reveal in Finder";
 "matrix.row.menu.help" = "More actions";
 "matrix.group.coverageHelp" = "%@: %d of %d enabled";
+"matrix.package.coverageHelp" = "%@ coverage: %d of %d components";
+"matrix.package.expand" = "Expand components";
+"matrix.package.collapse" = "Collapse components";
+"matrix.package.health.active" = "Complete";
+"matrix.package.health.partial" = "Partial";
+"matrix.package.health.inactive" = "Not installed";
+"matrix.package.health.blocked" = "Missing required";
+"matrix.package.component.required" = "Required";
+"matrix.package.component.optional" = "Optional";
+"matrix.package.component.enabledHelp" = "%@ enabled";
+"matrix.package.component.partialHelp" = "%@ is stubbed or recoverable";
+"matrix.package.component.offHelp" = "%@ not enabled";
+"matrix.package.missingRequired" = "%d required missing";
+"matrix.package.config.secret" = "Keychain secret";
 
 "matrix.empty.title" = "No capabilities yet";
 "matrix.empty.body" = "Install your first skill from a source, or wait for bootstrap to finish.";
@@ -348,6 +363,9 @@
 "matrix.inspector.section.summary" = "SUMMARY";
 "matrix.inspector.section.triggers" = "TRIGGERS";
 "matrix.inspector.section.apps" = "APPS";
+"matrix.inspector.section.coverage" = "COVERAGE";
+"matrix.inspector.section.components" = "COMPONENTS";
+"matrix.inspector.section.config" = "CONFIG";
 "matrix.inspector.section.deployment" = "DEPLOYMENT";
 "matrix.inspector.section.meta" = "METADATA";
 
@@ -362,6 +380,7 @@
 
 "matrix.inspector.meta.directory" = "Directory";
 "matrix.inspector.meta.sourceType" = "Source type";
+"matrix.inspector.meta.packageType" = "Package type";
 "matrix.inspector.meta.installedAt" = "Installed";
 "matrix.inspector.meta.updatedAt" = "Updated";
 "matrix.inspector.meta.size" = "Size";

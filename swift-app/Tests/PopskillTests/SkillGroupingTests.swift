@@ -85,13 +85,14 @@ struct SkillGroupingTests {
     @Test
     func sectionsRespectCanonicalKindOrder() {
         // CapabilityKind.allCases is the canonical order — even with inputs
-        // interleaved, sections come out in skill/agent/cli/mcp/config order.
+        // interleaved, sections come out in bundle/skill/agent/cli/mcp/config order.
+        let bundleCap = capability(name: "package", kind: .bundle, owner: "pkg", name2: "source")
         let agentCap = capability(name: "z", kind: .agent, owner: nil, name2: nil)
         let skillCap = capability(name: "y", kind: .skill, owner: "a", name2: "lib")
 
-        let sections = SkillGrouping.sections([agentCap, skillCap])
+        let sections = SkillGrouping.sections([agentCap, skillCap, bundleCap])
 
-        #expect(sections.map(\.kind) == [.skill, .agent])
+        #expect(sections.map(\.kind) == [.bundle, .skill, .agent])
     }
 
     @Test

@@ -15,6 +15,7 @@ import Observation
 final class PopskillStore {
     // ===== Data slices =====
     var skills: [Skill] = []
+    var packages: [CapabilityPackage] = []
     var unmanagedSkills: [UnmanagedSkill] = []
     var localAgents: [LocalAgent] = []
     var agentTargets: [AgentTarget] = []
@@ -70,6 +71,10 @@ final class PopskillStore {
     /// Repo groups the user has explicitly collapsed. Set is keyed by
     /// `MatrixGroup.id` (== "owner/name" or "ungrouped").
     var collapsedGroups: Set<String> = []
+    /// Composite packages are expanded by default so the matrix immediately
+    /// shows the component tree from the reference design. Users can collapse
+    /// noisy bundles without hiding the whole source group.
+    var collapsedPackageIDs: Set<String> = []
 
     // ===== System state =====
     var lastBootstrapAt: Date?
@@ -102,18 +107,28 @@ final class PopskillStore {
         async let skillsTask = client.list()
         async let sourcesTask = client.listRepositories()
         async let agentsTask = client.listAgents()
+        async let packagesTask = loadPackagesBestEffort()
 
         do {
             let now = Date()
             self.skills = try await skillsTask
             self.sources = try await sourcesTask
             self.localAgents = try await agentsTask
+            self.packages = await packagesTask
             self.lastBootstrapAt = now
             // Bootstrap counts as a fresh sources fetch — secondary views
             // that .task into refreshSources won't double-pull immediately.
             self.lastSourcesRefreshAt = now
         } catch {
             self.errorMessage = error.localizedDescription
+        }
+    }
+
+    private func loadPackagesBestEffort() async -> [CapabilityPackage] {
+        do {
+            return try await client.listPackages()
+        } catch {
+            return []
         }
     }
 
@@ -176,9 +191,16 @@ final class PopskillStore {
     /// rather than stored so toggle / install / uninstall actions only need
     /// to mutate `skills` / `localAgents` and the matrix follows.
     var capabilities: [MatrixCapability] {
-        skills.map(MatrixCapability.fromSkill) + localAgents.map(MatrixCapability.fromAgent)
+        compositePackages.map { MatrixCapability.fromPackage($0, skills: skills) }
+            + skills.map(MatrixCapability.fromSkill)
+            + localAgents.map(MatrixCapability.fromAgent)
     }
 
+    var compositePackages: [CapabilityPackage] {
+        packages.filter { $0.type == .composite }
+    }
+
+    var bundleCount: Int { compositePackages.count }
     var pendingUpdateCount: Int { updates.count }
     var brokenLinkCount: Int { linkHealth?.summary.broken ?? 0 }
     var okLinkCount: Int { linkHealth?.summary.ok ?? 0 }
@@ -193,6 +215,11 @@ final class PopskillStore {
     /// may be scoped ("owner/name:skill") or path-like, so both the full id
     /// and its useful suffixes are indexed once when `updates` changes.
     func hasPendingUpdate(for capability: MatrixCapability) -> Bool {
+        if let package = capability.package {
+            return updates.contains { update in
+                package.matchingSkillComponent(for: update) != nil
+            }
+        }
         guard let skillID = capability.underlyingSkillID else { return false }
         return updateIdentifierCandidates(for: skillID).contains { updateSkillIDs.contains($0) }
     }
@@ -218,6 +245,18 @@ final class PopskillStore {
     func selectCapability(_ capabilityID: String) {
         selectedSkillID = capabilityID
         inspectorOpen = true
+    }
+
+    func togglePackageExpansion(_ packageID: String) {
+        if collapsedPackageIDs.contains(packageID) {
+            collapsedPackageIDs.remove(packageID)
+        } else {
+            collapsedPackageIDs.insert(packageID)
+        }
+    }
+
+    func skill(for component: PackageComponent) -> Skill? {
+        skills.first { component.matchesSkill($0) }
     }
 
     func closeInspector() {

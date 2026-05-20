@@ -640,6 +640,94 @@ struct SkillModelsTests {
     }
 
     @Test
+    func packageComponentMatchesInstalledSkillByScopedIdentifierAndLocation() {
+        let component = PackageComponent(
+            id: "lark-doc",
+            name: "Lark Doc",
+            kind: "skill",
+            required: true,
+            installed: true,
+            status: "installed",
+            location: "skills/lark-doc"
+        )
+        let skill = Skill(
+            id: "larksuite/cli:lark-doc",
+            name: "Lark Doc",
+            description: "Docs skill",
+            directory: "lark-doc",
+            repoOwner: "larksuite",
+            repoName: "cli",
+            readmeUrl: nil,
+            apps: SkillApps(claude: true, codex: false, gemini: false, opencode: false, hermes: false),
+            installedAt: nil,
+            updatedAt: nil,
+            contentHash: nil
+        )
+
+        #expect(component.matchesSkill(skill))
+    }
+
+    @Test
+    func capabilityPackageCoverageUsesSkillTogglesAndComponentFallbacks() {
+        let package = CapabilityPackage(
+            id: "pkg:lark",
+            type: .composite,
+            name: "Feishu / Lark",
+            vendor: "ByteDance",
+            summary: "Composite office package.",
+            source: PackageSource(
+                kind: "builtin",
+                location: "popskill/builtin/lark",
+                updateStrategy: "manual",
+                repoOwner: nil,
+                repoName: nil,
+                repoBranch: nil,
+                readmeUrl: nil
+            ),
+            components: PackageComponents(
+                cli: [
+                    PackageComponent(id: "lark-cli", name: "lark-cli", kind: "cli", required: true, installed: true, status: "detected", location: nil)
+                ],
+                skills: [
+                    PackageComponent(id: "lark-doc", name: "Lark Doc", kind: "skill", required: true, installed: true, status: "installed", location: "lark-doc")
+                ],
+                mcp: [
+                    PackageComponent(id: "lark-mcp", name: "Lark MCP", kind: "mcp", required: false, installed: false, status: "registry-reference", location: nil)
+                ],
+                agents: [
+                    PackageComponent(id: "lark-agent", name: "Lark Agent", kind: "agent", required: false, installed: true, status: "installed", location: "~/.claude/agents/lark-agent.md")
+                ]
+            ),
+            configSchema: [],
+            installed: true,
+            lifecycle: nil
+        )
+        let skill = Skill(
+            id: "larksuite/cli:lark-doc",
+            name: "Lark Doc",
+            description: "Docs skill",
+            directory: "lark-doc",
+            repoOwner: "larksuite",
+            repoName: "cli",
+            readmeUrl: nil,
+            apps: SkillApps(claude: true, codex: false, gemini: false, opencode: false, hermes: false),
+            installedAt: nil,
+            updatedAt: nil,
+            contentHash: nil
+        )
+
+        let coverage = package.appCoverage(using: [skill])
+        let capability = MatrixCapability.fromPackage(package, skills: [skill])
+
+        #expect(coverage[.claude]?.label == "3/4")
+        #expect(coverage[.codex]?.label == "1/4")
+        #expect(capability.id == "bundle:pkg:lark")
+        #expect(capability.kind == .bundle)
+        #expect(capability.apps.claude == true)
+        #expect(capability.apps.codex == true)
+    }
+
+    @Test
     func capabilityPackageHealthSeparatesActivePartialBlockedAndInactive() {
         #expect(package(components: []).health == .inactive)
         #expect(package(components: [component(installed: true)]).health == .active)

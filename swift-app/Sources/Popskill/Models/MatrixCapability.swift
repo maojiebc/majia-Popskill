@@ -1,11 +1,11 @@
 import Foundation
 
-/// Five capability modalities Popskill surfaces in the matrix. Order in
-/// `CaseIterable` mirrors the type-filter chip row in `MatrixView` (skill →
-/// agent → cli → mcp → config). v0.4 ships skill + agent fully; cli / mcp /
-/// config are placeholders that the matrix renders an "empty for now" hint
-/// for until later sprints wire their sidecar discovery.
+/// Capability modalities Popskill surfaces in the matrix. Order in
+/// `CaseIterable` mirrors the type-filter chip row in `MatrixView`.
+/// Bundles are first-class package rows backed by `package-list`; skill and
+/// agent rows keep the existing direct management flows.
 enum CapabilityKind: String, Codable, CaseIterable, Identifiable {
+    case bundle
     case skill
     case agent
     case cli
@@ -16,6 +16,7 @@ enum CapabilityKind: String, Codable, CaseIterable, Identifiable {
 
     var titleKey: String {
         switch self {
+        case .bundle: return "matrix.type.bundle"
         case .skill:  return "matrix.type.skill"
         case .agent:  return "matrix.type.agent"
         case .cli:    return "matrix.type.cli"
@@ -26,6 +27,7 @@ enum CapabilityKind: String, Codable, CaseIterable, Identifiable {
 
     var symbol: String {
         switch self {
+        case .bundle: return "shippingbox.fill"
         case .skill:  return "square.grid.3x3.fill"
         case .agent:  return "person.crop.square"
         case .cli:    return "terminal"
@@ -33,6 +35,14 @@ enum CapabilityKind: String, Codable, CaseIterable, Identifiable {
         case .config: return "slider.horizontal.3"
         }
     }
+}
+
+struct CapabilityAppCoverage: Equatable {
+    let enabled: Int
+    let total: Int
+
+    var isEnabled: Bool { enabled > 0 }
+    var label: String { "\(enabled)/\(total)" }
 }
 
 /// Unified row model the matrix renders against. Wraps `Skill` / `LocalAgent`
@@ -59,10 +69,60 @@ struct MatrixCapability: Identifiable, Equatable {
     let triggerScenarios: [String]?
     let underlyingSkillID: String?
     let underlyingAgentID: String?
+    let underlyingPackageID: String?
+    let package: CapabilityPackage?
+    let appCoverage: [TargetApp: CapabilityAppCoverage]
+
+    init(
+        id: String,
+        kind: CapabilityKind,
+        name: String,
+        summary: String?,
+        sourceLabel: String,
+        sourceType: String?,
+        repoOwner: String?,
+        repoName: String?,
+        apps: SkillApps,
+        deployment: SkillDeployment?,
+        directory: String,
+        installedAt: Int?,
+        updatedAt: Int?,
+        sizeBytes: UInt64?,
+        triggerScenarios: [String]?,
+        underlyingSkillID: String?,
+        underlyingAgentID: String?,
+        underlyingPackageID: String? = nil,
+        package: CapabilityPackage? = nil,
+        appCoverage: [TargetApp: CapabilityAppCoverage] = [:]
+    ) {
+        self.id = id
+        self.kind = kind
+        self.name = name
+        self.summary = summary
+        self.sourceLabel = sourceLabel
+        self.sourceType = sourceType
+        self.repoOwner = repoOwner
+        self.repoName = repoName
+        self.apps = apps
+        self.deployment = deployment
+        self.directory = directory
+        self.installedAt = installedAt
+        self.updatedAt = updatedAt
+        self.sizeBytes = sizeBytes
+        self.triggerScenarios = triggerScenarios
+        self.underlyingSkillID = underlyingSkillID
+        self.underlyingAgentID = underlyingAgentID
+        self.underlyingPackageID = underlyingPackageID
+        self.package = package
+        self.appCoverage = appCoverage
+    }
 
     /// Source URL is reusable across kinds — the matrix uses it for the
     /// "Open Source" menu item.
     var sourceURL: URL? {
+        if let packageURL = package?.sourceURL {
+            return packageURL
+        }
         if let owner = repoOwner, let name = repoName, !owner.isEmpty, !name.isEmpty {
             return URL(string: "https://github.com/\(owner)/\(name)")
         }
@@ -89,6 +149,10 @@ struct MatrixCapability: Identifiable, Equatable {
         capabilityID(kind: .agent, rawID: agentID)
     }
 
+    static func packageCapabilityID(for packageID: String) -> String {
+        capabilityID(kind: .bundle, rawID: packageID)
+    }
+
     static func toggleKey(capabilityID: String, app: TargetApp) -> String {
         "\(capabilityID)|\(app.rawValue)"
     }
@@ -99,6 +163,40 @@ struct MatrixCapability: Identifiable, Equatable {
 }
 
 extension MatrixCapability {
+    static func fromPackage(_ package: CapabilityPackage, skills: [Skill]) -> MatrixCapability {
+        let coverage = package.appCoverage(using: skills)
+        let appState = SkillApps(
+            claude: coverage[.claude]?.isEnabled == true,
+            codex: coverage[.codex]?.isEnabled == true,
+            gemini: coverage[.gemini]?.isEnabled == true,
+            opencode: coverage[.opencode]?.isEnabled == true,
+            hermes: coverage[.hermes]?.isEnabled == true
+        )
+
+        return MatrixCapability(
+            id: packageCapabilityID(for: package.id),
+            kind: .bundle,
+            name: package.name,
+            summary: package.summary,
+            sourceLabel: package.sourceLabel,
+            sourceType: package.source.kind,
+            repoOwner: package.source.repoOwner,
+            repoName: package.source.repoName,
+            apps: appState,
+            deployment: nil,
+            directory: package.source.location,
+            installedAt: package.lifecycle?.installedAt,
+            updatedAt: package.lifecycle?.updatedAt,
+            sizeBytes: nil,
+            triggerScenarios: nil,
+            underlyingSkillID: nil,
+            underlyingAgentID: nil,
+            underlyingPackageID: package.id,
+            package: package,
+            appCoverage: coverage
+        )
+    }
+
     static func fromSkill(_ skill: Skill) -> MatrixCapability {
         MatrixCapability(
             id: skillCapabilityID(for: skill.id),
