@@ -581,7 +581,17 @@
 "settings.sync.soon" = "稍后";
 "settings.sync.push" = "推送";
 "settings.sync.pull" = "拉取";
+"settings.sync.status" = "状态";
 "settings.sync.done" = "已通过 %2$@ %1$@";
+"settings.sync.noDetails" = "同步没有返回详细信息。";
+"settings.sync.result.success" = "同步完成";
+"settings.sync.result.failure" = "同步失败";
+"settings.sync.result.unavailable" = "同步方式不可用";
+"settings.sync.result.unknown" = "同步响应";
+"settings.sync.detail.exitCode" = "退出码 %d";
+"settings.sync.detail.local" = "本地：%@";
+"settings.sync.detail.remote" = "远端：%@";
+"settings.sync.detail.count" = "%d 项";
 
 "settings.sources.title" = "数据源";
 "settings.sources.summary" = "%d / %d 个数据源已启用";

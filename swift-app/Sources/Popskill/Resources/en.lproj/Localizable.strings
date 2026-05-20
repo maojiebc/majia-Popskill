@@ -581,7 +581,17 @@
 "settings.sync.soon" = "SOON";
 "settings.sync.push" = "Push";
 "settings.sync.pull" = "Pull";
+"settings.sync.status" = "Status";
 "settings.sync.done" = "%@ via %@ done";
+"settings.sync.noDetails" = "No sync details returned.";
+"settings.sync.result.success" = "Sync complete";
+"settings.sync.result.failure" = "Sync failed";
+"settings.sync.result.unavailable" = "Provider unavailable";
+"settings.sync.result.unknown" = "Sync response";
+"settings.sync.detail.exitCode" = "Exit code %d";
+"settings.sync.detail.local" = "Local: %@";
+"settings.sync.detail.remote" = "Remote: %@";
+"settings.sync.detail.count" = "%d items";
 
 "settings.sources.title" = "SOURCES";
 "settings.sources.summary" = "%d of %d sources enabled";

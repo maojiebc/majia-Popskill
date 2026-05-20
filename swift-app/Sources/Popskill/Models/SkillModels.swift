@@ -1134,6 +1134,115 @@ struct SyncResult: Codable, Equatable {
     let stderr: String?
     let message: String?
     let implemented: Bool?
+    let localPath: String?
+    let remotePath: String?
+    let localCount: Int?
+    let remoteCount: Int?
+
+    init(
+        provider: String,
+        action: String,
+        ok: Bool? = nil,
+        exitCode: Int? = nil,
+        stdout: String? = nil,
+        stderr: String? = nil,
+        message: String? = nil,
+        implemented: Bool? = nil,
+        localPath: String? = nil,
+        remotePath: String? = nil,
+        localCount: Int? = nil,
+        remoteCount: Int? = nil
+    ) {
+        self.provider = provider
+        self.action = action
+        self.ok = ok
+        self.exitCode = exitCode
+        self.stdout = stdout
+        self.stderr = stderr
+        self.message = message
+        self.implemented = implemented
+        self.localPath = localPath
+        self.remotePath = remotePath
+        self.localCount = localCount
+        self.remoteCount = remoteCount
+    }
+}
+
+struct SyncResultSummary: Equatable {
+    enum State: Equatable {
+        case success
+        case failure
+        case unavailable
+        case unknown
+    }
+
+    enum Detail: Equatable {
+        case exitCode(Int)
+        case localEndpoint(path: String?, count: Int?)
+        case remoteEndpoint(path: String?, count: Int?)
+    }
+
+    let state: State
+    let message: String
+    let details: [Detail]
+}
+
+extension SyncResult {
+    func summary(successMessage: String, emptyMessage: String) -> SyncResultSummary {
+        let state = summaryState
+        let message = preferredMessage(for: state) ?? fallbackMessage(for: state, successMessage: successMessage, emptyMessage: emptyMessage)
+        var details: [SyncResultSummary.Detail] = []
+
+        if let exitCode, state != .success || exitCode != 0 {
+            details.append(.exitCode(exitCode))
+        }
+        if localPath != nil || localCount != nil {
+            details.append(.localEndpoint(path: localPath, count: localCount))
+        }
+        if remotePath != nil || remoteCount != nil {
+            details.append(.remoteEndpoint(path: remotePath, count: remoteCount))
+        }
+
+        return SyncResultSummary(state: state, message: message, details: details)
+    }
+
+    private var summaryState: SyncResultSummary.State {
+        if implemented == false {
+            return .unavailable
+        }
+        if ok == true {
+            return .success
+        }
+        if ok == false {
+            return .failure
+        }
+        return .unknown
+    }
+
+    private func preferredMessage(for state: SyncResultSummary.State) -> String? {
+        let candidates: [String?]
+        switch state {
+        case .failure, .unavailable:
+            candidates = [message, stderr, stdout]
+        case .success, .unknown:
+            candidates = [message, stdout, stderr]
+        }
+        return candidates.compactMap(Self.cleanedOutput).first
+    }
+
+    private func fallbackMessage(for state: SyncResultSummary.State, successMessage: String, emptyMessage: String) -> String {
+        state == .success ? successMessage : emptyMessage
+    }
+
+    private static func cleanedOutput(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        if trimmed.count <= 280 {
+            return trimmed
+        }
+        return String(trimmed.prefix(280)).trimmingCharacters(in: .whitespacesAndNewlines) + "..."
+    }
 }
 
 struct UnmanagedSkill: Identifiable, Codable, Equatable {
