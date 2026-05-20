@@ -1186,6 +1186,33 @@ extension PackageComponent {
         return !Set(candidates).isDisjoint(with: Set(skillCandidates))
     }
 
+    func matchesAttributionSkill(_ identifier: String) -> Bool {
+        guard kind.caseInsensitiveCompare("skill") == .orderedSame else {
+            return false
+        }
+
+        let normalizedIdentifier = Self.normalizedIdentifier(identifier)
+        guard !normalizedIdentifier.isEmpty else {
+            return false
+        }
+
+        let identifierSuffix = normalizedIdentifier
+            .split(separator: ":", maxSplits: 1)
+            .last
+            .map(String.init) ?? normalizedIdentifier
+
+        let candidates = [
+            id,
+            name,
+            location ?? "",
+            location?.split(separator: "/").last.map(String.init) ?? ""
+        ]
+            .map(Self.normalizedIdentifier)
+            .filter { !$0.isEmpty }
+
+        return candidates.contains(normalizedIdentifier) || candidates.contains(identifierSuffix)
+    }
+
     func matchesSkillUpdate(_ update: SkillUpdateInfo) -> Bool {
         guard kind.caseInsensitiveCompare("skill") == .orderedSame else {
             return false
@@ -1212,6 +1239,22 @@ extension PackageComponent {
 }
 
 extension CapabilityPackage {
+    func matchingInstalledSkills(in skills: [Skill]) -> [Skill] {
+        var seen: Set<String> = []
+        var matches: [Skill] = []
+
+        for component in components.skills {
+            guard let skill = matchingInstalledSkill(for: component, in: skills),
+                  !seen.contains(skill.id) else {
+                continue
+            }
+            seen.insert(skill.id)
+            matches.append(skill)
+        }
+
+        return matches
+    }
+
     func matchingInstalledSkill(for component: PackageComponent, in skills: [Skill]) -> Skill? {
         skills.first { component.matchesSkill($0) }
     }
@@ -1237,6 +1280,31 @@ extension CapabilityPackage {
 
     func matchingSkillComponent(for update: SkillUpdateInfo) -> PackageComponent? {
         components.skills.first { $0.matchesSkillUpdate(update) }
+    }
+
+    func usageSnapshot(using summary: UsageSummary?, skills: [Skill]) -> PackageUsageSnapshot? {
+        guard let summary else {
+            return nil
+        }
+
+        let matchedSkills = matchingInstalledSkills(in: skills)
+        var snapshot = PackageUsageSnapshot()
+
+        for stat in summary.skillStats where matchesUsageStat(stat, matchedSkills: matchedSkills) {
+            snapshot.add(stat)
+        }
+
+        return snapshot
+    }
+
+    private func matchesUsageStat(_ stat: SkillUsageStat, matchedSkills: [Skill]) -> Bool {
+        if matchedSkills.contains(where: { $0.matchesAttributionSkill(stat.skillID) }) {
+            return true
+        }
+
+        return components.skills.contains { component in
+            component.matchesAttributionSkill(stat.skillID)
+        }
     }
 }
 

@@ -351,6 +351,14 @@
 "matrix.package.component.offHelp" = "%@ not enabled";
 "matrix.package.missingRequired" = "%d required missing";
 "matrix.package.config.secret" = "Keychain secret";
+"matrix.package.usage.tokens" = "Tokens";
+"matrix.package.usage.calls" = "Calls";
+"matrix.package.usage.lastUsed" = "Last used %@";
+"matrix.package.usage.empty" = "Usage was scanned, but the %d local skills matched to this bundle have no attribution records yet.";
+"matrix.package.usage.notScanned" = "Transcript usage has not been scanned yet.";
+"matrix.package.usage.scanning" = "Scanning local transcripts…";
+"matrix.package.paths.empty" = "No local skill files matched this bundle.";
+"matrix.package.paths.more" = "%d more matched skills hidden.";
 
 "matrix.empty.title" = "No capabilities yet";
 "matrix.empty.body" = "Install your first skill from a source, or wait for bootstrap to finish.";
@@ -364,8 +372,10 @@
 "matrix.inspector.section.triggers" = "TRIGGERS";
 "matrix.inspector.section.apps" = "APPS";
 "matrix.inspector.section.coverage" = "COVERAGE";
+"matrix.inspector.section.usage" = "USAGE";
 "matrix.inspector.section.components" = "COMPONENTS";
 "matrix.inspector.section.config" = "CONFIG";
+"matrix.inspector.section.paths" = "LOCAL PATHS";
 "matrix.inspector.section.deployment" = "DEPLOYMENT";
 "matrix.inspector.section.meta" = "METADATA";
 

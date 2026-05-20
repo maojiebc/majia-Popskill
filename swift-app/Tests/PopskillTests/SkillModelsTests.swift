@@ -728,6 +728,103 @@ struct SkillModelsTests {
     }
 
     @Test
+    func capabilityPackageUsageSnapshotAggregatesMatchedSkillStats() {
+        let package = CapabilityPackage(
+            id: "pkg:baoyu",
+            type: .composite,
+            name: "Baoyu Skills",
+            vendor: "@dotey",
+            summary: "Prompt package",
+            source: PackageSource(
+                kind: "github",
+                location: "jimliu/baoyu-skills",
+                updateStrategy: "git",
+                repoOwner: "jimliu",
+                repoName: "baoyu-skills",
+                repoBranch: nil,
+                readmeUrl: nil
+            ),
+            components: PackageComponents(
+                cli: [],
+                skills: [
+                    PackageComponent(id: "baoyu-comic", name: "baoyu-comic", kind: "skill", required: true, installed: true, status: "installed", location: "skills/baoyu-comic"),
+                    PackageComponent(id: "baoyu-translate", name: "baoyu-translate", kind: "skill", required: true, installed: true, status: "installed", location: "skills/baoyu-translate")
+                ],
+                mcp: [],
+                agents: []
+            ),
+            configSchema: [],
+            installed: true,
+            lifecycle: nil
+        )
+        let comic = Skill(
+            id: "jimliu/baoyu-skills:baoyu-comic",
+            name: "baoyu-comic",
+            description: "Comic",
+            directory: "baoyu-comic",
+            repoOwner: "jimliu",
+            repoName: "baoyu-skills",
+            readmeUrl: nil,
+            apps: SkillApps(claude: true, codex: true, gemini: false, opencode: false, hermes: false),
+            installedAt: nil,
+            updatedAt: nil,
+            contentHash: nil
+        )
+        let lastUsed = Date(timeIntervalSince1970: 1_800_000_000)
+        let summary = UsageSummary(
+            filesScanned: 3,
+            sessions: 2,
+            usageEvents: 4,
+            inputTokens: 100,
+            outputTokens: 80,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            attributedSkillUsageEvents: 3,
+            modelStats: [],
+            skillStats: [
+                SkillUsageStat(
+                    skillID: "jimliu/baoyu-skills:baoyu-comic",
+                    sourcePlugin: nil,
+                    usageEvents: 2,
+                    inputTokens: 20,
+                    outputTokens: 30,
+                    cacheCreationTokens: 5,
+                    cacheReadTokens: 7,
+                    lastUsedAt: lastUsed
+                ),
+                SkillUsageStat(
+                    skillID: "other:baoyu-translate",
+                    sourcePlugin: nil,
+                    usageEvents: 1,
+                    inputTokens: 10,
+                    outputTokens: 12,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 0,
+                    lastUsedAt: Date(timeIntervalSince1970: 1_700_000_000)
+                ),
+                SkillUsageStat(
+                    skillID: "unrelated",
+                    sourcePlugin: nil,
+                    usageEvents: 9,
+                    inputTokens: 999,
+                    outputTokens: 999,
+                    cacheCreationTokens: 999,
+                    cacheReadTokens: 999,
+                    lastUsedAt: nil
+                )
+            ],
+            recentSessions: []
+        )
+
+        let snapshot = package.usageSnapshot(using: summary, skills: [comic])
+
+        #expect(snapshot?.matchedSkillCount == 2)
+        #expect(snapshot?.usageEvents == 3)
+        #expect(snapshot?.totalTokens == 84)
+        #expect(snapshot?.lastUsedAt == lastUsed)
+    }
+
+    @Test
     func capabilityPackageHealthSeparatesActivePartialBlockedAndInactive() {
         #expect(package(components: []).health == .inactive)
         #expect(package(components: [component(installed: true)]).health == .active)

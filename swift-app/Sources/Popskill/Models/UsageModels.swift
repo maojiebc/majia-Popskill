@@ -118,3 +118,37 @@ struct SkillUsageStat: Identifiable, Equatable {
         }
     }
 }
+
+struct PackageUsageSnapshot: Equatable {
+    var matchedSkillCount = 0
+    var usageEvents = 0
+    var inputTokens: Int64 = 0
+    var outputTokens: Int64 = 0
+    var cacheCreationTokens: Int64 = 0
+    var cacheReadTokens: Int64 = 0
+    var lastUsedAt: Date?
+
+    var totalTokens: Int64 {
+        inputTokens + outputTokens + cacheCreationTokens + cacheReadTokens
+    }
+
+    var hasUsage: Bool {
+        usageEvents > 0 || totalTokens > 0
+    }
+
+    mutating func add(_ stat: SkillUsageStat) {
+        matchedSkillCount += 1
+        usageEvents += stat.usageEvents
+        inputTokens += stat.inputTokens
+        outputTokens += stat.outputTokens
+        cacheCreationTokens += stat.cacheCreationTokens
+        cacheReadTokens += stat.cacheReadTokens
+
+        guard let date = stat.lastUsedAt else {
+            return
+        }
+        if lastUsedAt.map({ date > $0 }) ?? true {
+            lastUsedAt = date
+        }
+    }
+}

@@ -17,10 +17,12 @@ struct InspectorPane: View {
                 if let package = capability.package {
                     packageSummarySection(package)
                     packageCoverageSection
+                    packageUsageSection(package)
                     packageComponentsSection(package)
                     if !package.configSchema.isEmpty {
                         packageConfigSection(package)
                     }
+                    packageLocalPathsSection(package)
                     packageMetadataSection(package)
                 } else {
                     if !primaryDescription.isEmpty {
@@ -193,6 +195,74 @@ struct InspectorPane: View {
         }
     }
 
+    private func packageUsageSection(_ package: CapabilityPackage) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "matrix.inspector.section.usage", accent: .accentColor)
+
+            if store.usageScanInFlight {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.mini)
+                    LocalizedText("matrix.package.usage.scanning")
+                        .font(.caption)
+                        .foregroundStyle(Color.popSecondaryLabel)
+                }
+            } else if let snapshot = package.usageSnapshot(using: store.usageSummary, skills: store.skills) {
+                if snapshot.hasUsage {
+                    HStack(spacing: 10) {
+                        packageUsageMetric(
+                            titleKey: "matrix.package.usage.tokens",
+                            value: Self.formatTokens(snapshot.totalTokens),
+                            tint: .accentColor
+                        )
+                        packageUsageMetric(
+                            titleKey: "matrix.package.usage.calls",
+                            value: "\(snapshot.usageEvents)",
+                            tint: .popSectionGreen
+                        )
+                    }
+                    if let lastUsedAt = snapshot.lastUsedAt {
+                        Text(localization.string("matrix.package.usage.lastUsed", Self.relativeFormatter.localizedString(for: lastUsedAt, relativeTo: Date())))
+                            .font(.caption2)
+                            .foregroundStyle(Color.popTertiaryLabel)
+                    }
+                } else {
+                    Text(localization.string("matrix.package.usage.empty", snapshot.matchedSkillCount))
+                        .font(.caption)
+                        .foregroundStyle(Color.popSecondaryLabel)
+                }
+            } else {
+                HStack(alignment: .center, spacing: 8) {
+                    Text(localization.string("matrix.package.usage.notScanned"))
+                        .font(.caption)
+                        .foregroundStyle(Color.popSecondaryLabel)
+                    Spacer(minLength: 8)
+                    Button {
+                        Task { await store.refreshUsageScan() }
+                    } label: {
+                        Label(localization.string("insights.refresh"), systemImage: "chart.bar.doc.horizontal")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                }
+            }
+        }
+    }
+
+    private func packageUsageMetric(titleKey: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            LocalizedText(titleKey)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Color.popSecondaryLabel)
+            Text(value)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(tint)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(tint.opacity(0.07), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
     private func components(in kind: String, package: CapabilityPackage) -> [PackageComponent] {
         switch kind {
         case "skill": return package.components.skills
@@ -255,6 +325,55 @@ struct InspectorPane: View {
                 .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
         }
+    }
+
+    private func packageLocalPathsSection(_ package: CapabilityPackage) -> some View {
+        let matchedSkills = package.matchingInstalledSkills(in: store.skills)
+        return VStack(alignment: .leading, spacing: 8) {
+            SectionHeading(title: "matrix.inspector.section.paths")
+            if matchedSkills.isEmpty {
+                Text(localization.string("matrix.package.paths.empty"))
+                    .font(.caption)
+                    .foregroundStyle(Color.popTertiaryLabel)
+            } else {
+                ForEach(matchedSkills.prefix(8), id: \.id) { skill in
+                    packagePathRow(skill)
+                }
+                if matchedSkills.count > 8 {
+                    Text(localization.string("matrix.package.paths.more", matchedSkills.count - 8))
+                        .font(.caption2)
+                        .foregroundStyle(Color.popTertiaryLabel)
+                }
+            }
+        }
+    }
+
+    private func packagePathRow(_ skill: Skill) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "doc.text")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(skill.markdownURL == nil ? Color.popTertiaryLabel : Color.popSecondaryLabel)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(skill.name)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.popLabel)
+                Text(skill.localStoreURL.path.abbreviatingWithTilde)
+                    .font(.system(size: 10.5, design: .monospaced))
+                    .foregroundStyle(Color.popSecondaryLabel)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+            }
+            Spacer(minLength: 8)
+            if skill.markdownURL != nil {
+                Text("SKILL.md")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Color.popStatusOK)
+            }
+        }
+        .padding(8)
+        .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     private func packageMetadataSection(_ package: CapabilityPackage) -> some View {
@@ -506,6 +625,32 @@ struct InspectorPane: View {
         ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
     }
 
+    private static func formatTokens(_ value: Int64) -> String {
+        if value < 1_000 {
+            return decimalFormatter.string(from: NSNumber(value: value)) ?? "0"
+        }
+        if value < 1_000_000 {
+            return String(format: "%.1fK", Double(value) / 1_000.0)
+        }
+        if value < 1_000_000_000 {
+            return String(format: "%.1fM", Double(value) / 1_000_000.0)
+        }
+        return String(format: "%.2fB", Double(value) / 1_000_000_000.0)
+    }
+
+    private static let decimalFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = ","
+        return formatter
+    }()
+
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter
+    }()
+
     // MARK: Toggle helpers
 
     private func toggleKey(_ app: TargetApp) -> String {
@@ -528,6 +673,12 @@ struct InspectorPane: View {
         } catch {
             store.errorMessage = error.localizedDescription
         }
+    }
+}
+
+private extension String {
+    var abbreviatingWithTilde: String {
+        (self as NSString).abbreviatingWithTildeInPath
     }
 }
 

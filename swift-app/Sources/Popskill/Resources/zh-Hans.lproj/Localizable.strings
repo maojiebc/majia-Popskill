@@ -351,6 +351,14 @@
 "matrix.package.component.offHelp" = "%@ 未启用";
 "matrix.package.missingRequired" = "缺 %d 个必需";
 "matrix.package.config.secret" = "Keychain 密钥";
+"matrix.package.usage.tokens" = "Tokens";
+"matrix.package.usage.calls" = "调用";
+"matrix.package.usage.lastUsed" = "最近使用 %@";
+"matrix.package.usage.empty" = "已扫描用量，但这个套装匹配到的 %d 个本地 skill 暂无归因记录。";
+"matrix.package.usage.notScanned" = "还没有扫描 transcript，用量聚合暂不可用。";
+"matrix.package.usage.scanning" = "正在扫描本机 transcript…";
+"matrix.package.paths.empty" = "没有匹配到本地 skill 真身。";
+"matrix.package.paths.more" = "还有 %d 个匹配 skill 未展开。";
 
 "matrix.empty.title" = "还没有能力";
 "matrix.empty.body" = "从数据源安装第一个 skill,或等 sidecar 初始化完成。";
@@ -364,8 +372,10 @@
 "matrix.inspector.section.triggers" = "触发场景";
 "matrix.inspector.section.apps" = "应用启用";
 "matrix.inspector.section.coverage" = "覆盖";
+"matrix.inspector.section.usage" = "用量";
 "matrix.inspector.section.components" = "组件";
 "matrix.inspector.section.config" = "配置";
+"matrix.inspector.section.paths" = "本地路径";
 "matrix.inspector.section.deployment" = "位置与链接";
 "matrix.inspector.section.meta" = "元信息";
 
