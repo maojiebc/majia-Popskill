@@ -207,6 +207,7 @@ struct InspectorPane: View {
             }
             if let skill = selectedSkill {
                 skillActionsSection(skill)
+                skillMachineSection(skill)
             }
             if let scenarios = capability.triggerScenarios, !scenarios.isEmpty {
                 triggerSection(scenarios: scenarios)
@@ -357,6 +358,85 @@ struct InspectorPane: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func skillMachineSection(_ skill: Skill) -> some View {
+        let metrics = skillMachineMetrics(skill)
+        if !metrics.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                SectionHeading(title: "matrix.inspector.section.machine", accent: .popSectionGreen)
+                LazyVGrid(columns: Self.machineMetricColumns, alignment: .leading, spacing: 8) {
+                    ForEach(metrics) { metric in
+                        machineMetricCard(metric)
+                    }
+                }
+            }
+        }
+    }
+
+    private func skillMachineMetrics(_ skill: Skill) -> [InspectorMachineMetric] {
+        var metrics: [InspectorMachineMetric] = []
+        let snapshot = skill.usageSnapshot(using: store.usageSummary)
+
+        if let installedAt = skill.installedAt, installedAt > 0 {
+            metrics.append(InspectorMachineMetric(
+                id: "installed",
+                title: localization.string("matrix.machine.firstActivated"),
+                value: Self.formatTimestamp(installedAt),
+                tint: Color.popSectionPurple
+            ))
+        }
+        if let lastUsedAt = snapshot?.lastUsedAt {
+            metrics.append(InspectorMachineMetric(
+                id: "last-used",
+                title: localization.string("matrix.machine.lastUsed"),
+                value: Self.relativeFormatter.localizedString(for: lastUsedAt, relativeTo: Date()),
+                tint: Color.popSectionGreen
+            ))
+        }
+        if let snapshot, snapshot.hasUsage {
+            metrics.append(InspectorMachineMetric(
+                id: "tokens",
+                title: localization.string("matrix.machine.tokens"),
+                value: UsageDisplayFormatter.compactTokens(snapshot.totalTokens),
+                tint: Color.accentColor
+            ))
+            metrics.append(InspectorMachineMetric(
+                id: "calls",
+                title: localization.string("matrix.machine.calls"),
+                value: UsageDisplayFormatter.compactCount(snapshot.usageEvents),
+                tint: Color.popLabel
+            ))
+        }
+        if let size = skill.sizeBytes, size > 0 {
+            metrics.append(InspectorMachineMetric(
+                id: "size",
+                title: localization.string("matrix.machine.size"),
+                value: Self.formatBytes(size),
+                tint: Color.popSecondaryLabel
+            ))
+        }
+
+        return metrics
+    }
+
+    private func machineMetricCard(_ metric: InspectorMachineMetric) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(metric.title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Color.popSecondaryLabel)
+                .lineLimit(1)
+            Text(metric.value)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(metric.tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+        }
+        .padding(9)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(metric.tint.opacity(0.07), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     @ViewBuilder
@@ -1681,6 +1761,10 @@ struct InspectorPane: View {
         GridItem(.adaptive(minimum: 132), spacing: 8, alignment: .leading)
     ]
 
+    private static let machineMetricColumns: [GridItem] = [
+        GridItem(.adaptive(minimum: 96), spacing: 8, alignment: .leading)
+    ]
+
     private static let companionGridColumns: [GridItem] = [
         GridItem(.adaptive(minimum: 84), spacing: 5, alignment: .leading)
     ]
@@ -1775,6 +1859,13 @@ private extension String {
 private struct InspectorHeaderChip: Identifiable {
     let id: String
     let title: String
+    let tint: Color
+}
+
+private struct InspectorMachineMetric: Identifiable {
+    let id: String
+    let title: String
+    let value: String
     let tint: Color
 }
 
