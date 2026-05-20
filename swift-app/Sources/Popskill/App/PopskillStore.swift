@@ -34,6 +34,7 @@ final class PopskillStore {
     var usageScanError: String?
     var usageScanInFlight: Bool = false
     var updatesRefreshInFlight: Bool = false
+    var readmePreviewStates: [String: ReadmePreviewLoadState] = [:]
 
     // Per-slice refresh timestamps. Views call refresh*(force: false) from
     // .task on first appearance; if a recent refresh exists we skip the
@@ -267,6 +268,45 @@ final class PopskillStore {
     func closeInspector() {
         inspectorOpen = false
         selectedSkillID = nil
+    }
+
+    // MARK: README previews
+
+    func readmePreviewState(for skill: Skill) -> ReadmePreviewLoadState? {
+        readmePreviewStates[skill.id]
+    }
+
+    func loadReadmePreview(for skill: Skill, force: Bool = false) async {
+        if !force {
+            switch readmePreviewStates[skill.id] {
+            case .loading, .loaded:
+                return
+            case .failed, .none:
+                break
+            }
+        }
+
+        guard let readmeURL = skill.markdownURL else {
+            readmePreviewStates[skill.id] = .failed(ReadmePreviewError.missing.localizedDescription)
+            return
+        }
+
+        let skillID = skill.id
+        let skillName = skill.name
+        readmePreviewStates[skillID] = .loading
+
+        do {
+            let preview = try await Task.detached(priority: .utility) {
+                try ReadmePreview.load(
+                    skillID: skillID,
+                    skillName: skillName,
+                    readmeURL: readmeURL
+                )
+            }.value
+            readmePreviewStates[skillID] = .loaded(preview)
+        } catch {
+            readmePreviewStates[skillID] = .failed(error.localizedDescription)
+        }
     }
 
     // MARK: Usage scanner

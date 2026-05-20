@@ -370,6 +370,7 @@
 
 "matrix.inspector.section.summary" = "简介";
 "matrix.inspector.section.actions" = "操作";
+"matrix.inspector.section.readme" = "README";
 "matrix.inspector.section.triggers" = "触发场景";
 "matrix.inspector.section.apps" = "应用启用";
 "matrix.inspector.section.coverage" = "覆盖";
@@ -396,6 +397,12 @@
 "matrix.package.sync.notChecked" = "尚未检查";
 "matrix.package.sync.clean" = "没有检测到套装组件更新。";
 "matrix.package.sync.more" = "还有 %d 个更新未展开。";
+"matrix.readme.loading" = "正在加载 README 预览...";
+"matrix.readme.showing" = "当前显示 %@";
+"matrix.readme.openFile" = "打开 SKILL.md";
+"matrix.readme.reload" = "重新加载 README";
+"matrix.readme.error" = "README 不可用：%@";
+"matrix.readme.truncated" = "预览已截断。";
 
 "matrix.inspector.deployment.ssot" = "真身 (SSOT)";
 "matrix.inspector.deployment.strategy" = "部署策略 · %@";

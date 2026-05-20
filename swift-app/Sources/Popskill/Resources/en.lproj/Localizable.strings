@@ -370,6 +370,7 @@
 
 "matrix.inspector.section.summary" = "SUMMARY";
 "matrix.inspector.section.actions" = "ACTIONS";
+"matrix.inspector.section.readme" = "README";
 "matrix.inspector.section.triggers" = "TRIGGERS";
 "matrix.inspector.section.apps" = "APPS";
 "matrix.inspector.section.coverage" = "COVERAGE";
@@ -396,6 +397,12 @@
 "matrix.package.sync.notChecked" = "Not checked yet";
 "matrix.package.sync.clean" = "No package component updates detected.";
 "matrix.package.sync.more" = "%d more updates hidden.";
+"matrix.readme.loading" = "Loading README preview...";
+"matrix.readme.showing" = "Showing %@";
+"matrix.readme.openFile" = "Open SKILL.md";
+"matrix.readme.reload" = "Reload README";
+"matrix.readme.error" = "README unavailable: %@";
+"matrix.readme.truncated" = "Preview truncated.";
 
 "matrix.inspector.deployment.ssot" = "SSOT (real file)";
 "matrix.inspector.deployment.strategy" = "Strategy · %@";

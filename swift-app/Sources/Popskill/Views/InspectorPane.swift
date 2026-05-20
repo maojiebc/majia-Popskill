@@ -17,6 +17,12 @@ struct InspectorPane: View {
                 header
                 if let package = capability.package {
                     packageSummarySection(package)
+                    if let skill = readmeSkill(for: package) {
+                        readmePreviewSection(
+                            skill: skill,
+                            context: localization.string("matrix.readme.showing", skill.name)
+                        )
+                    }
                     packageActionsSection(package)
                     packageCoverageSection
                     packageUsageSection(package)
@@ -31,6 +37,9 @@ struct InspectorPane: View {
                 } else {
                     if !primaryDescription.isEmpty {
                         summarySection
+                    }
+                    if let skill = selectedSkill {
+                        readmePreviewSection(skill: skill)
                     }
                     if let scenarios = capability.triggerScenarios, !scenarios.isEmpty {
                         triggerSection(scenarios: scenarios)
@@ -195,6 +204,13 @@ struct InspectorPane: View {
         capability.summary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
+    private var selectedSkill: Skill? {
+        guard let skillID = capability.underlyingSkillID else {
+            return nil
+        }
+        return store.skills.first { $0.id == skillID }
+    }
+
     private var summarySection: some View {
         VStack(alignment: .leading, spacing: 6) {
             SectionHeading(title: "matrix.inspector.section.summary")
@@ -202,6 +218,85 @@ struct InspectorPane: View {
                 .font(.callout)
                 .foregroundStyle(Color.popLabel)
                 .textSelection(.enabled)
+        }
+    }
+
+    private func readmePreviewSection(skill: Skill, context: String? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                SectionHeading(title: "matrix.inspector.section.readme", accent: .popSectionPurple)
+                Spacer()
+                Button {
+                    Task { await store.loadReadmePreview(for: skill, force: true) }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.popSecondaryLabel)
+                .help(localization.string("matrix.readme.reload"))
+            }
+
+            if let context {
+                Text(context)
+                    .font(.caption2)
+                    .foregroundStyle(Color.popTertiaryLabel)
+            }
+
+            readmePreviewBody(for: skill)
+        }
+        .task(id: skill.id) {
+            await store.loadReadmePreview(for: skill)
+        }
+    }
+
+    @ViewBuilder
+    private func readmePreviewBody(for skill: Skill) -> some View {
+        switch store.readmePreviewState(for: skill) {
+        case .loaded(let preview):
+            VStack(alignment: .leading, spacing: 8) {
+                Text(preview.excerpt)
+                    .font(.system(size: 11.5, design: .monospaced))
+                    .foregroundStyle(Color.popLabel)
+                    .lineSpacing(2)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 10) {
+                    Button {
+                        NSWorkspace.shared.open(preview.url)
+                    } label: {
+                        Label(localization.string("matrix.readme.openFile"), systemImage: "doc.text")
+                            .font(.caption.weight(.medium))
+                    }
+                    .buttonStyle(.plain)
+
+                    if preview.truncated {
+                        Text(localization.string("matrix.readme.truncated"))
+                            .font(.caption2)
+                            .foregroundStyle(Color.popTertiaryLabel)
+                    }
+                }
+            }
+            .padding(10)
+            .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        case .failed(let message):
+            Text(localization.string("matrix.readme.error", message))
+                .font(.caption)
+                .foregroundStyle(Color.popTertiaryLabel)
+        case .loading:
+            readmeLoadingRow
+        case .none:
+            readmeLoadingRow
+        }
+    }
+
+    private var readmeLoadingRow: some View {
+        HStack(spacing: 8) {
+            ProgressView().controlSize(.mini)
+            Text(localization.string("matrix.readme.loading"))
+                .font(.caption)
+                .foregroundStyle(Color.popSecondaryLabel)
         }
     }
 
@@ -872,6 +967,11 @@ struct InspectorPane: View {
         package.matchingInstalledSkills(in: store.skills)
             .first { FileManager.default.fileExists(atPath: $0.localStoreURL.path) }?
             .localStoreURL
+    }
+
+    private func readmeSkill(for package: CapabilityPackage) -> Skill? {
+        package.matchingInstalledSkills(in: store.skills)
+            .first { $0.markdownURL != nil }
     }
 
     private func packagePendingUpdates(_ package: CapabilityPackage) -> [SkillUpdateInfo] {
