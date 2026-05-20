@@ -244,6 +244,7 @@ struct SkillManifest: Codable, Equatable {
     let license: String?
     let homepage: String?
     let requiredBins: [String]
+    let requiredTools: [SkillRequiredTool]
 
     private enum CodingKeys: String, CodingKey {
         case version
@@ -251,6 +252,7 @@ struct SkillManifest: Codable, Equatable {
         case license
         case homepage
         case requiredBins
+        case requiredTools
     }
 
     init(
@@ -258,13 +260,15 @@ struct SkillManifest: Codable, Equatable {
         author: String? = nil,
         license: String? = nil,
         homepage: String? = nil,
-        requiredBins: [String] = []
+        requiredBins: [String] = [],
+        requiredTools: [SkillRequiredTool] = []
     ) {
         self.version = version
         self.author = author
         self.license = license
         self.homepage = homepage
         self.requiredBins = requiredBins
+        self.requiredTools = requiredTools
     }
 
     init(from decoder: Decoder) throws {
@@ -274,6 +278,7 @@ struct SkillManifest: Codable, Equatable {
         license = try container.decodeIfPresent(String.self, forKey: .license)
         homepage = try container.decodeIfPresent(String.self, forKey: .homepage)
         requiredBins = try container.decodeIfPresent([String].self, forKey: .requiredBins) ?? []
+        requiredTools = try container.decodeIfPresent([SkillRequiredTool].self, forKey: .requiredTools) ?? []
     }
 
     var semanticVersion: String? {
@@ -290,6 +295,27 @@ struct SkillManifest: Codable, Equatable {
             .filter { !$0.isEmpty }
         return bins.isEmpty ? nil : bins.joined(separator: ", ")
     }
+
+    var hasMissingRequiredTools: Bool {
+        requiredTools.contains { !$0.available }
+    }
+
+    func requiredToolsLabel(availableLabel: String, missingLabel: String) -> String? {
+        if !requiredTools.isEmpty {
+            let labels = requiredTools
+                .filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                .map { tool in
+                    "\(tool.name.trimmingCharacters(in: .whitespacesAndNewlines)) \(tool.available ? availableLabel : missingLabel)"
+                }
+            return labels.isEmpty ? nil : labels.joined(separator: " · ")
+        }
+        return requiredBinsLabel
+    }
+}
+
+struct SkillRequiredTool: Codable, Equatable {
+    let name: String
+    let available: Bool
 }
 
 struct LocalAgent: Identifiable, Codable, Equatable {

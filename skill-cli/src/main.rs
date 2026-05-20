@@ -8,6 +8,8 @@ use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::process::ExitCode;
@@ -2201,6 +2203,15 @@ struct SkillManifest {
     homepage: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     required_bins: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    required_tools: Vec<SkillManifestTool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct SkillManifestTool {
+    name: String,
+    available: bool,
 }
 
 impl SkillManifest {
@@ -2210,6 +2221,7 @@ impl SkillManifest {
             && self.license.is_none()
             && self.homepage.is_none()
             && self.required_bins.is_empty()
+            && self.required_tools.is_empty()
     }
 }
 
@@ -3134,6 +3146,14 @@ fn parse_skill_manifest(content: &str) -> Option<SkillManifest> {
 
     manifest.required_bins.sort();
     manifest.required_bins.dedup();
+    manifest.required_tools = manifest
+        .required_bins
+        .iter()
+        .map(|name| SkillManifestTool {
+            name: name.clone(),
+            available: command_available(name),
+        })
+        .collect();
 
     if manifest.is_empty() {
         None
@@ -3160,6 +3180,44 @@ fn parse_frontmatter_list(value: &str) -> Vec<String> {
         .map(|item| item.trim().to_string())
         .filter(|item| !item.is_empty())
         .collect()
+}
+
+fn command_available(command: &str) -> bool {
+    let command = command.trim();
+    if command.is_empty() {
+        return false;
+    }
+
+    let explicit_path = Path::new(command);
+    if explicit_path.components().count() > 1 {
+        return is_executable(explicit_path);
+    }
+
+    let Some(paths) = env::var_os("PATH") else {
+        return false;
+    };
+
+    env::split_paths(&paths).any(|path| is_executable(&path.join(command)))
+}
+
+fn is_executable(path: &Path) -> bool {
+    let Ok(metadata) = fs::metadata(path) else {
+        return false;
+    };
+    if !metadata.is_file() {
+        return false;
+    }
+    has_execute_bit(&metadata)
+}
+
+#[cfg(unix)]
+fn has_execute_bit(metadata: &fs::Metadata) -> bool {
+    metadata.permissions().mode() & 0o111 != 0
+}
+
+#[cfg(not(unix))]
+fn has_execute_bit(_metadata: &fs::Metadata) -> bool {
+    true
 }
 
 fn first_sentence_of(value: &str) -> Option<String> {
@@ -4358,6 +4416,14 @@ metadata:
             Some("https://github.com/JimLiu/baoyu-skills#baoyu-comic")
         );
         assert_eq!(manifest.required_bins, vec!["bun", "npx"]);
+        assert_eq!(
+            manifest
+                .required_tools
+                .iter()
+                .map(|tool| tool.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["bun", "npx"]
+        );
     }
 
     #[test]
@@ -4366,7 +4432,7 @@ metadata:
             r#"---
 version: "2.4.1"
 homepage: 'https://example.com/demo'
-requiredBins: [bun, "npx"]
+requiredBins: [sh, "definitely-popskill-missing-command"]
 ---
 "#,
         )
@@ -4377,7 +4443,30 @@ requiredBins: [bun, "npx"]
             manifest.homepage.as_deref(),
             Some("https://example.com/demo")
         );
-        assert_eq!(manifest.required_bins, vec!["bun", "npx"]);
+        assert_eq!(
+            manifest.required_bins,
+            vec!["definitely-popskill-missing-command", "sh"]
+        );
+        assert_eq!(
+            manifest.required_tools,
+            vec![
+                SkillManifestTool {
+                    name: "definitely-popskill-missing-command".to_string(),
+                    available: false,
+                },
+                SkillManifestTool {
+                    name: "sh".to_string(),
+                    available: true,
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn command_available_detects_missing_commands() {
+        assert!(!command_available(
+            "definitely-popskill-missing-command-for-tests"
+        ));
     }
 
     #[test]

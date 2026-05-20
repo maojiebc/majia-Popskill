@@ -476,6 +476,8 @@
 "matrix.skill.manifest.author" = "作者";
 "matrix.skill.manifest.license" = "License";
 "matrix.skill.manifest.requires" = "依赖命令";
+"matrix.skill.manifest.requires.available" = "可用";
+"matrix.skill.manifest.requires.missing" = "缺失";
 "matrix.package.sync.upToDate" = "已是最新";
 "matrix.package.sync.pending" = "%d 个待更新";
 "matrix.package.sync.checking" = "正在检查上游更新...";

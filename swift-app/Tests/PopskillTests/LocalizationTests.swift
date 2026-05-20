@@ -56,5 +56,7 @@ struct LocalizationTests {
         #expect(localization.string("matrix.source.license") == "License")
         #expect(localization.string("matrix.source.requires") == "依赖命令")
         #expect(localization.string("matrix.skill.manifest.version") == "版本")
+        #expect(localization.string("matrix.skill.manifest.requires.available") == "可用")
+        #expect(localization.string("matrix.skill.manifest.requires.missing") == "缺失")
     }
 }

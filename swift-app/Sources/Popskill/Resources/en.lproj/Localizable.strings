@@ -476,6 +476,8 @@
 "matrix.skill.manifest.author" = "Author";
 "matrix.skill.manifest.license" = "License";
 "matrix.skill.manifest.requires" = "Requires";
+"matrix.skill.manifest.requires.available" = "ok";
+"matrix.skill.manifest.requires.missing" = "missing";
 "matrix.package.sync.upToDate" = "Up to date";
 "matrix.package.sync.pending" = "%d pending";
 "matrix.package.sync.checking" = "Checking upstream updates...";

@@ -135,7 +135,11 @@ struct SkillModelsTests {
             "author": "@dotey",
             "license": "MIT",
             "homepage": "https://github.com/JimLiu/baoyu-skills#baoyu-comic",
-            "required_bins": ["bun", "npx"]
+            "required_bins": ["bun", "npx"],
+            "required_tools": [
+              {"name": "bun", "available": true},
+              {"name": "npx", "available": false}
+            ]
           }
         }
         """.utf8)
@@ -148,6 +152,8 @@ struct SkillModelsTests {
         #expect(skill.manifest?.author == "@dotey")
         #expect(skill.manifest?.license == "MIT")
         #expect(skill.manifest?.requiredBinsLabel == "bun, npx")
+        #expect(skill.manifest?.hasMissingRequiredTools == true)
+        #expect(skill.manifest?.requiredToolsLabel(availableLabel: "ok", missingLabel: "missing") == "bun ok · npx missing")
         #expect(skill.sourceURL?.absoluteString == "https://github.com/JimLiu/baoyu-skills#baoyu-comic")
     }
 
@@ -184,6 +190,8 @@ struct SkillModelsTests {
 
         #expect(skill.manifest?.semanticVersion == "2.0.0")
         #expect(skill.manifest?.requiredBins == [])
+        #expect(skill.manifest?.requiredTools == [])
+        #expect(skill.manifest?.requiredToolsLabel(availableLabel: "ok", missingLabel: "missing") == nil)
     }
 
     @Test

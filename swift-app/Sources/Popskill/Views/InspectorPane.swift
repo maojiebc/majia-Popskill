@@ -505,12 +505,16 @@ struct InspectorPane: View {
                 url: homepageURL
             ))
         }
-        if let requiredBins = skill.manifest?.requiredBinsLabel {
+        if let manifest = skill.manifest,
+           let requiredTools = manifest.requiredToolsLabel(
+               availableLabel: localization.string("matrix.skill.manifest.requires.available"),
+               missingLabel: localization.string("matrix.skill.manifest.requires.missing")
+           ) {
             facts.append(InspectorSourceFact(
                 id: "requires",
                 title: localization.string("matrix.source.requires"),
-                value: requiredBins,
-                icon: "terminal"
+                value: requiredTools,
+                icon: manifest.hasMissingRequiredTools ? "exclamationmark.triangle.fill" : "checkmark.seal"
             ))
         }
         if let markdownURL = skill.markdownURL {
@@ -1367,8 +1371,12 @@ struct InspectorPane: View {
                 if let license = skill.manifest?.license?.trimmingCharacters(in: .whitespacesAndNewlines), !license.isEmpty {
                     metaRow(label: localization.string("matrix.skill.manifest.license"), value: license)
                 }
-                if let requiredBins = skill.manifest?.requiredBinsLabel {
-                    metaRow(label: localization.string("matrix.skill.manifest.requires"), value: requiredBins)
+                if let manifest = skill.manifest,
+                   let requiredTools = manifest.requiredToolsLabel(
+                       availableLabel: localization.string("matrix.skill.manifest.requires.available"),
+                       missingLabel: localization.string("matrix.skill.manifest.requires.missing")
+                   ) {
+                    metaRow(label: localization.string("matrix.skill.manifest.requires"), value: requiredTools)
                 }
                 metaRow(
                     label: localization.string("matrix.package.version.hash"),
