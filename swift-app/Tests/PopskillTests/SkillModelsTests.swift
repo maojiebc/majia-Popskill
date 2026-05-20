@@ -822,6 +822,10 @@ struct SkillModelsTests {
         #expect(snapshot?.usageEvents == 3)
         #expect(snapshot?.totalTokens == 84)
         #expect(snapshot?.lastUsedAt == lastUsed)
+        #expect(snapshot?.componentStats.map(\.componentID) == ["baoyu-comic", "baoyu-translate"])
+        #expect(snapshot?.componentStats.first?.componentName == "baoyu-comic")
+        #expect(snapshot?.componentStats.first?.usageEvents == 2)
+        #expect(snapshot?.componentStats.first?.totalTokens == 62)
     }
 
     @Test

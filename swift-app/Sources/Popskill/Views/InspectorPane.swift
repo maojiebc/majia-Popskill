@@ -417,6 +417,9 @@ struct InspectorPane: View {
                             .font(.caption2)
                             .foregroundStyle(Color.popTertiaryLabel)
                     }
+                    if !snapshot.componentStats.isEmpty {
+                        packageUsageBreakdown(snapshot.componentStats)
+                    }
                 } else {
                     Text(localization.string("matrix.package.usage.empty", snapshot.matchedSkillCount))
                         .font(.caption)
@@ -438,6 +441,48 @@ struct InspectorPane: View {
                 }
             }
         }
+    }
+
+    private func packageUsageBreakdown(_ stats: [PackageComponentUsageStat]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            LocalizedText("matrix.package.usage.topComponents")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Color.popSecondaryLabel)
+
+            ForEach(stats.prefix(5)) { stat in
+                packageUsageComponentRow(stat)
+            }
+        }
+    }
+
+    private func packageUsageComponentRow(_ stat: PackageComponentUsageStat) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            Image(systemName: stat.componentKind.usageKindSymbol)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(stat.installed ? Color.popStatusOK : Color.popTertiaryLabel)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(stat.componentName)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.popLabel)
+                    .lineLimit(1)
+                Text(stat.componentKind.uppercased())
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Color.popTertiaryLabel)
+            }
+            Spacer(minLength: 8)
+            VStack(alignment: .trailing, spacing: 1) {
+                Text(localization.string("matrix.package.usage.componentCalls", stat.usageEvents))
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Color.popLabel)
+                    .monospacedDigit()
+                Text(Self.formatTokens(stat.totalTokens))
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(Color.popSecondaryLabel)
+            }
+        }
+        .padding(8)
+        .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     private func packageUsageMetric(titleKey: String, value: String, tint: Color) -> some View {
@@ -1032,6 +1077,18 @@ private extension CapabilityPackageHealth {
 private extension PackageComponent {
     var inspectorKindSymbol: String {
         switch kind.lowercased() {
+        case "skill": "square.grid.3x3.fill"
+        case "agent": "person.crop.square"
+        case "cli": "terminal"
+        case "mcp": "rectangle.connected.to.line.below"
+        default: "circle.grid.2x2"
+        }
+    }
+}
+
+private extension String {
+    var usageKindSymbol: String {
+        switch lowercased() {
         case "skill": "square.grid.3x3.fill"
         case "agent": "person.crop.square"
         case "cli": "terminal"

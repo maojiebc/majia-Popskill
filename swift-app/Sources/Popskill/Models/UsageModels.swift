@@ -127,6 +127,7 @@ struct PackageUsageSnapshot: Equatable {
     var cacheCreationTokens: Int64 = 0
     var cacheReadTokens: Int64 = 0
     var lastUsedAt: Date?
+    var componentStats: [PackageComponentUsageStat] = []
 
     var totalTokens: Int64 {
         inputTokens + outputTokens + cacheCreationTokens + cacheReadTokens
@@ -136,8 +137,70 @@ struct PackageUsageSnapshot: Equatable {
         usageEvents > 0 || totalTokens > 0
     }
 
-    mutating func add(_ stat: SkillUsageStat) {
+    mutating func add(_ stat: SkillUsageStat, component: PackageComponent) {
         matchedSkillCount += 1
+        usageEvents += stat.usageEvents
+        inputTokens += stat.inputTokens
+        outputTokens += stat.outputTokens
+        cacheCreationTokens += stat.cacheCreationTokens
+        cacheReadTokens += stat.cacheReadTokens
+        upsertComponentStat(stat, component: component)
+
+        guard let date = stat.lastUsedAt else {
+            return
+        }
+        if lastUsedAt.map({ date > $0 }) ?? true {
+            lastUsedAt = date
+        }
+    }
+
+    private mutating func upsertComponentStat(_ stat: SkillUsageStat, component: PackageComponent) {
+        if let index = componentStats.firstIndex(where: { $0.componentID == component.id }) {
+            componentStats[index].add(stat)
+        } else {
+            componentStats.append(PackageComponentUsageStat(component: component, stat: stat))
+        }
+
+        componentStats.sort { lhs, rhs in
+            if lhs.usageEvents != rhs.usageEvents { return lhs.usageEvents > rhs.usageEvents }
+            if lhs.totalTokens != rhs.totalTokens { return lhs.totalTokens > rhs.totalTokens }
+            return lhs.componentName.localizedCaseInsensitiveCompare(rhs.componentName) == .orderedAscending
+        }
+    }
+}
+
+struct PackageComponentUsageStat: Identifiable, Equatable {
+    var id: String { componentID }
+
+    let componentID: String
+    let componentName: String
+    let componentKind: String
+    let installed: Bool
+    var usageEvents: Int
+    var inputTokens: Int64
+    var outputTokens: Int64
+    var cacheCreationTokens: Int64
+    var cacheReadTokens: Int64
+    var lastUsedAt: Date?
+
+    var totalTokens: Int64 {
+        inputTokens + outputTokens + cacheCreationTokens + cacheReadTokens
+    }
+
+    init(component: PackageComponent, stat: SkillUsageStat) {
+        componentID = component.id
+        componentName = component.name
+        componentKind = component.kind
+        installed = component.installed
+        usageEvents = stat.usageEvents
+        inputTokens = stat.inputTokens
+        outputTokens = stat.outputTokens
+        cacheCreationTokens = stat.cacheCreationTokens
+        cacheReadTokens = stat.cacheReadTokens
+        lastUsedAt = stat.lastUsedAt
+    }
+
+    mutating func add(_ stat: SkillUsageStat) {
         usageEvents += stat.usageEvents
         inputTokens += stat.inputTokens
         outputTokens += stat.outputTokens

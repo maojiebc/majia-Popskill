@@ -357,6 +357,8 @@
 "matrix.package.usage.empty" = "Usage was scanned, but the %d local skills matched to this bundle have no attribution records yet.";
 "matrix.package.usage.notScanned" = "Transcript usage has not been scanned yet.";
 "matrix.package.usage.scanning" = "Scanning local transcripts…";
+"matrix.package.usage.topComponents" = "TOP COMPONENTS";
+"matrix.package.usage.componentCalls" = "%d calls";
 "matrix.package.paths.empty" = "No local skill files matched this bundle.";
 "matrix.package.paths.more" = "%d more matched skills hidden.";
 

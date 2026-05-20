@@ -1290,19 +1290,23 @@ extension CapabilityPackage {
         let matchedSkills = matchingInstalledSkills(in: skills)
         var snapshot = PackageUsageSnapshot()
 
-        for stat in summary.skillStats where matchesUsageStat(stat, matchedSkills: matchedSkills) {
-            snapshot.add(stat)
+        for stat in summary.skillStats {
+            guard let component = usageComponent(for: stat, matchedSkills: matchedSkills) else {
+                continue
+            }
+            snapshot.add(stat, component: component)
         }
 
         return snapshot
     }
 
-    private func matchesUsageStat(_ stat: SkillUsageStat, matchedSkills: [Skill]) -> Bool {
-        if matchedSkills.contains(where: { $0.matchesAttributionSkill(stat.skillID) }) {
-            return true
+    private func usageComponent(for stat: SkillUsageStat, matchedSkills: [Skill]) -> PackageComponent? {
+        if let matchedSkill = matchedSkills.first(where: { $0.matchesAttributionSkill(stat.skillID) }),
+           let component = components.skills.first(where: { $0.matchesSkill(matchedSkill) }) {
+            return component
         }
 
-        return components.skills.contains { component in
+        return components.skills.first { component in
             component.matchesAttributionSkill(stat.skillID)
         }
     }
