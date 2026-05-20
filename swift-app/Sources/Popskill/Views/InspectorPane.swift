@@ -480,6 +480,39 @@ struct InspectorPane: View {
                 icon: "tag"
             ))
         }
+        if let author = skill.manifest?.author?.trimmingCharacters(in: .whitespacesAndNewlines), !author.isEmpty {
+            facts.append(InspectorSourceFact(
+                id: "author",
+                title: localization.string("matrix.source.author"),
+                value: author,
+                icon: "person"
+            ))
+        }
+        if let license = skill.manifest?.license?.trimmingCharacters(in: .whitespacesAndNewlines), !license.isEmpty {
+            facts.append(InspectorSourceFact(
+                id: "license",
+                title: localization.string("matrix.source.license"),
+                value: license,
+                icon: "doc.plaintext"
+            ))
+        }
+        if let homepageURL = skill.manifest?.homepageURL {
+            facts.append(InspectorSourceFact(
+                id: "homepage",
+                title: localization.string("matrix.source.homepage"),
+                value: homepageURL.absoluteString,
+                icon: "arrow.up.right.square",
+                url: homepageURL
+            ))
+        }
+        if let requiredBins = skill.manifest?.requiredBinsLabel {
+            facts.append(InspectorSourceFact(
+                id: "requires",
+                title: localization.string("matrix.source.requires"),
+                value: requiredBins,
+                icon: "terminal"
+            ))
+        }
         if let markdownURL = skill.markdownURL {
             facts.append(InspectorSourceFact(
                 id: "readme",
@@ -501,12 +534,21 @@ struct InspectorPane: View {
                 Text(fact.title)
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(Color.popSecondaryLabel)
-                Text(fact.value)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(Color.popLabel)
-                    .lineLimit(2)
-                    .truncationMode(.middle)
-                    .textSelection(.enabled)
+                if let url = fact.url {
+                    Link(fact.value, destination: url)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(Color.accentColor)
+                        .lineLimit(2)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                } else {
+                    Text(fact.value)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(Color.popLabel)
+                        .lineLimit(2)
+                        .truncationMode(.middle)
+                        .textSelection(.enabled)
+                }
             }
             Spacer(minLength: 8)
         }
@@ -1313,6 +1355,21 @@ struct InspectorPane: View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeading(title: "matrix.inspector.section.version")
             VStack(alignment: .leading, spacing: 6) {
+                if let version = skill.manifest?.semanticVersion {
+                    metaRow(
+                        label: localization.string("matrix.skill.manifest.version"),
+                        value: MatrixVersionFormatter.semanticVersion(version) ?? version
+                    )
+                }
+                if let author = skill.manifest?.author?.trimmingCharacters(in: .whitespacesAndNewlines), !author.isEmpty {
+                    metaRow(label: localization.string("matrix.skill.manifest.author"), value: author)
+                }
+                if let license = skill.manifest?.license?.trimmingCharacters(in: .whitespacesAndNewlines), !license.isEmpty {
+                    metaRow(label: localization.string("matrix.skill.manifest.license"), value: license)
+                }
+                if let requiredBins = skill.manifest?.requiredBinsLabel {
+                    metaRow(label: localization.string("matrix.skill.manifest.requires"), value: requiredBins)
+                }
                 metaRow(
                     label: localization.string("matrix.package.version.hash"),
                     value: skill.contentHash.map(Self.shortHash) ?? localization.string("matrix.package.version.untracked")
@@ -1949,6 +2006,7 @@ private struct InspectorSourceFact: Identifiable {
     let title: String
     let value: String
     let icon: String
+    var url: URL? = nil
 }
 
 private struct UsageTrendBars: View {

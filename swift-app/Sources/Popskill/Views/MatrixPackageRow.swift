@@ -429,6 +429,7 @@ private struct MatrixPackageComponentRow: View {
     private var versionCell: some View {
         MatrixVersionValueCell(
             value: MatrixVersionFormatter.value(
+                manifestVersion: matchingSkill?.manifest?.semanticVersion,
                 contentHash: matchingSkill?.contentHash,
                 updatedAt: matchingSkill?.updatedAt
             ),

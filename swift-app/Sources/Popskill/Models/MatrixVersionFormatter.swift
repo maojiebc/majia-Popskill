@@ -1,6 +1,13 @@
 import Foundation
 
 enum MatrixVersionFormatter {
+    static func value(manifestVersion: String?, contentHash: String?, updatedAt: Int?) -> String? {
+        if let version = semanticVersion(manifestVersion) {
+            return version
+        }
+        return value(contentHash: contentHash, updatedAt: updatedAt)
+    }
+
     static func value(contentHash: String?, updatedAt: Int?) -> String? {
         if let hash = shortHash(contentHash) {
             return hash
@@ -17,6 +24,14 @@ enum MatrixVersionFormatter {
             return nil
         }
         return String(hash.prefix(7))
+    }
+
+    static func semanticVersion(_ version: String?) -> String? {
+        guard let version = version?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !version.isEmpty else {
+            return nil
+        }
+        return version.hasPrefix("v") ? version : "v\(version)"
     }
 
     private static func dateString(_ timestamp: Int) -> String {

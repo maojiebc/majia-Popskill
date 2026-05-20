@@ -53,5 +53,8 @@ struct LocalizationTests {
         #expect(localization.string("matrix.inspector.section.source") == "来源与路径")
         #expect(localization.string("matrix.source.repository") == "仓库")
         #expect(localization.string("matrix.source.localStore") == "本地真身")
+        #expect(localization.string("matrix.source.license") == "License")
+        #expect(localization.string("matrix.source.requires") == "依赖命令")
+        #expect(localization.string("matrix.skill.manifest.version") == "版本")
     }
 }

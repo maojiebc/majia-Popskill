@@ -458,6 +458,10 @@
 "matrix.source.directory" = "目录";
 "matrix.source.localStore" = "本地真身";
 "matrix.source.type" = "来源类型";
+"matrix.source.author" = "作者";
+"matrix.source.license" = "License";
+"matrix.source.homepage" = "主页";
+"matrix.source.requires" = "依赖命令";
 "matrix.source.readme" = "SKILL.md";
 "matrix.skill.action.openReadme" = "编辑 prompt";
 "matrix.skill.action.checkUpdates" = "检查更新";
@@ -468,6 +472,10 @@
 "matrix.package.version.branch" = "分支";
 "matrix.package.version.hash" = "Hash";
 "matrix.package.version.untracked" = "未跟踪";
+"matrix.skill.manifest.version" = "版本";
+"matrix.skill.manifest.author" = "作者";
+"matrix.skill.manifest.license" = "License";
+"matrix.skill.manifest.requires" = "依赖命令";
 "matrix.package.sync.upToDate" = "已是最新";
 "matrix.package.sync.pending" = "%d 个待更新";
 "matrix.package.sync.checking" = "正在检查上游更新...";

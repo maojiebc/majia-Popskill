@@ -110,6 +110,83 @@ struct SkillModelsTests {
     }
 
     @Test
+    func installedSkillDecodesManifestMetadata() throws {
+        let data = Data("""
+        {
+          "id": "baoyu-comic",
+          "name": "baoyu-comic",
+          "description": "Create knowledge comics.",
+          "directory": "baoyu-comic",
+          "repo_owner": "JimLiu",
+          "repo_name": "baoyu-skills",
+          "readme_url": null,
+          "apps": {
+            "claude": true,
+            "codex": true,
+            "gemini": false,
+            "opencode": false,
+            "hermes": false
+          },
+          "installed_at": 1,
+          "updated_at": 2,
+          "content_hash": "abcdef123456",
+          "manifest": {
+            "version": "1.56.1",
+            "author": "@dotey",
+            "license": "MIT",
+            "homepage": "https://github.com/JimLiu/baoyu-skills#baoyu-comic",
+            "required_bins": ["bun", "npx"]
+          }
+        }
+        """.utf8)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+        let skill = try decoder.decode(Skill.self, from: data)
+
+        #expect(skill.manifest?.semanticVersion == "1.56.1")
+        #expect(skill.manifest?.author == "@dotey")
+        #expect(skill.manifest?.license == "MIT")
+        #expect(skill.manifest?.requiredBinsLabel == "bun, npx")
+        #expect(skill.sourceURL?.absoluteString == "https://github.com/JimLiu/baoyu-skills#baoyu-comic")
+    }
+
+    @Test
+    func installedSkillDecodesManifestWithoutRequiredBins() throws {
+        let data = Data("""
+        {
+          "id": "demo",
+          "name": "Demo",
+          "description": "Demo skill",
+          "directory": "demo",
+          "repo_owner": null,
+          "repo_name": null,
+          "readme_url": null,
+          "apps": {
+            "claude": true,
+            "codex": false,
+            "gemini": false,
+            "opencode": false,
+            "hermes": false
+          },
+          "installed_at": null,
+          "updated_at": null,
+          "content_hash": null,
+          "manifest": {
+            "version": "2.0.0"
+          }
+        }
+        """.utf8)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+        let skill = try decoder.decode(Skill.self, from: data)
+
+        #expect(skill.manifest?.semanticVersion == "2.0.0")
+        #expect(skill.manifest?.requiredBins == [])
+    }
+
+    @Test
     func installedSkillLocalStoreURLUsesCCSwitchStore() {
         let skill = installedSkill(directory: "demo-skill")
 
@@ -1449,6 +1526,8 @@ struct SkillModelsTests {
 
     @Test
     func matrixVersionFormatterPrefersHashThenUpdatedDate() {
+        #expect(MatrixVersionFormatter.value(manifestVersion: "2.4.1", contentHash: "abcdef123456", updatedAt: 1_700_000_000) == "v2.4.1")
+        #expect(MatrixVersionFormatter.value(manifestVersion: " v3.0.0 ", contentHash: nil, updatedAt: nil) == "v3.0.0")
         #expect(MatrixVersionFormatter.value(contentHash: "  abcdef123456  ", updatedAt: 1_700_000_000) == "abcdef1")
         #expect(MatrixVersionFormatter.value(contentHash: nil, updatedAt: 1_700_000_000) == "2023-11-14")
         #expect(MatrixVersionFormatter.value(contentHash: "   ", updatedAt: 0) == nil)

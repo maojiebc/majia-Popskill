@@ -557,7 +557,7 @@ async fn run() -> Result<()> {
                 .get_installed_skill(&skill_id)
                 .context("failed to read installed skill")?
                 .with_context(|| format!("skill not found: {skill_id}"))?;
-            print_json(&ApiResponse::ok(skill))
+            print_json(&ApiResponse::ok(enrich_installed_skill(skill)))
         }
         Commands::CheckUpdates { json: _ } => {
             let service = SkillService::new();
@@ -726,7 +726,7 @@ async fn run() -> Result<()> {
                     );
                 }
             }
-            print_json(&ApiResponse::ok(installed))
+            print_json(&ApiResponse::ok(enrich_installed_skill(installed)))
         }
         Commands::Update { skill_id, json: _ } => {
             let service = SkillService::new();
@@ -734,7 +734,7 @@ async fn run() -> Result<()> {
                 .update_skill(&db, &skill_id)
                 .await
                 .with_context(|| format!("failed to update skill '{skill_id}'"))?;
-            print_json(&ApiResponse::ok(skill))
+            print_json(&ApiResponse::ok(enrich_installed_skill(skill)))
         }
         Commands::Uninstall {
             skill_id,
@@ -761,7 +761,7 @@ async fn run() -> Result<()> {
             let app_type = parse_target_app(&app)?;
             let skill = rehydrate_stub(&db, &skill_id, &app_type)
                 .with_context(|| format!("failed to rehydrate skill '{skill_id}'"))?;
-            print_json(&ApiResponse::ok(skill))
+            print_json(&ApiResponse::ok(enrich_installed_skill(skill)))
         }
         Commands::SecurityScan {
             skill_dir,
@@ -795,7 +795,7 @@ async fn run() -> Result<()> {
             let app_type = parse_target_app(&app)?;
             let skill = SkillService::restore_from_backup(&db, &backup_id, &app_type)
                 .with_context(|| format!("failed to restore skill backup '{backup_id}'"))?;
-            print_json(&ApiResponse::ok(skill))
+            print_json(&ApiResponse::ok(enrich_installed_skill(skill)))
         }
         Commands::BackupDelete { backup_id, json: _ } => {
             SkillService::delete_backup(&backup_id)
@@ -2183,6 +2183,34 @@ struct EnrichedInstalledSkill {
     /// "位置与链接" section 以及"链接健康" view。
     #[serde(skip_serializing_if = "Option::is_none")]
     deployment: Option<DeploymentInfo>,
+    /// SKILL.md frontmatter that is useful for the matrix/detail UI.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    manifest: Option<SkillManifest>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct SkillManifest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    author: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    license: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    homepage: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    required_bins: Vec<String>,
+}
+
+impl SkillManifest {
+    fn is_empty(&self) -> bool {
+        self.version.is_none()
+            && self.author.is_none()
+            && self.license.is_none()
+            && self.homepage.is_none()
+            && self.required_bins.is_empty()
+    }
 }
 
 /// 描述一个 skill 在中心仓（SSOT）和各 AI 工具目录之间的部署形态。
@@ -2590,13 +2618,17 @@ fn npm_global_mcp_list() -> Vec<String> {
 
 fn enrich_installed_skill(skill: InstalledSkill) -> EnrichedInstalledSkill {
     // CC Switch already parses SKILL.md frontmatter description (including YAML
-    // multi-line scalars), so reuse it for capability_summary. Only read SKILL.md
-    // ourselves to extract the `triggers:` field, which CC Switch does not expose.
-    let trigger_scenarios = installed_skill_dir(&skill)
+    // multi-line scalars), so reuse it for capability_summary. Read SKILL.md
+    // once here for UI metadata CC Switch does not expose.
+    let skill_markdown = installed_skill_dir(&skill)
         .ok()
         .and_then(|dir| std::fs::read_to_string(dir.join("SKILL.md")).ok())
-        .map(|content| parse_skill_triggers(&content))
+        .map(|content| content);
+    let trigger_scenarios = skill_markdown
+        .as_deref()
+        .map(parse_skill_triggers)
         .unwrap_or_default();
+    let manifest = skill_markdown.as_deref().and_then(parse_skill_manifest);
 
     let capability_summary = skill.description.as_deref().and_then(first_sentence_of);
     let source_type = Some(detect_source_type(&skill));
@@ -2608,6 +2640,7 @@ fn enrich_installed_skill(skill: InstalledSkill) -> EnrichedInstalledSkill {
         trigger_scenarios,
         source_type,
         deployment,
+        manifest,
     }
 }
 
@@ -3053,6 +3086,80 @@ fn parse_skill_triggers(content: &str) -> Vec<String> {
     }
 
     triggers
+}
+
+fn parse_skill_manifest(content: &str) -> Option<SkillManifest> {
+    let Some((frontmatter, _body)) = split_frontmatter(content) else {
+        return None;
+    };
+
+    let mut manifest = SkillManifest::default();
+    let mut in_required_bins_block = false;
+
+    for line in frontmatter.lines() {
+        let trimmed = line.trim_start();
+
+        if in_required_bins_block {
+            if let Some(item) = trimmed.strip_prefix("- ") {
+                let bin = unquote_frontmatter_value(item.trim());
+                if !bin.is_empty() {
+                    manifest.required_bins.push(bin);
+                }
+                continue;
+            }
+            in_required_bins_block = false;
+        }
+
+        let Some((key, value)) = trimmed.split_once(':') else {
+            continue;
+        };
+        let key = key.trim();
+        let value = value.trim();
+
+        match key {
+            "version" => assign_manifest_scalar(&mut manifest.version, value),
+            "author" => assign_manifest_scalar(&mut manifest.author, value),
+            "license" => assign_manifest_scalar(&mut manifest.license, value),
+            "homepage" => assign_manifest_scalar(&mut manifest.homepage, value),
+            "anyBins" | "requiredBins" | "bins" => {
+                if value.is_empty() {
+                    in_required_bins_block = true;
+                } else {
+                    manifest.required_bins.extend(parse_frontmatter_list(value));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    manifest.required_bins.sort();
+    manifest.required_bins.dedup();
+
+    if manifest.is_empty() {
+        None
+    } else {
+        Some(manifest)
+    }
+}
+
+fn assign_manifest_scalar(target: &mut Option<String>, value: &str) {
+    if target.is_some() {
+        return;
+    }
+    let value = unquote_frontmatter_value(value);
+    if !value.is_empty() {
+        *target = Some(value);
+    }
+}
+
+fn parse_frontmatter_list(value: &str) -> Vec<String> {
+    let trimmed = value.trim().trim_start_matches('[').trim_end_matches(']');
+    trimmed
+        .split(',')
+        .map(unquote_frontmatter_value)
+        .map(|item| item.trim().to_string())
+        .filter(|item| !item.is_empty())
+        .collect()
 }
 
 fn first_sentence_of(value: &str) -> Option<String> {
@@ -4219,6 +4326,58 @@ Turns fuzzy product ideas into crisp release plans.
             parsed.description.as_deref(),
             Some("Turns fuzzy product ideas into crisp release plans.")
         );
+    }
+
+    #[test]
+    fn parse_skill_manifest_reads_version_source_and_required_bins() {
+        let manifest = parse_skill_manifest(
+            r#"---
+name: baoyu-comic
+description: Create knowledge comics.
+version: 1.56.1
+author: "@dotey"
+license: MIT
+metadata:
+  openclaw:
+    homepage: https://github.com/JimLiu/baoyu-skills#baoyu-comic
+    requires:
+      anyBins:
+        - bun
+        - npx
+---
+# Knowledge Comic Creator
+"#,
+        )
+        .expect("manifest should parse");
+
+        assert_eq!(manifest.version.as_deref(), Some("1.56.1"));
+        assert_eq!(manifest.author.as_deref(), Some("@dotey"));
+        assert_eq!(manifest.license.as_deref(), Some("MIT"));
+        assert_eq!(
+            manifest.homepage.as_deref(),
+            Some("https://github.com/JimLiu/baoyu-skills#baoyu-comic")
+        );
+        assert_eq!(manifest.required_bins, vec!["bun", "npx"]);
+    }
+
+    #[test]
+    fn parse_skill_manifest_accepts_inline_required_bins() {
+        let manifest = parse_skill_manifest(
+            r#"---
+version: "2.4.1"
+homepage: 'https://example.com/demo'
+requiredBins: [bun, "npx"]
+---
+"#,
+        )
+        .expect("manifest should parse");
+
+        assert_eq!(manifest.version.as_deref(), Some("2.4.1"));
+        assert_eq!(
+            manifest.homepage.as_deref(),
+            Some("https://example.com/demo")
+        );
+        assert_eq!(manifest.required_bins, vec!["bun", "npx"]);
     }
 
     #[test]

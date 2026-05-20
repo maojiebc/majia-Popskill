@@ -211,6 +211,7 @@ struct MatrixRow: View {
             store.skills.first { $0.id == skillID }
         }
         return MatrixVersionValueCell(value: MatrixVersionFormatter.value(
+            manifestVersion: skill?.manifest?.semanticVersion,
             contentHash: skill?.contentHash,
             updatedAt: capability.updatedAt
         ))

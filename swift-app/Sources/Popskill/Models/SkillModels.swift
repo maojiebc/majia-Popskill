@@ -132,6 +132,8 @@ struct Skill: Identifiable, Codable, Equatable {
     /// 来源类型（"github" | "npm" | "brew" | "pip" | "builtin"），sidecar 推断。
     /// Swift 端在 ViewModel 里可做更精细的二次推断（如 sourceShort 解析）。
     var sourceType: String? = nil
+    /// SKILL.md frontmatter surfaced by the sidecar for fast matrix/detail UI.
+    var manifest: SkillManifest? = nil
     /// 真身 + 各 AI 工具 symlink 状态。喂给 Inspector "位置与链接" 与 链接健康 view。
     var deployment: SkillDeployment? = nil
     var lastUsedAt: Int? = nil
@@ -145,7 +147,12 @@ struct Skill: Identifiable, Codable, Equatable {
     }
 
     var sourceURL: URL? {
-        explicitOrRepositoryURL(readmeUrl: readmeUrl, repoOwner: repoOwner, repoName: repoName)
+        explicitOrRepositoryURL(
+            readmeUrl: readmeUrl,
+            fallbackExplicitURL: manifest?.homepage,
+            repoOwner: repoOwner,
+            repoName: repoName
+        )
     }
 
     var markdownURL: URL? {
@@ -228,6 +235,60 @@ struct Skill: Identifiable, Codable, Equatable {
             snapshot.add(stat)
         }
         return snapshot
+    }
+}
+
+struct SkillManifest: Codable, Equatable {
+    let version: String?
+    let author: String?
+    let license: String?
+    let homepage: String?
+    let requiredBins: [String]
+
+    private enum CodingKeys: String, CodingKey {
+        case version
+        case author
+        case license
+        case homepage
+        case requiredBins
+    }
+
+    init(
+        version: String? = nil,
+        author: String? = nil,
+        license: String? = nil,
+        homepage: String? = nil,
+        requiredBins: [String] = []
+    ) {
+        self.version = version
+        self.author = author
+        self.license = license
+        self.homepage = homepage
+        self.requiredBins = requiredBins
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decodeIfPresent(String.self, forKey: .version)
+        author = try container.decodeIfPresent(String.self, forKey: .author)
+        license = try container.decodeIfPresent(String.self, forKey: .license)
+        homepage = try container.decodeIfPresent(String.self, forKey: .homepage)
+        requiredBins = try container.decodeIfPresent([String].self, forKey: .requiredBins) ?? []
+    }
+
+    var semanticVersion: String? {
+        version?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
+
+    var homepageURL: URL? {
+        sanitizedExternalURL(homepage)
+    }
+
+    var requiredBinsLabel: String? {
+        let bins = requiredBins
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return bins.isEmpty ? nil : bins.joined(separator: ", ")
     }
 }
 
@@ -630,6 +691,7 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
     var sourceURL: URL? {
         return explicitOrRepositoryURL(
             readmeUrl: source.readmeUrl ?? source.location,
+            fallbackExplicitURL: nil,
             repoOwner: source.repoOwner,
             repoName: source.repoName
         )
@@ -830,15 +892,25 @@ struct CatalogSkill: Identifiable, Codable, Equatable {
     }
 
     var sourceURL: URL? {
-        explicitOrRepositoryURL(readmeUrl: readmeUrl, repoOwner: repoOwner, repoName: repoName)
+        explicitOrRepositoryURL(
+            readmeUrl: readmeUrl,
+            fallbackExplicitURL: nil,
+            repoOwner: repoOwner,
+            repoName: repoName
+        )
     }
 }
 
-private func explicitOrRepositoryURL(readmeUrl: String?, repoOwner: String?, repoName: String?) -> URL? {
-    if let readmeUrl,
-       let url = URL(string: readmeUrl),
-       let scheme = url.scheme?.lowercased(),
-       ["http", "https"].contains(scheme) {
+private func explicitOrRepositoryURL(
+    readmeUrl: String?,
+    fallbackExplicitURL: String?,
+    repoOwner: String?,
+    repoName: String?
+) -> URL? {
+    if let url = sanitizedExternalURL(readmeUrl) {
+        return url
+    }
+    if let url = sanitizedExternalURL(fallbackExplicitURL) {
         return url
     }
 
@@ -851,6 +923,16 @@ private func explicitOrRepositoryURL(readmeUrl: String?, repoOwner: String?, rep
     components.host = "github.com"
     components.path = "/\(repoOwner)/\(repoName)"
     return components.url
+}
+
+private func sanitizedExternalURL(_ rawValue: String?) -> URL? {
+    guard let rawValue,
+          let url = URL(string: rawValue.trimmingCharacters(in: .whitespacesAndNewlines)),
+          let scheme = url.scheme?.lowercased(),
+          ["http", "https"].contains(scheme) else {
+        return nil
+    }
+    return url
 }
 
 private func githubRepositoryURL(from ownerRepo: String) -> URL? {
