@@ -89,8 +89,9 @@ struct SkillSearchScorerTests {
             ),
             query: "画图"
         )
-        #expect((hit?.matchedTriggers ?? []).contains("画图"))
-        #expect((hit?.matchedTriggers ?? []).contains("画个图"))
+        let matchedTriggers = hit?.matchedTriggers ?? []
+        #expect(matchedTriggers.contains("画图") == true)
+        #expect(matchedTriggers.contains("画个图") == true)
     }
 
     @Test

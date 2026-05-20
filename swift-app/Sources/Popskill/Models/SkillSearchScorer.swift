@@ -51,14 +51,14 @@ enum SkillSearchScorer {
         } else if name.hasPrefix(q) {
             score += 500
             matchedOnName = true
-        } else if name.contains(q) {
+        } else if matches(name, query: q) {
             score += 200
             matchedOnName = true
         }
 
         for trigger in triggers {
             let lowerTrigger = trigger.lowercased()
-            guard lowerTrigger.contains(q), !seenTriggers.contains(lowerTrigger) else {
+            guard matches(lowerTrigger, query: q), !seenTriggers.contains(lowerTrigger) else {
                 continue
             }
             seenTriggers.insert(lowerTrigger)
@@ -66,19 +66,19 @@ enum SkillSearchScorer {
             matchedTriggers.append(trigger)
         }
 
-        if !summary.isEmpty, summary.contains(q) {
+        if !summary.isEmpty, matches(summary, query: q) {
             score += 50
         }
 
-        if description.contains(q) {
+        if matches(description, query: q) {
             score += 20
         }
 
-        if source.contains(q) {
+        if matches(source, query: q) {
             score += 10
         }
 
-        if directory.contains(q) {
+        if matches(directory, query: q) {
             score += 5
         }
 
@@ -116,29 +116,29 @@ enum SkillSearchScorer {
         } else if name.hasPrefix(q) {
             score += 500
             matchedOnName = true
-        } else if name.contains(q) {
+        } else if matches(name, query: q) {
             score += 200
             matchedOnName = true
         }
 
         for trigger in triggers {
             let lower = trigger.lowercased()
-            guard lower.contains(q), !seenTriggers.contains(lower) else { continue }
+            guard matches(lower, query: q), !seenTriggers.contains(lower) else { continue }
             seenTriggers.insert(lower)
             score += 100
             matchedTriggers.append(trigger)
         }
 
-        if !summary.isEmpty, summary.contains(q) {
+        if !summary.isEmpty, matches(summary, query: q) {
             score += 50
         }
-        if description.contains(q) {
+        if matches(description, query: q) {
             score += 20
         }
-        if category.contains(q) {
+        if matches(category, query: q) {
             score += 10
         }
-        if fileName.contains(q) {
+        if matches(fileName, query: q) {
             score += 5
         }
 
@@ -149,5 +149,37 @@ enum SkillSearchScorer {
             matchedTriggers: matchedTriggers,
             matchedOnName: matchedOnName
         )
+    }
+
+    private static func matches(_ text: String, query: String) -> Bool {
+        guard !query.isEmpty else { return false }
+        if text.contains(query) {
+            return true
+        }
+        guard containsCJKScalar(query), containsCJKScalar(text) else {
+            return false
+        }
+        return text.containsCharactersInOrder(query)
+    }
+
+    private static func containsCJKScalar(_ value: String) -> Bool {
+        value.unicodeScalars.contains { scalar in
+            (0x4E00...0x9FFF).contains(scalar.value)
+                || (0x3400...0x4DBF).contains(scalar.value)
+                || (0xF900...0xFAFF).contains(scalar.value)
+        }
+    }
+}
+
+private extension String {
+    func containsCharactersInOrder(_ query: String) -> Bool {
+        var searchStart = startIndex
+        for character in query {
+            guard let match = self[searchStart...].firstIndex(of: character) else {
+                return false
+            }
+            searchStart = index(after: match)
+        }
+        return true
     }
 }
