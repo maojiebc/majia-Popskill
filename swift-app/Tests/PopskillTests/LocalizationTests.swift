@@ -71,5 +71,11 @@ struct LocalizationTests {
 
         #expect(localization.string("spotlight.action.usageScan.title") == "重新扫描用量")
         #expect(localization.string("spotlight.action.usageScan.subtitle") == "扫描最近 transcript，刷新调用与 tokens")
+        #expect(localization.string("spotlight.action.showBundles.title") == "查看套装")
+        #expect(localization.string("spotlight.action.showSkills.title") == "查看 Skill")
+        #expect(localization.string("spotlight.action.showCLI.title") == "查看 CLI")
+        #expect(localization.string("spotlight.action.showMCP.title") == "查看 MCP")
+        #expect(localization.string("spotlight.action.showBrokenLinks.title") == "查看断链")
+        #expect(localization.string("spotlight.action.showInactive.title") == "查看未启用")
     }
 }

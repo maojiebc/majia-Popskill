@@ -490,6 +490,66 @@ struct SpotlightAction: Identifiable {
             }
         ),
         SpotlightAction(
+            id: "show-bundles",
+            titleKey: "spotlight.action.showBundles.title",
+            subtitleKey: "spotlight.action.showBundles.subtitle",
+            symbol: "shippingbox",
+            tint: .popSectionPurple,
+            perform: { store in
+                store.showMatrix(typeFilter: .bundle)
+            }
+        ),
+        SpotlightAction(
+            id: "show-skills",
+            titleKey: "spotlight.action.showSkills.title",
+            subtitleKey: "spotlight.action.showSkills.subtitle",
+            symbol: CapabilityKind.skill.symbol,
+            tint: .accentColor,
+            perform: { store in
+                store.showMatrix(typeFilter: .skill)
+            }
+        ),
+        SpotlightAction(
+            id: "show-cli",
+            titleKey: "spotlight.action.showCLI.title",
+            subtitleKey: "spotlight.action.showCLI.subtitle",
+            symbol: CapabilityKind.cli.symbol,
+            tint: .blue,
+            perform: { store in
+                store.showMatrix(typeFilter: .cli)
+            }
+        ),
+        SpotlightAction(
+            id: "show-mcp",
+            titleKey: "spotlight.action.showMCP.title",
+            subtitleKey: "spotlight.action.showMCP.subtitle",
+            symbol: CapabilityKind.mcp.symbol,
+            tint: .mint,
+            perform: { store in
+                store.showMatrix(typeFilter: .mcp)
+            }
+        ),
+        SpotlightAction(
+            id: "show-broken-links",
+            titleKey: "spotlight.action.showBrokenLinks.title",
+            subtitleKey: "spotlight.action.showBrokenLinks.subtitle",
+            symbol: "exclamationmark.triangle",
+            tint: .red,
+            perform: { store in
+                store.showMatrix(filter: .brokenLinks)
+            }
+        ),
+        SpotlightAction(
+            id: "show-inactive",
+            titleKey: "spotlight.action.showInactive.title",
+            subtitleKey: "spotlight.action.showInactive.subtitle",
+            symbol: "pause.circle",
+            tint: .orange,
+            perform: { store in
+                store.showMatrix(filter: .inactive)
+            }
+        ),
+        SpotlightAction(
             id: "link-health",
             titleKey: "spotlight.action.linkHealth.title",
             subtitleKey: "spotlight.action.linkHealth.subtitle",
