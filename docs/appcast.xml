@@ -8,6 +8,32 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v1.0.5</title>
+      <pubDate>Thu, 21 May 2026 00:48:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v1.0.5 — 套装矩阵 + Inspector 进化</h2>
+        <p>把最近基于 HTML 参考稿的 UI / 易用性 / 性能迭代合并成一个正式版本。v1.0.4 用户会自动收到升级提示。</p>
+        <ul>
+          <li><b>套装成为一等矩阵行</b> —— bundle/package 现在有独立行、组件展开、Claude/Codex 覆盖、版本、调用量、token 和 broken-link 聚合</li>
+          <li><b>套装 Inspector</b> —— 新增 Overview / README / Usage / Version / Sync / Metadata 分页,显示组件状态、版本、用量、本机路径、同步与安全操作</li>
+          <li><b>覆盖卡解释缺口</b> —— 不只显示 2/3,还显示百分比和 占位 / 未启用 说明</li>
+          <li><b>Usage 指标进矩阵和详情页</b> —— skill、bundle、展开组件都能看到 30 天调用、token 和趋势</li>
+          <li><b>Command-K / Spotlight 升级</b> —— 可搜索套装名、来源、组件、kind、状态和 CJK 触发词,默认结果优先最近 30 天高频使用项</li>
+          <li><b>搜索与 sidebar shortcuts</b> —— 支持 baoyu-comic / baoyu comic 等格式归一,并提供套装、Claude-only、Codex-only、broken links、CLI、MCP、agent 等一键过滤</li>
+          <li><b>同步和依赖诊断</b> —— Settings 与 Inspector 显示结构化同步状态、link health、required commands 和 update state</li>
+          <li><b>CI 稳定性</b> —— PR checks 去重、Xcode 16 Swift Testing、step timeout 和 MainActor-safe SwiftUI 状态访问</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v1.0.5/Popskill-1.0.5.dmg"
+        sparkle:version="105"
+        sparkle:shortVersionString="1.0.5"
+        length="18620707"
+        type="application/octet-stream"
+        sparkle:edSignature="fqUHHvNTbYXv4O+0NA1+w8XxF/+xxF2yZV1yXm54XA0oA+dMmJzCF5PXugEy7gFQZ5LIillphvstEB5PGpzeBQ==" />
+    </item>
+    <item>
       <title>v1.0.4</title>
       <pubDate>Sun, 17 May 2026 05:00:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
