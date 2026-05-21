@@ -1,9 +1,19 @@
 import SwiftUI
 
+enum MatrixTableLayout {
+    static let appColumnWidth: CGFloat = 92
+    static let sourceColumnWidth: CGFloat = 184
+    static let versionColumnWidth: CGFloat = 86
+    static let tokensColumnWidth: CGFloat = 78
+    static let callsColumnWidth: CGFloat = 62
+    static let actionColumnWidth: CGFloat = 52
+}
+
 /// Skills × Tools — the matrix is Popskill's灵魂主视图: rows = capabilities
 /// (skill / cli / mcp / agent), columns = AI tools (Claude Code / Codex),
 /// the cell is a direct toggle. Selecting a row slides an Inspector pane in
 /// from the right showing the position-and-link section.
+@MainActor
 struct MatrixView: View {
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization
@@ -11,7 +21,12 @@ struct MatrixView: View {
 
     var body: some View {
         let capabilities = store.capabilities
-        let sections = filteredSections(in: capabilities)
+        let usageIndex = MatrixUsageIndex(
+            summary: store.usageSummary,
+            skills: store.skills,
+            packages: store.compositePackages
+        )
+        let sections = filteredSections(in: capabilities, usageIndex: usageIndex)
         VStack(spacing: 0) {
             header(capabilities: capabilities)
             Divider()
@@ -27,7 +42,7 @@ struct MatrixView: View {
             } else if sections.isEmpty {
                 noResultsState
             } else {
-                matrixTable(sections: sections)
+                matrixTable(sections: sections, usageIndex: usageIndex)
             }
         }
         .popPageBackground()
@@ -46,7 +61,7 @@ struct MatrixView: View {
     // MARK: Header
 
     private func header(capabilities: [MatrixCapability]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     LocalizedText("sidebar.matrix")
@@ -59,17 +74,22 @@ struct MatrixView: View {
                 Spacer(minLength: 16)
                 searchField
             }
-            filterChips
+            metricStrip(capabilities: capabilities)
+            HStack(spacing: 10) {
+                filterChips
+                Spacer(minLength: 8)
+                sortMenu
+            }
         }
         .padding(.horizontal, 28)
-        .padding(.top, 24)
-        .padding(.bottom, 14)
+        .padding(.top, 22)
+        .padding(.bottom, 12)
     }
 
     private func subtitle(capabilities: [MatrixCapability]) -> String {
         let count = capabilities.count
         let active = store.enabledSkillCount
-        return localization.string("matrix.subtitle", count, active)
+        return localization.string("matrix.subtitle", store.bundleCount, count, active)
     }
 
     private var searchField: some View {
@@ -105,6 +125,65 @@ struct MatrixView: View {
         .accessibilityLabel(Text(localization.string("matrix.search.placeholder")))
     }
 
+    private func metricStrip(capabilities: [MatrixCapability]) -> some View {
+        let metrics = summaryMetrics(capabilities: capabilities)
+        return HStack(spacing: 0) {
+            ForEach(Array(metrics.enumerated()), id: \.element.id) { index, metric in
+                MatrixSummaryMetricView(metric: metric)
+                    .frame(minWidth: metric.preferredWidth, alignment: .leading)
+                if index < metrics.count - 1 {
+                    Rectangle()
+                        .fill(Color.popSeparator.opacity(0.65))
+                        .frame(width: 0.5, height: 32)
+                        .padding(.horizontal, 16)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func summaryMetrics(capabilities: [MatrixCapability]) -> [MatrixSummaryMetric] {
+        [
+            MatrixSummaryMetric(
+                id: "capabilities",
+                value: "\(capabilities.count)",
+                title: localization.string("matrix.metric.capabilities"),
+                tint: .popLabel
+            ),
+            MatrixSummaryMetric(
+                id: "claude",
+                value: "\(capabilities.filter { $0.apps.claude }.count)",
+                title: localization.string("matrix.metric.claudeActive"),
+                tint: .popLabel
+            ),
+            MatrixSummaryMetric(
+                id: "codex",
+                value: "\(capabilities.filter { $0.apps.codex }.count)",
+                title: localization.string("matrix.metric.codexActive"),
+                tint: .popLabel
+            ),
+            MatrixSummaryMetric(
+                id: "stubs",
+                value: "\(store.stubs.count)",
+                title: localization.string("matrix.metric.stubs"),
+                tint: store.stubs.isEmpty ? .popSecondaryLabel : .popStatusWarning
+            ),
+            MatrixSummaryMetric(
+                id: "broken-links",
+                value: "\(store.brokenLinkCount)",
+                title: localization.string("matrix.metric.brokenLinks"),
+                tint: store.brokenLinkCount > 0 ? .popStatusError : .popSecondaryLabel
+            ),
+            MatrixSummaryMetric(
+                id: "tokens",
+                value: store.usageSummary.map { UsageDisplayFormatter.compactTokens($0.thirtyDayTotalTokens) } ?? "—",
+                title: localization.string("matrix.metric.tokenUsage"),
+                tint: .popLabel,
+                preferredWidth: 116
+            )
+        ]
+    }
+
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
@@ -117,6 +196,7 @@ struct MatrixView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func chipButton(filter: MatrixFilter) -> some View {
@@ -131,15 +211,18 @@ struct MatrixView: View {
                         .font(.system(size: 10.5, weight: .semibold).monospacedDigit())
                 }
             }
-            .font(.system(size: 12, weight: active ? .semibold : .regular))
-            .foregroundStyle(active ? Color.accentColor : Color.popSecondaryLabel)
-            .padding(.horizontal, 10)
+            .font(.system(size: 11.5, weight: active ? .semibold : .regular))
+            .foregroundStyle(active ? Color.popCardBackground : Color.popLabel)
+            .padding(.horizontal, 9)
             .padding(.vertical, 4)
             .background(
-                active ? Color.popAccentSoft : Color.popControlFill,
-                in: Capsule()
+                active ? Color.popLabel : Color.popControlFill,
+                in: RoundedRectangle(cornerRadius: 5, style: .continuous)
             )
-            .overlay(Capsule().strokeBorder(active ? Color.accentColor.opacity(0.30) : Color.popControlStroke, lineWidth: 0.7))
+            .overlay(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .strokeBorder(active ? Color.popLabel.opacity(0.10) : Color.popControlStroke, lineWidth: 0.7)
+            )
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(active ? .isSelected : [])
@@ -151,23 +234,62 @@ struct MatrixView: View {
             store.matrixTypeFilter = filter
         } label: {
             Text(localization.string(filter.titleKey))
-                .font(.system(size: 12, weight: active ? .semibold : .regular))
-                .foregroundStyle(active ? Color.accentColor : Color.popSecondaryLabel)
-                .padding(.horizontal, 10)
+                .font(.system(size: 11.5, weight: active ? .semibold : .regular))
+                .foregroundStyle(active ? Color.popCardBackground : Color.popLabel)
+                .padding(.horizontal, 9)
                 .padding(.vertical, 4)
                 .background(
-                    active ? Color.popAccentSoft : Color.popControlFill,
-                    in: Capsule()
+                    active ? Color.popLabel : Color.popControlFill,
+                    in: RoundedRectangle(cornerRadius: 5, style: .continuous)
                 )
-                .overlay(Capsule().strokeBorder(active ? Color.accentColor.opacity(0.30) : Color.popControlStroke, lineWidth: 0.7))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .strokeBorder(active ? Color.popLabel.opacity(0.10) : Color.popControlStroke, lineWidth: 0.7)
+                )
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(active ? .isSelected : [])
     }
 
+    private var sortMenu: some View {
+        Menu {
+            ForEach(MatrixSortMode.allCases) { mode in
+                Button {
+                    store.matrixSortMode = mode
+                } label: {
+                    Label(
+                        localization.string(mode.titleKey),
+                        systemImage: store.matrixSortMode == mode ? "checkmark" : mode.symbolName
+                    )
+                }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: store.matrixSortMode.symbolName)
+                    .font(.system(size: 10.5, weight: .semibold))
+                Text(localization.string(store.matrixSortMode.titleKey))
+                    .font(.system(size: 11.5, weight: .medium))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(Color.popTertiaryLabel)
+            }
+            .foregroundStyle(Color.popSecondaryLabel)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.popControlFill, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .strokeBorder(Color.popControlStroke, lineWidth: 0.7)
+            )
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(localization.string("matrix.sort.help"))
+    }
+
     // MARK: Matrix table
 
-    private func matrixTable(sections: [CapabilitySection]) -> some View {
+    private func matrixTable(sections: [CapabilitySection], usageIndex: MatrixUsageIndex) -> some View {
         ScrollView {
             LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                 Section {
@@ -182,7 +304,11 @@ struct MatrixView: View {
                             MatrixGroupHeader(group: group, store: store)
                             if !store.collapsedGroups.contains(group.id) {
                                 ForEach(group.capabilities, id: \.id) { capability in
-                                    MatrixRow(capability: capability, store: store)
+                                    if capability.kind == .bundle {
+                                        MatrixPackageRow(capability: capability, store: store, usageIndex: usageIndex)
+                                    } else {
+                                        MatrixRow(capability: capability, store: store, usageIndex: usageIndex)
+                                    }
                                     Divider().opacity(0.4)
                                 }
                             }
@@ -192,14 +318,12 @@ struct MatrixView: View {
                 Color.clear.frame(height: 24)
             }
         }
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .background(Color.popSurfaceElevated.opacity(0.18), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(Color.popSurfaceElevated.opacity(0.42), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.popBorder, lineWidth: 0.7)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(Color.popBorder.opacity(0.82), lineWidth: 0.7)
         )
-        .shadow(color: .black.opacity(0.035), radius: 12, x: 0, y: 3)
         .padding(.horizontal, 16)
         .padding(.bottom, 16)
     }
@@ -233,17 +357,24 @@ struct MatrixView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 14)
             Text("Claude Code")
-                .frame(width: 100, alignment: .center)
+                .frame(width: MatrixTableLayout.appColumnWidth, alignment: .center)
             Text("Codex")
-                .frame(width: 100, alignment: .center)
+                .frame(width: MatrixTableLayout.appColumnWidth, alignment: .center)
             Text(localization.string("matrix.col.source"))
-                .frame(width: 220, alignment: .leading)
-            Spacer().frame(width: 56)
+                .frame(width: MatrixTableLayout.sourceColumnWidth, alignment: .leading)
+            Text(localization.string("matrix.col.version"))
+                .frame(width: MatrixTableLayout.versionColumnWidth, alignment: .leading)
+            Text(localization.string("matrix.col.tokens"))
+                .frame(width: MatrixTableLayout.tokensColumnWidth, alignment: .trailing)
+            Text(localization.string("matrix.col.calls"))
+                .frame(width: MatrixTableLayout.callsColumnWidth, alignment: .trailing)
+            Spacer().frame(width: MatrixTableLayout.actionColumnWidth)
         }
-        .font(.system(size: 11.5, weight: .medium))
-        .foregroundStyle(Color.popSecondaryLabel)
-        .padding(.vertical, 8)
-        .background(Color.popTableHeaderFill)
+        .font(.system(size: 10.5, weight: .semibold))
+        .foregroundStyle(Color.popTertiaryLabel)
+        .textCase(.uppercase)
+        .padding(.vertical, 7)
+        .background(Color.popTableHeaderFill.opacity(0.70))
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(Color.popSeparator)
@@ -272,17 +403,17 @@ struct MatrixView: View {
 
     // MARK: Filtering & grouping
 
-    private func filteredSections(in capabilities: [MatrixCapability]) -> [CapabilitySection] {
-        let q = store.trimmedSearch.lowercased()
+    private func filteredSections(
+        in capabilities: [MatrixCapability],
+        usageIndex: MatrixUsageIndex
+    ) -> [CapabilitySection] {
+        let q = SearchTextNormalizer.key(store.trimmedSearch)
         let visible = capabilities.filter { capability in
-            store.matrixFilter.includes(capability: capability, store: store)
+                store.matrixFilter.includes(capability: capability, store: store)
                 && store.matrixTypeFilter.includes(capability: capability)
-                && (q.isEmpty
-                    || capability.name.lowercased().contains(q)
-                    || (capability.summary ?? "").lowercased().contains(q)
-                    || capability.directory.lowercased().contains(q))
+                && capability.matchesSearch(query: q)
         }
-        return SkillGrouping.sections(visible)
+        return SkillGrouping.sections(visible, sort: store.matrixSortMode, usageIndex: usageIndex)
     }
 
     private var noResultsState: some View {
@@ -334,11 +465,41 @@ struct MatrixView: View {
     }
 }
 
+private struct MatrixSummaryMetric: Identifiable {
+    let id: String
+    let value: String
+    let title: String
+    let tint: Color
+    var preferredWidth: CGFloat = 92
+}
+
+private struct MatrixSummaryMetricView: View {
+    let metric: MatrixSummaryMetric
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(metric.value)
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(metric.tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+            Text(metric.title)
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(Color.popSecondaryLabel)
+                .textCase(.uppercase)
+                .lineLimit(1)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
 // MARK: - Filters
 
 enum MatrixFilter: String, CaseIterable, Identifiable {
     case all
     case updates
+    case brokenLinks = "broken-links"
     case claudeOnly = "claude-only"
     case codexOnly = "codex-only"
     case inactive
@@ -349,6 +510,7 @@ enum MatrixFilter: String, CaseIterable, Identifiable {
         switch self {
         case .all:        return "matrix.filter.all"
         case .updates:    return "matrix.filter.updates"
+        case .brokenLinks: return "matrix.filter.brokenLinks"
         case .claudeOnly: return "matrix.filter.claudeOnly"
         case .codexOnly:  return "matrix.filter.codexOnly"
         case .inactive:   return "matrix.filter.inactive"
@@ -358,8 +520,12 @@ enum MatrixFilter: String, CaseIterable, Identifiable {
     @MainActor
     func badge(store: PopskillStore) -> Int? {
         switch self {
-        case .updates: return store.pendingUpdateCount > 0 ? store.pendingUpdateCount : nil
-        default:       return nil
+        case .updates:
+            return store.pendingUpdateCount > 0 ? store.pendingUpdateCount : nil
+        case .brokenLinks:
+            return store.brokenLinkCount > 0 ? store.brokenLinkCount : nil
+        default:
+            return nil
         }
     }
 
@@ -370,6 +536,8 @@ enum MatrixFilter: String, CaseIterable, Identifiable {
             return true
         case .updates:
             return store.hasPendingUpdate(for: capability)
+        case .brokenLinks:
+            return capability.hasBrokenLink || capability.package?.hasBrokenLinks(in: store.skills) == true
         case .claudeOnly:
             return capability.apps.claude && !capability.apps.codex
         case .codexOnly:
@@ -382,6 +550,7 @@ enum MatrixFilter: String, CaseIterable, Identifiable {
 
 enum MatrixTypeFilter: String, CaseIterable, Identifiable {
     case allTypes
+    case bundle
     case skill
     case agent
     case cli
@@ -392,6 +561,7 @@ enum MatrixTypeFilter: String, CaseIterable, Identifiable {
     var titleKey: String {
         switch self {
         case .allTypes: return "matrix.type.all"
+        case .bundle:   return "matrix.type.bundle"
         case .skill:    return "matrix.type.skill"
         case .agent:    return "matrix.type.agent"
         case .cli:      return "matrix.type.cli"
@@ -402,6 +572,7 @@ enum MatrixTypeFilter: String, CaseIterable, Identifiable {
     func includes(capability: MatrixCapability) -> Bool {
         switch self {
         case .allTypes: return true
+        case .bundle:   return capability.kind == .bundle
         case .skill:    return capability.kind == .skill
         case .agent:    return capability.kind == .agent
         case .cli:      return capability.kind == .cli

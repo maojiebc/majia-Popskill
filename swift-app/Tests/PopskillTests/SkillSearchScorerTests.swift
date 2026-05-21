@@ -31,6 +31,22 @@ struct SkillSearchScorerTests {
     }
 
     @Test
+    func spaceSeparatedQueryMatchesDashedSkillName() {
+        let hit = SkillSearchScorer.score(skill: skill(name: "baoyu-comic"), query: "baoyu comic")
+
+        #expect(hit?.matchedOnName == true)
+        #expect((hit?.score ?? 0) >= 1000)
+    }
+
+    @Test
+    func compactQueryMatchesSeparatedSkillName() {
+        let hit = SkillSearchScorer.score(skill: skill(name: "baoyu comic"), query: "baoyucomic")
+
+        #expect(hit?.matchedOnName == true)
+        #expect((hit?.score ?? 0) >= 1000)
+    }
+
+    @Test
     func triggerMatchesAddOneHundredEach() {
         let hit = SkillSearchScorer.score(
             skill: skill(
@@ -89,8 +105,9 @@ struct SkillSearchScorerTests {
             ),
             query: "画图"
         )
-        #expect((hit?.matchedTriggers ?? []).contains("画图"))
-        #expect((hit?.matchedTriggers ?? []).contains("画个图"))
+        let matchedTriggers = hit?.matchedTriggers ?? []
+        #expect(matchedTriggers.contains("画图") == true)
+        #expect(matchedTriggers.contains("画个图") == true)
     }
 
     @Test
@@ -107,6 +124,17 @@ struct SkillSearchScorerTests {
         // category contains (10) + fileName "doc-writer.md" no contains (0) = 10
         #expect(hit?.score == 10)
         #expect(hit?.matchedOnName == false)
+    }
+
+    @Test
+    func agentQueryMatchesDelimitedFileName() {
+        let hit = SkillSearchScorer.score(
+            agent: localAgent(name: "lark-office-assistant", description: "Drafts documents"),
+            query: "office assistant"
+        )
+
+        #expect(hit?.matchedOnName == true)
+        #expect((hit?.score ?? 0) >= 200)
     }
 
     @Test

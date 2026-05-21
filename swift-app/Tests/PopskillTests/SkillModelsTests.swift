@@ -110,6 +110,91 @@ struct SkillModelsTests {
     }
 
     @Test
+    func installedSkillDecodesManifestMetadata() throws {
+        let data = Data("""
+        {
+          "id": "baoyu-comic",
+          "name": "baoyu-comic",
+          "description": "Create knowledge comics.",
+          "directory": "baoyu-comic",
+          "repo_owner": "JimLiu",
+          "repo_name": "baoyu-skills",
+          "readme_url": null,
+          "apps": {
+            "claude": true,
+            "codex": true,
+            "gemini": false,
+            "opencode": false,
+            "hermes": false
+          },
+          "installed_at": 1,
+          "updated_at": 2,
+          "content_hash": "abcdef123456",
+          "manifest": {
+            "version": "1.56.1",
+            "author": "@dotey",
+            "license": "MIT",
+            "homepage": "https://github.com/JimLiu/baoyu-skills#baoyu-comic",
+            "required_bins": ["bun", "npx"],
+            "required_tools": [
+              {"name": "bun", "available": true},
+              {"name": "npx", "available": false}
+            ]
+          }
+        }
+        """.utf8)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+        let skill = try decoder.decode(Skill.self, from: data)
+
+        #expect(skill.manifest?.semanticVersion == "1.56.1")
+        #expect(skill.manifest?.author == "@dotey")
+        #expect(skill.manifest?.license == "MIT")
+        #expect(skill.manifest?.requiredBinsLabel == "bun, npx")
+        #expect(skill.manifest?.hasMissingRequiredTools == true)
+        #expect(skill.manifest?.requiredToolsLabel(availableLabel: "ok", missingLabel: "missing") == "bun ok · npx missing")
+        #expect(skill.sourceURL?.absoluteString == "https://github.com/JimLiu/baoyu-skills#baoyu-comic")
+    }
+
+    @Test
+    func installedSkillDecodesManifestWithoutRequiredBins() throws {
+        let data = Data("""
+        {
+          "id": "demo",
+          "name": "Demo",
+          "description": "Demo skill",
+          "directory": "demo",
+          "repo_owner": null,
+          "repo_name": null,
+          "readme_url": null,
+          "apps": {
+            "claude": true,
+            "codex": false,
+            "gemini": false,
+            "opencode": false,
+            "hermes": false
+          },
+          "installed_at": null,
+          "updated_at": null,
+          "content_hash": null,
+          "manifest": {
+            "version": "2.0.0"
+          }
+        }
+        """.utf8)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+        let skill = try decoder.decode(Skill.self, from: data)
+
+        #expect(skill.manifest?.semanticVersion == "2.0.0")
+        #expect(skill.manifest?.requiredBins == [])
+        #expect(skill.manifest?.requiredTools == [])
+        #expect(skill.manifest?.requiredToolsLabel(availableLabel: "ok", missingLabel: "missing") == nil)
+    }
+
+    @Test
     func installedSkillLocalStoreURLUsesCCSwitchStore() {
         let skill = installedSkill(directory: "demo-skill")
 
@@ -152,6 +237,189 @@ struct SkillModelsTests {
         skill.apps.hermes = true
 
         #expect(skill.enabledAppCount == 3)
+    }
+
+    @Test
+    func skillBrokenLinkDetectionUsesDeploymentStatuses() {
+        var skill = installedSkill(directory: "demo-skill")
+
+        #expect(skill.hasBrokenLink == false)
+
+        skill.deployment = SkillDeployment(
+            strategy: "symlink",
+            ssotPath: "/Users/example/.cc-switch/skills/demo-skill",
+            appLinks: [
+                "claude": AppLinkStatus(path: "/Users/example/.claude/skills/demo-skill", status: "ok"),
+                "codex": AppLinkStatus(path: "/Users/example/.codex/skills/demo-skill", status: "BROKEN")
+            ]
+        )
+
+        #expect(skill.deployment?.hasBrokenLink == true)
+        #expect(skill.hasBrokenLink == true)
+    }
+
+    @Test
+    func capabilityPackageBrokenLinksAggregateMatchedSkills() {
+        let package = self.package(components: [component(id: "demo-skill", installed: true)])
+        let unrelatedPackage = self.package(components: [component(id: "healthy-skill", installed: true)])
+        var skill = installedSkill(directory: "demo-skill")
+
+        skill.deployment = SkillDeployment(
+            strategy: "symlink",
+            ssotPath: "/Users/example/.cc-switch/skills/demo-skill",
+            appLinks: [
+                "claude": AppLinkStatus(path: "/Users/example/.claude/skills/demo-skill", status: "broken")
+            ]
+        )
+
+        #expect(package.hasBrokenLinks(in: [skill]) == true)
+        #expect(unrelatedPackage.hasBrokenLinks(in: [skill]) == false)
+    }
+
+    @Test
+    func capabilityPackageLinkHealthSnapshotMatchesInstalledComponents() {
+        let package = self.package(components: [
+            component(id: "demo-skill", installed: true),
+            component(id: "second-skill", installed: true)
+        ])
+        let demo = installedSkill(directory: "owner/repo:demo-skill")
+        let second = installedSkill(directory: "second-skill")
+        let report = LinkHealthReport(
+            summary: LinkHealthSummary(ok: 5, broken: 3, inactive: 2),
+            rows: [
+                LinkHealthRow(
+                    skillId: "owner/repo:demo-skill",
+                    skillName: "Demo",
+                    deployment: SkillDeployment(
+                        strategy: "symlink",
+                        ssotPath: "/Users/example/.cc-switch/skills/demo-skill",
+                        appLinks: [
+                            "claude": AppLinkStatus(path: "/Users/example/.claude/skills/demo-skill", status: "ok"),
+                            "codex": AppLinkStatus(path: "/Users/example/.codex/skills/demo-skill", status: "broken")
+                        ]
+                    )
+                ),
+                LinkHealthRow(
+                    skillId: "second-skill",
+                    skillName: "Second",
+                    deployment: SkillDeployment(
+                        strategy: "symlink",
+                        ssotPath: "/Users/example/.cc-switch/skills/second-skill",
+                        appLinks: [
+                            "claude": AppLinkStatus(path: "/Users/example/.claude/skills/second-skill", status: "inactive")
+                        ]
+                    )
+                ),
+                LinkHealthRow(
+                    skillId: "unrelated",
+                    skillName: "Unrelated",
+                    deployment: SkillDeployment(
+                        strategy: "symlink",
+                        ssotPath: "/Users/example/.cc-switch/skills/unrelated",
+                        appLinks: [
+                            "claude": AppLinkStatus(path: "/Users/example/.claude/skills/unrelated", status: "ok")
+                        ]
+                    )
+                )
+            ]
+        )
+
+        let snapshot = package.linkHealthSnapshot(using: report, skills: [demo, second])
+
+        #expect(snapshot?.rows.map(\.skillId) == ["owner/repo:demo-skill", "second-skill"])
+        #expect(snapshot?.okCount == 1)
+        #expect(snapshot?.brokenCount == 1)
+        #expect(snapshot?.inactiveCount == 1)
+        #expect(package.linkHealthSnapshot(using: nil, skills: [demo]) == nil)
+    }
+
+    @Test
+    func matrixCapabilityBrokenLinksAggregateDirectAndPackageLinks() {
+        let package = self.package(components: [component(id: "demo-skill", installed: true)])
+        let unrelatedPackage = self.package(components: [component(id: "healthy-skill", installed: true)])
+        var skill = installedSkill(directory: "demo-skill")
+
+        skill.deployment = SkillDeployment(
+            strategy: "symlink",
+            ssotPath: "/Users/example/.cc-switch/skills/demo-skill",
+            appLinks: [
+                "codex": AppLinkStatus(path: "/Users/example/.codex/skills/demo-skill", status: "broken")
+            ]
+        )
+
+        #expect(MatrixCapability.fromSkill(skill).hasBrokenLinks(in: []) == true)
+        #expect(MatrixCapability.fromPackage(package, skills: [skill]).hasBrokenLinks(in: [skill]) == true)
+        #expect(MatrixCapability.fromPackage(unrelatedPackage, skills: [skill]).hasBrokenLinks(in: [skill]) == false)
+    }
+
+    @Test
+    func matrixCapabilitySearchMatchesSourceTriggersAndAppTargets() {
+        var skill = Skill(
+            id: "dotey/prompt-engineering:baoyu-comic",
+            name: "baoyu-comic",
+            description: "Comic generator",
+            directory: "baoyu-comic",
+            repoOwner: "dotey",
+            repoName: "prompt-engineering",
+            readmeUrl: nil,
+            apps: SkillApps(claude: false, codex: true, gemini: false, opencode: false, hermes: false),
+            installedAt: nil,
+            updatedAt: nil,
+            contentHash: nil
+        )
+        skill.capabilitySummary = "Turns topics into four-panel comics."
+        skill.triggerScenarios = ["用 baoyu-comic 把 X 画成四格"]
+        skill.sourceType = "github"
+        let capability = MatrixCapability.fromSkill(skill)
+
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("dotey")))
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("prompt engineering")))
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("四格")))
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("codex")))
+        #expect(!capability.matchesSearch(query: SearchTextNormalizer.key("feishu")))
+    }
+
+    @Test
+    func matrixCapabilitySearchMatchesPackageSourceComponentsAndConfig() {
+        let package = CapabilityPackage(
+            id: "pkg:feishu-suite",
+            type: .composite,
+            name: "Feishu Suite",
+            vendor: "ByteDance",
+            summary: "Office automation suite",
+            source: PackageSource(
+                kind: "github",
+                location: "github.com/feishu/lark-suite",
+                updateStrategy: "manual",
+                repoOwner: "feishu",
+                repoName: "lark-suite",
+                repoBranch: "main",
+                readmeUrl: nil
+            ),
+            components: PackageComponents(
+                cli: [
+                    PackageComponent(id: "lark-cli", name: "lark-cli", kind: "cli", required: true, installed: false, status: "stub", location: "feishu-suite/lark-cli")
+                ],
+                skills: [],
+                mcp: [
+                    PackageComponent(id: "lark-openapi-mcp", name: "Lark OpenAPI MCP", kind: "mcp", required: false, installed: false, status: "registry-reference", location: nil)
+                ],
+                agents: []
+            ),
+            configSchema: [
+                PackageConfigField(id: "lark.app_secret", label: "App Secret", required: true, secret: true, storage: "keychain")
+            ],
+            installed: false,
+            lifecycle: nil
+        )
+        let capability = MatrixCapability.fromPackage(package, skills: [])
+
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("bytedance")))
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("lark suite")))
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("套装")))
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("占位")))
+        #expect(capability.matchesSearch(query: SearchTextNormalizer.key("keychain")))
+        #expect(!capability.matchesSearch(query: SearchTextNormalizer.key("baoyu comic")))
     }
 
     @Test
@@ -223,6 +491,124 @@ struct SkillModelsTests {
         #expect(skill.matchesAttributionSkill("BAOYU-IMAGE-GEN"))
         #expect(skill.matchesAttributionSkill("other-plugin:baoyu-image-gen"))
         #expect(!skill.matchesAttributionSkill("baoyu-cover-image"))
+    }
+
+    @Test
+    func installedSkillUsageSnapshotAggregatesAttributionStats() {
+        let skill = installedSkill(directory: "baoyu-comic")
+        let lastUsed = Date(timeIntervalSince1970: 1_800_000_000)
+        let summary = UsageSummary(
+            filesScanned: 2,
+            sessions: 2,
+            usageEvents: 3,
+            inputTokens: 100,
+            outputTokens: 80,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            attributedSkillUsageEvents: 2,
+            modelStats: [],
+            skillStats: [
+                SkillUsageStat(
+                    skillID: "baoyu-comic",
+                    sourcePlugin: nil,
+                    usageEvents: 2,
+                    inputTokens: 20,
+                    outputTokens: 30,
+                    cacheCreationTokens: 5,
+                    cacheReadTokens: 7,
+                    lastUsedAt: lastUsed
+                ),
+                SkillUsageStat(
+                    skillID: "jimliu/baoyu-skills:baoyu-comic",
+                    sourcePlugin: nil,
+                    usageEvents: 1,
+                    inputTokens: 10,
+                    outputTokens: 12,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 0,
+                    lastUsedAt: Date(timeIntervalSince1970: 1_700_000_000)
+                ),
+                SkillUsageStat(
+                    skillID: "unrelated",
+                    sourcePlugin: nil,
+                    usageEvents: 9,
+                    inputTokens: 999,
+                    outputTokens: 999,
+                    cacheCreationTokens: 999,
+                    cacheReadTokens: 999,
+                    lastUsedAt: nil
+                )
+            ],
+            recentSessions: []
+        )
+
+        let snapshot = skill.usageSnapshot(using: summary)
+
+        #expect(snapshot?.usageEvents == 3)
+        #expect(snapshot?.totalTokens == 84)
+        #expect(snapshot?.lastUsedAt == lastUsed)
+    }
+
+    @Test
+    func installedSkillUsageSnapshotPrefersRecentThirtyDayWindow() {
+        let skill = installedSkill(directory: "baoyu-comic")
+        let oldStat = SkillUsageStat(
+            skillID: "baoyu-comic",
+            sourcePlugin: nil,
+            usageEvents: 9,
+            inputTokens: 90,
+            outputTokens: 0,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            lastUsedAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+        let recentDay = Date(timeIntervalSince1970: 1_799_971_200)
+        var recentStat = SkillUsageStat(
+            skillID: "baoyu-comic",
+            sourcePlugin: nil,
+            usageEvents: 2,
+            inputTokens: 4,
+            outputTokens: 6,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            lastUsedAt: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+        recentStat.dailyStats = [
+            UsageBucketStat(
+                dayStart: recentDay,
+                usageEvents: 2,
+                inputTokens: 4,
+                outputTokens: 6,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0
+            )
+        ]
+        var recentWindow = UsageWindowSummary(
+            days: 30,
+            startedAt: Date(timeIntervalSince1970: 1_799_000_000),
+            endedAt: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+        recentWindow.usageEvents = 2
+        recentWindow.inputTokens = 4
+        recentWindow.outputTokens = 6
+        recentWindow.attributedSkillUsageEvents = 2
+        recentWindow.skillStats = [recentStat]
+        let summary = UsageSummary(
+            usageEvents: 11,
+            inputTokens: 94,
+            outputTokens: 6,
+            attributedSkillUsageEvents: 11,
+            skillStats: [oldStat],
+            recent30Days: recentWindow
+        )
+
+        let snapshot = skill.usageSnapshot(using: summary)
+
+        #expect(snapshot?.usageEvents == 2)
+        #expect(snapshot?.totalTokens == 10)
+        #expect(snapshot?.lastUsedAt == recentStat.lastUsedAt)
+        #expect(snapshot?.dailyStats.map(\.dayStart) == [recentDay])
+        #expect(snapshot?.dailyStats.first?.usageEvents == 2)
     }
 
     @Test
@@ -640,6 +1026,516 @@ struct SkillModelsTests {
     }
 
     @Test
+    func packageComponentCompositionSummarizesKindsInStableOrder() {
+        let package = CapabilityPackage(
+            id: "pkg:lark",
+            type: .composite,
+            name: "Feishu / Lark",
+            vendor: "ByteDance",
+            summary: "Collaboration suite.",
+            source: PackageSource(
+                kind: "builtin",
+                location: "popskill/builtin/lark",
+                updateStrategy: "manual",
+                repoOwner: nil,
+                repoName: nil,
+                repoBranch: nil,
+                readmeUrl: nil
+            ),
+            components: PackageComponents(
+                cli: [
+                    PackageComponent(id: "lark-cli", name: "lark-cli", kind: "cli", required: true, installed: true, status: "detected", location: nil)
+                ],
+                skills: [
+                    PackageComponent(id: "lark-doc", name: "Lark Doc", kind: "skill", required: true, installed: true, status: "installed", location: "lark-doc"),
+                    PackageComponent(id: "lark-base", name: "Lark Base", kind: "skill", required: false, installed: true, status: "installed", location: "lark-base")
+                ],
+                mcp: [
+                    PackageComponent(id: "lark-mcp", name: "Lark MCP", kind: "mcp", required: false, installed: false, status: "registry-reference", location: nil)
+                ],
+                agents: [
+                    PackageComponent(id: "lark-agent", name: "Lark Agent", kind: "agent", required: false, installed: true, status: "installed", location: "~/.claude/agents/lark-agent.md")
+                ]
+            ),
+            configSchema: [],
+            installed: true,
+            lifecycle: nil
+        )
+
+        #expect(package.componentCompositionCounts.map { "\($0.kind):\($0.count)" } == ["cli:1", "mcp:1", "skill:2", "agent:1"])
+        #expect(PackageComponentCompositionFormatter.composition(for: package, localization: PopskillLocalization(language: .english)) == "1 CLI + 1 MCP + 2 Skills + 1 Agent")
+        #expect(PackageComponentCompositionFormatter.composition(for: package, localization: PopskillLocalization(language: .simplifiedChinese)) == "1 个 CLI + 1 个 MCP + 2 项 Skill + 1 个 Agent")
+        #expect(PackageComponentCompositionFormatter.summary(for: package, localization: PopskillLocalization(language: .english)) == "Collaboration suite. · 1 CLI + 1 MCP + 2 Skills + 1 Agent")
+    }
+
+    @Test
+    func packageComponentMatchesInstalledSkillByScopedIdentifierAndLocation() {
+        let component = PackageComponent(
+            id: "lark-doc",
+            name: "Lark Doc",
+            kind: "skill",
+            required: true,
+            installed: true,
+            status: "installed",
+            location: "skills/lark-doc"
+        )
+        let skill = Skill(
+            id: "larksuite/cli:lark-doc",
+            name: "Lark Doc",
+            description: "Docs skill",
+            directory: "lark-doc",
+            repoOwner: "larksuite",
+            repoName: "cli",
+            readmeUrl: nil,
+            apps: SkillApps(claude: true, codex: false, gemini: false, opencode: false, hermes: false),
+            installedAt: nil,
+            updatedAt: nil,
+            contentHash: nil
+        )
+
+        #expect(component.matchesSkill(skill))
+    }
+
+    @Test
+    func capabilityPackageCoverageUsesSkillTogglesAndComponentFallbacks() {
+        let package = CapabilityPackage(
+            id: "pkg:lark",
+            type: .composite,
+            name: "Feishu / Lark",
+            vendor: "ByteDance",
+            summary: "Composite office package.",
+            source: PackageSource(
+                kind: "builtin",
+                location: "popskill/builtin/lark",
+                updateStrategy: "manual",
+                repoOwner: nil,
+                repoName: nil,
+                repoBranch: nil,
+                readmeUrl: nil
+            ),
+            components: PackageComponents(
+                cli: [
+                    PackageComponent(id: "lark-cli", name: "lark-cli", kind: "cli", required: true, installed: true, status: "detected", location: nil)
+                ],
+                skills: [
+                    PackageComponent(id: "lark-doc", name: "Lark Doc", kind: "skill", required: true, installed: true, status: "installed", location: "lark-doc")
+                ],
+                mcp: [
+                    PackageComponent(id: "lark-mcp", name: "Lark MCP", kind: "mcp", required: false, installed: false, status: "registry-reference", location: nil)
+                ],
+                agents: [
+                    PackageComponent(id: "lark-agent", name: "Lark Agent", kind: "agent", required: false, installed: true, status: "installed", location: "~/.claude/agents/lark-agent.md")
+                ]
+            ),
+            configSchema: [],
+            installed: true,
+            lifecycle: nil
+        )
+        let skill = Skill(
+            id: "larksuite/cli:lark-doc",
+            name: "Lark Doc",
+            description: "Docs skill",
+            directory: "lark-doc",
+            repoOwner: "larksuite",
+            repoName: "cli",
+            readmeUrl: nil,
+            apps: SkillApps(claude: true, codex: false, gemini: false, opencode: false, hermes: false),
+            installedAt: nil,
+            updatedAt: nil,
+            contentHash: nil
+        )
+
+        let coverage = package.appCoverage(using: [skill])
+        let capability = MatrixCapability.fromPackage(package, skills: [skill])
+
+        #expect(coverage[.claude]?.label == "3/4")
+        #expect(coverage[.codex]?.label == "1/4")
+        #expect(capability.id == "bundle:pkg:lark")
+        #expect(capability.kind == .bundle)
+        #expect(capability.apps.claude == true)
+        #expect(capability.apps.codex == true)
+    }
+
+    @Test
+    func packageComponentAppStateUsesInstalledSkillTogglesAndStubStatus() {
+        let skill = installedSkill(
+            directory: "baoyu-comic",
+            apps: SkillApps(claude: true, codex: false, gemini: false, opencode: false, hermes: false)
+        )
+        let skillComponent = PackageComponent(
+            id: "baoyu-comic",
+            name: "baoyu-comic",
+            kind: "skill",
+            required: true,
+            installed: true,
+            status: "installed",
+            location: "skills/baoyu-comic"
+        )
+        let stubbedAgent = PackageComponent(
+            id: "base-analyst",
+            name: "base-analyst",
+            kind: "agent",
+            required: false,
+            installed: false,
+            status: "stub",
+            location: "~/.claude/agents/base-analyst.md"
+        )
+        let installedCLI = PackageComponent(
+            id: "lark-cli",
+            name: "lark-cli",
+            kind: "cli",
+            required: true,
+            installed: true,
+            status: "detected",
+            location: nil
+        )
+
+        #expect(skillComponent.appState(for: .claude, matching: skill) == .active)
+        #expect(skillComponent.appState(for: .codex, matching: skill) == .off)
+        #expect(stubbedAgent.appState(for: .claude, matching: nil) == .stub)
+        #expect(stubbedAgent.appState(for: .codex, matching: nil) == .off)
+        #expect(installedCLI.appState(for: .codex, matching: nil) == .active)
+        #expect(installedCLI.appState(for: .gemini, matching: nil) == .unsupported)
+    }
+
+    @Test
+    func capabilityPackageCoverageBreakdownCountsStubbedAndOffComponents() {
+        let skill = installedSkill(
+            directory: "baoyu-comic",
+            apps: SkillApps(claude: true, codex: false, gemini: false, opencode: false, hermes: false)
+        )
+        let package = self.package(components: [
+            PackageComponent(
+                id: "baoyu-comic",
+                name: "baoyu-comic",
+                kind: "skill",
+                required: true,
+                installed: true,
+                status: "installed",
+                location: "skills/baoyu-comic"
+            ),
+            PackageComponent(
+                id: "base-analyst",
+                name: "base-analyst",
+                kind: "agent",
+                required: false,
+                installed: false,
+                status: "stub",
+                location: "~/.claude/agents/base-analyst.md"
+            ),
+            PackageComponent(
+                id: "lark-cli",
+                name: "lark-cli",
+                kind: "cli",
+                required: true,
+                installed: true,
+                status: "detected",
+                location: nil
+            )
+        ])
+
+        let claude = package.appCoverageBreakdown(for: .claude, skills: [skill])
+        let codex = package.appCoverageBreakdown(for: .codex, skills: [skill])
+
+        #expect(claude.label == "2/3")
+        #expect(claude.percent == 67)
+        #expect(claude.enabled == 2)
+        #expect(claude.stubbed == 1)
+        #expect(claude.off == 0)
+        #expect(codex.label == "1/3")
+        #expect(codex.percent == 33)
+        #expect(codex.enabled == 1)
+        #expect(codex.stubbed == 0)
+        #expect(codex.off == 2)
+        #expect(package.appCoverage(using: [skill])[.claude]?.label == claude.label)
+    }
+
+    @Test
+    func capabilityPackageUsageSnapshotAggregatesMatchedSkillStats() {
+        let package = CapabilityPackage(
+            id: "pkg:baoyu",
+            type: .composite,
+            name: "Baoyu Skills",
+            vendor: "@dotey",
+            summary: "Prompt package",
+            source: PackageSource(
+                kind: "github",
+                location: "jimliu/baoyu-skills",
+                updateStrategy: "git",
+                repoOwner: "jimliu",
+                repoName: "baoyu-skills",
+                repoBranch: nil,
+                readmeUrl: nil
+            ),
+            components: PackageComponents(
+                cli: [],
+                skills: [
+                    PackageComponent(id: "baoyu-comic", name: "baoyu-comic", kind: "skill", required: true, installed: true, status: "installed", location: "skills/baoyu-comic"),
+                    PackageComponent(id: "baoyu-translate", name: "baoyu-translate", kind: "skill", required: true, installed: true, status: "installed", location: "skills/baoyu-translate")
+                ],
+                mcp: [],
+                agents: []
+            ),
+            configSchema: [],
+            installed: true,
+            lifecycle: nil
+        )
+        let comic = Skill(
+            id: "jimliu/baoyu-skills:baoyu-comic",
+            name: "baoyu-comic",
+            description: "Comic",
+            directory: "baoyu-comic",
+            repoOwner: "jimliu",
+            repoName: "baoyu-skills",
+            readmeUrl: nil,
+            apps: SkillApps(claude: true, codex: true, gemini: false, opencode: false, hermes: false),
+            installedAt: nil,
+            updatedAt: nil,
+            contentHash: nil
+        )
+        let lastUsed = Date(timeIntervalSince1970: 1_800_000_000)
+        let summary = UsageSummary(
+            filesScanned: 3,
+            sessions: 2,
+            usageEvents: 4,
+            inputTokens: 100,
+            outputTokens: 80,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            attributedSkillUsageEvents: 3,
+            modelStats: [],
+            skillStats: [
+                SkillUsageStat(
+                    skillID: "jimliu/baoyu-skills:baoyu-comic",
+                    sourcePlugin: nil,
+                    usageEvents: 2,
+                    inputTokens: 20,
+                    outputTokens: 30,
+                    cacheCreationTokens: 5,
+                    cacheReadTokens: 7,
+                    lastUsedAt: lastUsed
+                ),
+                SkillUsageStat(
+                    skillID: "other:baoyu-translate",
+                    sourcePlugin: nil,
+                    usageEvents: 1,
+                    inputTokens: 10,
+                    outputTokens: 12,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 0,
+                    lastUsedAt: Date(timeIntervalSince1970: 1_700_000_000)
+                ),
+                SkillUsageStat(
+                    skillID: "unrelated",
+                    sourcePlugin: nil,
+                    usageEvents: 9,
+                    inputTokens: 999,
+                    outputTokens: 999,
+                    cacheCreationTokens: 999,
+                    cacheReadTokens: 999,
+                    lastUsedAt: nil
+                )
+            ],
+            recentSessions: []
+        )
+
+        let snapshot = package.usageSnapshot(using: summary, skills: [comic])
+
+        #expect(snapshot?.matchedSkillCount == 2)
+        #expect(snapshot?.usageEvents == 3)
+        #expect(snapshot?.totalTokens == 84)
+        #expect(snapshot?.lastUsedAt == lastUsed)
+        #expect(snapshot?.componentStats.map(\.componentID) == ["baoyu-comic", "baoyu-translate"])
+        #expect(snapshot?.componentStats.first?.componentName == "baoyu-comic")
+        #expect(snapshot?.componentStats.first?.usageEvents == 2)
+        #expect(snapshot?.componentStats.first?.totalTokens == 62)
+    }
+
+    @Test
+    func capabilityPackageInstalledSizeBytesAggregatesMatchedSkills() {
+        let package = self.package(components: [
+            component(id: "baoyu-comic", installed: true),
+            component(id: "baoyu-translate", installed: true)
+        ])
+        let comic = installedSkill(directory: "baoyu-comic", sizeBytes: 1_024)
+        let translate = installedSkill(directory: "baoyu-translate", sizeBytes: 2_048)
+        let unrelated = installedSkill(directory: "unrelated", sizeBytes: 8_192)
+
+        #expect(package.installedSizeBytes(in: [comic, translate, unrelated]) == 3_072)
+        #expect(package.installedSizeBytes(in: [installedSkill(directory: "baoyu-comic")]) == nil)
+    }
+
+    @Test
+    func capabilityPackageComponentVersionSummariesPreferSemanticVersionThenHash() {
+        let package = self.package(components: [
+            component(id: "versioned-skill", installed: true),
+            component(id: "hashed-skill", installed: true),
+            component(id: "missing-skill", installed: false)
+        ])
+        let versioned = installedSkill(
+            directory: "versioned-skill",
+            contentHash: "abcdef123456",
+            manifest: SkillManifest(version: "2.4.1")
+        )
+        let hashed = installedSkill(
+            directory: "hashed-skill",
+            updatedAt: 1_700_000_000,
+            contentHash: "1234567890"
+        )
+
+        let summaries = package.componentVersionSummaries(in: [versioned, hashed])
+
+        #expect(summaries.map(\.name) == ["versioned-skill", "hashed-skill", "missing-skill"])
+        #expect(summaries[0].versionLabel == "v2.4.1")
+        #expect(summaries[1].versionLabel == "1234567")
+        #expect(summaries[2].versionLabel == nil)
+        #expect(package.componentVersionLabel(for: package.components.skills[0], in: [versioned]) == "v2.4.1")
+    }
+
+    @Test
+    func capabilityPackageUsageSnapshotPrefersRecentThirtyDayWindow() {
+        let package = self.package(components: [component(id: "baoyu-comic", installed: true)])
+        let skill = installedSkill(directory: "baoyu-comic")
+        let oldStat = SkillUsageStat(
+            skillID: "baoyu-comic",
+            sourcePlugin: nil,
+            usageEvents: 6,
+            inputTokens: 60,
+            outputTokens: 0,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            lastUsedAt: nil
+        )
+        let recentDay = Date(timeIntervalSince1970: 1_799_971_200)
+        var recentStat = SkillUsageStat(
+            skillID: "baoyu-comic",
+            sourcePlugin: nil,
+            usageEvents: 1,
+            inputTokens: 2,
+            outputTokens: 3,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            lastUsedAt: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+        recentStat.dailyStats = [
+            UsageBucketStat(
+                dayStart: recentDay,
+                usageEvents: 1,
+                inputTokens: 2,
+                outputTokens: 3,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0
+            )
+        ]
+        var recentWindow = UsageWindowSummary(
+            days: 30,
+            startedAt: Date(timeIntervalSince1970: 1_799_000_000),
+            endedAt: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+        recentWindow.usageEvents = 1
+        recentWindow.inputTokens = 2
+        recentWindow.outputTokens = 3
+        recentWindow.attributedSkillUsageEvents = 1
+        recentWindow.skillStats = [recentStat]
+        let summary = UsageSummary(
+            usageEvents: 7,
+            inputTokens: 62,
+            outputTokens: 3,
+            attributedSkillUsageEvents: 7,
+            skillStats: [oldStat],
+            recent30Days: recentWindow
+        )
+
+        let snapshot = package.usageSnapshot(using: summary, skills: [skill])
+
+        #expect(snapshot?.usageEvents == 1)
+        #expect(snapshot?.totalTokens == 5)
+        #expect(snapshot?.componentStats.first?.componentID == "baoyu-comic")
+        #expect(snapshot?.dailyStats.map(\.dayStart) == [recentDay])
+        #expect(snapshot?.componentStats.first?.dailyStats.map(\.usageEvents) == [1])
+    }
+
+    @Test
+    func capabilityPackageFindsContainedAndCompanionSkills() {
+        let package = self.package(components: [
+            component(id: "baoyu-comic", installed: true),
+            component(id: "baoyu-translate", installed: true),
+            component(id: "declared-only", installed: false)
+        ])
+        let comic = installedSkill(directory: "baoyu-comic")
+        let translate = installedSkill(directory: "baoyu-translate")
+        let unrelated = installedSkill(directory: "other-skill")
+
+        #expect(package.containsSkill(comic))
+        #expect(package.containsSkill(translate))
+        #expect(!package.containsSkill(unrelated))
+        #expect(package.companionInstalledSkills(for: comic, in: [comic, translate, unrelated]).map(\.id) == ["baoyu-translate"])
+        #expect(package.installedSkillsRequiringEnablement(for: .claude, in: [comic, translate, unrelated]).isEmpty)
+        #expect(package.installedSkillsRequiringEnablement(for: .codex, in: [comic, translate, unrelated]).map(\.id) == ["baoyu-comic", "baoyu-translate"])
+    }
+
+    @Test
+    func matrixUsageIndexCachesSkillPackageAndComponentUsage() {
+        let skill = installedSkill(directory: "baoyu-comic")
+        let package = self.package(components: [
+            component(id: "baoyu-comic", installed: true)
+        ])
+        let summary = UsageSummary(
+            filesScanned: 1,
+            sessions: 1,
+            usageEvents: 3,
+            inputTokens: 50,
+            outputTokens: 30,
+            cacheCreationTokens: 0,
+            cacheReadTokens: 0,
+            attributedSkillUsageEvents: 2,
+            modelStats: [],
+            skillStats: [
+                SkillUsageStat(
+                    skillID: "baoyu-comic",
+                    sourcePlugin: nil,
+                    usageEvents: 2,
+                    inputTokens: 20,
+                    outputTokens: 10,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 5,
+                    lastUsedAt: nil
+                ),
+                SkillUsageStat(
+                    skillID: "unrelated",
+                    sourcePlugin: nil,
+                    usageEvents: 1,
+                    inputTokens: 99,
+                    outputTokens: 99,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 0,
+                    lastUsedAt: nil
+                )
+            ],
+            recentSessions: []
+        )
+
+        let index = MatrixUsageIndex(summary: summary, skills: [skill], packages: [package])
+        let emptyIndex = MatrixUsageIndex(summary: nil, skills: [skill], packages: [package])
+
+        #expect(index.hasSummary)
+        #expect(index.skillSnapshot(for: "baoyu-comic")?.usageEvents == 2)
+        #expect(index.skillSnapshot(for: "baoyu-comic")?.totalTokens == 35)
+        #expect(index.packageSnapshot(for: "pkg:demo")?.usageEvents == 2)
+        #expect(index.packageComponentStat(packageID: "pkg:demo", componentID: "baoyu-comic")?.totalTokens == 35)
+        #expect(index.skillSnapshot(for: "missing")?.hasUsage == false)
+        #expect(!emptyIndex.hasSummary)
+        #expect(emptyIndex.skillSnapshot(for: "baoyu-comic") == nil)
+    }
+
+    @Test
+    func usageDisplayFormatterCompactsMatrixMetrics() {
+        #expect(UsageDisplayFormatter.compactTokens(999) == "999")
+        #expect(UsageDisplayFormatter.compactTokens(1_500) == "1.5K")
+        #expect(UsageDisplayFormatter.compactCount(2_500_000) == "2.5M")
+    }
+
+    @Test
     func capabilityPackageHealthSeparatesActivePartialBlockedAndInactive() {
         #expect(package(components: []).health == .inactive)
         #expect(package(components: [component(installed: true)]).health == .active)
@@ -830,6 +1726,15 @@ struct SkillModelsTests {
     }
 
     @Test
+    func matrixVersionFormatterPrefersHashThenUpdatedDate() {
+        #expect(MatrixVersionFormatter.value(manifestVersion: "2.4.1", contentHash: "abcdef123456", updatedAt: 1_700_000_000) == "v2.4.1")
+        #expect(MatrixVersionFormatter.value(manifestVersion: " v3.0.0 ", contentHash: nil, updatedAt: nil) == "v3.0.0")
+        #expect(MatrixVersionFormatter.value(contentHash: "  abcdef123456  ", updatedAt: 1_700_000_000) == "abcdef1")
+        #expect(MatrixVersionFormatter.value(contentHash: nil, updatedAt: 1_700_000_000) == "2023-11-14")
+        #expect(MatrixVersionFormatter.value(contentHash: "   ", updatedAt: 0) == nil)
+    }
+
+    @Test
     func capabilityPackageMatchesScopedSkillUpdateIdentifier() {
         let package = self.package(
             components: [
@@ -969,6 +1874,9 @@ struct SkillModelsTests {
         directory: String,
         installedAt: Int? = nil,
         updatedAt: Int? = nil,
+        contentHash: String? = nil,
+        sizeBytes: UInt64? = nil,
+        manifest: SkillManifest? = nil,
         apps: SkillApps = SkillApps(
             claude: true,
             codex: false,
@@ -977,7 +1885,7 @@ struct SkillModelsTests {
             hermes: false
         )
     ) -> Skill {
-        Skill(
+        var skill = Skill(
             id: directory,
             name: "Demo",
             description: "Demo skill",
@@ -988,8 +1896,11 @@ struct SkillModelsTests {
             apps: apps,
             installedAt: installedAt,
             updatedAt: updatedAt,
-            contentHash: nil
+            contentHash: contentHash,
+            sizeBytes: sizeBytes
         )
+        skill.manifest = manifest
+        return skill
     }
 
     private func package(components: [PackageComponent]) -> CapabilityPackage {

@@ -2,12 +2,19 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   macos:
     name: macOS Build
     runs-on: macos-14
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -15,14 +22,26 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Select Xcode 16
+        timeout-minutes: 2
+        run: |
+          XCODE_PATH="$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort | tail -n 1)"
+          test -n "$XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          swift --version
+
       - name: Install Rust
+        timeout-minutes: 5
         run: rustup toolchain install stable --profile minimal
 
       - name: Build sidecar
-        run: cargo build --manifest-path skill-cli/Cargo.toml
+        timeout-minutes: 10
+        run: cargo build --locked --manifest-path skill-cli/Cargo.toml
 
       - name: Build SwiftUI app
+        timeout-minutes: 10
         run: swift build --package-path swift-app
 
       - name: Run Swift tests
+        timeout-minutes: 10
         run: swift test --package-path swift-app

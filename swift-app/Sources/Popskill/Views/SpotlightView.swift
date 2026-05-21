@@ -2,13 +2,14 @@ import SwiftUI
 
 /// ⌘K command palette. Opens over the entire app, search box auto-focused.
 /// Two sections shown together, deduped by source:
-///   1. **能力** — top N (8) `Skill` hits ranked by `SkillSearchScorer`.
+///   1. **能力** — top package / skill hits ranked by local scorers.
 ///   2. **操作** — fixed quick actions (refresh / link-health / updates /
 ///      settings) filtered by query substring match.
 ///
 /// Keyboard: ↑↓ moves highlight, Enter triggers the highlighted row, Esc
 /// closes. Clicking the scrim closes too. Pressing ⌘1 / ⌘2 on a skill row
 /// toggles Claude / Codex without leaving the palette.
+@MainActor
 struct SpotlightView: View {
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization
@@ -17,7 +18,13 @@ struct SpotlightView: View {
     @State private var highlighted: Int = 0
     @FocusState private var queryFocused: Bool
 
-    private let maxSkillHits = 8
+    private let maxCapabilityHits = 8
+    private let maxPackageHits = 3
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter
+    }()
 
     var body: some View {
         ZStack {
@@ -121,17 +128,17 @@ struct SpotlightView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                    if !skillHits.isEmpty {
+                    if !capabilityItems.isEmpty {
                         Section {
-                            ForEach(Array(skillHits.enumerated()), id: \.offset) { offset, hit in
+                            ForEach(Array(capabilityItems.enumerated()), id: \.offset) { offset, item in
                                 row(
-                                    item: .skill(hit.skill, hit.hit),
+                                    item: item,
                                     index: offset,
                                     proxy: proxy
                                 )
                             }
                         } header: {
-                            sectionHeader(localization.string("spotlight.section.capabilities"))
+                            sectionHeader(localization.string(capabilitySectionTitleKey))
                         }
                     }
                     if !actionHits.isEmpty {
@@ -139,7 +146,7 @@ struct SpotlightView: View {
                             ForEach(Array(actionHits.enumerated()), id: \.offset) { offset, action in
                                 row(
                                     item: .action(action),
-                                    index: skillHits.count + offset,
+                                    index: capabilityItems.count + offset,
                                     proxy: proxy
                                 )
                             }
@@ -210,9 +217,10 @@ struct SpotlightView: View {
     private func icon(for item: SpotlightItem) -> some View {
         Group {
             switch item {
+            case let .package(package, _):
+                PackageAvatar(name: package.name, identifier: package.id, size: 24)
             case let .skill(skill, _):
-                InitialAvatarView(name: skill.name, identifier: skill.id)
-                    .frame(width: 24, height: 24)
+                InitialAvatarView(name: skill.name, identifier: skill.id, size: 24)
             case let .action(action):
                 Image(systemName: action.symbol)
                     .font(.system(size: 13, weight: .semibold))
@@ -225,6 +233,7 @@ struct SpotlightView: View {
 
     private func primaryLabel(for item: SpotlightItem) -> String {
         switch item {
+        case let .package(package, _): return package.name
         case let .skill(skill, _): return skill.name
         case let .action(action):  return localization.string(action.titleKey)
         }
@@ -232,9 +241,27 @@ struct SpotlightView: View {
 
     private func secondaryLabel(for item: SpotlightItem) -> String? {
         switch item {
+        case let .package(package, hit):
+            if !hit.matchedComponents.isEmpty {
+                return localization.string(
+                    "spotlight.bundle.matchedComponents",
+                    hit.matchedComponents.joined(separator: " · ")
+                )
+            }
+            if isEmptyQuery,
+               let snapshot = package.usageSnapshot(using: store.usageSummary, skills: store.skills),
+               let label = recentUsageLabel(calls: snapshot.usageEvents, lastUsedAt: snapshot.lastUsedAt) {
+                return label
+            }
+            return PackageComponentCompositionFormatter.summary(for: package, localization: localization)
         case let .skill(skill, hit):
             if !hit.matchedTriggers.isEmpty {
                 return hit.matchedTriggers.prefix(2).joined(separator: " · ")
+            }
+            if isEmptyQuery,
+               let snapshot = skill.usageSnapshot(using: store.usageSummary),
+               let label = recentUsageLabel(calls: snapshot.usageEvents, lastUsedAt: snapshot.lastUsedAt) {
+                return label
             }
             if let summary = skill.capabilitySummary, !summary.isEmpty { return summary }
             return skill.description
@@ -243,9 +270,26 @@ struct SpotlightView: View {
         }
     }
 
+    private func recentUsageLabel(calls: Int, lastUsedAt: Date?) -> String? {
+        guard calls > 0 || lastUsedAt != nil else {
+            return nil
+        }
+        let relative = lastUsedAt.map {
+            Self.relativeFormatter.localizedString(for: $0, relativeTo: Date())
+        } ?? localization.string("spotlight.recentUsage.unknown")
+        return localization.string("spotlight.recentUsage", relative, UsageDisplayFormatter.compactCount(calls))
+    }
+
     @ViewBuilder
     private func trailing(for item: SpotlightItem) -> some View {
         switch item {
+        case .package:
+            Text(localization.string("matrix.type.bundle").uppercased())
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(Color.popSectionPurple)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2.5)
+                .background(Color.popSectionPurple.opacity(0.12), in: Capsule())
         case let .skill(skill, _):
             HStack(spacing: 6) {
                 quickToggle(skill: skill, app: .claude, shortcut: "1")
@@ -316,13 +360,50 @@ struct SpotlightView: View {
 
     // MARK: Derived
 
-    private var skillHits: [(skill: Skill, hit: SkillSearchHit)] {
+    private var isEmptyQuery: Bool {
+        localQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var capabilitySectionTitleKey: String {
+        isEmptyQuery ? "spotlight.section.recent" : "spotlight.section.capabilities"
+    }
+
+    private var packageHits: [(package: CapabilityPackage, hit: PackageSearchHit)] {
         let q = localQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else {
-            // Empty query: show recently installed / updated skills (max N).
-            return store.skills
-                .sorted { ($0.lastLifecycleTimestamp ?? 0) > ($1.lastLifecycleTimestamp ?? 0) }
-                .prefix(maxSkillHits)
+            return SpotlightRecentRanker.recentPackages(
+                store.compositePackages,
+                skills: store.skills,
+                summary: store.usageSummary
+            )
+                .prefix(maxPackageHits)
+                .map { ($0, PackageSearchHit.recent) }
+        }
+
+        return store.compositePackages
+            .compactMap { package -> (CapabilityPackage, PackageSearchHit)? in
+                guard let hit = PackageSearchScorer.score(package: package, query: q) else { return nil }
+                return (package, hit)
+            }
+            .sorted { lhs, rhs in
+                if lhs.1.score != rhs.1.score { return lhs.1.score > rhs.1.score }
+                return lhs.0.name.localizedCaseInsensitiveCompare(rhs.0.name) == .orderedAscending
+            }
+            .prefix(maxPackageHits)
+            .map { ($0.0, $0.1) }
+    }
+
+    private var skillHits: [(skill: Skill, hit: SkillSearchHit)] {
+        let q = localQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let remainingSlots = max(0, maxCapabilityHits - packageHits.count)
+        guard !q.isEmpty else {
+            // Empty query: mirror the HTML prototype's "recently used" command
+            // palette, falling back to lifecycle recency before usage has been scanned.
+            return SpotlightRecentRanker.recentSkills(
+                store.skills,
+                summary: store.usageSummary
+            )
+                .prefix(remainingSlots)
                 .map { ($0, SkillSearchHit(score: 0, matchedTriggers: [], matchedOnName: false)) }
         }
         return store.skills
@@ -331,22 +412,26 @@ struct SpotlightView: View {
                 return (skill, hit)
             }
             .sorted { $0.1.score > $1.1.score }
-            .prefix(maxSkillHits)
+            .prefix(remainingSlots)
             .map { ($0.0, $0.1) }
     }
 
     private var actionHits: [SpotlightAction] {
-        let q = localQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let q = SearchTextNormalizer.key(localQuery)
         return SpotlightAction.all.filter { action in
             guard !q.isEmpty else { return true }
-            let title = localization.string(action.titleKey).lowercased()
-            let subtitle = localization.string(action.subtitleKey).lowercased()
-            return title.contains(q) || subtitle.contains(q)
+            return SearchTextNormalizer.matches(localization.string(action.titleKey), query: q)
+                || SearchTextNormalizer.matches(localization.string(action.subtitleKey), query: q)
         }
     }
 
     private var combined: [SpotlightItem] {
-        skillHits.map { .skill($0.skill, $0.hit) } + actionHits.map { .action($0) }
+        capabilityItems + actionHits.map { .action($0) }
+    }
+
+    private var capabilityItems: [SpotlightItem] {
+        packageHits.map { .package($0.package, $0.hit) }
+            + skillHits.map { .skill($0.skill, $0.hit) }
     }
 
     // MARK: Activation
@@ -360,6 +445,10 @@ struct SpotlightView: View {
     private func activate(index: Int) {
         guard combined.indices.contains(index) else { return }
         switch combined[index] {
+        case let .package(package, _):
+            store.currentSelection = .matrix
+            store.selectCapability(MatrixCapability.packageCapabilityID(for: package.id))
+            close()
         case let .skill(skill, _):
             store.currentSelection = .matrix
             store.selectSkill(skill.id)
@@ -393,9 +482,105 @@ struct SpotlightView: View {
     }
 }
 
+enum SpotlightRecentRanker {
+    static func recentPackages(
+        _ packages: [CapabilityPackage],
+        skills: [Skill],
+        summary: UsageSummary?
+    ) -> [CapabilityPackage] {
+        packages
+            .map { package in
+                (
+                    package: package,
+                    snapshot: package.usageSnapshot(using: summary, skills: skills)
+                )
+            }
+            .sorted { lhs, rhs in
+                isRankedBefore(
+                    lhsLastUsed: lhs.snapshot?.lastUsedAt,
+                    lhsCalls: lhs.snapshot?.usageEvents ?? 0,
+                    lhsTokens: lhs.snapshot?.totalTokens ?? 0,
+                    lhsLifecycle: lhs.package.lastLifecycleTimestamp,
+                    lhsName: lhs.package.name,
+                    rhsLastUsed: rhs.snapshot?.lastUsedAt,
+                    rhsCalls: rhs.snapshot?.usageEvents ?? 0,
+                    rhsTokens: rhs.snapshot?.totalTokens ?? 0,
+                    rhsLifecycle: rhs.package.lastLifecycleTimestamp,
+                    rhsName: rhs.package.name
+                )
+            }
+            .map(\.package)
+    }
+
+    static func recentSkills(_ skills: [Skill], summary: UsageSummary?) -> [Skill] {
+        skills
+            .map { skill in
+                (
+                    skill: skill,
+                    snapshot: skill.usageSnapshot(using: summary)
+                )
+            }
+            .sorted { lhs, rhs in
+                isRankedBefore(
+                    lhsLastUsed: lhs.snapshot?.lastUsedAt,
+                    lhsCalls: lhs.snapshot?.usageEvents ?? 0,
+                    lhsTokens: lhs.snapshot?.totalTokens ?? 0,
+                    lhsLifecycle: lhs.skill.lastLifecycleTimestamp,
+                    lhsName: lhs.skill.name,
+                    rhsLastUsed: rhs.snapshot?.lastUsedAt,
+                    rhsCalls: rhs.snapshot?.usageEvents ?? 0,
+                    rhsTokens: rhs.snapshot?.totalTokens ?? 0,
+                    rhsLifecycle: rhs.skill.lastLifecycleTimestamp,
+                    rhsName: rhs.skill.name
+                )
+            }
+            .map(\.skill)
+    }
+
+    private static func isRankedBefore(
+        lhsLastUsed: Date?,
+        lhsCalls: Int,
+        lhsTokens: Int64,
+        lhsLifecycle: Int?,
+        lhsName: String,
+        rhsLastUsed: Date?,
+        rhsCalls: Int,
+        rhsTokens: Int64,
+        rhsLifecycle: Int?,
+        rhsName: String
+    ) -> Bool {
+        switch (lhsLastUsed, rhsLastUsed) {
+        case let (lhs?, rhs?) where lhs != rhs:
+            return lhs > rhs
+        case (_?, nil):
+            return true
+        case (nil, _?):
+            return false
+        default:
+            break
+        }
+
+        if lhsCalls != rhsCalls {
+            return lhsCalls > rhsCalls
+        }
+        if lhsTokens != rhsTokens {
+            return lhsTokens > rhsTokens
+        }
+
+        let lhsLifecycle = lhsLifecycle ?? 0
+        let rhsLifecycle = rhsLifecycle ?? 0
+        if lhsLifecycle != rhsLifecycle {
+            return lhsLifecycle > rhsLifecycle
+        }
+
+        return lhsName.localizedCaseInsensitiveCompare(rhsName) == .orderedAscending
+    }
+}
+
 // MARK: - Items
 
 private enum SpotlightItem {
+    case package(CapabilityPackage, PackageSearchHit)
     case skill(Skill, SkillSearchHit)
     case action(SpotlightAction)
 }
@@ -425,6 +610,77 @@ struct SpotlightAction: Identifiable {
             tint: .accentColor,
             perform: { store in
                 Task { await store.bootstrap() }
+            }
+        ),
+        SpotlightAction(
+            id: "usage-scan",
+            titleKey: "spotlight.action.usageScan.title",
+            subtitleKey: "spotlight.action.usageScan.subtitle",
+            symbol: "chart.bar.doc.horizontal",
+            tint: .green,
+            perform: { store in
+                store.currentSelection = .insights
+                Task { await store.refreshUsageScan() }
+            }
+        ),
+        SpotlightAction(
+            id: "show-bundles",
+            titleKey: "spotlight.action.showBundles.title",
+            subtitleKey: "spotlight.action.showBundles.subtitle",
+            symbol: "shippingbox",
+            tint: .popSectionPurple,
+            perform: { store in
+                store.showMatrix(typeFilter: .bundle)
+            }
+        ),
+        SpotlightAction(
+            id: "show-skills",
+            titleKey: "spotlight.action.showSkills.title",
+            subtitleKey: "spotlight.action.showSkills.subtitle",
+            symbol: CapabilityKind.skill.symbol,
+            tint: .accentColor,
+            perform: { store in
+                store.showMatrix(typeFilter: .skill)
+            }
+        ),
+        SpotlightAction(
+            id: "show-cli",
+            titleKey: "spotlight.action.showCLI.title",
+            subtitleKey: "spotlight.action.showCLI.subtitle",
+            symbol: CapabilityKind.cli.symbol,
+            tint: .blue,
+            perform: { store in
+                store.showMatrix(typeFilter: .cli)
+            }
+        ),
+        SpotlightAction(
+            id: "show-mcp",
+            titleKey: "spotlight.action.showMCP.title",
+            subtitleKey: "spotlight.action.showMCP.subtitle",
+            symbol: CapabilityKind.mcp.symbol,
+            tint: .mint,
+            perform: { store in
+                store.showMatrix(typeFilter: .mcp)
+            }
+        ),
+        SpotlightAction(
+            id: "show-broken-links",
+            titleKey: "spotlight.action.showBrokenLinks.title",
+            subtitleKey: "spotlight.action.showBrokenLinks.subtitle",
+            symbol: "exclamationmark.triangle",
+            tint: .red,
+            perform: { store in
+                store.showMatrix(filter: .brokenLinks)
+            }
+        ),
+        SpotlightAction(
+            id: "show-inactive",
+            titleKey: "spotlight.action.showInactive.title",
+            subtitleKey: "spotlight.action.showInactive.subtitle",
+            symbol: "pause.circle",
+            tint: .orange,
+            perform: { store in
+                store.showMatrix(filter: .inactive)
             }
         ),
         SpotlightAction(

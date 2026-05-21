@@ -11,6 +11,7 @@ import SwiftUI
 ///   3. Storage + sync — confirm SSOT + pick provider (iCloud recommended on
 ///      Mac with iCloud Drive available, Git otherwise).
 ///   4. Done — open matrix.
+@MainActor
 struct OnboardingWizardView: View {
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization

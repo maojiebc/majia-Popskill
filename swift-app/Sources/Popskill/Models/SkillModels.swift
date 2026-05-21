@@ -132,6 +132,8 @@ struct Skill: Identifiable, Codable, Equatable {
     /// 来源类型（"github" | "npm" | "brew" | "pip" | "builtin"），sidecar 推断。
     /// Swift 端在 ViewModel 里可做更精细的二次推断（如 sourceShort 解析）。
     var sourceType: String? = nil
+    /// SKILL.md frontmatter surfaced by the sidecar for fast matrix/detail UI.
+    var manifest: SkillManifest? = nil
     /// 真身 + 各 AI 工具 symlink 状态。喂给 Inspector "位置与链接" 与 链接健康 view。
     var deployment: SkillDeployment? = nil
     var lastUsedAt: Int? = nil
@@ -145,7 +147,12 @@ struct Skill: Identifiable, Codable, Equatable {
     }
 
     var sourceURL: URL? {
-        explicitOrRepositoryURL(readmeUrl: readmeUrl, repoOwner: repoOwner, repoName: repoName)
+        explicitOrRepositoryURL(
+            readmeUrl: readmeUrl,
+            fallbackExplicitURL: manifest?.homepage,
+            repoOwner: repoOwner,
+            repoName: repoName
+        )
     }
 
     var markdownURL: URL? {
@@ -155,6 +162,10 @@ struct Skill: Identifiable, Codable, Equatable {
 
     var enabledAppCount: Int {
         TargetApp.supported.filter { apps.isEnabled($0) }.count
+    }
+
+    var hasBrokenLink: Bool {
+        deployment?.hasBrokenLink == true
     }
 
     var localStoreURL: URL {
@@ -213,6 +224,98 @@ struct Skill: Identifiable, Codable, Equatable {
     private static func normalizedAttributionIdentifier(_ value: String) -> String {
         value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
+
+    func usageSnapshot(using summary: UsageSummary?) -> SkillUsageSnapshot? {
+        guard let summary else {
+            return nil
+        }
+
+        var snapshot = SkillUsageSnapshot()
+        for stat in summary.thirtyDaySkillStats where matchesAttributionSkill(stat.skillID) {
+            snapshot.add(stat)
+        }
+        return snapshot
+    }
+}
+
+struct SkillManifest: Codable, Equatable {
+    let version: String?
+    let author: String?
+    let license: String?
+    let homepage: String?
+    let requiredBins: [String]
+    let requiredTools: [SkillRequiredTool]
+
+    private enum CodingKeys: String, CodingKey {
+        case version
+        case author
+        case license
+        case homepage
+        case requiredBins
+        case requiredTools
+    }
+
+    init(
+        version: String? = nil,
+        author: String? = nil,
+        license: String? = nil,
+        homepage: String? = nil,
+        requiredBins: [String] = [],
+        requiredTools: [SkillRequiredTool] = []
+    ) {
+        self.version = version
+        self.author = author
+        self.license = license
+        self.homepage = homepage
+        self.requiredBins = requiredBins
+        self.requiredTools = requiredTools
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decodeIfPresent(String.self, forKey: .version)
+        author = try container.decodeIfPresent(String.self, forKey: .author)
+        license = try container.decodeIfPresent(String.self, forKey: .license)
+        homepage = try container.decodeIfPresent(String.self, forKey: .homepage)
+        requiredBins = try container.decodeIfPresent([String].self, forKey: .requiredBins) ?? []
+        requiredTools = try container.decodeIfPresent([SkillRequiredTool].self, forKey: .requiredTools) ?? []
+    }
+
+    var semanticVersion: String? {
+        version?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
+
+    var homepageURL: URL? {
+        sanitizedExternalURL(homepage)
+    }
+
+    var requiredBinsLabel: String? {
+        let bins = requiredBins
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return bins.isEmpty ? nil : bins.joined(separator: ", ")
+    }
+
+    var hasMissingRequiredTools: Bool {
+        requiredTools.contains { !$0.available }
+    }
+
+    func requiredToolsLabel(availableLabel: String, missingLabel: String) -> String? {
+        if !requiredTools.isEmpty {
+            let labels = requiredTools
+                .filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                .map { tool in
+                    "\(tool.name.trimmingCharacters(in: .whitespacesAndNewlines)) \(tool.available ? availableLabel : missingLabel)"
+                }
+            return labels.isEmpty ? nil : labels.joined(separator: " · ")
+        }
+        return requiredBinsLabel
+    }
+}
+
+struct SkillRequiredTool: Codable, Equatable {
+    let name: String
+    let available: Bool
 }
 
 struct LocalAgent: Identifiable, Codable, Equatable {
@@ -614,6 +717,7 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
     var sourceURL: URL? {
         return explicitOrRepositoryURL(
             readmeUrl: source.readmeUrl ?? source.location,
+            fallbackExplicitURL: nil,
             repoOwner: source.repoOwner,
             repoName: source.repoName
         )
@@ -647,6 +751,15 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
         ].filter { $0.total > 0 }
     }
 
+    var componentCompositionCounts: [PackageComponentCompositionCount] {
+        [
+            PackageComponentCompositionCount(kind: "cli", count: components.cli.count),
+            PackageComponentCompositionCount(kind: "mcp", count: components.mcp.count),
+            PackageComponentCompositionCount(kind: "skill", count: components.skills.count),
+            PackageComponentCompositionCount(kind: "agent", count: components.agents.count)
+        ].filter { $0.count > 0 }
+    }
+
     var lastLifecycleTimestamp: Int? {
         [lifecycle?.installedAt, lifecycle?.updatedAt]
             .compactMap { value -> Int? in
@@ -662,6 +775,22 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
         lifecycle?.contentHash?
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .nilIfEmpty
+    }
+
+    func installedSizeBytes(in skills: [Skill]) -> UInt64? {
+        let total = matchingInstalledSkills(in: skills)
+            .compactMap(\.sizeBytes)
+            .reduce(UInt64(0), +)
+        return total > 0 ? total : nil
+    }
+
+    func componentVersionSummaries(in skills: [Skill]) -> [PackageComponentVersionSummary] {
+        components.all.map { component in
+            PackageComponentVersionSummary(
+                component: component,
+                versionLabel: componentVersionLabel(for: component, in: skills)
+            )
+        }
     }
 }
 
@@ -684,6 +813,85 @@ struct PackageComponentGroupSummary: Identifiable, Equatable {
         missing = max(0, total - installed)
         missingRequired = components.filter { !$0.installed && $0.required }.count
         recoverableMissing = components.filter { !$0.installed && $0.isRecoverable }.count
+    }
+}
+
+struct PackageAppCoverageBreakdown: Equatable {
+    var total: Int
+    var enabled: Int = 0
+    var stubbed: Int = 0
+    var off: Int = 0
+    var unsupported: Int = 0
+
+    var label: String { "\(enabled)/\(total)" }
+
+    var percent: Int {
+        guard total > 0 else { return 0 }
+        return Int((Double(enabled) / Double(total) * 100).rounded())
+    }
+
+    mutating func add(_ state: PackageComponentAppState) {
+        switch state {
+        case .active:
+            enabled += 1
+        case .stub:
+            stubbed += 1
+        case .off:
+            off += 1
+        case .unsupported:
+            unsupported += 1
+        }
+    }
+}
+
+struct PackageComponentCompositionCount: Identifiable, Equatable {
+    let kind: String
+    let count: Int
+
+    var id: String { kind }
+}
+
+enum PackageComponentCompositionFormatter {
+    static func composition(for package: CapabilityPackage, localization: PopskillLocalization) -> String {
+        let parts = package.componentCompositionCounts.map { count in
+            localization.string(titleKey(kind: count.kind, count: count.count), count.count)
+        }
+        return parts.isEmpty ? localization.string("package.componentComposition.empty") : parts.joined(separator: " + ")
+    }
+
+    static func label(for package: CapabilityPackage, localization: PopskillLocalization) -> String {
+        composition(for: package, localization: localization)
+    }
+
+    static func summary(for package: CapabilityPackage, localization: PopskillLocalization) -> String {
+        let composition = composition(for: package, localization: localization)
+        let summary = package.summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        return summary.isEmpty ? composition : "\(summary) · \(composition)"
+    }
+
+    private static func titleKey(kind: String, count: Int) -> String {
+        switch kind.lowercased() {
+        case "cli": return count == 1 ? "package.componentComposition.cli.one" : "package.componentComposition.cli.other"
+        case "mcp": return count == 1 ? "package.componentComposition.mcp.one" : "package.componentComposition.mcp.other"
+        case "agent": return count == 1 ? "package.componentComposition.agent.one" : "package.componentComposition.agent.other"
+        default: return count == 1 ? "package.componentComposition.skill.one" : "package.componentComposition.skill.other"
+        }
+    }
+}
+
+struct PackageComponentVersionSummary: Identifiable, Equatable {
+    let id: String
+    let name: String
+    let kind: String
+    let status: String
+    let versionLabel: String?
+
+    init(component: PackageComponent, versionLabel: String?) {
+        id = component.displayKey
+        name = component.name
+        kind = component.kind
+        status = component.status
+        self.versionLabel = versionLabel
     }
 }
 
@@ -747,6 +955,23 @@ struct PackageComponent: Codable, Equatable {
             return false
         }
     }
+
+    var isStubbed: Bool {
+        status.trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .contains("stub")
+    }
+}
+
+enum PackageComponentAppState: Equatable {
+    case active
+    case stub
+    case off
+    case unsupported
+
+    var isEnabled: Bool {
+        self == .active
+    }
 }
 
 struct PackageConfigField: Identifiable, Codable, Equatable {
@@ -797,15 +1022,25 @@ struct CatalogSkill: Identifiable, Codable, Equatable {
     }
 
     var sourceURL: URL? {
-        explicitOrRepositoryURL(readmeUrl: readmeUrl, repoOwner: repoOwner, repoName: repoName)
+        explicitOrRepositoryURL(
+            readmeUrl: readmeUrl,
+            fallbackExplicitURL: nil,
+            repoOwner: repoOwner,
+            repoName: repoName
+        )
     }
 }
 
-private func explicitOrRepositoryURL(readmeUrl: String?, repoOwner: String?, repoName: String?) -> URL? {
-    if let readmeUrl,
-       let url = URL(string: readmeUrl),
-       let scheme = url.scheme?.lowercased(),
-       ["http", "https"].contains(scheme) {
+private func explicitOrRepositoryURL(
+    readmeUrl: String?,
+    fallbackExplicitURL: String?,
+    repoOwner: String?,
+    repoName: String?
+) -> URL? {
+    if let url = sanitizedExternalURL(readmeUrl) {
+        return url
+    }
+    if let url = sanitizedExternalURL(fallbackExplicitURL) {
         return url
     }
 
@@ -818,6 +1053,16 @@ private func explicitOrRepositoryURL(readmeUrl: String?, repoOwner: String?, rep
     components.host = "github.com"
     components.path = "/\(repoOwner)/\(repoName)"
     return components.url
+}
+
+private func sanitizedExternalURL(_ rawValue: String?) -> URL? {
+    guard let rawValue,
+          let url = URL(string: rawValue.trimmingCharacters(in: .whitespacesAndNewlines)),
+          let scheme = url.scheme?.lowercased(),
+          ["http", "https"].contains(scheme) else {
+        return nil
+    }
+    return url
 }
 
 private func githubRepositoryURL(from ownerRepo: String) -> URL? {
@@ -1059,6 +1304,18 @@ struct AppLinkStatus: Codable, Equatable, Hashable {
     let status: String
 }
 
+extension SkillDeployment {
+    var hasBrokenLink: Bool {
+        appLinks.values.contains { $0.isBroken }
+    }
+}
+
+extension AppLinkStatus {
+    var isBroken: Bool {
+        status.caseInsensitiveCompare("broken") == .orderedSame
+    }
+}
+
 /// Top-level envelope returned by `skill-cli link-health --json`.
 struct LinkHealthReport: Codable, Equatable {
     let summary: LinkHealthSummary
@@ -1075,6 +1332,30 @@ struct LinkHealthRow: Codable, Equatable {
     let skillId: String
     let skillName: String
     let deployment: SkillDeployment?
+}
+
+struct PackageLinkHealthSnapshot: Equatable {
+    let rows: [LinkHealthRow]
+
+    var okCount: Int {
+        statusCount("ok")
+    }
+
+    var brokenCount: Int {
+        statusCount("broken")
+    }
+
+    var inactiveCount: Int {
+        statusCount("inactive")
+    }
+
+    private func statusCount(_ status: String) -> Int {
+        rows.reduce(0) { count, row in
+            count + (row.deployment?.appLinks.values.filter {
+                $0.status.caseInsensitiveCompare(status) == .orderedSame
+            }.count ?? 0)
+        }
+    }
 }
 
 /// Envelope returned by `skill-cli onboard-scan --json`. Powers onboarding
@@ -1122,6 +1403,115 @@ struct SyncResult: Codable, Equatable {
     let stderr: String?
     let message: String?
     let implemented: Bool?
+    let localPath: String?
+    let remotePath: String?
+    let localCount: Int?
+    let remoteCount: Int?
+
+    init(
+        provider: String,
+        action: String,
+        ok: Bool? = nil,
+        exitCode: Int? = nil,
+        stdout: String? = nil,
+        stderr: String? = nil,
+        message: String? = nil,
+        implemented: Bool? = nil,
+        localPath: String? = nil,
+        remotePath: String? = nil,
+        localCount: Int? = nil,
+        remoteCount: Int? = nil
+    ) {
+        self.provider = provider
+        self.action = action
+        self.ok = ok
+        self.exitCode = exitCode
+        self.stdout = stdout
+        self.stderr = stderr
+        self.message = message
+        self.implemented = implemented
+        self.localPath = localPath
+        self.remotePath = remotePath
+        self.localCount = localCount
+        self.remoteCount = remoteCount
+    }
+}
+
+struct SyncResultSummary: Equatable {
+    enum State: Equatable {
+        case success
+        case failure
+        case unavailable
+        case unknown
+    }
+
+    enum Detail: Equatable {
+        case exitCode(Int)
+        case localEndpoint(path: String?, count: Int?)
+        case remoteEndpoint(path: String?, count: Int?)
+    }
+
+    let state: State
+    let message: String
+    let details: [Detail]
+}
+
+extension SyncResult {
+    func summary(successMessage: String, emptyMessage: String) -> SyncResultSummary {
+        let state = summaryState
+        let message = preferredMessage(for: state) ?? fallbackMessage(for: state, successMessage: successMessage, emptyMessage: emptyMessage)
+        var details: [SyncResultSummary.Detail] = []
+
+        if let exitCode, state != .success || exitCode != 0 {
+            details.append(.exitCode(exitCode))
+        }
+        if localPath != nil || localCount != nil {
+            details.append(.localEndpoint(path: localPath, count: localCount))
+        }
+        if remotePath != nil || remoteCount != nil {
+            details.append(.remoteEndpoint(path: remotePath, count: remoteCount))
+        }
+
+        return SyncResultSummary(state: state, message: message, details: details)
+    }
+
+    private var summaryState: SyncResultSummary.State {
+        if implemented == false {
+            return .unavailable
+        }
+        if ok == true {
+            return .success
+        }
+        if ok == false {
+            return .failure
+        }
+        return .unknown
+    }
+
+    private func preferredMessage(for state: SyncResultSummary.State) -> String? {
+        let candidates: [String?]
+        switch state {
+        case .failure, .unavailable:
+            candidates = [message, stderr, stdout]
+        case .success, .unknown:
+            candidates = [message, stdout, stderr]
+        }
+        return candidates.compactMap(Self.cleanedOutput).first
+    }
+
+    private func fallbackMessage(for state: SyncResultSummary.State, successMessage: String, emptyMessage: String) -> String {
+        state == .success ? successMessage : emptyMessage
+    }
+
+    private static func cleanedOutput(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        if trimmed.count <= 280 {
+            return trimmed
+        }
+        return String(trimmed.prefix(280)).trimmingCharacters(in: .whitespacesAndNewlines) + "..."
+    }
 }
 
 struct UnmanagedSkill: Identifiable, Codable, Equatable {
@@ -1160,6 +1550,59 @@ extension SkillUpdateInfo {
 }
 
 extension PackageComponent {
+    func matchesSkill(_ skill: Skill) -> Bool {
+        guard kind.caseInsensitiveCompare("skill") == .orderedSame else {
+            return false
+        }
+
+        let candidates = [
+            id,
+            name,
+            location ?? "",
+            location?.split(separator: "/").last.map(String.init) ?? ""
+        ]
+            .map(Self.normalizedIdentifier)
+            .filter { !$0.isEmpty }
+
+        let skillCandidates = [
+            skill.id,
+            skill.name,
+            skill.directory,
+            skill.id.split(separator: ":", maxSplits: 1).last.map(String.init) ?? skill.id
+        ]
+            .map(Self.normalizedIdentifier)
+            .filter { !$0.isEmpty }
+
+        return !Set(candidates).isDisjoint(with: Set(skillCandidates))
+    }
+
+    func matchesAttributionSkill(_ identifier: String) -> Bool {
+        guard kind.caseInsensitiveCompare("skill") == .orderedSame else {
+            return false
+        }
+
+        let normalizedIdentifier = Self.normalizedIdentifier(identifier)
+        guard !normalizedIdentifier.isEmpty else {
+            return false
+        }
+
+        let identifierSuffix = normalizedIdentifier
+            .split(separator: ":", maxSplits: 1)
+            .last
+            .map(String.init) ?? normalizedIdentifier
+
+        let candidates = [
+            id,
+            name,
+            location ?? "",
+            location?.split(separator: "/").last.map(String.init) ?? ""
+        ]
+            .map(Self.normalizedIdentifier)
+            .filter { !$0.isEmpty }
+
+        return candidates.contains(normalizedIdentifier) || candidates.contains(identifierSuffix)
+    }
+
     func matchesSkillUpdate(_ update: SkillUpdateInfo) -> Bool {
         guard kind.caseInsensitiveCompare("skill") == .orderedSame else {
             return false
@@ -1179,11 +1622,198 @@ extension PackageComponent {
 
         return name.caseInsensitiveCompare(update.name) == .orderedSame
     }
+
+    private static func normalizedIdentifier(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
 }
 
 extension CapabilityPackage {
+    func containsSkill(_ skill: Skill) -> Bool {
+        components.skills.contains { $0.matchesSkill(skill) }
+    }
+
+    func companionInstalledSkills(for skill: Skill, in skills: [Skill]) -> [Skill] {
+        matchingInstalledSkills(in: skills)
+            .filter { $0.id != skill.id }
+    }
+
+    func installedSkillsRequiringEnablement(for app: TargetApp, in skills: [Skill]) -> [Skill] {
+        matchingInstalledSkills(in: skills)
+            .filter { !$0.apps.isEnabled(app) }
+    }
+
+    func matchingInstalledSkills(in skills: [Skill]) -> [Skill] {
+        var seen: Set<String> = []
+        var matches: [Skill] = []
+
+        for component in components.skills {
+            guard let skill = matchingInstalledSkill(for: component, in: skills),
+                  !seen.contains(skill.id) else {
+                continue
+            }
+            seen.insert(skill.id)
+            matches.append(skill)
+        }
+
+        return matches
+    }
+
+    func hasBrokenLinks(in skills: [Skill]) -> Bool {
+        matchingInstalledSkills(in: skills).contains { $0.hasBrokenLink }
+    }
+
+    func linkHealthSnapshot(using report: LinkHealthReport?, skills: [Skill]) -> PackageLinkHealthSnapshot? {
+        guard let report else {
+            return nil
+        }
+
+        let matchedSkills = matchingInstalledSkills(in: skills)
+        let matchedSkillIdentifiers = Set(matchedSkills.flatMap { skill in
+            [
+                skill.id,
+                skill.name,
+                skill.directory,
+                skill.id.split(separator: ":", maxSplits: 1).last.map(String.init) ?? skill.id
+            ].map(Self.normalizedIdentifier).filter { !$0.isEmpty }
+        })
+
+        let rows = report.rows.filter { row in
+            let rowCandidates = [
+                row.skillId,
+                row.skillName,
+                row.skillId.split(separator: ":", maxSplits: 1).last.map(String.init) ?? row.skillId
+            ].map(Self.normalizedIdentifier).filter { !$0.isEmpty }
+
+            if !Set(rowCandidates).isDisjoint(with: matchedSkillIdentifiers) {
+                return true
+            }
+
+            return components.skills.contains { component in
+                component.matchesAttributionSkill(row.skillId) || component.matchesAttributionSkill(row.skillName)
+            }
+        }
+
+        return PackageLinkHealthSnapshot(rows: rows)
+    }
+
+    func componentVersionLabel(for component: PackageComponent, in skills: [Skill]) -> String? {
+        guard let skill = matchingInstalledSkill(for: component, in: skills) else {
+            return nil
+        }
+        return MatrixVersionFormatter.value(
+            manifestVersion: skill.manifest?.semanticVersion,
+            contentHash: skill.contentHash,
+            updatedAt: skill.updatedAt
+        )
+    }
+
+    func matchingInstalledSkill(for component: PackageComponent, in skills: [Skill]) -> Skill? {
+        skills.first { component.matchesSkill($0) }
+    }
+
+    func appCoverage(using skills: [Skill]) -> [TargetApp: CapabilityAppCoverage] {
+        Dictionary(uniqueKeysWithValues: TargetApp.supported.map { app in
+            let breakdown = appCoverageBreakdown(for: app, skills: skills)
+            return (app, CapabilityAppCoverage(enabled: breakdown.enabled, total: breakdown.total))
+        })
+    }
+
+    func appCoverageBreakdown(for app: TargetApp, skills: [Skill]) -> PackageAppCoverageBreakdown {
+        var breakdown = PackageAppCoverageBreakdown(total: components.all.count)
+        for component in components.all {
+            let state = component.appState(
+                for: app,
+                matching: matchingInstalledSkill(for: component, in: skills)
+            )
+            breakdown.add(state)
+        }
+        return breakdown
+    }
+
     func matchingSkillComponent(for update: SkillUpdateInfo) -> PackageComponent? {
         components.skills.first { $0.matchesSkillUpdate(update) }
+    }
+
+    func usageSnapshot(using summary: UsageSummary?, skills: [Skill]) -> PackageUsageSnapshot? {
+        guard let summary else {
+            return nil
+        }
+
+        let matchedSkills = matchingInstalledSkills(in: skills)
+        var snapshot = PackageUsageSnapshot()
+
+        for stat in summary.thirtyDaySkillStats {
+            guard let component = usageComponent(for: stat, matchedSkills: matchedSkills) else {
+                continue
+            }
+            snapshot.add(stat, component: component)
+        }
+
+        return snapshot
+    }
+
+    private func usageComponent(for stat: SkillUsageStat, matchedSkills: [Skill]) -> PackageComponent? {
+        if let matchedSkill = matchedSkills.first(where: { $0.matchesAttributionSkill(stat.skillID) }),
+           let component = components.skills.first(where: { $0.matchesSkill(matchedSkill) }) {
+            return component
+        }
+
+        return components.skills.first { component in
+            component.matchesAttributionSkill(stat.skillID)
+        }
+    }
+
+    private static func normalizedIdentifier(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+}
+
+private extension PackageComponent {
+    func isEnabled(for app: TargetApp, matching skill: Skill?) -> Bool {
+        appState(for: app, matching: skill).isEnabled
+    }
+}
+
+extension PackageComponent {
+    func appState(for app: TargetApp, matching skill: Skill?) -> PackageComponentAppState {
+        switch kind.lowercased() {
+        case "skill":
+            if let skill {
+                if skill.apps.isEnabled(app) {
+                    return .active
+                }
+                return isStubbed ? .stub : .off
+            }
+            guard app == .claude || app == .codex else {
+                return .unsupported
+            }
+            if installed {
+                return .active
+            }
+            return isStubbed ? .stub : .off
+        case "agent":
+            guard app == .claude || app == .codex else {
+                return .unsupported
+            }
+            guard app == .claude else {
+                return .off
+            }
+            if installed {
+                return .active
+            }
+            return isStubbed ? .stub : .off
+        case "cli", "mcp":
+            guard app == .claude || app == .codex else {
+                return .unsupported
+            }
+            if installed {
+                return .active
+            }
+            return isStubbed ? .stub : .off
+        default:
+            return .unsupported
+        }
     }
 }
 

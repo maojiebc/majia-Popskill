@@ -43,6 +43,15 @@ struct CommonViewsTests {
     }
 
     @Test
+    func packageComponentTreePrefixMarksLastRow() {
+        #expect(PackageComponentTreePrefix.value(index: 0, count: 1) == "└─")
+        #expect(PackageComponentTreePrefix.value(index: 0, count: 3) == "├─")
+        #expect(PackageComponentTreePrefix.value(index: 1, count: 3) == "├─")
+        #expect(PackageComponentTreePrefix.value(index: 2, count: 3) == "└─")
+        #expect(PackageComponentTreePrefix.value(index: 0, count: 0) == "├─")
+    }
+
+    @Test
     func sectionAccentIndexWrapsForwardAndBackward() {
         #expect(PopskillSectionAccent.index(for: 0) == 0)
         #expect(PopskillSectionAccent.index(for: 4) == 0)

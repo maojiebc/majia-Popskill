@@ -15,6 +15,7 @@ import Observation
 final class PopskillStore {
     // ===== Data slices =====
     var skills: [Skill] = []
+    var packages: [CapabilityPackage] = []
     var unmanagedSkills: [UnmanagedSkill] = []
     var localAgents: [LocalAgent] = []
     var agentTargets: [AgentTarget] = []
@@ -32,6 +33,8 @@ final class PopskillStore {
     var usageSummary: UsageSummary?
     var usageScanError: String?
     var usageScanInFlight: Bool = false
+    var updatesRefreshInFlight: Bool = false
+    var readmePreviewStates: [String: ReadmePreviewLoadState] = [:]
 
     // Per-slice refresh timestamps. Views call refresh*(force: false) from
     // .task on first appearance; if a recent refresh exists we skip the
@@ -67,9 +70,14 @@ final class PopskillStore {
     // ===== Matrix state =====
     var matrixFilter: MatrixFilter = .all
     var matrixTypeFilter: MatrixTypeFilter = .allTypes
+    var matrixSortMode: MatrixSortMode = .typeDescending
     /// Repo groups the user has explicitly collapsed. Set is keyed by
     /// `MatrixGroup.id` (== "owner/name" or "ungrouped").
     var collapsedGroups: Set<String> = []
+    /// Composite packages are expanded by default so the matrix immediately
+    /// shows the component tree from the reference design. Users can collapse
+    /// noisy bundles without hiding the whole source group.
+    var collapsedPackageIDs: Set<String> = []
 
     // ===== System state =====
     var lastBootstrapAt: Date?
@@ -79,14 +87,16 @@ final class PopskillStore {
     var errorMessage: String?
 
     // ===== Services =====
-    let client = SkillCLIClient()
+    let client: SkillCLIClient
 
     // Per-skill toggle / uninstall in-flight tracking so the matrix can dim
     // controls during pending IO.
     var pendingToggles: Set<String> = []
     var pendingUninstalls: Set<String> = []
 
-    init() {}
+    init(client: SkillCLIClient = SkillCLIClient()) {
+        self.client = client
+    }
 
     // ===== Bootstrap =====
 
@@ -102,18 +112,38 @@ final class PopskillStore {
         async let skillsTask = client.list()
         async let sourcesTask = client.listRepositories()
         async let agentsTask = client.listAgents()
+        async let packagesTask = loadPackagesBestEffort()
+        async let stubsTask = loadStubsBestEffort()
 
         do {
             let now = Date()
             self.skills = try await skillsTask
             self.sources = try await sourcesTask
             self.localAgents = try await agentsTask
+            self.packages = await packagesTask
+            self.stubs = await stubsTask
             self.lastBootstrapAt = now
             // Bootstrap counts as a fresh sources fetch — secondary views
             // that .task into refreshSources won't double-pull immediately.
             self.lastSourcesRefreshAt = now
         } catch {
             self.errorMessage = error.localizedDescription
+        }
+    }
+
+    private func loadPackagesBestEffort() async -> [CapabilityPackage] {
+        do {
+            return try await client.listPackages()
+        } catch {
+            return []
+        }
+    }
+
+    private func loadStubsBestEffort() async -> [StubbedSkill] {
+        do {
+            return try await client.listStubs()
+        } catch {
+            return []
         }
     }
 
@@ -138,7 +168,11 @@ final class PopskillStore {
     }
 
     func refreshUpdates(force: Bool = false) async {
+        guard !updatesRefreshInFlight else { return }
         guard !shouldSkipRefresh(lastUpdatesRefreshAt, force: force) else { return }
+        updatesRefreshInFlight = true
+        defer { updatesRefreshInFlight = false }
+
         do {
             updates = try await client.checkUpdates()
             lastUpdatesRefreshAt = Date()
@@ -155,6 +189,20 @@ final class PopskillStore {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func refreshStubs() async {
+        do {
+            stubs = try await client.listStubs()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func upsertStub(_ stub: StubbedSkill) {
+        stubs.removeAll { $0.skill.id == stub.skill.id }
+        stubs.append(stub)
+        stubs.sort { $0.stubbedAt > $1.stubbedAt }
     }
 
     private func shouldSkipRefresh(_ lastRefresh: Date?, force: Bool) -> Bool {
@@ -176,9 +224,16 @@ final class PopskillStore {
     /// rather than stored so toggle / install / uninstall actions only need
     /// to mutate `skills` / `localAgents` and the matrix follows.
     var capabilities: [MatrixCapability] {
-        skills.map(MatrixCapability.fromSkill) + localAgents.map(MatrixCapability.fromAgent)
+        compositePackages.map { MatrixCapability.fromPackage($0, skills: skills) }
+            + skills.map(MatrixCapability.fromSkill)
+            + localAgents.map(MatrixCapability.fromAgent)
     }
 
+    var compositePackages: [CapabilityPackage] {
+        packages.filter { $0.type == .composite }
+    }
+
+    var bundleCount: Int { compositePackages.count }
     var pendingUpdateCount: Int { updates.count }
     var brokenLinkCount: Int { linkHealth?.summary.broken ?? 0 }
     var okLinkCount: Int { linkHealth?.summary.ok ?? 0 }
@@ -189,10 +244,57 @@ final class PopskillStore {
 
     var isSearchActive: Bool { !trimmedSearch.isEmpty }
 
+    func showMatrix(
+        filter: MatrixFilter = .all,
+        typeFilter: MatrixTypeFilter = .allTypes,
+        clearSearch: Bool = true
+    ) {
+        currentSelection = .matrix
+        matrixFilter = filter
+        matrixTypeFilter = typeFilter
+        inspectorOpen = false
+        selectedSkillID = nil
+        if clearSearch {
+            searchText = ""
+        }
+    }
+
+    func showSettings() {
+        currentSelection = .settings
+    }
+
+    func matrixFilterCount(_ filter: MatrixFilter) -> Int {
+        capabilities.filter { filter.includes(capability: $0, store: self) }.count
+    }
+
+    func matrixTypeFilterCount(_ typeFilter: MatrixTypeFilter) -> Int {
+        capabilities.filter { typeFilter.includes(capability: $0) }.count
+    }
+
+    func matrixShortcutCounts() -> MatrixShortcutCounts {
+        let currentCapabilities = capabilities
+        let filterCounts = Dictionary(uniqueKeysWithValues: MatrixFilter.allCases.map { filter in
+            (filter, currentCapabilities.filter { filter.includes(capability: $0, store: self) }.count)
+        })
+        let typeCounts = Dictionary(uniqueKeysWithValues: MatrixTypeFilter.allCases.map { filter in
+            (filter, currentCapabilities.filter { filter.includes(capability: $0) }.count)
+        })
+        return MatrixShortcutCounts(
+            capabilityCount: currentCapabilities.count,
+            filterCounts: filterCounts,
+            typeCounts: typeCounts
+        )
+    }
+
     /// O(1) update lookup for matrix rows and filters. `SkillUpdateInfo.id`
     /// may be scoped ("owner/name:skill") or path-like, so both the full id
     /// and its useful suffixes are indexed once when `updates` changes.
     func hasPendingUpdate(for capability: MatrixCapability) -> Bool {
+        if let package = capability.package {
+            return updates.contains { update in
+                package.matchingSkillComponent(for: update) != nil
+            }
+        }
         guard let skillID = capability.underlyingSkillID else { return false }
         return updateIdentifierCandidates(for: skillID).contains { updateSkillIDs.contains($0) }
     }
@@ -220,9 +322,60 @@ final class PopskillStore {
         inspectorOpen = true
     }
 
+    func togglePackageExpansion(_ packageID: String) {
+        if collapsedPackageIDs.contains(packageID) {
+            collapsedPackageIDs.remove(packageID)
+        } else {
+            collapsedPackageIDs.insert(packageID)
+        }
+    }
+
+    func skill(for component: PackageComponent) -> Skill? {
+        skills.first { component.matchesSkill($0) }
+    }
+
     func closeInspector() {
         inspectorOpen = false
         selectedSkillID = nil
+    }
+
+    // MARK: README previews
+
+    func readmePreviewState(for skill: Skill) -> ReadmePreviewLoadState? {
+        readmePreviewStates[skill.id]
+    }
+
+    func loadReadmePreview(for skill: Skill, force: Bool = false) async {
+        if !force {
+            switch readmePreviewStates[skill.id] {
+            case .loading, .loaded:
+                return
+            case .failed, .none:
+                break
+            }
+        }
+
+        guard let readmeURL = skill.markdownURL else {
+            readmePreviewStates[skill.id] = .failed(ReadmePreviewError.missing.localizedDescription)
+            return
+        }
+
+        let skillID = skill.id
+        let skillName = skill.name
+        readmePreviewStates[skillID] = .loading
+
+        do {
+            let preview = try await Task.detached(priority: .utility) {
+                try ReadmePreview.load(
+                    skillID: skillID,
+                    skillName: skillName,
+                    readmeURL: readmeURL
+                )
+            }.value
+            readmePreviewStates[skillID] = .loaded(preview)
+        } catch {
+            readmePreviewStates[skillID] = .failed(error.localizedDescription)
+        }
     }
 
     // MARK: Usage scanner
@@ -251,5 +404,29 @@ final class PopskillStore {
 
     private static func makeUpdateSkillIDs(from updates: [SkillUpdateInfo]) -> Set<String> {
         Set(updates.flatMap(\.normalizedIdentifierCandidates))
+    }
+}
+
+struct MatrixShortcutCounts: Equatable {
+    let capabilityCount: Int
+    private let filterCounts: [MatrixFilter: Int]
+    private let typeCounts: [MatrixTypeFilter: Int]
+
+    init(
+        capabilityCount: Int,
+        filterCounts: [MatrixFilter: Int],
+        typeCounts: [MatrixTypeFilter: Int]
+    ) {
+        self.capabilityCount = capabilityCount
+        self.filterCounts = filterCounts
+        self.typeCounts = typeCounts
+    }
+
+    func count(for filter: MatrixFilter) -> Int {
+        filterCounts[filter] ?? 0
+    }
+
+    func count(for filter: MatrixTypeFilter) -> Int {
+        typeCounts[filter] ?? 0
     }
 }

@@ -59,10 +59,10 @@ enum PopskillSpacing {
 }
 
 enum PopskillRadius {
-    static let button: CGFloat = 8
-    static let smallCard: CGFloat = 12
-    static let card: CGFloat = 18
-    static let largeCard: CGFloat = 20
+    static let button: CGFloat = 6
+    static let smallCard: CGFloat = 8
+    static let card: CGFloat = 8
+    static let largeCard: CGFloat = 12
 }
 
 enum PopskillShadow {

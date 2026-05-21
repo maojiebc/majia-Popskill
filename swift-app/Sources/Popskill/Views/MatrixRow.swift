@@ -1,14 +1,16 @@
 import SwiftUI
 
 /// One capability row inside the matrix. Layout mirrors `matrixColumnHeader`
-/// in `MatrixView.swift`: capability column (flexible), Claude toggle
-/// (100pt), Codex toggle (100pt), source label (220pt), action menu (56pt).
+/// in `MatrixView.swift`: capability column (flexible), tool coverage,
+/// source, version identity, usage metrics, and action menu.
 /// Renders Skill / Agent / CLI / MCP / Config via the unified
 /// `MatrixCapability` model; non-toggleable kinds (anything but skill) show
 /// a read-only "on" icon instead of the interactive switch.
+@MainActor
 struct MatrixRow: View {
     let capability: MatrixCapability
     @Bindable var store: PopskillStore
+    let usageIndex: MatrixUsageIndex
     @Environment(\.popskillLocalization) private var localization
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovering = false
@@ -26,18 +28,25 @@ struct MatrixRow: View {
             capabilityCell
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 14)
-                .padding(.vertical, 8)
+                .padding(.vertical, 6)
 
             appToggleCell(for: .claude)
-                .frame(width: 100)
+                .frame(width: MatrixTableLayout.appColumnWidth)
             appToggleCell(for: .codex)
-                .frame(width: 100)
+                .frame(width: MatrixTableLayout.appColumnWidth)
 
             sourceCell
-                .frame(width: 220, alignment: .leading)
+                .frame(width: MatrixTableLayout.sourceColumnWidth, alignment: .leading)
+            versionCell
+                .frame(width: MatrixTableLayout.versionColumnWidth, alignment: .leading)
+
+            tokensCell
+                .frame(width: MatrixTableLayout.tokensColumnWidth, alignment: .trailing)
+            callsCell
+                .frame(width: MatrixTableLayout.callsColumnWidth, alignment: .trailing)
 
             actionCell
-                .frame(width: 56)
+                .frame(width: MatrixTableLayout.actionColumnWidth)
         }
         .padding(.trailing, 4)
         .contentShape(Rectangle())
@@ -66,15 +75,17 @@ struct MatrixRow: View {
 
     private var capabilityCell: some View {
         HStack(alignment: .center, spacing: 10) {
-            InitialAvatarView(name: capability.name, identifier: capability.id)
-                .frame(width: 28, height: 28)
+            InitialAvatarView(name: capability.name, identifier: capability.id, size: 24)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(capability.name)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(Color.popLabel)
                         .lineLimit(1)
                     kindBadge
+                    if capability.hasBrokenLinks(in: store.skills) {
+                        MatrixBrokenLinkBadge()
+                    }
                     if hasUpdate {
                         Text(localization.string("matrix.row.updateBadge"))
                             .font(.system(size: 9.5, weight: .semibold))
@@ -128,7 +139,7 @@ struct MatrixRow: View {
                     onChange: { newValue in
                         Task { await toggle(app: app, enabled: newValue) }
                     },
-                    size: 26
+                    size: 22
                 )
             } else {
                 readOnlyAppBadge(app: app, isOn: capability.apps.isEnabled(app))
@@ -181,14 +192,48 @@ struct MatrixRow: View {
     private var sourceCell: some View {
         HStack(spacing: 6) {
             Image(systemName: sourceSymbol)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 10.5, weight: .semibold))
                 .foregroundStyle(Color.popSecondaryLabel)
             Text(capability.sourceLabel)
-                .font(.system(size: 11.5))
+                .font(.system(size: 11))
                 .foregroundStyle(Color.popSecondaryLabel)
                 .lineLimit(1)
                 .truncationMode(.middle)
         }
+    }
+
+    private var usageSnapshot: SkillUsageSnapshot? {
+        usageIndex.skillSnapshot(for: capability.underlyingSkillID)
+    }
+
+    private var versionCell: some View {
+        let skill = capability.underlyingSkillID.flatMap { skillID in
+            store.skills.first { $0.id == skillID }
+        }
+        return MatrixVersionValueCell(value: MatrixVersionFormatter.value(
+            manifestVersion: skill?.manifest?.semanticVersion,
+            contentHash: skill?.contentHash,
+            updatedAt: capability.updatedAt
+        ))
+    }
+
+    private var tokensCell: some View {
+        MatrixUsageValueCell(value: usageText { snapshot in
+            UsageDisplayFormatter.compactTokens(snapshot.totalTokens)
+        })
+    }
+
+    private var callsCell: some View {
+        MatrixUsageValueCell(value: usageText { snapshot in
+            UsageDisplayFormatter.compactCount(snapshot.usageEvents)
+        })
+    }
+
+    private func usageText(_ format: (SkillUsageSnapshot) -> String) -> String? {
+        guard let snapshot = usageSnapshot else {
+            return nil
+        }
+        return snapshot.hasUsage ? format(snapshot) : "0"
     }
 
     private var sourceSymbol: String {
@@ -253,11 +298,41 @@ struct MatrixRow: View {
     }
 }
 
+struct MatrixVersionValueCell: View {
+    let value: String?
+    var isSubtle = false
+
+    var body: some View {
+        Text(value ?? "—")
+            .font(.system(size: isSubtle ? 10.3 : 10.8, weight: .medium, design: .monospaced))
+            .foregroundStyle(value == nil ? Color.popTertiaryLabel : (isSubtle ? Color.popSecondaryLabel : Color.popLabel))
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.trailing, 8)
+    }
+}
+
+struct MatrixUsageValueCell: View {
+    let value: String?
+    var isSubtle = false
+
+    var body: some View {
+        Text(value ?? "—")
+            .font(.system(size: isSubtle ? 10.5 : 11, weight: isSubtle ? .regular : .medium).monospacedDigit())
+            .foregroundStyle(value == nil ? Color.popTertiaryLabel : (isSubtle ? Color.popSecondaryLabel : Color.popLabel))
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.trailing, 8)
+    }
+}
+
 /// Sticky header above each repo bucket. Clicking the chevron collapses /
 /// expands the bucket. The right side shows aggregate "%d enabled on Claude
 /// / Codex" so users can see coverage without scanning every row. v0.4
 /// renders the same header for any capability kind — the kind-level banner
 /// in MatrixView provides the kind context.
+@MainActor
 struct MatrixGroupHeader: View {
     let group: MatrixGroup
     @Bindable var store: PopskillStore
@@ -301,8 +376,8 @@ struct MatrixGroupHeader: View {
             coverageChip(symbol: "chevron.left.forwardslash.chevron.right", label: "Codex", enabled: codexOn, total: group.capabilities.count)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 7)
-        .background(Color.popSurface.opacity(0.52))
+        .padding(.vertical, 6)
+        .background(Color.popSurface.opacity(0.36))
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(Color.popSeparator)

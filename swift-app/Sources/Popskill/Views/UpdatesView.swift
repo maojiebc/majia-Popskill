@@ -3,6 +3,7 @@ import SwiftUI
 /// Updates — lists every skill whose remote content hash differs from local.
 /// On `.task` we re-run `client.checkUpdates()` so the badge in the sidebar
 /// reflects the latest scan; the user can also trigger a manual re-scan.
+@MainActor
 struct UpdatesView: View {
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization
@@ -24,7 +25,7 @@ struct UpdatesView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .disabled(loading)
+                    .disabled(loading || store.updatesRefreshInFlight)
                     Button {
                         Task { await updateAll() }
                     } label: {
@@ -35,7 +36,7 @@ struct UpdatesView: View {
                     // Also disable while a scan or per-row update is in
                     // flight — clicking "全部更新" mid-scan stacks two
                     // concurrent rescans and confuses pendingUpdate state.
-                    .disabled(store.updates.isEmpty || loading || !pendingUpdate.isEmpty)
+                    .disabled(store.updates.isEmpty || loading || store.updatesRefreshInFlight || !pendingUpdate.isEmpty)
                 }
             }
 
@@ -59,7 +60,7 @@ struct UpdatesView: View {
     }
 
     private var subtitle: String {
-        if loading {
+        if loading || store.updatesRefreshInFlight {
             return localization.string("updates.subtitleScanning", store.updates.count)
         }
         if let lastScanAt = store.lastUpdatesRefreshAt {

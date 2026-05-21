@@ -6,13 +6,14 @@ import SwiftUI
 ///      The non-Git providers are placeholder buttons (sidecar gates them).
 ///   3. 数据源管理 — count + jump to Sources view.
 ///   4. 重新引导 — re-run the 5-step Onboarding (S6) explicitly.
+@MainActor
 struct SettingsView: View {
     @Bindable var store: PopskillStore
     @Environment(\.popskillLocalization) private var localization
 
     @State private var syncProvider: SyncProvider = .git
     @State private var pendingSync: Bool = false
-    @State private var syncMessage: String?
+    @State private var syncSummary: SyncResultSummary?
 
     var body: some View {
         ScrollView {
@@ -136,15 +137,22 @@ struct SettingsView: View {
                 .controlSize(.small)
                 .disabled(pendingSync || !syncProvider.actionable)
 
+                Button {
+                    Task { await runSync(.status) }
+                } label: {
+                    Label(localization.string("settings.sync.status"), systemImage: "list.bullet.rectangle")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(pendingSync || !syncProvider.actionable)
+
                 if pendingSync {
                     ProgressView().controlSize(.small)
                 }
                 Spacer()
             }
-            if let syncMessage {
-                Text(syncMessage)
-                    .font(.caption)
-                    .foregroundStyle(Color.popSecondaryLabel)
+            if let syncSummary {
+                syncStatusPanel(syncSummary)
             }
         }
         .padding(16)
@@ -156,6 +164,7 @@ struct SettingsView: View {
         Button {
             syncProvider = provider
             store.lastSyncProvider = provider.rawValue
+            syncSummary = nil
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: syncProvider == provider ? "largecircle.fill.circle" : "circle")
@@ -185,20 +194,115 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 
+    private func syncStatusPanel(_ summary: SyncResultSummary) -> some View {
+        let tint = syncStatusColor(summary.state)
+        let detailLines = summary.details.map(syncDetailText)
+
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: syncStatusSymbol(summary.state))
+                    .foregroundStyle(tint)
+                Text(localization.string(syncStatusTitleKey(summary.state)))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.popLabel)
+                Spacer()
+            }
+            Text(summary.message)
+                .font(.caption)
+                .foregroundStyle(Color.popSecondaryLabel)
+                .textSelection(.enabled)
+                .lineLimit(4)
+            if !detailLines.isEmpty {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(detailLines.indices, id: \.self) { index in
+                        Text(detailLines[index])
+                            .font(.caption2)
+                            .foregroundStyle(Color.popTertiaryLabel)
+                            .textSelection(.enabled)
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                    }
+                }
+            }
+        }
+        .padding(10)
+        .background(tint.opacity(0.09), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(tint.opacity(0.24), lineWidth: 0.7)
+        }
+    }
+
+    private func syncStatusTitleKey(_ state: SyncResultSummary.State) -> String {
+        switch state {
+        case .success: return "settings.sync.result.success"
+        case .failure: return "settings.sync.result.failure"
+        case .unavailable: return "settings.sync.result.unavailable"
+        case .unknown: return "settings.sync.result.unknown"
+        }
+    }
+
+    private func syncStatusSymbol(_ state: SyncResultSummary.State) -> String {
+        switch state {
+        case .success: return "checkmark.circle.fill"
+        case .failure: return "exclamationmark.circle.fill"
+        case .unavailable: return "clock.fill"
+        case .unknown: return "info.circle.fill"
+        }
+    }
+
+    private func syncStatusColor(_ state: SyncResultSummary.State) -> Color {
+        switch state {
+        case .success: return Color.popStatusOK
+        case .failure: return Color.popStatusError
+        case .unavailable: return Color.popStatusWarning
+        case .unknown: return Color.popStatusNeutral
+        }
+    }
+
+    private func syncDetailText(_ detail: SyncResultSummary.Detail) -> String {
+        switch detail {
+        case .exitCode(let code):
+            return localization.string("settings.sync.detail.exitCode", code)
+        case .localEndpoint(let path, let count):
+            return localization.string("settings.sync.detail.local", endpointDetail(path: path, count: count))
+        case .remoteEndpoint(let path, let count):
+            return localization.string("settings.sync.detail.remote", endpointDetail(path: path, count: count))
+        }
+    }
+
+    private func endpointDetail(path: String?, count: Int?) -> String {
+        var parts: [String] = []
+        if let count {
+            parts.append(localization.string("settings.sync.detail.count", count))
+        }
+        if let path {
+            parts.append(path)
+        }
+        return parts.joined(separator: " - ")
+    }
+
     @MainActor
     private func runSync(_ action: SyncAction) async {
         guard !pendingSync, syncProvider.actionable else { return }
         pendingSync = true
-        syncMessage = nil
+        syncSummary = nil
         defer { pendingSync = false }
         do {
             let result = try await store.client.sync(action: action.rawValue, provider: syncProvider.rawValue)
-            syncMessage = result.message ?? localization.string("settings.sync.done", action.rawValue, syncProvider.rawValue)
-            if result.ok == true {
+            syncSummary = result.summary(
+                successMessage: localization.string("settings.sync.done", action.rawValue, syncProvider.rawValue),
+                emptyMessage: localization.string("settings.sync.noDetails")
+            )
+            if result.ok == true && action != .status {
                 store.lastSyncAt = Date()
             }
         } catch {
-            syncMessage = error.localizedDescription
+            syncSummary = SyncResultSummary(
+                state: .failure,
+                message: error.localizedDescription,
+                details: []
+            )
         }
     }
 
