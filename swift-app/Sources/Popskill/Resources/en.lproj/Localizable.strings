@@ -537,11 +537,14 @@
 "spotlight.clear" = "Clear";
 
 "spotlight.section.capabilities" = "CAPABILITIES";
+"spotlight.section.recent" = "RECENTLY USED";
 "spotlight.section.actions" = "ACTIONS";
 "spotlight.bundle.matchedComponents" = "Matched components: %@";
+"spotlight.recentUsage" = "Used %@ · %@ calls";
+"spotlight.recentUsage.unknown" = "recently";
 
 "spotlight.empty.title" = "No matches";
-"spotlight.empty.body" = "Try a name, trigger word, or use ↑↓ to pick a recent capability.";
+"spotlight.empty.body" = "Try a name, trigger word, or use ↑↓ to pick a recently used capability.";
 
 "spotlight.hint.navigate" = "↑↓ navigate";
 "spotlight.hint.open" = "↩ open";

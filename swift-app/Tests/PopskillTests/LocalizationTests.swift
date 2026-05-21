@@ -77,5 +77,6 @@ struct LocalizationTests {
         #expect(localization.string("spotlight.action.showMCP.title") == "查看 MCP")
         #expect(localization.string("spotlight.action.showBrokenLinks.title") == "查看断链")
         #expect(localization.string("spotlight.action.showInactive.title") == "查看未启用")
+        #expect(localization.string("spotlight.section.recent") == "最近使用")
     }
 }

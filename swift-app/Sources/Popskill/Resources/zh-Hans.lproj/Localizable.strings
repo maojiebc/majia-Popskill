@@ -537,11 +537,14 @@
 "spotlight.clear" = "清空";
 
 "spotlight.section.capabilities" = "能力";
+"spotlight.section.recent" = "最近使用";
 "spotlight.section.actions" = "操作";
 "spotlight.bundle.matchedComponents" = "匹配组件：%@";
+"spotlight.recentUsage" = "最近 %@ · %@ 次调用";
+"spotlight.recentUsage.unknown" = "刚刚";
 
 "spotlight.empty.title" = "没有匹配";
-"spotlight.empty.body" = "试试名字、触发词,或按 ↑↓ 挑一条最近更新的能力。";
+"spotlight.empty.body" = "试试名字、触发词,或按 ↑↓ 挑一条最近使用的能力。";
 
 "spotlight.hint.navigate" = "↑↓ 导航";
 "spotlight.hint.open" = "↩ 打开";

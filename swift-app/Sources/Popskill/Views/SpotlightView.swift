@@ -20,6 +20,11 @@ struct SpotlightView: View {
 
     private let maxCapabilityHits = 8
     private let maxPackageHits = 3
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter
+    }()
 
     var body: some View {
         ZStack {
@@ -133,7 +138,7 @@ struct SpotlightView: View {
                                 )
                             }
                         } header: {
-                            sectionHeader(localization.string("spotlight.section.capabilities"))
+                            sectionHeader(localization.string(capabilitySectionTitleKey))
                         }
                     }
                     if !actionHits.isEmpty {
@@ -243,16 +248,36 @@ struct SpotlightView: View {
                     hit.matchedComponents.joined(separator: " · ")
                 )
             }
+            if isEmptyQuery,
+               let snapshot = package.usageSnapshot(using: store.usageSummary, skills: store.skills),
+               let label = recentUsageLabel(calls: snapshot.usageEvents, lastUsedAt: snapshot.lastUsedAt) {
+                return label
+            }
             return PackageComponentCompositionFormatter.summary(for: package, localization: localization)
         case let .skill(skill, hit):
             if !hit.matchedTriggers.isEmpty {
                 return hit.matchedTriggers.prefix(2).joined(separator: " · ")
+            }
+            if isEmptyQuery,
+               let snapshot = skill.usageSnapshot(using: store.usageSummary),
+               let label = recentUsageLabel(calls: snapshot.usageEvents, lastUsedAt: snapshot.lastUsedAt) {
+                return label
             }
             if let summary = skill.capabilitySummary, !summary.isEmpty { return summary }
             return skill.description
         case let .action(action):
             return localization.string(action.subtitleKey)
         }
+    }
+
+    private func recentUsageLabel(calls: Int, lastUsedAt: Date?) -> String? {
+        guard calls > 0 || lastUsedAt != nil else {
+            return nil
+        }
+        let relative = lastUsedAt.map {
+            Self.relativeFormatter.localizedString(for: $0, relativeTo: Date())
+        } ?? localization.string("spotlight.recentUsage.unknown")
+        return localization.string("spotlight.recentUsage", relative, UsageDisplayFormatter.compactCount(calls))
     }
 
     @ViewBuilder
@@ -335,11 +360,22 @@ struct SpotlightView: View {
 
     // MARK: Derived
 
+    private var isEmptyQuery: Bool {
+        localQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var capabilitySectionTitleKey: String {
+        isEmptyQuery ? "spotlight.section.recent" : "spotlight.section.capabilities"
+    }
+
     private var packageHits: [(package: CapabilityPackage, hit: PackageSearchHit)] {
         let q = localQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else {
-            return store.compositePackages
-                .sorted { ($0.lastLifecycleTimestamp ?? 0) > ($1.lastLifecycleTimestamp ?? 0) }
+            return SpotlightRecentRanker.recentPackages(
+                store.compositePackages,
+                skills: store.skills,
+                summary: store.usageSummary
+            )
                 .prefix(maxPackageHits)
                 .map { ($0, PackageSearchHit.recent) }
         }
@@ -361,9 +397,12 @@ struct SpotlightView: View {
         let q = localQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         let remainingSlots = max(0, maxCapabilityHits - packageHits.count)
         guard !q.isEmpty else {
-            // Empty query: show recently installed / updated skills (max N).
-            return store.skills
-                .sorted { ($0.lastLifecycleTimestamp ?? 0) > ($1.lastLifecycleTimestamp ?? 0) }
+            // Empty query: mirror the HTML prototype's "recently used" command
+            // palette, falling back to lifecycle recency before usage has been scanned.
+            return SpotlightRecentRanker.recentSkills(
+                store.skills,
+                summary: store.usageSummary
+            )
                 .prefix(remainingSlots)
                 .map { ($0, SkillSearchHit(score: 0, matchedTriggers: [], matchedOnName: false)) }
         }
@@ -440,6 +479,101 @@ struct SpotlightView: View {
         } catch {
             store.errorMessage = error.localizedDescription
         }
+    }
+}
+
+enum SpotlightRecentRanker {
+    static func recentPackages(
+        _ packages: [CapabilityPackage],
+        skills: [Skill],
+        summary: UsageSummary?
+    ) -> [CapabilityPackage] {
+        packages
+            .map { package in
+                (
+                    package: package,
+                    snapshot: package.usageSnapshot(using: summary, skills: skills)
+                )
+            }
+            .sorted { lhs, rhs in
+                isRankedBefore(
+                    lhsLastUsed: lhs.snapshot?.lastUsedAt,
+                    lhsCalls: lhs.snapshot?.usageEvents ?? 0,
+                    lhsTokens: lhs.snapshot?.totalTokens ?? 0,
+                    lhsLifecycle: lhs.package.lastLifecycleTimestamp,
+                    lhsName: lhs.package.name,
+                    rhsLastUsed: rhs.snapshot?.lastUsedAt,
+                    rhsCalls: rhs.snapshot?.usageEvents ?? 0,
+                    rhsTokens: rhs.snapshot?.totalTokens ?? 0,
+                    rhsLifecycle: rhs.package.lastLifecycleTimestamp,
+                    rhsName: rhs.package.name
+                )
+            }
+            .map(\.package)
+    }
+
+    static func recentSkills(_ skills: [Skill], summary: UsageSummary?) -> [Skill] {
+        skills
+            .map { skill in
+                (
+                    skill: skill,
+                    snapshot: skill.usageSnapshot(using: summary)
+                )
+            }
+            .sorted { lhs, rhs in
+                isRankedBefore(
+                    lhsLastUsed: lhs.snapshot?.lastUsedAt,
+                    lhsCalls: lhs.snapshot?.usageEvents ?? 0,
+                    lhsTokens: lhs.snapshot?.totalTokens ?? 0,
+                    lhsLifecycle: lhs.skill.lastLifecycleTimestamp,
+                    lhsName: lhs.skill.name,
+                    rhsLastUsed: rhs.snapshot?.lastUsedAt,
+                    rhsCalls: rhs.snapshot?.usageEvents ?? 0,
+                    rhsTokens: rhs.snapshot?.totalTokens ?? 0,
+                    rhsLifecycle: rhs.skill.lastLifecycleTimestamp,
+                    rhsName: rhs.skill.name
+                )
+            }
+            .map(\.skill)
+    }
+
+    private static func isRankedBefore(
+        lhsLastUsed: Date?,
+        lhsCalls: Int,
+        lhsTokens: Int64,
+        lhsLifecycle: Int?,
+        lhsName: String,
+        rhsLastUsed: Date?,
+        rhsCalls: Int,
+        rhsTokens: Int64,
+        rhsLifecycle: Int?,
+        rhsName: String
+    ) -> Bool {
+        switch (lhsLastUsed, rhsLastUsed) {
+        case let (lhs?, rhs?) where lhs != rhs:
+            return lhs > rhs
+        case (_?, nil):
+            return true
+        case (nil, _?):
+            return false
+        default:
+            break
+        }
+
+        if lhsCalls != rhsCalls {
+            return lhsCalls > rhsCalls
+        }
+        if lhsTokens != rhsTokens {
+            return lhsTokens > rhsTokens
+        }
+
+        let lhsLifecycle = lhsLifecycle ?? 0
+        let rhsLifecycle = rhsLifecycle ?? 0
+        if lhsLifecycle != rhsLifecycle {
+            return lhsLifecycle > rhsLifecycle
+        }
+
+        return lhsName.localizedCaseInsensitiveCompare(rhsName) == .orderedAscending
     }
 }
 
