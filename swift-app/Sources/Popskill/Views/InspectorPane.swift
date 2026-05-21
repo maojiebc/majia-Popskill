@@ -170,9 +170,10 @@ struct InspectorPane: View {
         switch selectedTab {
         case .overview:
             packageSummarySection(package)
+            packageActivationSection(package)
+            packageActionsSection(package)
             packageCoverageSection
             packageMachineSection(package)
-            packageActivationSection(package)
             packageComponentsSection(package)
         case .readme:
             if let skill = readmeSkill(for: package) {
