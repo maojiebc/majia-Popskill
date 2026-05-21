@@ -63,6 +63,8 @@ struct LocalizationTests {
         #expect(localization.string("matrix.skill.manifest.version") == "版本")
         #expect(localization.string("matrix.skill.manifest.requires.available") == "可用")
         #expect(localization.string("matrix.skill.manifest.requires.missing") == "缺失")
+        #expect(localization.string("matrix.package.coverage.stubbed", 1) == "1 占位")
+        #expect(localization.string("matrix.package.coverage.off", 3) == "3 未启用")
     }
 
     @Test

@@ -172,7 +172,7 @@ struct InspectorPane: View {
             packageSummarySection(package)
             packageActivationSection(package)
             packageActionsSection(package)
-            packageCoverageSection
+            packageCoverageSection(package)
             packageMachineSection(package)
             packageComponentsSection(package)
         case .readme:
@@ -813,18 +813,18 @@ struct InspectorPane: View {
         }
     }
 
-    private var packageCoverageSection: some View {
+    private func packageCoverageSection(_ package: CapabilityPackage) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeading(title: "matrix.inspector.section.coverage", accent: .popSectionPurple)
             HStack(spacing: 10) {
-                packageCoverageCard(for: .claude)
-                packageCoverageCard(for: .codex)
+                packageCoverageCard(for: .claude, package: package)
+                packageCoverageCard(for: .codex, package: package)
             }
         }
     }
 
-    private func packageCoverageCard(for app: TargetApp) -> some View {
-        let coverage = capability.appCoverage[app] ?? CapabilityAppCoverage(enabled: 0, total: 0)
+    private func packageCoverageCard(for app: TargetApp, package: CapabilityPackage) -> some View {
+        let coverage = package.appCoverageBreakdown(for: app, skills: store.skills)
         return VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 5) {
                 Image(systemName: app.symbolName)
@@ -833,16 +833,38 @@ struct InspectorPane: View {
                     .font(.caption.weight(.medium))
             }
             .foregroundStyle(Color.popSecondaryLabel)
-            Text(coverage.label)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(coverage.enabled > 0 ? app.inspectorAccentColor : Color.popTertiaryLabel)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(coverage.label)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(coverage.enabled > 0 ? app.inspectorAccentColor : Color.popTertiaryLabel)
+                Text(localization.string("matrix.package.coverage.percent", coverage.percent))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.popSecondaryLabel)
+            }
             ProgressView(value: Double(coverage.enabled), total: Double(max(coverage.total, 1)))
                 .tint(app.inspectorAccentColor)
+            Text(packageCoverageStatusLabel(coverage))
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(coverage.stubbed > 0 ? Color.popStatusWarning : Color.popTertiaryLabel)
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.popSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func packageCoverageStatusLabel(_ coverage: PackageAppCoverageBreakdown) -> String {
+        var parts: [String] = []
+        if coverage.stubbed > 0 {
+            parts.append(localization.string("matrix.package.coverage.stubbed", coverage.stubbed))
+        }
+        if coverage.off > 0 {
+            parts.append(localization.string("matrix.package.coverage.off", coverage.off))
+        }
+        if !parts.isEmpty {
+            return parts.joined(separator: " · ")
+        }
+        return localization.string("matrix.package.coverage.complete")
     }
 
     @ViewBuilder

@@ -816,6 +816,34 @@ struct PackageComponentGroupSummary: Identifiable, Equatable {
     }
 }
 
+struct PackageAppCoverageBreakdown: Equatable {
+    var total: Int
+    var enabled: Int = 0
+    var stubbed: Int = 0
+    var off: Int = 0
+    var unsupported: Int = 0
+
+    var label: String { "\(enabled)/\(total)" }
+
+    var percent: Int {
+        guard total > 0 else { return 0 }
+        return Int((Double(enabled) / Double(total) * 100).rounded())
+    }
+
+    mutating func add(_ state: PackageComponentAppState) {
+        switch state {
+        case .active:
+            enabled += 1
+        case .stub:
+            stubbed += 1
+        case .off:
+            off += 1
+        case .unsupported:
+            unsupported += 1
+        }
+    }
+}
+
 struct PackageComponentCompositionCount: Identifiable, Equatable {
     let kind: String
     let count: Int
@@ -1685,22 +1713,22 @@ extension CapabilityPackage {
     }
 
     func appCoverage(using skills: [Skill]) -> [TargetApp: CapabilityAppCoverage] {
-        let components = components.all
-        let total = components.count
-        guard total > 0 else {
-            return Dictionary(
-                uniqueKeysWithValues: TargetApp.supported.map { app in
-                    (app, CapabilityAppCoverage(enabled: 0, total: 0))
-                }
-            )
-        }
-
-        return Dictionary(uniqueKeysWithValues: TargetApp.supported.map { app in
-            let enabled = components.filter { component in
-                component.isEnabled(for: app, matching: matchingInstalledSkill(for: component, in: skills))
-            }.count
-            return (app, CapabilityAppCoverage(enabled: enabled, total: total))
+        Dictionary(uniqueKeysWithValues: TargetApp.supported.map { app in
+            let breakdown = appCoverageBreakdown(for: app, skills: skills)
+            return (app, CapabilityAppCoverage(enabled: breakdown.enabled, total: breakdown.total))
         })
+    }
+
+    func appCoverageBreakdown(for app: TargetApp, skills: [Skill]) -> PackageAppCoverageBreakdown {
+        var breakdown = PackageAppCoverageBreakdown(total: components.all.count)
+        for component in components.all {
+            let state = component.appState(
+                for: app,
+                matching: matchingInstalledSkill(for: component, in: skills)
+            )
+            breakdown.add(state)
+        }
+        return breakdown
     }
 
     func matchingSkillComponent(for update: SkillUpdateInfo) -> PackageComponent? {

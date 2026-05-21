@@ -374,6 +374,10 @@
 "matrix.row.menu.help" = "More actions";
 "matrix.group.coverageHelp" = "%@: %d of %d enabled";
 "matrix.package.coverageHelp" = "%@ coverage: %d of %d components";
+"matrix.package.coverage.percent" = "%d%%";
+"matrix.package.coverage.stubbed" = "%d stubbed";
+"matrix.package.coverage.off" = "%d off";
+"matrix.package.coverage.complete" = "Complete";
 "matrix.package.expand" = "Expand components";
 "matrix.package.collapse" = "Collapse components";
 "matrix.package.health.active" = "Complete";

@@ -374,6 +374,10 @@
 "matrix.row.menu.help" = "更多操作";
 "matrix.group.coverageHelp" = "%@：已启用 %d / %d";
 "matrix.package.coverageHelp" = "%@ 覆盖：%d / %d 个组件";
+"matrix.package.coverage.percent" = "%d%%";
+"matrix.package.coverage.stubbed" = "%d 占位";
+"matrix.package.coverage.off" = "%d 未启用";
+"matrix.package.coverage.complete" = "已覆盖";
 "matrix.package.expand" = "展开组件";
 "matrix.package.collapse" = "收起组件";
 "matrix.package.health.active" = "完整";

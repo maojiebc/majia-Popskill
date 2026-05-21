@@ -1199,6 +1199,58 @@ struct SkillModelsTests {
     }
 
     @Test
+    func capabilityPackageCoverageBreakdownCountsStubbedAndOffComponents() {
+        let skill = installedSkill(
+            directory: "baoyu-comic",
+            apps: SkillApps(claude: true, codex: false, gemini: false, opencode: false, hermes: false)
+        )
+        let package = self.package(components: [
+            PackageComponent(
+                id: "baoyu-comic",
+                name: "baoyu-comic",
+                kind: "skill",
+                required: true,
+                installed: true,
+                status: "installed",
+                location: "skills/baoyu-comic"
+            ),
+            PackageComponent(
+                id: "base-analyst",
+                name: "base-analyst",
+                kind: "agent",
+                required: false,
+                installed: false,
+                status: "stub",
+                location: "~/.claude/agents/base-analyst.md"
+            ),
+            PackageComponent(
+                id: "lark-cli",
+                name: "lark-cli",
+                kind: "cli",
+                required: true,
+                installed: true,
+                status: "detected",
+                location: nil
+            )
+        ])
+
+        let claude = package.appCoverageBreakdown(for: .claude, skills: [skill])
+        let codex = package.appCoverageBreakdown(for: .codex, skills: [skill])
+
+        #expect(claude.label == "2/3")
+        #expect(claude.percent == 67)
+        #expect(claude.enabled == 2)
+        #expect(claude.stubbed == 1)
+        #expect(claude.off == 0)
+        #expect(codex.label == "1/3")
+        #expect(codex.percent == 33)
+        #expect(codex.enabled == 1)
+        #expect(codex.stubbed == 0)
+        #expect(codex.off == 2)
+        #expect(package.appCoverage(using: [skill])[.claude]?.label == claude.label)
+    }
+
+    @Test
     func capabilityPackageUsageSnapshotAggregatesMatchedSkillStats() {
         let package = CapabilityPackage(
             id: "pkg:baoyu",
