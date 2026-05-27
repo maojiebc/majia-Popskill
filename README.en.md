@@ -3,7 +3,7 @@
 > **One control surface for AI capabilities on macOS.** Skills × tools matrix for Claude Code and Codex, with one-click toggles, link health, iCloud sync, and token usage insights.
 
 <p align="center">
-  <a href="https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.0.1.dmg">
+  <a href="https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.0.5.dmg">
     <img src="docs/screenshots/hero.jpg" alt="Popskill capability × tool matrix" width="900">
   </a>
 </p>
@@ -22,7 +22,7 @@
 
 ## Install
 
-[**↓ Download Popskill 1.0.1 (16.3 MB, signed + notarized)**](https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.0.1.dmg)
+[**↓ Download Popskill 1.0.5 (17.8 MB, signed + notarized)**](https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.0.5.dmg)
 
 Requires macOS 14 (Sonoma) or newer. After first install, Sparkle prompts in-app for future versions — no need to come back here.
 
@@ -68,10 +68,10 @@ The annoying part isn't the symlink itself — it's **not knowing which side has
 
 ## Features
 
-- **Capability matrix** — Skill / Agent / CLI / MCP across Claude Code + Codex, one-click toggle
-- **⌘K command palette** — search capabilities and run quick actions without leaving the keyboard
-- **Link health monitor** — see SSOT real path + per-tool symlink status; broken links surface immediately
-- **Token usage insights** — local-only scan of ~/.claude/projects/*.jsonl for total tokens + top 10 capabilities
+- **Capability matrix** — Skill / Agent / CLI / MCP / Package across Claude Code + Codex, one-click toggle. Packages (suites) are first-class rows that expand to show their components
+- **⌘K command palette** — search capabilities and run quick actions without leaving the keyboard. Empty-query results ranked by 30-day usage; CJK aliases supported (`baoyu-comic` / `baoyu comic` / `宝玉漫画` all resolve)
+- **Link health monitor** — see SSOT real path + per-tool symlink status; broken links surface immediately, with sidebar shortcuts to filter
+- **Token usage insights** — local-only scan of ~/.claude/projects/*.jsonl for total tokens + top 10 capabilities. Streaming parser keeps memory at ~50MB even on hundreds of MB of transcripts
 - **5-step onboarding wizard** — first launch detects installed tools, scans existing capabilities, helps pick sync
 - **iCloud Drive sync** — change config on one Mac, other Macs pick it up on next launch
 - **Safe-by-default uninstalls** — every uninstall creates a backup snapshot; idle (60+ days) capabilities surface their own view
@@ -162,8 +162,12 @@ Mac only. Rust sidecar is portable; SwiftUI front-end isn't. If someone wants to
 
 See [GitHub Releases](https://github.com/maojiebc/majia-Popskill/releases) for changelogs and signed DMGs.
 
-Latest: [v1.0.1](./docs/release/v1.0.1.md) — Sparkle auto-update wired  
-Previous: [v1.0.0](./docs/release/v1.0.0.md) — first signed + notarized release
+- [v1.0.5](./docs/release/v1.0.5.md) — Package matrix as first-class rows + Inspector tabs + Spotlight CJK aliases (**Latest**)
+- [v1.0.4](./docs/release/v1.0.4.md) — Spotlight/Idle jump fixes + delete confirmation + Insights streaming parser
+- [v1.0.3](./docs/release/v1.0.3.md) — UI design tokens + Hover/Selected states + O(1) update lookup
+- [v1.0.2](./docs/release/v1.0.2.md) — SSOT path fix + global error toast + 30s refresh TTL
+- [v1.0.1](./docs/release/v1.0.1.md) — Sparkle auto-update wired
+- [v1.0.0](./docs/release/v1.0.0.md) — first signed + notarized release
 
 ---
 
