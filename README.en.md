@@ -47,20 +47,20 @@ The annoying part isn't the symlink itself — it's **not knowing which side has
 
 <table>
 <tr>
-<td width="50%"><img src="docs/screenshots/matrix.jpg" alt="Capability × tool matrix"></td>
-<td width="50%"><img src="docs/screenshots/spotlight.jpg" alt="⌘K Spotlight"></td>
+<td width="50%"><img src="docs/screenshots/inspector.jpg" alt="Full-page Inspector"></td>
+<td width="50%"><img src="docs/screenshots/create.jpg" alt="New Capability"></td>
 </tr>
 <tr>
-<td><b>Capability × tool matrix</b> — one row per skill, one column per AI tool, click to toggle</td>
-<td><b>⌘K Spotlight</b> — search anywhere; ⌘1 / ⌘2 to toggle Claude / Codex directly on a result</td>
+<td><b>Full-page Inspector</b> — open any capability: Claude/Codex coverage, component list, source / SSOT / version / this-machine usage</td>
+<td><b>New Capability</b> — editor + live matrix-row preview + install-target toggles + a "will write" terminal plan</td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/screenshots/insights.jpg" alt="Token usage"></td>
-<td width="50%"><img src="docs/screenshots/settings.jpg" alt="Settings + sync"></td>
+<td width="50%"><img src="docs/screenshots/compose.jpg" alt="Compose Bundle"></td>
+<td width="50%"><img src="docs/screenshots/settings.jpg" alt="Settings"></td>
 </tr>
 <tr>
-<td><b>Token usage</b> — scans ~/.claude/projects locally for total tokens + top 10 capabilities by usage</td>
-<td><b>Sync</b> — iCloud Drive or Git remote, cross-Mac auto-sync</td>
+<td><b>Compose Bundle</b> — check existing capabilities → live coverage + a generated popskill.toml</td>
+<td><b>Settings</b> — tabbed (Connect / Sync / Sources / Install / Quota / About): tool connections + source management</td>
 </tr>
 </table>
 
