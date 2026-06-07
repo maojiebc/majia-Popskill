@@ -17,6 +17,8 @@
 | v1.0.2 | 2026-05-17 | SSOT 路径修复 + error toast + 30s TTL |
 | v1.0.3 | 2026-05-17 | UI tokens + hover state + O(1) update lookup |
 | v1.0.4 | 2026-05-17 | 跳转修复 + 删除确认 + Insights streaming + 6 新单测 |
+| v1.0.5 | 2026-05-21 | Package 矩阵一等公民 + Inspector tabs(Overview/README/Usage/Version/Sync/Metadata) + Spotlight CJK 别名 + 用量指标铺满 |
+| v1.1.0 | 2026-06-07 | **紧凑账本 redesign** — 全局暖纸色账本 UI + 整页 Inspector + 新建/组装/修复/源/设置全屏重做 + IA 收成 6 目的地 |
 
 ## 项目结构
 
@@ -26,7 +28,7 @@ popskill/
 ├── swift-app/Sources/Popskill/
 │   ├── App/PopskillStore.swift           @MainActor @Observable, 单 store
 │   ├── Models/                           Skill / MatrixCapability / SkillGrouping
-│   ├── Views/                            Matrix / Spotlight / Onboarding / 7 次级 view
+│   ├── Views/                            Matrix(账本) / InspectorView(整页) / Fix / Sources / Create / Compose / Settings / LedgerChrome(标题栏+固定侧栏) / LedgerComponents(字形/彩标/覆盖条)
 │   ├── Design/PopskillColors.swift       named tokens (popSurface / popControlFill / ...)
 │   └── Resources/{AppIcon.icns, *.lproj/Localizable.strings}
 ├── cc-switch/                            submodule, sidecar 依赖
@@ -68,12 +70,20 @@ popskill/
 - **store.hasPendingUpdate(for:)** 是 O(1) 用 `updateSkillIDs: Set<String>` cache，不要再写 `store.updates.contains` 扫描。
 - **`@MainActor` 标在 PopskillStore 类上**，所有 mutating helpers / extensions / filters 必须显式 `@MainActor`。
 - **errorMessage 现在被 RootView 全局 toast 读取**（v1.0.2 之前是写了没人看）。任何 sidecar 调用失败 set 这个就行。
-- **refresh TTL = 30s**。Sources / Updates / Backups view 用 `store.refreshXXX(force: Bool)` helper；手动按钮 force=true，自动 .task force=false。
+- **refresh TTL = 30s**。Sources view 用 `store.refreshXXX(force: Bool)` helper；手动按钮 force=true，自动 .task force=false。
+
+### v1.1.0 紧凑账本重设计（关键变化，别按旧印象改）
+- **全局暖纸色**：`PopskillColors` 的 `pop*` 令牌已从系统色**重指为固定亮色 hex**（暖纸 #fafaf8 / 墨黑 #111 / 电光蓝 #1f4ed8）；`PopskillApp` 加了 `.preferredColorScheme(.light)` + `.tint(.popAccent)`。**app 不再跟随系统深色**。
+- **窗口外壳是自定义的，不是 NavigationSplitView**：`RootView` = `VStack{ LedgerTitlebar; HStack{ LedgerSidebar(固定 222); detailArea } }.ignoresSafeArea(.top)` + `PopskillApp` 的 `.windowStyle(.hiddenTitleBar)`。侧栏**纯文字、无折叠**（`LedgerSidebar` in `LedgerChrome.swift`）。
+- **IA = 6 目的地**：`SidebarSelection` = matrix / fix / sources / create / compose / settings。`insights / backups / idle` 的 View 文件还在但**已从路由摘除**；`health` → `fix`，`updates` 并入 `sources`。
+- **点行 → 整页 InspectorView**（`store.inspectorOpen` 时 `MatrixView.body` 整页切到 `InspectorView`），**不再是 `.inspector` 侧板**。
+- **矩阵状态格是可点击的 `●—◐✕` 字形**（`LedgerStatusGlyph`），不是 `AppToggle` 开关；类型彩标 `LedgerTypeTag`、套装覆盖 `LedgerCoverageBar`、底部 `LedgerStatusBar` 都在 `Views/LedgerComponents.swift`。
+- **后端缺口（UI 搭好但没接 sidecar）**：Sources 注册表在线浏览、Fix 修复执行、Settings 安装/配额、Inspector 的 tab 切换 —— 都是结构占位。
 
 ## Release Pipeline（重复一次背下来）
 
 ```bash
-cd /Users/majia/projects/popskill
+cd /Users/majia/Projects/popskill
 
 # 0. Pre-flight: 验 notarytool profile 还活着 (会被 macOS 锁屏 / 升级 / 其他什么清掉)
 xcrun notarytool history --keychain-profile popskill-notarize 2>&1 | head -2
@@ -124,13 +134,14 @@ gh release create v1.0.X "$POPSKILL_DMG_PATH" --title "Popskill v1.0.X" --notes-
 7. **外部 patch 大概率 base 不在 HEAD** — `git apply --3way` 而不是 `git apply --check`
 8. **notarytool keychain profile 会被清掉** — 大概率是锁屏 / macOS 升级 / 重启时被某个 helper 进程清掉。每次发版前必先跑 `xcrun notarytool history --keychain-profile popskill-notarize`,失败就 store-credentials 重存。Developer ID cert 和 Sparkle 私钥不受影响,只是 notary 凭证。
 9. **同名分支 push -u 直接复用** — PR #2 / PR #3 都用了 `agent-optimize-popskill-20260517` 分支名,合并完没删,下次推同名分支 git 会附加 commit 而不是新建。Codex / 其他外部 agent 似乎默认复用这个名字,正常合并就行,不必非要 unique。
+10. **GitHub Pages 会被禁用 → Sparkle 自动更新静默失效** — v1.1.0 发版时发现 Pages 是 **disabled**（`gh api repos/maojiebc/majia-Popskill/pages` 返回 404）,而 app 的 `SUFeedURL` 指向 `maojiebc.github.io/.../appcast.xml`,等于自动更新一直是哑的(之前 v1.0.x 用户只能手动下)。**每次发版后必 `curl -sI https://maojiebc.github.io/majia-Popskill/appcast.xml` 确认非 404 且含新版 enclosure**。Pages 没开就重新启用:`echo '{"source":{"branch":"main","path":"/docs"}}' | gh api -X POST repos/maojiebc/majia-Popskill/pages --input -`,等 1-2 min build 完再验。
 
 ## 测试基线
 
-- `swift test --package-path swift-app` = **94/94** (v1.0.4 — PR #3 加了 PopskillStoreTests + SettingsViewTests 共 6 个)
-- `cargo test --manifest-path skill-cli/Cargo.toml` = 44/44
-- `scripts/ci-local.sh` = 全绿
-- 实测机：majia 自己 Mac，59 skill / 71 active toggle / 13 GitHub sources / 189 transcript sessions
+- `swift test --package-path swift-app` = **150/150** (v1.1.0)
+- `cargo test --manifest-path skill-cli/Cargo.toml` = 47/47 (Rust sidecar v1.1.0 未动)
+- `scripts/ci-local.sh` = 全绿（含 native/bundled/screenshot/release artifact smoke）
+- 实测机：majia 自己 Mac，61 capability / 71 active toggle / 13 GitHub sources
 
 ## majia-ota-app skill（这次会话沉淀出来的）
 
@@ -142,13 +153,12 @@ gh release create v1.0.X "$POPSKILL_DMG_PATH" --title "Popskill v1.0.X" --notes-
 
 下次发其他 Mac app 直接 invoke 这个 skill。
 
-## 当前状态（2026-05-17）
+## 当前状态（2026-06-07）
 
-- v1.0.4 是 Latest，main 干净，无未推内容
-- 累计 commit ~40，从 v0.3 wipe 算起 ~75 个
-- README 是 landing page，docs/screenshots/ 6 张实拍
-- Sparkle 升级链 + GitHub Pages + GitHub Releases 全通
-- 外部 Codex agent 通过 PR (`agent-optimize-popskill-20260517` 分支)持续贡献 — 已经收 PR #2 (v1.0.3) 和 PR #3 (v1.0.4)
+- **v1.1.0 是 Latest**（2026-06-07 发布）—— 紧凑账本全屏重设计,signed+notarized DMG + GitHub Release + appcast 上线。main 干净。
+- 重设计 commit `bc06f1f`,发布物料 `91b97a6`,截图刷新 `592bc8b`（hero=矩阵,grid=Inspector/新建/组装/设置）
+- **GitHub Pages 发版时发现是 disabled,已重新启用（main /docs）** —— Sparkle 自动更新从这版起才真的通（见已知坑 #10）
+- 测试 150/150;README 已刷到 1.1.0 + 新 UI 截图
 
 ## 下一步候选（v1.1.x 范围）
 
@@ -158,18 +168,23 @@ gh release create v1.0.X "$POPSKILL_DMG_PATH" --title "Popskill v1.0.X" --notes-
 2. **SSOT 路径迁移 .cc-switch/skills → .agents/skills** — sidecar 要做平滑迁移逻辑（rsync + symlink），Swift 端只要改 ssotPath 字符串
 3. **WebDAV sync 真接** — sidecar 复用 cc-switch 已有 webdav 命令；Settings 去 SOON 标签
 4. **AgentShield 安全扫描复接** — sidecar `security-scan` 命令已存在，Swift 端要做 UI（应该是矩阵行旁的 badge + 详情）
-5. **Hover / 选中态推广到其他 view** — Inspector / Sources / Updates view 还是 v0.3 风格，v1.0.3 的 token 体系可以推广
+5. **给 v1.1.0 的 UI 占位接真后端** — Sources 注册表在线浏览 / Fix 修复执行 / Settings 安装·配额 / Inspector tab 切换,都搭了 UI 没接 sidecar,逐个接
 
 ## 常用命令速查
 
 ```bash
 # 跑应用看效果
-export POPSKILL_CLI=/Users/majia/projects/popskill/skill-cli/target/debug/skill-cli
-/Users/majia/projects/popskill/swift-app/.build/debug/Popskill
+export POPSKILL_CLI=/Users/majia/Projects/popskill/skill-cli/target/debug/skill-cli
+/Users/majia/Projects/popskill/swift-app/.build/debug/Popskill
 
 # 跑特定 view（截图调试）
-export POPSKILL_DEFAULT_VIEW=insights         # matrix / sources / updates / backups / idle / insights / health / settings
+export POPSKILL_DEFAULT_VIEW=matrix           # matrix / fix / sources / create / compose / settings
 export POPSKILL_DEFAULT_OVERLAY=spotlight     # 或 onboarding
+
+# 自己截图验证(不用让用户截)：启动 app → 调窗口 → screencapture 窗口矩形 → Read /tmp/shot.png
+osascript -e 'tell application "System Events" to tell process "Popskill" to set size of front window to {1480,920}'
+read X Y W H < <(osascript -e 'tell application "System Events" to tell process "Popskill" to get {position, size} of front window' | tr ',' ' ')
+screencapture -x -R"$X,$Y,$W,$H" /tmp/shot.png   # 显示器睡了先 caffeinate -u -t 3;Quartz/cliclick 不可用,点击靠 store env hook
 
 # 看 sidecar 状态
 $POPSKILL_CLI health --json
@@ -192,4 +207,4 @@ python3 ~/.claude/skills/majia-ota-app/scripts/audit-mac-app-release.py .
 
 ---
 
-最后更新：2026-05-17，v1.0.4 发布后
+最后更新：2026-06-07，v1.1.0 发布后（紧凑账本重设计 + Pages 重新启用 + 自截验证流程）
