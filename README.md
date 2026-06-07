@@ -3,7 +3,7 @@
 > **Mac 上 AI 能力的统一控制台**。把 Claude Code 和 Codex 的 skill / agent / CLI / MCP 全摆成一个矩阵，一键开关、链接健康、iCloud 同步。
 
 <p align="center">
-  <a href="https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.0.5.dmg">
+  <a href="https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.1.0.dmg">
     <img src="docs/screenshots/hero.jpg" alt="Popskill 能力 × 工具矩阵" width="900">
   </a>
 </p>
@@ -22,7 +22,7 @@
 
 ## 下载安装
 
-[**↓ 下载 Popskill 1.0.5（17.8 MB，已签名 + 已公证）**](https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.0.5.dmg)
+[**↓ 下载 Popskill 1.1.0（19.1 MB，已签名 + 已公证）**](https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.1.0.dmg)
 
 要求 macOS 14 (Sonoma) 及以上。第一次装完之后,新版本会通过 Sparkle 应用内提醒,不需要再来 GitHub 手动下。
 
@@ -163,7 +163,8 @@ App Store 的 sandbox 规则会挡住 Popskill 需要做的 symlink 管理。直
 
 详见 [GitHub Releases](https://github.com/maojiebc/majia-Popskill/releases)。每版都附 release notes 和签名 DMG。
 
-- [v1.0.5](./docs/release/v1.0.5.md) — Package matrix 一等公民 + Inspector tabs + Spotlight CJK 别名(**Latest**)
+- [v1.1.0](./docs/release/v1.1.0.md) — 紧凑账本 redesign：暖纸色账本 UI + 整页 Inspector + 新建/组装/修复/源/设置 全屏重做(**Latest**)
+- [v1.0.5](./docs/release/v1.0.5.md) — Package matrix 一等公民 + Inspector tabs + Spotlight CJK 别名
 - [v1.0.4](./docs/release/v1.0.4.md) — Spotlight/Idle 跳转修复 + 删除确认 + Insights streaming 解析
 - [v1.0.3](./docs/release/v1.0.3.md) — UI design tokens + Hover/Selected 状态 + O(1) update lookup
 - [v1.0.2](./docs/release/v1.0.2.md) — SSOT 路径修复 + 全局 error toast + 30s refresh TTL

@@ -3,7 +3,7 @@
 > **One control surface for AI capabilities on macOS.** Skills × tools matrix for Claude Code and Codex, with one-click toggles, link health, iCloud sync, and token usage insights.
 
 <p align="center">
-  <a href="https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.0.5.dmg">
+  <a href="https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.1.0.dmg">
     <img src="docs/screenshots/hero.jpg" alt="Popskill capability × tool matrix" width="900">
   </a>
 </p>
@@ -22,7 +22,7 @@
 
 ## Install
 
-[**↓ Download Popskill 1.0.5 (17.8 MB, signed + notarized)**](https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.0.5.dmg)
+[**↓ Download Popskill 1.1.0 (19.1 MB, signed + notarized)**](https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.1.0.dmg)
 
 Requires macOS 14 (Sonoma) or newer. After first install, Sparkle prompts in-app for future versions — no need to come back here.
 
@@ -162,7 +162,8 @@ Mac only. Rust sidecar is portable; SwiftUI front-end isn't. If someone wants to
 
 See [GitHub Releases](https://github.com/maojiebc/majia-Popskill/releases) for changelogs and signed DMGs.
 
-- [v1.0.5](./docs/release/v1.0.5.md) — Package matrix as first-class rows + Inspector tabs + Spotlight CJK aliases (**Latest**)
+- [v1.1.0](./docs/release/v1.1.0.md) — 紧凑账本 redesign: warm-paper ledger UI + full-page Inspector + rebuilt Create/Compose/Fix/Sources/Settings (**Latest**)
+- [v1.0.5](./docs/release/v1.0.5.md) — Package matrix as first-class rows + Inspector tabs + Spotlight CJK aliases
 - [v1.0.4](./docs/release/v1.0.4.md) — Spotlight/Idle jump fixes + delete confirmation + Insights streaming parser
 - [v1.0.3](./docs/release/v1.0.3.md) — UI design tokens + Hover/Selected states + O(1) update lookup
 - [v1.0.2](./docs/release/v1.0.2.md) — SSOT path fix + global error toast + 30s refresh TTL

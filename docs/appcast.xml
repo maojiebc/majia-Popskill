@@ -8,6 +8,31 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v1.1.0</title>
+      <pubDate>Sun, 07 Jun 2026 04:41:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v1.1.0 — 紧凑账本 redesign</h2>
+        <p>整个 app 改用「紧凑账本」设计语言：暖纸色、仅亮色、单一电光蓝强调。v1.0.5 用户会自动收到升级提示。</p>
+        <ul>
+          <li><b>全新设计语言</b> —— 全局暖纸色配色 + 强制亮色 + 自定义账本窗口外壳（symlink 品牌标题栏 / 固定文字侧栏 / 底部状态栏）</li>
+          <li><b>矩阵重做</b> —— 密集齐边账本表（名称/类型/作者/Claude/Codex/版本/Tokens/调用）、可点击的 ●/—/◐/✕ 链接字形、彩色类型标签、套装覆盖分数+迷你条、树形子项、三段式头部</li>
+          <li><b>整页 Inspector</b> —— 点击行打开整页详情（面包屑 + hero + 覆盖卡 + 组件清单 + 来源/SSOT/版本/本机 右栏），取代旧的侧边面板</li>
+          <li><b>新屏</b> —— 新建能力（Create）、组装套装（Compose），带实时预览 / 覆盖 / manifest</li>
+          <li><b>重做</b> —— 修复中心（健康 + 修复）、源 / 更新（可更新项 + 你的 GitHub 源 + URL 添加）、设置（连接 / 同步 / 源 / 安装 / 配额 / 关于 分页）</li>
+          <li><b>信息架构</b> —— 侧栏精简为 6 个目的地（矩阵 / 修复中心 / 源·更新 / 新建能力 / 组装套装 / 设置）；用量数据并入矩阵和详情页</li>
+        </ul>
+        <p>这是 UI 版本,不是数据迁移 —— 你的 skill、源、同步设置保持不变。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v1.1.0/Popskill-1.1.0.dmg"
+        sparkle:version="110"
+        sparkle:shortVersionString="1.1.0"
+        length="20003746"
+        type="application/octet-stream"
+        sparkle:edSignature="weSQtopok4ThBz7ELyjW36uJgt69A1x60Uak80HRFsBYvMudts788UJ67sm2gwnGWutJP+emIWtldlTxbduJDA==" />
+    </item>
+    <item>
       <title>v1.0.5</title>
       <pubDate>Thu, 21 May 2026 00:48:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
