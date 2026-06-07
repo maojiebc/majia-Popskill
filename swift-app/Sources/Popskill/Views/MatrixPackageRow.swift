@@ -1,9 +1,11 @@
 import AppKit
 import SwiftUI
 
-/// Composite package row in the capability matrix. The row is read-only at the
-/// package level for v1.1, but it exposes the component tree inline so Bundle
-/// coverage is visible without opening a detail page.
+/// Composite package (套装) row in the capability matrix. The header row carries
+/// the disclosure triangle, type tag, author, and a fraction+mini-bar coverage
+/// cell; expanding it reveals the component tree with `├─ / └─` connectors.
+/// Layout matches `matrixColumnHeader`: capability · 类型 · 作者 · Claude · Codex
+/// · 版本 · Tokens · 调用.
 @MainActor
 struct MatrixPackageRow: View {
     let capability: MatrixCapability
@@ -50,23 +52,22 @@ struct MatrixPackageRow: View {
                 .padding(.leading, 14)
                 .padding(.vertical, 7)
 
+            typeCell
+                .frame(width: MatrixTableLayout.typeColumnWidth, alignment: .leading)
+            authorCell
+                .frame(width: MatrixTableLayout.authorColumnWidth, alignment: .leading)
+
             coverageCell(for: .claude)
                 .frame(width: MatrixTableLayout.appColumnWidth)
             coverageCell(for: .codex)
                 .frame(width: MatrixTableLayout.appColumnWidth)
 
-            sourceCell
-                .frame(width: MatrixTableLayout.sourceColumnWidth, alignment: .leading)
             versionCell
                 .frame(width: MatrixTableLayout.versionColumnWidth, alignment: .leading)
-
             tokensCell
                 .frame(width: MatrixTableLayout.tokensColumnWidth, alignment: .trailing)
             callsCell
                 .frame(width: MatrixTableLayout.callsColumnWidth, alignment: .trailing)
-
-            actionCell
-                .frame(width: MatrixTableLayout.actionColumnWidth)
         }
         .padding(.trailing, 4)
         .contentShape(Rectangle())
@@ -74,7 +75,7 @@ struct MatrixPackageRow: View {
         .overlay(alignment: .leading) {
             if isSelected {
                 RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                    .fill(Color.accentColor)
+                    .fill(Color.popAccent)
                     .frame(width: 3)
                     .padding(.vertical, 6)
             }
@@ -92,29 +93,26 @@ struct MatrixPackageRow: View {
     }
 
     private var capabilityCell: some View {
-        HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .top, spacing: 8) {
             Button {
                 if let package {
                     store.togglePackageExpansion(package.id)
                 }
             } label: {
-                Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Color.popSecondaryLabel)
-                    .frame(width: 14, height: 22)
+                Text(isCollapsed ? "▶" : "▼")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color(hex: 0x444444))
+                    .frame(width: 16, height: 18)
             }
             .buttonStyle(.plain)
             .help(localization.string(isCollapsed ? "matrix.package.expand" : "matrix.package.collapse"))
 
-            PackageAvatar(name: capability.name, identifier: capability.id, size: 26)
-
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(capability.name)
-                        .font(.system(size: 12.8, weight: .semibold))
+                        .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(Color.popLabel)
                         .lineLimit(1)
-                    kindBadge
                     if let package {
                         healthBadge(package.health)
                     }
@@ -126,29 +124,45 @@ struct MatrixPackageRow: View {
                             .font(.system(size: 9.5, weight: .semibold))
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
-                            .background(Color.accentColor.opacity(0.16), in: Capsule())
-                            .foregroundStyle(Color.accentColor)
+                            .background(Color.popAccentSoft, in: Capsule())
+                            .foregroundStyle(Color.popAccent)
                     }
                 }
                 Text(packageSubtitle)
                     .font(.system(size: 11.2))
                     .foregroundStyle(Color.popSecondaryLabel)
                     .lineLimit(1)
+                if !capability.sourceLabel.isEmpty {
+                    Text("↗ \(capability.sourceLabel)")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(Color.popSecondaryLabel)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
             }
         }
     }
 
-    private var kindBadge: some View {
-        HStack(spacing: 2) {
-            Image(systemName: capability.kind.symbol)
-                .font(.system(size: 8, weight: .semibold))
-            Text(localization.string(capability.kind.titleKey).uppercased())
-                .font(.system(size: 9, weight: .bold))
+    private var typeCell: some View {
+        HStack(spacing: 0) {
+            LedgerTypeTag(kind: capability.kind)
+            Spacer(minLength: 0)
         }
-        .foregroundStyle(Color.popSectionPurple)
-        .padding(.horizontal, 4)
-        .padding(.vertical, 1)
-        .background(Color.popSectionPurple.opacity(0.12), in: Capsule())
+    }
+
+    private var authorCell: some View {
+        Text(authorText)
+            .font(.system(size: 11.5))
+            .foregroundStyle(Color.popSecondaryLabel)
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var authorText: String {
+        if let vendor = package?.vendor, !vendor.isEmpty { return vendor }
+        if let owner = capability.repoOwner, !owner.isEmpty { return owner }
+        return "—"
     }
 
     private func healthBadge(_ health: CapabilityPackageHealth) -> some View {
@@ -168,43 +182,11 @@ struct MatrixPackageRow: View {
 
     private func coverageCell(for app: TargetApp) -> some View {
         let coverage = capability.appCoverage[app] ?? CapabilityAppCoverage(enabled: 0, total: 0)
-        return HStack {
-            Spacer(minLength: 0)
-            HStack(spacing: 4) {
-                Image(systemName: app.symbolName)
-                    .font(.system(size: 9.5, weight: .semibold))
-                Text(coverage.label)
-                    .font(.system(size: 10.8, weight: .semibold).monospacedDigit())
-            }
-            .foregroundStyle(coverage.enabled > 0 ? app.bundleAccentColor : Color.popTertiaryLabel)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(
-                coverage.enabled > 0 ? app.bundleAccentColor.opacity(0.10) : Color.popControlFill,
-                in: Capsule()
-            )
-            .overlay(
-                Capsule().strokeBorder(
-                    coverage.enabled > 0 ? app.bundleAccentColor.opacity(0.26) : Color.popControlStroke,
-                    lineWidth: 0.7
-                )
-            )
-            .help(localization.string("matrix.package.coverageHelp", app.title, coverage.enabled, coverage.total))
-            Spacer(minLength: 0)
-        }
-    }
-
-    private var sourceCell: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "shippingbox")
-                .font(.system(size: 10.5, weight: .semibold))
-                .foregroundStyle(Color.popSecondaryLabel)
-            Text(capability.sourceLabel)
-                .font(.system(size: 11))
-                .foregroundStyle(Color.popSecondaryLabel)
-                .lineLimit(1)
-                .truncationMode(.middle)
-        }
+        return LedgerCoverageBar(
+            enabled: coverage.enabled,
+            total: coverage.total,
+            help: localization.string("matrix.package.coverageHelp", app.title, coverage.enabled, coverage.total)
+        )
     }
 
     private var usageSnapshot: PackageUsageSnapshot? {
@@ -237,53 +219,6 @@ struct MatrixPackageRow: View {
         return snapshot.hasUsage ? format(snapshot) : "0"
     }
 
-    private var actionCell: some View {
-        Menu {
-            Button {
-                store.selectCapability(capability.id)
-            } label: {
-                Label(localization.string("matrix.row.menu.inspect"), systemImage: "sidebar.right")
-            }
-            if let url = capability.sourceURL {
-                Link(destination: url) {
-                    Label(localization.string("matrix.row.menu.openSource"), systemImage: "arrow.up.right.square")
-                }
-            }
-            if let package {
-                Button {
-                    store.togglePackageExpansion(package.id)
-                } label: {
-                    Label(
-                        localization.string(isCollapsed ? "matrix.package.expand" : "matrix.package.collapse"),
-                        systemImage: isCollapsed ? "chevron.down" : "chevron.up"
-                    )
-                }
-                if let url = revealableSkillURL(for: package) {
-                    Button {
-                        NSWorkspace.shared.activateFileViewerSelecting([url])
-                    } label: {
-                        Label(localization.string("matrix.row.menu.revealInFinder"), systemImage: "folder")
-                    }
-                }
-            }
-        } label: {
-            Image(systemName: "ellipsis")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.popSecondaryLabel)
-                .frame(width: 28, height: 22)
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .help(localization.string("matrix.row.menu.help"))
-    }
-
-    private func revealableSkillURL(for package: CapabilityPackage) -> URL? {
-        package.matchingInstalledSkills(in: store.skills)
-            .first { FileManager.default.fileExists(atPath: $0.localStoreURL.path) }?
-            .localStoreURL
-    }
-
     private var rowBackground: some View {
         Group {
             if isSelected {
@@ -291,7 +226,7 @@ struct MatrixPackageRow: View {
             } else if isHovering {
                 Color.popSurfaceHover
             } else {
-                Color.popSectionPurple.opacity(0.035)
+                Color.popSubtleFill
             }
         }
     }
@@ -317,22 +252,22 @@ private struct MatrixPackageComponentRow: View {
                 .padding(.leading, 44)
                 .padding(.vertical, 5)
 
+            componentTypeCell
+                .frame(width: MatrixTableLayout.typeColumnWidth, alignment: .leading)
+            Color.clear
+                .frame(width: MatrixTableLayout.authorColumnWidth)
+
             appStateCell(for: .claude)
                 .frame(width: MatrixTableLayout.appColumnWidth)
             appStateCell(for: .codex)
                 .frame(width: MatrixTableLayout.appColumnWidth)
 
-            sourceCell
-                .frame(width: MatrixTableLayout.sourceColumnWidth, alignment: .leading)
             versionCell
                 .frame(width: MatrixTableLayout.versionColumnWidth, alignment: .leading)
-
             tokensCell
                 .frame(width: MatrixTableLayout.tokensColumnWidth, alignment: .trailing)
             callsCell
                 .frame(width: MatrixTableLayout.callsColumnWidth, alignment: .trailing)
-
-            Spacer().frame(width: MatrixTableLayout.actionColumnWidth)
         }
         .padding(.trailing, 4)
         .contentShape(Rectangle())
@@ -341,20 +276,15 @@ private struct MatrixPackageComponentRow: View {
                 store.selectSkill(skill.id)
             }
         }
-        .background(Color.popCardBackground.opacity(0.14))
+        .background(Color.popChildRowFill)
     }
 
     private var componentCell: some View {
         HStack(spacing: 9) {
-            Text(componentTreePrefix)
+            Text(treePrefix)
                 .font(.system(size: 11.5, weight: .medium, design: .monospaced))
-                .foregroundStyle(Color.popTertiaryLabel)
+                .foregroundStyle(Color.popLinkOff)
                 .frame(width: 18, alignment: .leading)
-
-            Image(systemName: component.kindSymbol)
-                .font(.system(size: 10.5, weight: .semibold))
-                .foregroundStyle(component.installed ? Color.popSecondaryLabel : Color.popTertiaryLabel)
-                .frame(width: 14)
 
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
@@ -362,12 +292,6 @@ private struct MatrixPackageComponentRow: View {
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.popLabel)
                         .lineLimit(1)
-                    Text(component.kind.uppercased())
-                        .font(.system(size: 8.5, weight: .bold))
-                        .foregroundStyle(Color.popSecondaryLabel)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(Color.popControlFill, in: Capsule())
                     if let requirement = requirementBadge {
                         Text(localization.string(requirement.key))
                             .font(.system(size: 8.5, weight: .semibold))
@@ -385,8 +309,21 @@ private struct MatrixPackageComponentRow: View {
         }
     }
 
-    private var componentTreePrefix: String {
-        treePrefix
+    private var componentTypeCell: some View {
+        HStack(spacing: 0) {
+            Text(component.kind.uppercased())
+                .font(.system(size: 9, weight: .bold))
+                .tracking(0.4)
+                .foregroundStyle(Color.popSecondaryLabel)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1.5)
+                .background(Color.popControlFill, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .strokeBorder(Color.popControlStroke, lineWidth: 0.7)
+                )
+            Spacer(minLength: 0)
+        }
     }
 
     private var requirementBadge: (key: String, color: Color)? {
@@ -400,24 +337,15 @@ private struct MatrixPackageComponentRow: View {
     }
 
     private func appStateCell(for app: TargetApp) -> some View {
-        let indicator = component.indicator(for: app, matching: matchingSkill)
+        let state = component.linkState(for: app, matching: matchingSkill)
         return HStack {
             Spacer(minLength: 0)
-            Text(indicator.symbol)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(indicator.color)
-                .frame(width: 26, height: 22)
-                .help(localization.string(indicator.helpKey, app.title))
+            LedgerStatusGlyph(
+                state: state,
+                help: localization.string("matrix.package.component.stateHelp", app.title)
+            )
             Spacer(minLength: 0)
         }
-    }
-
-    private var sourceCell: some View {
-        Text(component.location ?? component.id)
-            .font(.system(size: 10.5, design: .monospaced))
-            .foregroundStyle(Color.popSecondaryLabel)
-            .lineLimit(1)
-            .truncationMode(.middle)
     }
 
     private var usageStat: PackageComponentUsageStat? {
@@ -467,65 +395,6 @@ enum PackageComponentTreePrefix {
     }
 }
 
-private enum ComponentAppIndicator {
-    case enabled
-    case partial
-    case off
-
-    var symbol: String {
-        switch self {
-        case .enabled: "●"
-        case .partial: "◐"
-        case .off: "—"
-        }
-    }
-
-    var color: Color {
-        switch self {
-        case .enabled: Color.popStatusOK
-        case .partial: Color.popStatusWarning
-        case .off: Color.popTertiaryLabel
-        }
-    }
-
-    var helpKey: String {
-        switch self {
-        case .enabled: "matrix.package.component.enabledHelp"
-        case .partial: "matrix.package.component.partialHelp"
-        case .off: "matrix.package.component.offHelp"
-        }
-    }
-}
-
-private extension PackageComponent {
-    var kindSymbol: String {
-        switch kind.lowercased() {
-        case "skill": "square.grid.3x3.fill"
-        case "agent": "person.crop.square"
-        case "cli": "terminal"
-        case "mcp": "rectangle.connected.to.line.below"
-        default: "circle.grid.2x2"
-        }
-    }
-
-    func indicator(for app: TargetApp, matching skill: Skill?) -> ComponentAppIndicator {
-        switch kind.lowercased() {
-        case "skill":
-            if let skill {
-                return skill.apps.isEnabled(app) ? .enabled : .off
-            }
-            return installed ? .enabled : (status.lowercased() == "stub" ? .partial : .off)
-        case "agent":
-            if installed && app == .claude { return .enabled }
-            return status.lowercased() == "stub" && app == .claude ? .partial : .off
-        case "cli", "mcp":
-            return installed && (app == .claude || app == .codex) ? .enabled : .off
-        default:
-            return .off
-        }
-    }
-}
-
 private extension CapabilityPackageHealth {
     var titleKey: String {
         switch self {
@@ -546,14 +415,33 @@ private extension CapabilityPackageHealth {
     }
 }
 
-private extension TargetApp {
-    var bundleAccentColor: Color {
-        switch self {
-        case .claude: .orange
-        case .codex: .green
-        case .gemini: .blue
-        case .opencode: .indigo
-        case .hermes: .purple
+private extension PackageComponent {
+    var kindSymbol: String {
+        switch kind.lowercased() {
+        case "skill": "square.grid.3x3.fill"
+        case "agent": "person.crop.square"
+        case "cli": "terminal"
+        case "mcp": "rectangle.connected.to.line.below"
+        default: "circle.grid.2x2"
+        }
+    }
+
+    /// Map a component's per-tool installation state onto the ledger glyph set.
+    func linkState(for app: TargetApp, matching skill: Skill?) -> LedgerLinkState {
+        switch kind.lowercased() {
+        case "skill":
+            if let skill {
+                guard skill.apps.isEnabled(app) else { return .off }
+                return skill.hasBrokenLink ? .broken : .on
+            }
+            return installed ? .on : (status.lowercased() == "stub" ? .stub : .off)
+        case "agent":
+            if installed && app == .claude { return .on }
+            return status.lowercased() == "stub" && app == .claude ? .stub : .off
+        case "cli", "mcp":
+            return installed && (app == .claude || app == .codex) ? .on : .off
+        default:
+            return .off
         }
     }
 }

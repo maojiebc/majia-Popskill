@@ -1,28 +1,25 @@
 import Foundation
 
-/// The 8 top-level destinations in the v0.3 sidebar. Organized into 3 sections
-/// (操控台 / 来源 / 维护) plus a Settings entry at the bottom — mirroring the
-/// HTML prototype's IA decision: separate "content surface" (matrix) from
-/// "tooling" (maintenance) from "preferences" (settings).
+/// The 6 top-level destinations, mirroring the HTML prototype's information
+/// architecture: 视图 (矩阵 / 修复中心) · 获取 (源·更新) · 创建 (新建能力 /
+/// 组装套装) · 系统 (设置). Earlier maintenance-only screens (updates / backups
+/// / idle / insights) folded away — pending updates now surface on 源·更新,
+/// link health became 修复中心, and usage lives in the matrix + inspector.
 enum SidebarSelection: String, Hashable, CaseIterable {
     case matrix
+    case fix
     case sources
-    case updates
-    case backups
-    case idle
-    case insights
-    case health
+    case create
+    case compose
     case settings
 
     var titleKey: String {
         switch self {
         case .matrix:   return "sidebar.matrix"
+        case .fix:      return "sidebar.fix"
         case .sources:  return "sidebar.sources"
-        case .updates:  return "sidebar.updates"
-        case .backups:  return "sidebar.backups"
-        case .idle:     return "sidebar.idle"
-        case .insights: return "sidebar.insights"
-        case .health:   return "sidebar.health"
+        case .create:   return "sidebar.create"
+        case .compose:  return "sidebar.compose"
         case .settings: return "sidebar.settings"
         }
     }
@@ -30,40 +27,38 @@ enum SidebarSelection: String, Hashable, CaseIterable {
     var symbolName: String {
         switch self {
         case .matrix:   return "square.grid.3x3.fill"
+        case .fix:      return "wrench.and.screwdriver"
         case .sources:  return "shippingbox"
-        case .updates:  return "arrow.down.circle"
-        case .backups:  return "clock.arrow.circlepath"
-        case .idle:     return "pause.circle"
-        case .insights: return "chart.bar"
-        case .health:   return "checkmark.shield"
+        case .create:   return "square.and.pencil"
+        case .compose:  return "cube.box"
         case .settings: return "gearshape"
         }
     }
 
-    /// Group the sidebar entry belongs to: control / sources / maintenance.
-    /// Settings is its own singleton row pinned to the bottom.
+    /// Group the sidebar entry belongs to: 视图 / 获取 / 创建. Settings is its
+    /// own singleton row pinned to the bottom.
     var group: SidebarGroup {
         switch self {
-        case .matrix: return .control
-        case .sources: return .sources
-        case .updates, .backups, .idle, .insights, .health: return .maintenance
-        case .settings: return .pinned
+        case .matrix, .fix:     return .view
+        case .sources:          return .acquire
+        case .create, .compose: return .create
+        case .settings:         return .pinned
         }
     }
 }
 
 enum SidebarGroup: String, CaseIterable {
-    case control
-    case sources
-    case maintenance
+    case view
+    case acquire
+    case create
     case pinned
 
     var titleKey: String? {
         switch self {
-        case .control:     return "sidebar.section.control"
-        case .sources:     return "sidebar.section.sources"
-        case .maintenance: return "sidebar.section.maintenance"
-        case .pinned:      return nil
+        case .view:    return "sidebar.section.view"
+        case .acquire: return "sidebar.section.acquire"
+        case .create:  return "sidebar.section.create"
+        case .pinned:  return nil
         }
     }
 }

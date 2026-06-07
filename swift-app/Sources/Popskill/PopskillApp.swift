@@ -12,7 +12,15 @@ struct PopskillApp: App {
         WindowGroup {
             RootView()
                 .frame(minWidth: 1180, minHeight: 720)
+                // "01 紧凑账本" is a light-only warm-paper design. Pin the window
+                // to light so system controls (menus, List selection, fields)
+                // render light to match the fixed-light pop* palette instead of
+                // clashing under macOS dark mode. The single electric-blue accent
+                // drives every system tint (selection / focus ring / links).
+                .preferredColorScheme(.light)
+                .tint(.popAccent)
         }
+        .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentMinSize)
         .commands {
             // Replace the system About panel with our branded version so it

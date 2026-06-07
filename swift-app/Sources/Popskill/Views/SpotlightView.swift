@@ -619,7 +619,7 @@ struct SpotlightAction: Identifiable {
             symbol: "chart.bar.doc.horizontal",
             tint: .green,
             perform: { store in
-                store.currentSelection = .insights
+                store.currentSelection = .matrix
                 Task { await store.refreshUsageScan() }
             }
         ),
@@ -690,7 +690,7 @@ struct SpotlightAction: Identifiable {
             symbol: "stethoscope",
             tint: .orange,
             perform: { store in
-                store.currentSelection = .health
+                store.currentSelection = .fix
             }
         ),
         SpotlightAction(
@@ -700,7 +700,7 @@ struct SpotlightAction: Identifiable {
             symbol: "arrow.triangle.2.circlepath",
             tint: .blue,
             perform: { store in
-                store.currentSelection = .updates
+                store.currentSelection = .sources
             }
         ),
         SpotlightAction(
