@@ -338,6 +338,17 @@
 "matrix.sort.tokensDescending" = "排序：Tokens ↓";
 "matrix.sort.recentDescending" = "排序：最近使用 ↓";
 "matrix.sort.help" = "选择矩阵行排序方式";
+"matrix.bulk.selectAll" = "选择可见行";
+"matrix.bulk.selectRow" = "选择此行";
+"matrix.bulk.selected" = "已选";
+"matrix.bulk.leafCount" = "含 %d 项能力";
+"matrix.bulk.enableClaude" = "启用到 Claude";
+"matrix.bulk.enableCodex" = "启用到 Codex";
+"matrix.bulk.update" = "升级";
+"matrix.bulk.export" = "导出 JSON";
+"matrix.bulk.uninstall" = "卸载";
+"matrix.bulk.uninstallDisabled" = "批量卸载需要确认流程。";
+"matrix.bulk.cancel" = "取消";
 "matrix.col.capability" = "名称";
 "matrix.col.source" = "来源";
 "matrix.col.version" = "版本";
@@ -576,6 +587,9 @@
 "spotlight.action.updates.subtitle" = "查看待更新的能力";
 "spotlight.action.settings.title" = "打开设置";
 "spotlight.action.settings.subtitle" = "存储 / 同步 / 数据源";
+"spotlight.action.quotaWarning.title" = "Token 预算预警";
+"spotlight.action.quotaExceeded.title" = "Token 预算已超";
+"spotlight.action.quota.subtitle" = "查看配额设置和对话用量";
 "spotlight.quickToggle.help" = "%@ · Command-%@";
 
 // S5 — Sources
@@ -651,6 +665,7 @@
 "insights.tokens.cacheCreation" = "缓存创建";
 "insights.tokens.cacheRead" = "缓存读取";
 "insights.tokens.total" = "总计";
+"insights.tokens.quota" = "%@ / %@ 本月 · %d%% 预警";
 
 "insights.topSkills.title" = "Top 能力按用量";
 "insights.topSkills.empty" = "本次扫描没找到 skill 归因记录。";
@@ -660,6 +675,8 @@
 "insights.scan.errorTitle" = "读取 transcript 失败";
 "insights.scan.emptyTitle" = "还没有用量数据";
 "insights.scan.emptyBody" = "至少用一次 Claude Code,再重新扫描就能看到 token 用量。";
+"insights.scan.disabledTitle" = "用量统计已暂停";
+"insights.scan.disabledBody" = "配额统计关闭时会隐藏 token 用量。";
 
 // S5 — Link Health
 "health.subtitle" = "%d 正常 · %d 断 · %d 未启用";
@@ -814,7 +831,26 @@
 "sources.updated" = "已更新";
 "sources.update" = "更新";
 "sources.browse" = "浏览 · %@";
+"sources.catalog.loading" = "正在从已启用仓库加载可安装 Skill…";
+"sources.catalog.error" = "加载目录失败：%@";
+"sources.install" = "安装";
+"sources.installed" = "已安装";
+"sources.install.noTargets" = "请先在设置里选择至少一个默认安装目标。";
 "sources.registrySoon" = "该注册表的在线浏览即将支持。";
+"sources.installPlan.crumb" = "添加";
+"sources.installPlan.title" = "安装计划";
+"sources.installPlan.targets" = "目标";
+"sources.installPlan.branch" = "分支";
+"sources.installPlan.writes" = "将写入";
+"sources.installPlan.store" = "Store";
+"sources.installPlan.noAppPath" = "暂无应用链接路径";
+"sources.installPlan.steps" = "执行步骤";
+"sources.installPlan.preview" = "终端预览";
+"sources.installPlan.noSelection" = "请至少选择一个目标。";
+"sources.installPlan.existing" = "将复用已有安装：%@";
+"sources.installPlan.summary" = "已选择 %d 个目标 · 写入 %@";
+"sources.installPlan.cancel" = "取消";
+"sources.installPlan.confirm" = "安装 %d 个目标";
 
 /* Settings (tabbed) */
 "settings.subtitle2" = "管理工具连接、同步后端与安装默认。所有改动即时写入 ~/.popskill/config.toml。";
@@ -861,13 +897,17 @@
 "settings.install.off" = "关闭";
 "settings.install.autoUpdate" = "自动更新";
 "settings.install.autoUpdateDesc" = "对已安装能力的版本更新策略。";
+"settings.install.daily" = "每天检查";
 "settings.install.weekly" = "每周检查";
+"settings.install.manual" = "手动检查";
 "settings.quota.title" = "Token 与配额";
 "settings.quota.budget" = "月度预算";
 "settings.quota.budgetDesc" = "超出后在状态栏与命令面板提示。";
 "settings.quota.threshold" = "警戒阈值";
 "settings.quota.thresholdDesc" = "达到预算此比例时高亮告警。";
+"settings.quota.60" = "60%";
 "settings.quota.80" = "80%";
+"settings.quota.90" = "90%";
 "settings.quota.track" = "记录调用统计";
 "settings.quota.trackDesc" = "本地记录每项能力的 token 与调用次数。";
 "settings.about.title" = "关于";
@@ -897,6 +937,10 @@
 "inspector.tab.versions" = "版本";
 "inspector.tab.sync" = "同步日志";
 "inspector.tab.paths" = "路径";
+"inspector.version.hash" = "内容哈希";
+"inspector.version.updated" = "最后更新";
+"inspector.sync.last" = "上次同步";
+"inspector.sync.health" = "链接健康";
 "inspector.coverage" = "%@ 覆盖";
 "inspector.componentList" = "组件清单";
 "inspector.triggers" = "触发语";
@@ -920,12 +964,15 @@
 "matrix.package.component.stateHelp" = "%@ 链接状态";
 "matrix.statusbar.symlinks" = "%d symlinks";
 "matrix.statusbar.health" = "%d 断链 / %d 占位";
+"matrix.statusbar.quota" = "%@/%@ tokens";
 "matrix.statusbar.syncedAt" = "同步于 %@";
 "matrix.statusbar.syncNever" = "尚未同步";
 "matrix.statusbar.version" = "%@";
 
 "create.subtitle" = "从空白创建一个能力。保存后写入 store，并按右侧目标链接到 Claude / Codex。";
 "create.saveDraft" = "保存草稿";
+"create.creating" = "创建中…";
+"create.unsupportedKind" = "当前只有 Skill 类型已接入本地 store 写入。";
 "create.createAndLink" = "创建并链接 (%d) →";
 "create.saveOnly" = "仅保存到 store →";
 "create.field.type" = "类型";
@@ -934,7 +981,9 @@
 "create.field.desc" = "描述";
 "create.field.author" = "作者";
 "create.field.version" = "版本";
-"create.nameAvailable" = "✓ store 中可用";
+"create.nameAvailable" = "✓ %@ 可用";
+"create.nameInvalid" = "至少包含一个字母或数字";
+"create.nameTaken" = "%@ 已存在";
 "create.source.blank" = "空白";
 "create.source.template" = "从模板";
 "create.source.import" = "导入文件";
@@ -946,6 +995,11 @@
 
 "compose.subtitle" = "从已有能力中挑选若干项，打包为一个可发布、可一键安装的套装。";
 "compose.publish" = "发布套装 (%d) →";
+"compose.publishing" = "发布中…";
+"compose.emptyBundleError" = "发布套装前至少选择一个能力。";
+"compose.nameAvailable" = "✓ %@ 可用";
+"compose.nameInvalid" = "至少包含一个字母或数字";
+"compose.nameTaken" = "%@ 已存在";
 "compose.candidates" = "候选能力 · 已选 %d / %d";
 "compose.filter" = "筛选候选…";
 "compose.noMatch" = "无匹配候选";

@@ -26,6 +26,10 @@ struct MatrixPackageRow: View {
         return store.collapsedPackageIDs.contains(package.id)
     }
 
+    private var bulkSelectionState: MatrixBulkSelectionState {
+        store.matrixBulkSelectionState(for: capability)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             packageHeader
@@ -47,9 +51,12 @@ struct MatrixPackageRow: View {
 
     private var packageHeader: some View {
         HStack(spacing: 0) {
+            bulkSelectionButton
+                .frame(width: MatrixTableLayout.selectionColumnWidth)
+
             capabilityCell
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 14)
+                .padding(.leading, 0)
                 .padding(.vertical, 7)
 
             typeCell
@@ -73,7 +80,7 @@ struct MatrixPackageRow: View {
         .contentShape(Rectangle())
         .background(rowBackground)
         .overlay(alignment: .leading) {
-            if isSelected {
+            if isSelected || bulkSelectionState.isSelected {
                 RoundedRectangle(cornerRadius: 1.5, style: .continuous)
                     .fill(Color.popAccent)
                     .frame(width: 3)
@@ -81,7 +88,11 @@ struct MatrixPackageRow: View {
             }
         }
         .onTapGesture {
-            store.selectCapability(capability.id)
+            if store.matrixBulkSelectedIDs.isEmpty {
+                store.selectCapability(capability.id)
+            } else {
+                store.toggleMatrixBulkSelection(for: capability)
+            }
         }
         .onHover { isHovering = $0 }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.14), value: isHovering)
@@ -90,6 +101,17 @@ struct MatrixPackageRow: View {
         .accessibilityLabel(Text(capability.name))
         .accessibilityHint(Text(capability.summary ?? localization.string("matrix.row.noSummary")))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var bulkSelectionButton: some View {
+        Button {
+            store.toggleMatrixBulkSelection(for: capability)
+        } label: {
+            MatrixBulkCheckbox(state: bulkSelectionState)
+        }
+        .buttonStyle(.plain)
+        .help(localization.string("matrix.bulk.selectRow"))
+        .accessibilityLabel(Text(localization.string("matrix.bulk.selectRow")))
     }
 
     private var capabilityCell: some View {
@@ -221,7 +243,9 @@ struct MatrixPackageRow: View {
 
     private var rowBackground: some View {
         Group {
-            if isSelected {
+            if bulkSelectionState.isSelected {
+                Color.popAccentSoft.opacity(0.84)
+            } else if isSelected {
                 Color.popSelectedRowFill
             } else if isHovering {
                 Color.popSurfaceHover
@@ -245,11 +269,18 @@ private struct MatrixPackageComponentRow: View {
         store.skill(for: component)
     }
 
+    private var bulkSelectionState: MatrixBulkSelectionState {
+        store.matrixBulkSelectionState(packageID: packageID, component: component)
+    }
+
     var body: some View {
         HStack(spacing: 0) {
+            bulkSelectionButton
+                .frame(width: MatrixTableLayout.selectionColumnWidth)
+
             componentCell
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 44)
+                .padding(.leading, 6)
                 .padding(.vertical, 5)
 
             componentTypeCell
@@ -272,11 +303,24 @@ private struct MatrixPackageComponentRow: View {
         .padding(.trailing, 4)
         .contentShape(Rectangle())
         .onTapGesture {
-            if let skill = matchingSkill {
+            if store.matrixBulkSelectedIDs.isEmpty, let skill = matchingSkill {
                 store.selectSkill(skill.id)
+            } else {
+                store.toggleMatrixBulkComponentSelection(packageID: packageID, component: component)
             }
         }
-        .background(Color.popChildRowFill)
+        .background(bulkSelectionState.isSelected ? Color.popAccentSoft.opacity(0.68) : Color.popChildRowFill)
+    }
+
+    private var bulkSelectionButton: some View {
+        Button {
+            store.toggleMatrixBulkComponentSelection(packageID: packageID, component: component)
+        } label: {
+            MatrixBulkCheckbox(state: bulkSelectionState)
+        }
+        .buttonStyle(.plain)
+        .help(localization.string("matrix.bulk.selectRow"))
+        .accessibilityLabel(Text(localization.string("matrix.bulk.selectRow")))
     }
 
     private var componentCell: some View {

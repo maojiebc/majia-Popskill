@@ -22,11 +22,18 @@ struct MatrixRow: View {
         store.hasPendingUpdate(for: capability)
     }
 
+    private var bulkSelectionState: MatrixBulkSelectionState {
+        store.matrixBulkSelectionState(for: capability)
+    }
+
     var body: some View {
         HStack(spacing: 0) {
+            bulkSelectionButton
+                .frame(width: MatrixTableLayout.selectionColumnWidth)
+
             capabilityCell
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 14)
+                .padding(.leading, 0)
                 .padding(.vertical, 6)
 
             typeCell
@@ -50,7 +57,7 @@ struct MatrixRow: View {
         .contentShape(Rectangle())
         .background(rowBackground)
         .overlay(alignment: .leading) {
-            if isSelected {
+            if isSelected || bulkSelectionState.isSelected {
                 RoundedRectangle(cornerRadius: 1.5, style: .continuous)
                     .fill(Color.popAccent)
                     .frame(width: 3)
@@ -58,7 +65,11 @@ struct MatrixRow: View {
             }
         }
         .onTapGesture {
-            store.selectCapability(capability.id)
+            if store.matrixBulkSelectedIDs.isEmpty {
+                store.selectCapability(capability.id)
+            } else {
+                store.toggleMatrixBulkSelection(for: capability)
+            }
         }
         .onHover { isHovering = $0 }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.14), value: isHovering)
@@ -70,6 +81,17 @@ struct MatrixRow: View {
     }
 
     // MARK: Cells
+
+    private var bulkSelectionButton: some View {
+        Button {
+            store.toggleMatrixBulkSelection(for: capability)
+        } label: {
+            MatrixBulkCheckbox(state: bulkSelectionState)
+        }
+        .buttonStyle(.plain)
+        .help(localization.string("matrix.bulk.selectRow"))
+        .accessibilityLabel(Text(localization.string("matrix.bulk.selectRow")))
+    }
 
     private var capabilityCell: some View {
         VStack(alignment: .leading, spacing: 1) {
@@ -208,7 +230,9 @@ struct MatrixRow: View {
 
     private var rowBackground: some View {
         Group {
-            if isSelected {
+            if bulkSelectionState.isSelected {
+                Color.popAccentSoft.opacity(0.84)
+            } else if isSelected {
                 Color.popSelectedRowFill
             } else if isHovering {
                 Color.popSurfaceHover
