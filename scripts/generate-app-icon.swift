@@ -3,10 +3,10 @@
 // Run: swift scripts/generate-app-icon.swift
 // Outputs to swift-app/Resources/AppIcon.appiconset/ + AppIcon.icns
 //
-// Design: rounded-square macOS-style icon, orange→purple diagonal gradient
-// background (matches the popSectionOrange / popSectionPurple tokens), 3x3
-// dot matrix in white at the center to evoke the "capabilities × tools"
-// matrix that's the app's headline visual.
+// Design: macOS-style adaptation of the prototype LedgerMark:
+// a near-black rounded square with two white linked capability nodes.
+// The geometry intentionally follows tmp/popskill-handoff/.../v1-ledger.jsx:
+// rect 18x18 rx=5, circles at 6.4/6.4 and 11.6/11.6, joined by a diagonal.
 
 import AppKit
 import Foundation
@@ -28,63 +28,85 @@ let sizes: [(name: String, size: Int)] = [
     ("icon_512x512@2x.png", 1024),
 ]
 
-func render(size: Int) -> NSImage {
+func render(size: Int) -> NSBitmapImageRep {
     let s = CGFloat(size)
-    let image = NSImage(size: NSSize(width: s, height: s))
-    image.lockFocus()
-    defer { image.unlockFocus() }
+    guard let bitmap = NSBitmapImageRep(
+        bitmapDataPlanes: nil,
+        pixelsWide: size,
+        pixelsHigh: size,
+        bitsPerSample: 8,
+        samplesPerPixel: 4,
+        hasAlpha: true,
+        isPlanar: false,
+        colorSpaceName: .deviceRGB,
+        bytesPerRow: 0,
+        bitsPerPixel: 0
+    ), let graphics = NSGraphicsContext(bitmapImageRep: bitmap) else {
+        fatalError("Could not create icon bitmap")
+    }
+    bitmap.size = NSSize(width: s, height: s)
 
-    let ctx = NSGraphicsContext.current!.cgContext
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = graphics
+    graphics.shouldAntialias = true
+    defer { NSGraphicsContext.restoreGraphicsState() }
+
+    let ctx = graphics.cgContext
+    NSColor.clear.setFill()
+    NSRect(x: 0, y: 0, width: s, height: s).fill()
+
     // macOS Big Sur+ icon: rounded square ~22.37% radius.
     let radius = s * 0.2237
     let path = NSBezierPath(roundedRect: NSRect(x: 0, y: 0, width: s, height: s),
                             xRadius: radius, yRadius: radius)
     path.addClip()
 
-    // Diagonal gradient: warm orange → muted purple, matches the in-app
-    // section accent palette so the icon visually anchors the same brand.
-    let gradient = NSGradient(colors: [
-        NSColor(calibratedRed: 1.00, green: 0.58, blue: 0.20, alpha: 1.0),
-        NSColor(calibratedRed: 0.70, green: 0.30, blue: 0.85, alpha: 1.0),
-    ])!
-    gradient.draw(in: NSRect(x: 0, y: 0, width: s, height: s), angle: -45)
+    // Prototype mark base: solid near-black, matching the design canvas.
+    NSColor(calibratedWhite: 0.067, alpha: 1.0).setFill()
+    NSRect(x: 0, y: 0, width: s, height: s).fill()
 
-    // 3x3 dot matrix in soft white. Dots are slightly translucent so the
-    // gradient bleeds through and the icon feels less like flat clipart.
-    let dotColor = NSColor(white: 1.0, alpha: 0.92)
-    dotColor.setFill()
+    ctx.saveGState()
+    ctx.setShadow(offset: CGSize(width: 0, height: -s * 0.018),
+                  blur: s * 0.04,
+                  color: NSColor.black.withAlphaComponent(0.38).cgColor)
 
-    let dotSize = s * 0.16
-    let spacing = s * 0.085
-    let gridWidth = dotSize * 3 + spacing * 2
-    let originX = (s - gridWidth) / 2
-    let originY = (s - gridWidth) / 2
-    for row in 0..<3 {
-        for col in 0..<3 {
-            let x = originX + CGFloat(col) * (dotSize + spacing)
-            let y = originY + CGFloat(row) * (dotSize + spacing)
-            let dot = NSBezierPath(roundedRect: NSRect(x: x, y: y, width: dotSize, height: dotSize),
-                                   xRadius: dotSize * 0.32, yRadius: dotSize * 0.32)
-            dot.fill()
-        }
+    let markColor = NSColor(white: 1.0, alpha: 0.96)
+    markColor.setStroke()
+
+    let line = NSBezierPath()
+    line.lineWidth = s * 0.074
+    line.lineCapStyle = .round
+    line.move(to: NSPoint(x: s * 0.438, y: s * 0.438))
+    line.line(to: NSPoint(x: s * 0.562, y: s * 0.562))
+    line.stroke()
+
+    let nodeRadius = s * 0.106
+    let nodeStroke = s * 0.074
+    func drawNode(cx: CGFloat, cy: CGFloat) {
+        let node = NSBezierPath(ovalIn: NSRect(
+            x: cx - nodeRadius,
+            y: cy - nodeRadius,
+            width: nodeRadius * 2,
+            height: nodeRadius * 2
+        ))
+        node.lineWidth = nodeStroke
+        node.stroke()
     }
 
-    // Subtle inner highlight along the top edge — gives the icon a hint of
-    // depth without going full skeuomorphic.
-    let highlight = NSGradient(colors: [
-        NSColor(white: 1.0, alpha: 0.22),
-        NSColor(white: 1.0, alpha: 0.0),
-    ])!
-    highlight.draw(in: NSRect(x: 0, y: s * 0.55, width: s, height: s * 0.45), angle: 90)
+    drawNode(cx: s * 0.356, cy: s * 0.356)
+    drawNode(cx: s * 0.644, cy: s * 0.644)
+    ctx.restoreGState()
 
-    _ = ctx
-    return image
+    // Quiet inner rim keeps the dark tile crisp on light and dark wallpapers.
+    NSColor(white: 1.0, alpha: 0.12).setStroke()
+    path.lineWidth = max(1, s * 0.012)
+    path.stroke()
+
+    return bitmap
 }
 
-func writePNG(image: NSImage, path: String) throws {
-    guard let tiff = image.tiffRepresentation,
-          let rep = NSBitmapImageRep(data: tiff),
-          let png = rep.representation(using: .png, properties: [:]) else {
+func writePNG(bitmap: NSBitmapImageRep, path: String) throws {
+    guard let png = bitmap.representation(using: .png, properties: [:]) else {
         throw NSError(domain: "icongen", code: 1)
     }
     try png.write(to: URL(fileURLWithPath: path))
@@ -96,7 +118,7 @@ try fm.createDirectory(atPath: outDir, withIntermediateDirectories: true)
 for (name, size) in sizes {
     let img = render(size: size)
     let path = "\(outDir)/\(name)"
-    try writePNG(image: img, path: path)
+    try writePNG(bitmap: img, path: path)
     print("rendered \(path)")
 }
 
