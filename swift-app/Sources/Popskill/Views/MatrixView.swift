@@ -1,6 +1,8 @@
+import AppKit
 import SwiftUI
 
 enum MatrixTableLayout {
+    static let selectionColumnWidth: CGFloat = 38
     static let typeColumnWidth: CGFloat = 74
     static let authorColumnWidth: CGFloat = 120
     static let appColumnWidth: CGFloat = 92
@@ -41,12 +43,24 @@ struct MatrixView: View {
         let sections = filteredSections(in: capabilities, usageIndex: usageIndex)
         return VStack(spacing: 0) {
             header(capabilities: capabilities)
-            if capabilities.isEmpty {
-                emptyState
-            } else if sections.isEmpty {
-                noResultsState
-            } else {
-                matrixTable(sections: sections, usageIndex: usageIndex)
+            ZStack(alignment: .bottom) {
+                Group {
+                    if capabilities.isEmpty {
+                        emptyState
+                    } else if sections.isEmpty {
+                        noResultsState
+                    } else {
+                        matrixTable(sections: sections, usageIndex: usageIndex)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                MatrixBulkActionBar(
+                    store: store,
+                    capabilities: capabilities,
+                    onExport: exportMatrixBulkJSON
+                )
+                    .padding(.bottom, 18)
             }
             LedgerStatusBar(store: store, symlinks: symlinkCount(capabilities))
         }
@@ -226,10 +240,21 @@ struct MatrixView: View {
                 id: "tokens",
                 value: store.usageSummary.map { UsageDisplayFormatter.compactTokens($0.thirtyDayTotalTokens) } ?? "—",
                 title: localization.string("matrix.metric.tokenUsage"),
-                tint: .popLabel,
+                tint: tokenUsageTint,
                 preferredWidth: 116
             )
         ]
+    }
+
+    private var tokenUsageTint: Color {
+        switch store.quotaUsageState(for: store.usageSummary?.thirtyDayTotalTokens) {
+        case .exceeded:
+            return .popStatusError
+        case .warning:
+            return .popStatusWarning
+        case .trackingOff, .unavailable, .normal:
+            return .popLabel
+        }
     }
 
     private var filterChips: some View {
@@ -338,10 +363,11 @@ struct MatrixView: View {
     // MARK: Matrix table
 
     private func matrixTable(sections: [CapabilitySection], usageIndex: MatrixUsageIndex) -> some View {
-        ScrollView {
+        let visibleCapabilities = flattenedCapabilities(in: sections)
+        return ScrollView {
             LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                 Section {
-                    matrixColumnHeader
+                    matrixColumnHeader(capabilities: visibleCapabilities)
                 }
                 ForEach(sections) { section in
                     ForEach(section.groups) { group in
@@ -369,6 +395,12 @@ struct MatrixView: View {
         .background(Color.popMainBackground)
     }
 
+    private func flattenedCapabilities(in sections: [CapabilitySection]) -> [MatrixCapability] {
+        sections.flatMap { section in
+            section.groups.flatMap(\.capabilities)
+        }
+    }
+
     /// Big-band header that separates capability kinds in the matrix when
     /// more than one kind is currently visible. Hidden in single-kind views
     /// (e.g. when the user clicks the "Skill" type chip) to avoid noise.
@@ -392,11 +424,22 @@ struct MatrixView: View {
         .background(Color.popAccentSoft.opacity(0.72))
     }
 
-    private var matrixColumnHeader: some View {
-        HStack(spacing: 0) {
+    private func matrixColumnHeader(capabilities: [MatrixCapability]) -> some View {
+        let selectionState = store.matrixBulkAllSelectionState(capabilities: capabilities)
+        return HStack(spacing: 0) {
+            Button {
+                store.toggleMatrixBulkAll(capabilities: capabilities)
+            } label: {
+                MatrixBulkCheckbox(state: selectionState)
+            }
+            .buttonStyle(.plain)
+            .frame(width: MatrixTableLayout.selectionColumnWidth)
+            .help(localization.string("matrix.bulk.selectAll"))
+            .accessibilityLabel(Text(localization.string("matrix.bulk.selectAll")))
+
             Text(localization.string("matrix.col.capability"))
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 14)
+                .padding(.leading, 0)
             Text(localization.string("matrix.col.type"))
                 .frame(width: MatrixTableLayout.typeColumnWidth, alignment: .leading)
             Text(localization.string("matrix.col.author"))
@@ -423,6 +466,16 @@ struct MatrixView: View {
             Rectangle()
                 .fill(Color.popSeparator)
                 .frame(height: 0.7)
+        }
+    }
+
+    private func exportMatrixBulkJSON(capabilities: [MatrixCapability]) {
+        do {
+            let json = try store.matrixBulkExportJSONString(capabilities: capabilities)
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(json, forType: .string)
+        } catch {
+            store.errorMessage = error.localizedDescription
         }
     }
 

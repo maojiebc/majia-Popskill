@@ -338,6 +338,17 @@
 "matrix.sort.tokensDescending" = "Sort: tokens";
 "matrix.sort.recentDescending" = "Sort: recent";
 "matrix.sort.help" = "Choose matrix row sort";
+"matrix.bulk.selectAll" = "Select visible rows";
+"matrix.bulk.selectRow" = "Select row";
+"matrix.bulk.selected" = "selected";
+"matrix.bulk.leafCount" = "includes %d capabilities";
+"matrix.bulk.enableClaude" = "Enable for Claude";
+"matrix.bulk.enableCodex" = "Enable for Codex";
+"matrix.bulk.update" = "Update";
+"matrix.bulk.export" = "Export JSON";
+"matrix.bulk.uninstall" = "Uninstall";
+"matrix.bulk.uninstallDisabled" = "Bulk uninstall requires a confirmation flow.";
+"matrix.bulk.cancel" = "Cancel";
 "matrix.col.capability" = "Capability";
 "matrix.col.source" = "Source";
 "matrix.col.version" = "Version";
@@ -576,6 +587,9 @@
 "spotlight.action.updates.subtitle" = "See pending capability updates";
 "spotlight.action.settings.title" = "Open Settings";
 "spotlight.action.settings.subtitle" = "Storage, sync provider, sources";
+"spotlight.action.quotaWarning.title" = "Token budget warning";
+"spotlight.action.quotaExceeded.title" = "Token budget exceeded";
+"spotlight.action.quota.subtitle" = "Review quota settings and transcript usage";
 "spotlight.quickToggle.help" = "%@ · Command-%@";
 
 // S5 — Sources view
@@ -651,6 +665,7 @@
 "insights.tokens.cacheCreation" = "Cache create";
 "insights.tokens.cacheRead" = "Cache read";
 "insights.tokens.total" = "Total";
+"insights.tokens.quota" = "%@ / %@ monthly · warning at %d%%";
 
 "insights.topSkills.title" = "TOP CAPABILITIES BY USAGE";
 "insights.topSkills.empty" = "No skill attributions found in this scan.";
@@ -660,6 +675,8 @@
 "insights.scan.errorTitle" = "Couldn't read transcripts";
 "insights.scan.emptyTitle" = "No transcript data yet";
 "insights.scan.emptyBody" = "Use Claude Code at least once, then re-scan to see token usage here.";
+"insights.scan.disabledTitle" = "Usage tracking is paused";
+"insights.scan.disabledBody" = "Token statistics are hidden while quota tracking is off.";
 
 // S5 — Link Health view
 "health.subtitle" = "%d OK · %d broken · %d inactive";
@@ -814,7 +831,26 @@
 "sources.updated" = "Updated";
 "sources.update" = "Update";
 "sources.browse" = "Browse · %@";
+"sources.catalog.loading" = "Loading installable skills from enabled repositories…";
+"sources.catalog.error" = "Couldn't load catalog: %@";
+"sources.install" = "Install";
+"sources.installed" = "Installed";
+"sources.install.noTargets" = "Select at least one default install target in Settings.";
 "sources.registrySoon" = "Online browse for this registry is coming soon.";
+"sources.installPlan.crumb" = "Add";
+"sources.installPlan.title" = "Install plan";
+"sources.installPlan.targets" = "Targets";
+"sources.installPlan.branch" = "Branch";
+"sources.installPlan.writes" = "Writes";
+"sources.installPlan.store" = "Store";
+"sources.installPlan.noAppPath" = "No app link path available";
+"sources.installPlan.steps" = "Execution";
+"sources.installPlan.preview" = "Terminal preview";
+"sources.installPlan.noSelection" = "Select at least one target.";
+"sources.installPlan.existing" = "Existing install will be reused: %@";
+"sources.installPlan.summary" = "%d target(s) selected · writes %@";
+"sources.installPlan.cancel" = "Cancel";
+"sources.installPlan.confirm" = "Install %d target(s)";
 
 /* Settings (tabbed) */
 "settings.subtitle2" = "Manage tool connections, the sync backend, and install defaults. Every change writes to ~/.popskill/config.toml immediately.";
@@ -861,13 +897,17 @@
 "settings.install.off" = "Off";
 "settings.install.autoUpdate" = "Auto-update";
 "settings.install.autoUpdateDesc" = "Version update policy for installed capabilities.";
+"settings.install.daily" = "Daily";
 "settings.install.weekly" = "Weekly";
+"settings.install.manual" = "Manual";
 "settings.quota.title" = "Tokens & quota";
 "settings.quota.budget" = "Monthly budget";
 "settings.quota.budgetDesc" = "Warn in the status bar and command palette when exceeded.";
 "settings.quota.threshold" = "Warning threshold";
 "settings.quota.thresholdDesc" = "Highlight a warning at this share of the budget.";
+"settings.quota.60" = "60%";
 "settings.quota.80" = "80%";
+"settings.quota.90" = "90%";
 "settings.quota.track" = "Track usage stats";
 "settings.quota.trackDesc" = "Record per-capability tokens and call counts locally.";
 "settings.about.title" = "About";
@@ -897,6 +937,10 @@
 "inspector.tab.versions" = "Versions";
 "inspector.tab.sync" = "Sync log";
 "inspector.tab.paths" = "Paths";
+"inspector.version.hash" = "Content hash";
+"inspector.version.updated" = "Last updated";
+"inspector.sync.last" = "Last sync";
+"inspector.sync.health" = "Link health";
 "inspector.coverage" = "%@ coverage";
 "inspector.componentList" = "Components";
 "inspector.triggers" = "Triggers";
@@ -920,12 +964,15 @@
 "matrix.package.component.stateHelp" = "%@ link state";
 "matrix.statusbar.symlinks" = "%d symlinks";
 "matrix.statusbar.health" = "%d broken / %d stub";
+"matrix.statusbar.quota" = "%@/%@ tokens";
 "matrix.statusbar.syncedAt" = "synced %@";
 "matrix.statusbar.syncNever" = "never synced";
 "matrix.statusbar.version" = "%@";
 
 "create.subtitle" = "Author a capability from scratch. Saving writes it to the store and links it to Claude / Codex per the targets on the right.";
 "create.saveDraft" = "Save draft";
+"create.creating" = "Creating…";
+"create.unsupportedKind" = "Only Skill creation is wired to the local store right now.";
 "create.createAndLink" = "Create & link (%d) →";
 "create.saveOnly" = "Save to store only →";
 "create.field.type" = "Type";
@@ -934,7 +981,9 @@
 "create.field.desc" = "Description";
 "create.field.author" = "Author";
 "create.field.version" = "Version";
-"create.nameAvailable" = "✓ available in store";
+"create.nameAvailable" = "✓ %@ available";
+"create.nameInvalid" = "Use at least one letter or number";
+"create.nameTaken" = "%@ already exists";
 "create.source.blank" = "Blank";
 "create.source.template" = "Template";
 "create.source.import" = "Import file";
@@ -946,6 +995,11 @@
 
 "compose.subtitle" = "Pick capabilities you already have and package them into a publishable, one-click-installable bundle.";
 "compose.publish" = "Publish bundle (%d) →";
+"compose.publishing" = "Publishing…";
+"compose.emptyBundleError" = "Select at least one capability before publishing a bundle.";
+"compose.nameAvailable" = "✓ %@ available";
+"compose.nameInvalid" = "Use at least one letter or number";
+"compose.nameTaken" = "%@ already exists";
 "compose.candidates" = "Candidates · %d / %d selected";
 "compose.filter" = "Filter candidates…";
 "compose.noMatch" = "No matching candidates";
