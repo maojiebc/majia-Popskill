@@ -175,8 +175,45 @@ struct StoreFS {
             version: front["version"],
             author: front["author"],
             tokens: type == .cli ? 0 : estimateTokens(dir),
-            dirURL: dir
+            dirURL: dir,
+            readme: extractReadme(dir, type: type)
         )
+    }
+
+    /// 详情 peek 的文档摘要（PATCH-01）：SKILL.md 正文首段截 ~120 字；
+    /// CLI 无 SKILL.md，用 README 首段并加前缀。扫描时提取，peek 打开不读盘。
+    func extractReadme(_ dir: URL, type: CapType) -> String? {
+        if type == .cli {
+            let para = firstParagraph(of: dir.appendingPathComponent("README.md"), skipFrontmatter: false)
+            return "二进制 CLI，无 SKILL.md。" + (para ?? "")
+        }
+        return firstParagraph(of: dir.appendingPathComponent("SKILL.md"), skipFrontmatter: true)
+    }
+
+    func firstParagraph(of url: URL, skipFrontmatter: Bool) -> String? {
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        var lines = text.split(separator: "\n", omittingEmptySubsequences: false)[...]
+        if skipFrontmatter, lines.first?.hasPrefix("---") == true {
+            lines = lines.dropFirst()
+            if let end = lines.firstIndex(where: { $0.hasPrefix("---") }) {
+                lines = lines[(end + 1)...]
+            }
+        }
+        var para: [String] = []
+        var inFence = false
+        for raw in lines {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            if line.hasPrefix("```") { inFence.toggle(); continue }
+            if inFence { continue }
+            if line.isEmpty || line.hasPrefix("#") || line.hasPrefix("<!--") || line.hasPrefix(">") {
+                if para.isEmpty { continue }
+                break
+            }
+            para.append(line)
+        }
+        guard !para.isEmpty else { return nil }
+        let joined = para.joined(separator: " ")
+        return joined.count > 120 ? String(joined.prefix(120)) + "…" : joined
     }
 
     // ── 链接解析 ──────────────────────────────────────────

@@ -57,6 +57,17 @@ struct RootView: View {
                     }
                 }
 
+                // 详情 peek（与修复弹层互斥，model.openFix/openPeek 保证）
+                if let peek = model.peekTarget {
+                    Color.black.opacity(0.001)
+                        .ignoresSafeArea()
+                        .onTapGesture { model.peekTarget = nil }
+                    ZStack(alignment: peek.flip ? .bottomLeading : .topLeading) {
+                        Color.clear
+                        DetailPeekView(target: peek, winSize: geo.size)
+                    }
+                }
+
                 // 弹层
                 if model.sheet == .add {
                     AddSheet().transition(.opacity)
@@ -89,6 +100,7 @@ struct RootView: View {
         guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             if event.keyCode == 53 {   // Esc
+                if model.peekTarget != nil { model.peekTarget = nil; return nil }
                 if model.fixTarget != nil { model.fixTarget = nil; return nil }
                 if model.sheet != nil { model.sheet = nil; return nil }
                 return event

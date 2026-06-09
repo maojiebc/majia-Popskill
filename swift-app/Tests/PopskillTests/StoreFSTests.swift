@@ -223,6 +223,53 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(trash.filter { $0.hasPrefix("foo-") }.count, 1)
     }
 
+    // ── 文档摘要提取（PATCH-01 详情 peek）─────────────────
+
+    func testReadmeExtractionSkipsFrontmatterAndHeadings() throws {
+        let dir = try makeSkill("foo")
+        try """
+        ---
+        name: foo
+        description: 描述
+        ---
+
+        # foo
+
+        这是正文首段第一句。
+        这是同段第二句。
+
+        第二段不应出现。
+        """.write(to: dir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let cap = scan()[0].cap
+        XCTAssertEqual(cap.readme, "这是正文首段第一句。 这是同段第二句。")
+    }
+
+    func testReadmeTruncatesAt120() throws {
+        let dir = try makeSkill("foo")
+        let long = String(repeating: "字", count: 200)
+        try "---\nname: foo\n---\n\n\(long)\n".write(to: dir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let readme = scan()[0].cap.readme
+        XCTAssertEqual(readme?.count, 121)   // 120 字 + …
+        XCTAssertTrue(readme?.hasSuffix("…") == true)
+    }
+
+    func testReadmeSkipsCodeFence() throws {
+        let dir = try makeSkill("foo")
+        try "---\nname: foo\n---\n\n```bash\nrm -rf /\n```\n\n真正的首段。\n".write(
+            to: dir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        XCTAssertEqual(scan()[0].cap.readme, "真正的首段。")
+    }
+
+    func testReadmeCLIPrefix() throws {
+        let kindDir = env.storeRoot.appendingPathComponent("bin")
+        let dir = kindDir.appendingPathComponent("mytool")
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        try "# mytool\n\n高性能工具。\n".write(to: dir.appendingPathComponent("README.md"), atomically: true, encoding: .utf8)
+        let entries = scan()
+        let cli = entries.first { $0.name == "mytool" }
+        XCTAssertEqual(cli?.cap.readme, "二进制 CLI，无 SKILL.md。高性能工具。")
+    }
+
     // ── 元数据 ───────────────────────────────────────────
 
     func testMetaRoundtrip() throws {

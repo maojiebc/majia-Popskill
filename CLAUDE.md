@@ -8,9 +8,9 @@
 
 核心场景一句话：**技能装一次，挂到多个 AI 工具上；坏了能修，旧了能升。**
 
-产品刻意做小：**一个主屏（卡片矩阵）+ 两个弹层（添加 / 设置）+ 行内修复弹层 + 空态**。没有侧栏、没有路由。
+产品刻意做小：**一个主屏（卡片矩阵）+ 两个弹层（添加 / 设置）+ 行内修复弹层 + 详情 peek + 空态**。没有侧栏、没有路由。
 
-- 设计真源：`docs/design/v2-handoff/`（SPEC.md = 产品规格、README.md = 高保真视觉规格、prototype.html = 可点击原型）
+- 设计真源：`docs/design/v2-handoff/`（SPEC.md = 产品规格、README.md = 高保真视觉规格、prototype.html = 可点击原型）+ `docs/design/v2-handoff-patch-01/`（详情 peek 增量）
 - v1（sidecar + cc-switch + 6 目的地账本）止于 tag `v1.1.0`，复盘见 `docs/history/PLAN-v1.md` 与 `PLAN-v2.md`
 
 公开 repo：https://github.com/maojiebc/majia-Popskill
@@ -27,9 +27,10 @@ swift-app/Sources/Popskill/
 ├── ChromeViews.swift   标题栏/状态栏/tag/单元格/pill/toast
 ├── MainView.swift      主屏：hero/健康横幅/类型chip/卡片网格/空态
 ├── FixPopover.swift    行内修复弹层（锚定单元格）
+├── DetailPeek.swift    详情 peek（PATCH-01：点能力名称，380 宽，与修复弹层互斥）
 ├── Sheets.swift        添加（URL→安装计划）+ 设置
 └── Fixtures.swift      原型样例数据（POPSKILL_FAKE_DATA=1）
-Tests/PopskillTests/StoreFSTests.swift   17 个引擎测试（临时目录沙盘）
+Tests/PopskillTests/StoreFSTests.swift   21 个引擎测试（临时目录沙盘）
 ```
 
 ### 关键架构事实
@@ -50,6 +51,7 @@ POPSKILL_EMPTY=1                # 空 store 态
 POPSKILL_SHEET=add|settings     # 启动即开弹层
 POPSKILL_ADD_URL=<url>          # 配合 SHEET=add 预填并自动解析
 POPSKILL_FIXPOP=<capId>:<toolId># 启动即开修复弹层
+POPSKILL_PEEK=<capId>           # 启动即开详情 peek
 POPSKILL_STORE_ROOT=<path>      # 替换 store 根（沙盘）
 ```
 
@@ -60,7 +62,7 @@ POPSKILL_STORE_ROOT=<path>      # 替换 store 根（沙盘）
 ```bash
 swift build --package-path swift-app
 DEVELOPER_DIR=/Applications/Xcode.app swift test --package-path swift-app   # CLT 没有 XCTest，必须指 Xcode
-# 基线：17/17（StoreFSTests，临时目录沙盘，不碰真实 ~/.agents）
+# 基线：21/21（StoreFSTests，临时目录沙盘，不碰真实 ~/.agents）
 ```
 
 ## 凭证 / 路径（设了一次终生有效）

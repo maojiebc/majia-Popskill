@@ -321,10 +321,7 @@ struct CapCard: View {
                 .overlay(RoundedRectangle(cornerRadius: 9).stroke(Ink.hairline, lineWidth: 1))
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
-                    Text(highlight(cap.name, query))
-                        .font(.ui(13.5, .bold))
-                        .foregroundStyle(Ink.ink)
-                        .lineLimit(1)
+                    PeekableName(cap: cap, entry: entry, font: .ui(13.5, .bold), color: Ink.ink, query: query)
                     TypeTag(type: cap.type)
                     Spacer(minLength: 0)
                     if hovered {
@@ -391,8 +388,8 @@ struct CapCard: View {
         if st == .on || st == .off {
             model.toggle(cap: cap, entry: entry, tool: tool)
         } else {
-            model.fixTarget = FixTarget(issueKind: st, cap: cap, entry: entry, tool: tool,
-                                        anchor: currentClickPoint(), flip: shouldFlip())
+            model.openFix(FixTarget(issueKind: st, cap: cap, entry: entry, tool: tool,
+                                    anchor: currentClickPoint(), flip: shouldFlip()))
         }
     }
 }
@@ -515,10 +512,7 @@ struct BundleCard: View {
                 Text(treeGlyph(isLast: isLast))
                     .font(.mono(12))
                     .foregroundStyle(Ink.offGlyph)
-                Text(highlight(c.name, query))
-                    .font(.ui(12, .semibold))
-                    .foregroundStyle(Color(hex: 0x222222))
-                    .lineLimit(1)
+                PeekableName(cap: c, entry: entry, font: .ui(12, .semibold), color: Color(hex: 0x222222), query: query)
                 TypeTag(type: c.type)
                 Text(highlight(c.desc, query))
                     .font(.ui(11))
@@ -553,8 +547,8 @@ struct BundleCard: View {
         if st == .on || st == .off {
             model.toggle(cap: c, entry: entry, tool: tool)
         } else {
-            model.fixTarget = FixTarget(issueKind: st, cap: c, entry: entry, tool: tool,
-                                        anchor: currentClickPoint(), flip: shouldFlip())
+            model.openFix(FixTarget(issueKind: st, cap: c, entry: entry, tool: tool,
+                                    anchor: currentClickPoint(), flip: shouldFlip()))
         }
     }
 }
@@ -615,8 +609,35 @@ func currentClickPoint() -> CGPoint {
 }
 
 @MainActor
-func shouldFlip() -> Bool {
+func shouldFlip(threshold: CGFloat = 0.63) -> Bool {
+    // 设计空间 820 高：修复弹层 y>520（0.63），详情 peek y>430（0.52）向上翻
     guard let event = NSApp.currentEvent, let window = event.window else { return false }
     let yTop = window.frame.height - event.locationInWindow.y
-    return yTop > window.frame.height * 0.63   // 设计：820 高度时 y > 520 向上翻
+    return yTop > window.frame.height * threshold
+}
+
+/// 可点击的能力名称（PATCH-01）：悬停下划线提示，点击开详情 peek
+struct PeekableName: View {
+    @Environment(AppModel.self) private var model
+    let cap: Capability
+    let entry: Entry
+    let font: Font
+    let color: Color
+    let query: String
+    @State private var hovered = false
+
+    var body: some View {
+        Button {
+            model.openPeek(cap: cap, entry: entry, anchor: currentClickPoint(), flip: shouldFlip(threshold: 0.52))
+        } label: {
+            Text(highlight(cap.name, query))
+                .font(font)
+                .foregroundStyle(color)
+                .underline(hovered)
+                .lineLimit(1)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+        .help("查看详情")
+    }
 }

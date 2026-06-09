@@ -14,6 +14,14 @@ struct FixTarget: Equatable {
     let flip: Bool                   // 下半屏向上翻
 }
 
+/// 详情 peek 的目标（PATCH-01）
+struct PeekTarget: Equatable {
+    let cap: Capability
+    let entry: Entry
+    let anchor: CGPoint
+    let flip: Bool
+}
+
 struct FixOption: Identifiable {
     enum Kind { case relink, repull, adopt, unlink, trashCopy, keep, update }
     let id = UUID()
@@ -44,6 +52,7 @@ final class AppModel {
     var typeFilter: CapType?         // nil = 全部
     var expanded: Set<String> = []
     var fixTarget: FixTarget?
+    var peekTarget: PeekTarget?
     var searchFocused = false
 
     @ObservationIgnored private var toastTask: Task<Void, Never>?
@@ -71,6 +80,15 @@ final class AppModel {
         default: break
         }
         if let first = entries.first(where: \.isBundle) { expanded.insert(first.id) }
+        // 调试钩子：POPSKILL_PEEK=capId 启动即开详情 peek（截图验证用）
+        if let capId = pe["POPSKILL_PEEK"] {
+            for e in entries {
+                if let c = e.allCaps.first(where: { $0.id == capId }) {
+                    expanded.insert(e.id)
+                    peekTarget = PeekTarget(cap: c, entry: e, anchor: CGPoint(x: 300, y: 420), flip: false)
+                }
+            }
+        }
         // 调试钩子：POPSKILL_FIXPOP=capId:toolId 启动即开修复弹层（截图验证用）
         if let spec = pe["POPSKILL_FIXPOP"]?.split(separator: ":"), spec.count == 2 {
             let capId = String(spec[0]), toolId = String(spec[1])
@@ -113,6 +131,18 @@ final class AppModel {
             try? await Task.sleep(for: .seconds(1.8))
             if flashId == id { flashId = nil }
         }
+    }
+
+    // ── 浮层互斥（peek 与修复弹层只存在一个）──────────────
+
+    func openFix(_ target: FixTarget) {
+        peekTarget = nil
+        fixTarget = target
+    }
+
+    func openPeek(cap: Capability, entry: Entry, anchor: CGPoint, flip: Bool) {
+        fixTarget = nil
+        peekTarget = PeekTarget(cap: cap, entry: entry, anchor: anchor, flip: flip)
     }
 
     // ── 开关 ─────────────────────────────────────────────

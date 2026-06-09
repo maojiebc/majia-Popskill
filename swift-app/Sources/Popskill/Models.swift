@@ -45,6 +45,7 @@ struct Capability: Identifiable, Equatable {
     var author: String?
     var tokens: Int           // 提示词体量估算（CLI 为 0）
     var dirURL: URL           // store 内真实目录
+    var readme: String?       // SKILL.md / README 开头摘要（详情 peek 用，扫描时提取）
     var links: [String: LinkStatus] = [:]   // toolId → status
     var brokenCause: [String: String] = [:] // toolId → 成因
 
