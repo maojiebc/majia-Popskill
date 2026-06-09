@@ -20,10 +20,7 @@ let package = Package(
             dependencies: [
                 .product(name: "Sparkle", package: "Sparkle")
             ],
-            path: "Sources/Popskill",
-            resources: [
-                .process("Resources")
-            ]
+            path: "Sources/Popskill"
         ),
         .testTarget(
             name: "PopskillTests",
