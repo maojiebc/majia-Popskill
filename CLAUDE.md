@@ -30,7 +30,7 @@ swift-app/Sources/Popskill/
 ├── DetailPeek.swift    详情 peek（PATCH-01：点能力名称，380 宽，与修复弹层互斥）
 ├── Sheets.swift        添加（URL→安装计划）+ 设置
 └── Fixtures.swift      原型样例数据（POPSKILL_FAKE_DATA=1）
-Tests/PopskillTests/StoreFSTests.swift   21 个引擎测试（临时目录沙盘）
+Tests/PopskillTests/StoreFSTests.swift   26 个引擎测试（临时目录沙盘）
 ```
 
 ### 关键架构事实
@@ -40,7 +40,9 @@ Tests/PopskillTests/StoreFSTests.swift   21 个引擎测试（临时目录沙盘
 - **LinkStatus 四态**：`on`=symlink 有效 / `off`=未链接 / `stub`=**真实目录占位（本地副本，未托管）** / `broken`=symlink 目标丢失。注意 stub 的真实语义和原型（占位待校验）不同。
 - **套装双形态**：工具侧既可能是「整套一条 symlink」（全部子项 on），也可能是「物化目录 + 逐子项 symlink」。单独关某个子项时 `setBundleChildLink` 自动物化。移除套装时物化目录会被清理。
 - **防呆三条**：`removeLink` 只删 symlink、真实目录一律走 store 回收站（`~/.agents/.trash/`，带时间戳）、store 目录绝不被开关动到。改 StoreFS 必须跑测试。
-- **更新检查（latest）在 v2.0 永远为 nil**——UI 通路（↑ 徽标/全部更新/修复弹层 update 分支）已铺好，v2.1 接真实检查。
+- **更新机制（v2.1，吸收 cc-switch）**：不靠 semver，对目录算 SHA-256 内容哈希（`computeDirHash`，相对路径字典序级联，跳过隐藏文件），`checkUpdate` 拉上游比对，`applyUpdate` 先备份进回收站再落新版（symlink 路径不变自动延续）。启动 2s 后后台自动检查，`autoUpdate=true` 的源直接更。回收站保留 20 份（`pruneTrash`）。
+- **安全校验（v2.1）**：`sanitizeName` 拒绝空名 / `/` / `..` / 隐藏名，install 与导入都走它。
+- **未托管导入（v2.1）**：设置 → Store「导入未托管目录」，把工具目录里的真实技能目录收编进 store 并换 symlink。
 - **npm 源暂不支持**（resolve 抛错），GitHub = 浅 clone 到临时目录再扫描，local = 复制进 store。
 
 ### 调试钩子（截图自验用）
@@ -53,6 +55,7 @@ POPSKILL_ADD_URL=<url>          # 配合 SHEET=add 预填并自动解析
 POPSKILL_FIXPOP=<capId>:<toolId># 启动即开修复弹层
 POPSKILL_PEEK=<capId>           # 启动即开详情 peek
 POPSKILL_STORE_ROOT=<path>      # 替换 store 根（沙盘）
+POPSKILL_NO_AUTOCHECK=1         # 关掉启动自动检查更新
 ```
 
 自截流程（v1 验证过，沿用）：启动 app → osascript 调窗口 1280×820 → `screencapture -x -R` → Read 截图。
@@ -62,7 +65,7 @@ POPSKILL_STORE_ROOT=<path>      # 替换 store 根（沙盘）
 ```bash
 swift build --package-path swift-app
 DEVELOPER_DIR=/Applications/Xcode.app swift test --package-path swift-app   # CLT 没有 XCTest，必须指 Xcode
-# 基线：21/21（StoreFSTests，临时目录沙盘，不碰真实 ~/.agents）
+# 基线：26/26（StoreFSTests，临时目录沙盘，不碰真实 ~/.agents）
 ```
 
 ## 凭证 / 路径（设了一次终生有效）

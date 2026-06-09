@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 // 文件系统引擎 — 文件系统就是数据库（SPEC.md §8）。
@@ -48,6 +49,7 @@ enum StoreError: LocalizedError {
     case notASymlink(String)
     case sourceUnsupported(String)
     case resolveFailed(String)
+    case unsafeName(String)
 
     var errorDescription: String? {
         switch self {
@@ -55,8 +57,19 @@ enum StoreError: LocalizedError {
         case .notASymlink(let p): "\(abbrev(p)) 不是 popskill 管理的 symlink，已跳过"
         case .sourceUnsupported(let m): m
         case .resolveFailed(let m): m
+        case .unsafeName(let n): "不安全的目录名：\(n)"
         }
     }
+}
+
+/// 目录名安全校验（吸收 cc-switch 的防目录遍历，v2.1）：
+/// 拒绝空名、路径分隔、.. 上跳、隐藏目录名。
+func sanitizeName(_ name: String) throws -> String {
+    guard !name.isEmpty, !name.hasPrefix("."),
+          !name.contains("/"), !name.contains(".."), !name.contains("\0") else {
+        throw StoreError.unsafeName(name)
+    }
+    return name
 }
 
 struct StoreFS {
@@ -276,14 +289,30 @@ struct StoreFS {
         (try? fm.attributesOfItem(atPath: url.path))?[.type] as? FileAttributeType == .typeSymbolicLink
     }
 
-    /// 真实目录移入 store 回收站（可逆），返回回收位置
+    /// 真实目录移入 store 回收站（可逆），返回回收位置。
+    /// 吸收 cc-switch 的备份保留策略：回收站最多留 20 份，旧的物理删除。
     @discardableResult
     func moveToTrash(_ url: URL) throws -> URL {
         try fm.createDirectory(at: trashURL, withIntermediateDirectories: true)
         let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
         let dest = trashURL.appendingPathComponent("\(url.lastPathComponent)-\(stamp)")
         try fm.moveItem(at: url, to: dest)
+        pruneTrash()
         return dest
+    }
+
+    static let trashRetainCount = 20
+
+    func pruneTrash(keep: Int = StoreFS.trashRetainCount) {
+        guard let items = try? fm.contentsOfDirectory(
+            at: trashURL, includingPropertiesForKeys: [.contentModificationDateKey]) else { return }
+        guard items.count > keep else { return }
+        let sorted = items.sorted {
+            let a = (try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+            let b = (try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+            return a > b
+        }
+        for old in sorted.dropFirst(keep) { try? fm.removeItem(at: old) }
     }
 
     /// 独立能力 / 套装整体 开↔关
@@ -394,7 +423,8 @@ struct StoreFS {
 
     /// 安装：staging → store/skills/<name>，再为选中工具建链
     func install(_ src: ResolvedSource, linkTools: [Tool]) throws {
-        let dest = env.storeRoot.appendingPathComponent(CapType.skill.dirName).appendingPathComponent(src.entryName)
+        let name = try sanitizeName(src.entryName)
+        let dest = env.storeRoot.appendingPathComponent(CapType.skill.dirName).appendingPathComponent(name)
         guard !fm.fileExists(atPath: dest.path) else { throw StoreError.alreadyExists(src.entryName) }
         try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
         try fm.copyItem(at: src.stagingDir, to: dest)
@@ -428,6 +458,118 @@ struct StoreFS {
         var meta = loadMeta()
         meta.entries.removeValue(forKey: entry.name)
         saveMeta(meta)
+    }
+
+    // ── 更新机制（v2.1，吸收 cc-switch 的内容哈希方案）─────
+    // 不依赖 semver（多数 skill 没有规范版本号）：对目录算 SHA-256
+    // 内容哈希（相对路径字典序，"path\0content\0" 级联，跳过隐藏文件），
+    // 拉上游后比对哈希判断「有更新」。
+
+    func computeDirHash(_ dir: URL) -> String {
+        var files: [(String, URL)] = []
+        func walk(_ d: URL, rel: String) {
+            let items = ((try? fm.contentsOfDirectory(atPath: d.path)) ?? []).sorted()
+            for name in items where !name.hasPrefix(".") {
+                let url = d.appendingPathComponent(name)
+                let relPath = rel.isEmpty ? name : "\(rel)/\(name)"
+                var isDir: ObjCBool = false
+                guard fm.fileExists(atPath: url.path, isDirectory: &isDir) else { continue }
+                if isDir.boolValue { walk(url, rel: relPath) } else { files.append((relPath, url)) }
+            }
+        }
+        walk(dir, rel: "")
+        var hasher = SHA256()
+        for (rel, url) in files {
+            hasher.update(data: Data(rel.utf8))
+            hasher.update(data: Data([0]))
+            hasher.update(data: (try? Data(contentsOf: url)) ?? Data())
+            hasher.update(data: Data([0]))
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+
+    struct UpdateCheck {
+        let entryId: String
+        let latest: String      // 上游版本号；无版本号时为 "新版"
+    }
+
+    /// 比对单个源的上游：哈希不同 ⇒ 有更新。返回 nil = 已最新或无法检查。
+    /// 同时支持 github（浅 clone）与本地路径源。
+    func checkUpdate(_ entry: Entry) throws -> UpdateCheck? {
+        guard let url = entry.sourceUrl, SourceKind.of(url) != .npm else { return nil }
+        let resolved = try resolve(url)
+        defer { if resolved.kind == .github { try? fm.removeItem(at: resolved.stagingDir) } }
+        let localHash = computeDirHash(entry.cap.dirURL)
+        let upstreamHash = computeDirHash(resolved.stagingDir)
+        guard localHash != upstreamHash else { return nil }
+        let upstreamVersion = resolved.version
+        let latest = (upstreamVersion != nil && upstreamVersion != entry.cap.version) ? upstreamVersion! : "新版"
+        return UpdateCheck(entryId: entry.id, latest: latest)
+    }
+
+    /// 执行更新：备份现版进回收站 → 上游副本落 store → symlink 路径不变自动延续。
+    func applyUpdate(_ entry: Entry) throws {
+        guard let url = entry.sourceUrl else { throw StoreError.resolveFailed("该源没有记录 URL，无法更新") }
+        let resolved = try resolve(url)
+        let dest = entry.cap.dirURL
+        try moveToTrash(dest)
+        try fm.copyItem(at: resolved.stagingDir, to: dest)
+        if resolved.kind == .github { try? fm.removeItem(at: resolved.stagingDir) }
+        var meta = loadMeta()
+        var m = meta.entries[entry.name] ?? StoreMeta.EntryMeta()
+        m.latest = nil
+        meta.entries[entry.name] = m
+        saveMeta(meta)
+    }
+
+    func saveLatest(_ entryName: String, latest: String?) {
+        var meta = loadMeta()
+        var m = meta.entries[entryName] ?? StoreMeta.EntryMeta()
+        m.latest = latest
+        meta.entries[entryName] = m
+        saveMeta(meta)
+    }
+
+    // ── 未托管目录导入（v2.1，吸收 cc-switch 的 scan_unmanaged）──
+    // 工具目录里的真实目录（非 symlink）且 store 没有同名 ⇒ 未托管。
+    // 导入 = 复制进 store → 原目录进回收站 → 原位换 symlink。
+
+    struct UnmanagedDir {
+        let name: String
+        let toolId: String
+        let url: URL
+    }
+
+    func scanUnmanaged(tools: [Tool], knownNames: Set<String>) -> [UnmanagedDir] {
+        var out: [UnmanagedDir] = []
+        for t in tools {
+            let dir = t.root.appendingPathComponent(CapType.skill.dirName)
+            for name in ((try? fm.contentsOfDirectory(atPath: dir.path)) ?? []).sorted() where !name.hasPrefix(".") {
+                guard !knownNames.contains(name) else { continue }
+                let url = dir.appendingPathComponent(name)
+                guard !isSymlink(url) else { continue }
+                var isDir: ObjCBool = false
+                guard fm.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue else { continue }
+                guard hasManifest(url) || isBundleDir(url) else { continue }
+                out.append(UnmanagedDir(name: name, toolId: t.id, url: url))
+            }
+        }
+        return out
+    }
+
+    /// 返回导入成功的名字
+    func importUnmanaged(_ items: [UnmanagedDir]) throws -> [String] {
+        var imported: [String] = []
+        for item in items {
+            let name = try sanitizeName(item.name)
+            let dest = env.storeRoot.appendingPathComponent(CapType.skill.dirName).appendingPathComponent(name)
+            guard !fm.fileExists(atPath: dest.path) else { continue }   // 后到的同名跳过
+            try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try fm.copyItem(at: item.url, to: dest)
+            try replaceCopyWithLink(at: item.url, target: dest)
+            imported.append(name)
+        }
+        return imported
     }
 
     // ── 同步信息（store 是 git 仓时）──────────────────────

@@ -270,6 +270,85 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(cli?.cap.readme, "二进制 CLI，无 SKILL.md。高性能工具。")
     }
 
+    // ── 更新机制（v2.1：内容哈希）────────────────────────
+
+    func testDirHashStableAndSensitive() throws {
+        let dir = try makeSkill("foo")
+        let h1 = fs.computeDirHash(dir)
+        XCTAssertEqual(h1, fs.computeDirHash(dir), "同内容哈希必须稳定")
+        try "改动".write(to: dir.appendingPathComponent("extra.md"), atomically: true, encoding: .utf8)
+        XCTAssertNotEqual(h1, fs.computeDirHash(dir), "内容变化哈希必须变化")
+        // 隐藏文件不参与
+        let h2 = fs.computeDirHash(dir)
+        try "junk".write(to: dir.appendingPathComponent(".DS_Store"), atomically: true, encoding: .utf8)
+        XCTAssertEqual(h2, fs.computeDirHash(dir), "隐藏文件不应影响哈希")
+    }
+
+    func testCheckUpdateAndApply() throws {
+        // 本地源安装 → 上游改动 → 检查到更新 → 执行更新（备份 + 落盘 + 链接延续）
+        let src = sandbox.appendingPathComponent("up-skill")
+        try fm.createDirectory(at: src, withIntermediateDirectories: true)
+        try "---\nname: up-skill\nversion: 1.0.0\n---\n旧内容\n".write(
+            to: src.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let resolved = try fs.resolve(src.path)
+        try fs.install(resolved, linkTools: tools.filter { $0.id == "claude" })
+
+        var entry = scan()[0]
+        XCTAssertNil(try fs.checkUpdate(entry), "未变化时不应报更新")
+
+        try "---\nname: up-skill\nversion: 1.1.0\n---\n新内容\n".write(
+            to: src.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let check = try XCTUnwrap(try fs.checkUpdate(entry))
+        XCTAssertEqual(check.latest, "1.1.0")
+
+        try fs.applyUpdate(entry)
+        entry = scan()[0]
+        XCTAssertEqual(entry.cap.version, "1.1.0", "store 应换成上游新版")
+        XCTAssertEqual(entry.cap.status("claude"), .on, "symlink 路径不变应自动延续")
+        let trash = (try? fm.contentsOfDirectory(atPath: fs.trashURL.path)) ?? []
+        XCTAssertEqual(trash.filter { $0.hasPrefix("up-skill-") }.count, 1, "更新前必须备份旧版")
+    }
+
+    func testTrashPruneKeepsNewest() throws {
+        for i in 0..<25 {
+            let d = sandbox.appendingPathComponent("junk\(i)")
+            try fm.createDirectory(at: d, withIntermediateDirectories: true)
+            try fs.moveToTrash(d)
+        }
+        let count = ((try? fm.contentsOfDirectory(atPath: fs.trashURL.path)) ?? []).count
+        XCTAssertLessThanOrEqual(count, StoreFS.trashRetainCount, "回收站最多保留 \(StoreFS.trashRetainCount) 份")
+    }
+
+    // ── 安全校验（v2.1）──────────────────────────────────
+
+    func testSanitizeNameRejectsTraversal() {
+        XCTAssertThrowsError(try sanitizeName("../evil"))
+        XCTAssertThrowsError(try sanitizeName("a/b"))
+        XCTAssertThrowsError(try sanitizeName(".hidden"))
+        XCTAssertThrowsError(try sanitizeName(""))
+        XCTAssertEqual(try? sanitizeName("good-name"), "good-name")
+    }
+
+    // ── 未托管目录导入（v2.1）────────────────────────────
+
+    func testScanAndImportUnmanaged() throws {
+        // 工具目录里有一个真实技能目录，store 没有同名
+        let wild = claudeLink("wild-skill")
+        try fm.createDirectory(at: wild, withIntermediateDirectories: true)
+        try "---\nname: wild-skill\ndescription: 散养的\n---\n".write(
+            to: wild.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+
+        let found = fs.scanUnmanaged(tools: tools, knownNames: [])
+        XCTAssertEqual(found.map(\.name), ["wild-skill"])
+
+        let imported = try fs.importUnmanaged(found)
+        XCTAssertEqual(imported, ["wild-skill"])
+        let entries = scan()
+        XCTAssertEqual(entries.map(\.name), ["wild-skill"])
+        XCTAssertEqual(entries[0].cap.status("claude"), .on, "原位应已换成 symlink")
+        XCTAssertTrue(fs.isSymlink(wild))
+    }
+
     // ── 元数据 ───────────────────────────────────────────
 
     func testMetaRoundtrip() throws {

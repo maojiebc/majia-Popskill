@@ -145,7 +145,7 @@ struct MainView: View {
                 .buttonStyle(.plain)
             }
             if !model.updates.isEmpty {
-                Button { model.say("更新检查将在 v2.1 接入") } label: {
+                Button { model.updateAll() } label: {
                     Text("全部更新 (\(model.updates.count))")
                         .font(.ui(11.5, .semibold)).foregroundStyle(Color(hex: 0x5A4A14))
                         .padding(.horizontal, 11).padding(.vertical, 4)
@@ -363,7 +363,7 @@ struct CapCard: View {
         HStack(spacing: 10) {
             if let v = cap.version { Text("v\(v)") }
             if entry.hasUpdate, fromBundle == nil, let latest = entry.latest {
-                UpdateBadge(latest: latest) { model.say("更新检查将在 v2.1 接入") }
+                UpdateBadge(latest: latest) { model.runUpdate(entry.id) }
             }
             if let a = cap.author { Text(highlight(a, query)) }
             if cap.tokens > 0 { Text(formatTokens(cap.tokens)) }
@@ -460,7 +460,7 @@ struct BundleCard: View {
             HStack(spacing: 6) {
                 if let v = entry.cap.version { Text("v\(v)") }
                 if entry.hasUpdate, let latest = entry.latest {
-                    UpdateBadge(latest: latest) { model.say("更新检查将在 v2.1 接入") }
+                    UpdateBadge(latest: latest) { model.runUpdate(entry.id) }
                 }
             }
             .font(.ui(11.5))

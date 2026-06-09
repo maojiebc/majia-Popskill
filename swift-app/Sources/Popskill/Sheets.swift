@@ -351,7 +351,7 @@ struct SettingsSheet: View {
                         }
                         Spacer(minLength: 8)
                         if e.hasUpdate, let latest = e.latest {
-                            UpdateBadge(latest: latest) { model.say("更新检查将在 v2.1 接入") }
+                            UpdateBadge(latest: latest) { model.runUpdate(e.id) }
                         }
                         PsSwitch(on: e.autoUpdate) { model.toggleAutoUpdate(e.id) }
                         HoverAction(symbol: "✕", danger: true, help: "移除该源（含其能力）") { model.removeEntry(e) }
@@ -366,6 +366,14 @@ struct SettingsSheet: View {
                         .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+                Button { model.checkUpdates() } label: {
+                    Text(model.checkingUpdates ? "检查中…" : "检查更新")
+                        .font(.ui(11.5, .semibold)).foregroundStyle(Color(hex: 0x444444))
+                        .padding(.horizontal, 10).frame(height: 26)
+                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .disabled(model.checkingUpdates)
                 Text("开关 = 自动更新。移除源会同时卸载它提供的能力与 symlink。")
                     .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
             }
@@ -413,6 +421,14 @@ struct SettingsSheet: View {
                 SheetRow {
                     Text(abbrev(model.fs.env.storeRoot.path)).font(.mono(11.5)).foregroundStyle(Ink.ink)
                     Spacer()
+                    Button { model.importUnmanaged() } label: {
+                        Text("导入未托管目录")
+                            .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
+                            .padding(.horizontal, 8).frame(height: 24)
+                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .help("把 ~/.claude / ~/.codex 里的真实技能目录收编进 store 并换成 symlink")
                     Button { model.openStore() } label: {
                         Text("↗ 在编辑器中打开")
                             .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))

@@ -2,7 +2,7 @@ import AppKit
 import Observation
 import SwiftUI
 
-let popskillVersion = "2.0.0"
+let popskillVersion = "2.1.0"
 
 /// 修复弹层的目标：哪个能力 × 哪个工具 × 锚点在哪
 struct FixTarget: Equatable {
@@ -54,6 +54,8 @@ final class AppModel {
     var fixTarget: FixTarget?
     var peekTarget: PeekTarget?
     var searchFocused = false
+    var checkingUpdates = false
+    var updatingIds: Set<String> = []
 
     @ObservationIgnored private var toastTask: Task<Void, Never>?
 
@@ -80,6 +82,13 @@ final class AppModel {
         default: break
         }
         if let first = entries.first(where: \.isBundle) { expanded.insert(first.id) }
+        // 启动后台检查更新；开了自动更新的源直接更（v2.1）
+        if !fake && pe["POPSKILL_NO_AUTOCHECK"] != "1" {
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(2))   // 不抢首屏
+                await MainActor.run { self?.checkUpdates(auto: true) }
+            }
+        }
         // 调试钩子：POPSKILL_PEEK=capId 启动即开详情 peek（截图验证用）
         if let capId = pe["POPSKILL_PEEK"] {
             for e in entries {
@@ -184,8 +193,12 @@ final class AppModel {
             opts.append(FixOption(kind: .keep, label: "保持现状", desc: "保留本地副本，popskill 不接管", rec: false, toast: ""))
         } else {
             let storeExists = FileManager.default.fileExists(atPath: t.cap.dirURL.path)
+            if t.entry.hasUpdate, let latest = t.entry.latest {
+                opts.append(FixOption(kind: .update, label: "更新到 \(latest) 并修复", desc: "从 \(t.entry.sourceUrl ?? "源") 拉取新版，重链 symlink", rec: true,
+                                      toast: "已更新 \(t.entry.name) 并修复链接"))
+            }
             if storeExists {
-                opts.append(FixOption(kind: .relink, label: "重链到 store 中本地版本", desc: "指回 store 中现存的目录", rec: true,
+                opts.append(FixOption(kind: .relink, label: "重链到 store 中本地版本", desc: "指回 store 中现存的目录", rec: !t.entry.hasUpdate,
                                       toast: "已重链 \(t.cap.name) · \(t.tool.name)"))
             }
             if let url = t.entry.sourceUrl, SourceKind.of(url) == .github {
@@ -203,6 +216,7 @@ final class AppModel {
         if fake {
             let to: LinkStatus = (opt.kind == .unlink || opt.kind == .trashCopy) ? .off : .on
             if opt.kind != .keep { mutateFake(capId: t.cap.id, toolId: t.tool.id, to: to) }
+            if opt.kind == .update { runUpdate(t.entry.id, quiet: true) }
             if !opt.toast.isEmpty { say(opt.toast) }
             return
         }
@@ -228,7 +242,8 @@ final class AppModel {
                 }
                 try fs.install(resolved, linkTools: relinkTools)
             case .update:
-                break   // v2.1：真实更新检查接入后启用
+                try? relink(cap: t.cap, entry: t.entry, tool: t.tool)   // 先把这格链上，更新落盘后自动生效
+                runUpdate(t.entry.id)
             }
             refresh()
             if !opt.toast.isEmpty { say(opt.toast) }
@@ -275,6 +290,113 @@ final class AppModel {
         }
         if !fake { refresh() }
         say("已修复 \(list.count) 个链接问题")
+    }
+
+    // ── 更新（v2.1：内容哈希比对，吸收自 cc-switch）────────
+
+    /// 检查全部可检查的源；auto=true 时对开了自动更新的源直接执行更新
+    func checkUpdates(auto: Bool = false) {
+        guard !fake else { say("原型数据模式不检查更新"); return }
+        guard !checkingUpdates else { return }
+        let candidates = entries.filter { $0.sourceUrl != nil && SourceKind.of($0.sourceUrl) != .npm }
+        guard !candidates.isEmpty else { say("没有可检查的源（需要 GitHub 或本地路径来源）"); return }
+        checkingUpdates = true
+        let fsCopy = fs
+        Task { [weak self] in
+            var found: [StoreFS.UpdateCheck] = []
+            var failed = 0
+            await withTaskGroup(of: StoreFS.UpdateCheck?.self) { group in
+                var pending = candidates.makeIterator()
+                var running = 0
+                func enqueue() {
+                    while running < 4, let e = pending.next() {
+                        running += 1
+                        group.addTask { try? fsCopy.checkUpdate(e) }
+                    }
+                }
+                enqueue()
+                for await result in group {
+                    running -= 1
+                    if let result { found.append(result) } else { failed += 0 }
+                    enqueue()
+                }
+            }
+            _ = failed
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.checkingUpdates = false
+                for check in found {
+                    if let i = self.entries.firstIndex(where: { $0.id == check.entryId }) {
+                        self.entries[i].latest = check.latest
+                        self.fs.saveLatest(self.entries[i].name, latest: check.latest)
+                    }
+                }
+                let autoTargets = auto ? self.entries.filter { $0.hasUpdate && $0.autoUpdate } : []
+                if !autoTargets.isEmpty {
+                    for e in autoTargets { self.runUpdate(e.id, quiet: true) }
+                    self.say("自动更新 \(autoTargets.count) 个源")
+                } else if !auto || !found.isEmpty {
+                    self.say(found.isEmpty ? "全部源已是最新" : "发现 \(found.count) 个源可更新")
+                }
+            }
+        }
+    }
+
+    /// 一步更新：备份 → 拉上游 → 落盘（symlink 路径不变自动延续）
+    func runUpdate(_ entryId: String, quiet: Bool = false) {
+        guard let entry = entries.first(where: { $0.id == entryId }) else { return }
+        if fake {
+            if let i = entries.firstIndex(where: { $0.id == entryId }) {
+                let latest = entries[i].latest ?? "新版"
+                entries[i].cap.version = entries[i].latest
+                entries[i].latest = nil
+                say("已更新 \(entry.name) → \(latest)")
+            }
+            return
+        }
+        guard !updatingIds.contains(entryId) else { return }
+        updatingIds.insert(entryId)
+        let fsCopy = fs
+        Task { [weak self] in
+            let result: Result<Void, Error> = await Task.detached {
+                do { try fsCopy.applyUpdate(entry); return .success(()) }
+                catch { return .failure(error) }
+            }.value
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.updatingIds.remove(entryId)
+                switch result {
+                case .success:
+                    self.refresh()
+                    if !quiet { self.say("已更新 \(entry.name)（旧版已入回收站）") }
+                case .failure(let err):
+                    self.say("更新 \(entry.name) 失败：\(err.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    func updateAll() {
+        let targets = updates
+        guard !targets.isEmpty else { return }
+        for e in targets { runUpdate(e.id, quiet: true) }
+        say("正在更新 \(targets.count) 个源…")
+    }
+
+    // ── 未托管目录导入（v2.1）─────────────────────────────
+
+    func importUnmanaged() {
+        guard !fake else { say("原型数据模式不可导入"); return }
+        let known = Set(entries.map(\.name))
+        let found = fs.scanUnmanaged(tools: tools, knownNames: known)
+        guard !found.isEmpty else { say("没有发现未托管的技能目录"); return }
+        do {
+            let imported = try fs.importUnmanaged(found)
+            refresh()
+            say("已导入 \(imported.count) 个未托管目录进 store（原目录已入回收站）")
+        } catch {
+            say(error.localizedDescription)
+        }
     }
 
     // ── 安装 / 移除 ───────────────────────────────────────
