@@ -30,7 +30,7 @@ swift-app/Sources/Popskill/
 ├── DetailPeek.swift    详情 peek（PATCH-01：点能力名称，380 宽，与修复弹层互斥）
 ├── Sheets.swift        添加（URL→安装计划）+ 设置
 └── Fixtures.swift      原型样例数据（POPSKILL_FAKE_DATA=1）
-Tests/PopskillTests/StoreFSTests.swift   26 个引擎测试（临时目录沙盘）
+Tests/PopskillTests/StoreFSTests.swift   30 个引擎测试 + RealEnvSmoke 只读冒烟
 ```
 
 ### 关键架构事实
@@ -40,7 +40,9 @@ Tests/PopskillTests/StoreFSTests.swift   26 个引擎测试（临时目录沙盘
 - **LinkStatus 四态**：`on`=symlink 有效 / `off`=未链接 / `stub`=**真实目录占位（本地副本，未托管）** / `broken`=symlink 目标丢失。注意 stub 的真实语义和原型（占位待校验）不同。
 - **套装双形态**：工具侧既可能是「整套一条 symlink」（全部子项 on），也可能是「物化目录 + 逐子项 symlink」。单独关某个子项时 `setBundleChildLink` 自动物化。移除套装时物化目录会被清理。
 - **防呆三条**：`removeLink` 只删 symlink、真实目录一律走 store 回收站（`~/.agents/.trash/`，带时间戳）、store 目录绝不被开关动到。改 StoreFS 必须跑测试。
-- **更新机制（v2.1，吸收 cc-switch）**：不靠 semver，对目录算 SHA-256 内容哈希（`computeDirHash`，相对路径字典序级联，跳过隐藏文件），`checkUpdate` 拉上游比对，`applyUpdate` 先备份进回收站再落新版（symlink 路径不变自动延续）。启动 2s 后后台自动检查，`autoUpdate=true` 的源直接更。回收站保留 20 份（`pruneTrash`）。
+- **来源回填链（v2.1）**：`.popskill.json`（自装）→ `~/.agents/.skill-lock.json`（npx skills 生态，v3 schema，含 skillPath 子路径）→ 目录自带 `.git` remote → frontmatter homepage 正则。`normalizeSource` 统一成 `github.com/owner/repo` 小写。
+- **源式套装（v2.1）**：同一 github 来源 ≥2 个平铺成员归拢成 `BundleKind.source` 套装（id `src:<repo>`），磁盘平铺、symlink 逐成员（与 `.directory` 形态的整链/物化区分，toggle/linkPath 按 bundleKind 路由）。实测：72 平铺 → 26 条目（baoyu 22 / lark 26 各一张卡）。store 内软链成员（私有开发）不归拢、更新跳过。
+- **更新机制（v2.1，吸收 cc-switch）**：不靠 semver，对目录算 SHA-256 内容哈希（`computeDirHash`），`checkUpdate` 一次 clone 逐成员比对（lock 的 skillPath 定位 monorepo 子目录，兜底 skills/<name> 约定），还报告上游新增未安装项；`applyUpdate` 只换有变化的成员、每个先备份进回收站（保留 20 份）。启动 2s 后后台自动检查，`autoUpdate=true` 的源直接更。
 - **安全校验（v2.1）**：`sanitizeName` 拒绝空名 / `/` / `..` / 隐藏名，install 与导入都走它。
 - **未托管导入（v2.1）**：设置 → Store「导入未托管目录」，把工具目录里的真实技能目录收编进 store 并换 symlink。
 - **npm 源暂不支持**（resolve 抛错），GitHub = 浅 clone 到临时目录再扫描，local = 复制进 store。
@@ -65,7 +67,7 @@ POPSKILL_NO_AUTOCHECK=1         # 关掉启动自动检查更新
 ```bash
 swift build --package-path swift-app
 DEVELOPER_DIR=/Applications/Xcode.app swift test --package-path swift-app   # CLT 没有 XCTest，必须指 Xcode
-# 基线：26/26（StoreFSTests，临时目录沙盘，不碰真实 ~/.agents）
+# 基线：30/30 + 真实环境只读冒烟 POPSKILL_REAL_SMOKE=1（StoreFSTests，临时目录沙盘，不碰真实 ~/.agents）
 ```
 
 ## 凭证 / 路径（设了一次终生有效）

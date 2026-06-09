@@ -30,7 +30,8 @@ enum Fixtures {
             var head = Capability(id: id, name: id, type: .bundle, desc: desc, version: version,
                                   author: author, tokens: tokens, dirURL: URL(fileURLWithPath: "/tmp/\(id)"))
             head.links = [:]
-            return Entry(id: id, cap: head, children: children, sourceUrl: sourceUrl, latest: latest, autoUpdate: autoUpdate)
+            return Entry(id: id, cap: head, children: children, bundleKind: .directory,
+                         sourceUrl: sourceUrl, latest: latest, autoUpdate: autoUpdate)
         }
 
         func standalone(_ id: String, _ type: CapType, _ desc: String, _ version: String,

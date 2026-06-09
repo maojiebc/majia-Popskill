@@ -46,10 +46,18 @@ struct Capability: Identifiable, Equatable {
     var tokens: Int           // 提示词体量估算（CLI 为 0）
     var dirURL: URL           // store 内真实目录
     var readme: String?       // SKILL.md / README 开头摘要（详情 peek 用，扫描时提取）
+    var repoSubdir: String?   // 上游仓库内的子路径（lock 文件 skillPath，monorepo 用）
     var links: [String: LinkStatus] = [:]   // toolId → status
     var brokenCause: [String: String] = [:] // toolId → 成因
 
     func status(_ toolId: String) -> LinkStatus { links[toolId] ?? .off }
+}
+
+/// 套装的两种形态（v2.1）：
+/// directory = store 里的真实嵌套目录（如 anthropic-skills），工具侧整链/物化；
+/// source    = 平铺成员按同一上游仓库归拢的视图（如 baoyu 系），工具侧逐成员 symlink。
+enum BundleKind: String, Codable, Equatable {
+    case directory, source
 }
 
 /// 已添加的源 — 唯一顶层概念。套装带 children，独立条目自身即能力。
@@ -57,6 +65,7 @@ struct Entry: Identifiable, Equatable {
     let id: String
     var cap: Capability                 // 套装时承载名称/描述等展示字段
     var children: [Capability]?         // 仅 Bundle 有
+    var bundleKind: BundleKind?         // 仅 Bundle 有
     var sourceUrl: String?
     var latest: String?                 // 上游最新版；存在且 ≠ version ⇒ 可更新
     var autoUpdate: Bool = false
@@ -64,10 +73,9 @@ struct Entry: Identifiable, Equatable {
     var isBundle: Bool { children != nil }
     var name: String { cap.name }
     var allCaps: [Capability] { children ?? [cap] }
-    var hasUpdate: Bool {
-        guard let latest, let v = cap.version else { return false }
-        return latest != v
-    }
+    /// latest 只在 checkUpdate 确认内容有差异时写入、applyUpdate 后清除，
+    /// 所以有值即有更新（源式套装的 latest 是 "N 项" 这类标签，不是 semver）。
+    var hasUpdate: Bool { latest != nil }
 }
 
 enum SourceKind: String {

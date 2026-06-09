@@ -108,6 +108,7 @@ struct StoreFS {
     }
 
     func scanEntries(tools: [Tool], meta: StoreMeta) -> [Entry] {
+        let lock = loadLock()
         var entries: [Entry] = []
         for kind in [CapType.skill, .agent, .mcp, .cli] {
             let kindDir = env.storeRoot.appendingPathComponent(kind.dirName)
@@ -118,18 +119,128 @@ struct StoreFS {
                 guard fm.fileExists(atPath: dir.path, isDirectory: &isDir) else { continue }
                 if kind == .cli {
                     // bin/ 下可执行文件或目录都算一条 CLI
-                    entries.append(makeStandalone(name: name, type: .cli, dir: dir, tools: tools, meta: meta))
+                    entries.append(makeStandalone(name: name, type: .cli, dir: dir, tools: tools, meta: meta, lock: lock))
                     continue
                 }
                 guard isDir.boolValue else { continue }
                 if kind == .skill && !hasManifest(dir) && isBundleDir(dir) {
                     entries.append(makeBundle(name: name, dir: dir, tools: tools, meta: meta))
                 } else {
-                    entries.append(makeStandalone(name: name, type: kind, dir: dir, tools: tools, meta: meta))
+                    entries.append(makeStandalone(name: name, type: kind, dir: dir, tools: tools, meta: meta, lock: lock))
                 }
             }
         }
-        return entries
+        return groupBySource(entries, meta: meta)
+    }
+
+    // ── 来源回填链（v2.1，对应真实环境的多种安装机制）──────
+    // .popskill.json（app 自装）→ .skill-lock.json（npx skills 生态）
+    // → 目录自带 .git 的 remote（独立 clone）→ frontmatter homepage（兜底）
+
+    struct LockEntry {
+        let source: String        // "jimliu/baoyu-skills"
+        let sourceUrl: String?    // "https://github.com/jimliu/baoyu-skills.git"
+        let skillPath: String?    // "skills/baoyu-article-illustrator/SKILL.md"
+    }
+
+    /// 解析 ~/.agents/.skill-lock.json（npx skills 安装器写入，v3 schema）
+    func loadLock() -> [String: LockEntry] {
+        let url = env.storeRoot.appendingPathComponent(".skill-lock.json")
+        guard let data = try? Data(contentsOf: url),
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let skills = root["skills"] as? [String: [String: Any]] else { return [:] }
+        var out: [String: LockEntry] = [:]
+        for (name, v) in skills {
+            guard let source = v["source"] as? String else { continue }
+            out[name] = LockEntry(source: source,
+                                  sourceUrl: v["sourceUrl"] as? String,
+                                  skillPath: v["skillPath"] as? String)
+        }
+        return out
+    }
+
+    /// 目录自带 .git（独立 clone 的 skill）→ origin remote
+    func gitRemote(_ dir: URL) -> String? {
+        guard fm.fileExists(atPath: dir.appendingPathComponent(".git").path) else { return nil }
+        let r = run("/usr/bin/git", ["-C", dir.path, "remote", "get-url", "origin"])
+        let url = r.out.trimmingCharacters(in: .whitespacesAndNewlines)
+        return r.status == 0 && !url.isEmpty ? url : nil
+    }
+
+    /// frontmatter 里的 homepage（含嵌套的 metadata.openclaw.homepage），正则兜底
+    func frontmatterHomepage(_ dir: URL) -> String? {
+        guard let text = try? String(contentsOf: dir.appendingPathComponent("SKILL.md"), encoding: .utf8),
+              text.hasPrefix("---"),
+              let endRange = text.range(of: "\n---", range: text.index(text.startIndex, offsetBy: 3)..<text.endIndex) else { return nil }
+        let front = text[..<endRange.lowerBound]
+        guard let match = front.range(of: #"homepage:\s*(\S+)"#, options: .regularExpression) else { return nil }
+        let line = String(front[match])
+        return line.split(separator: ":", maxSplits: 1).last.map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+
+    /// 统一成 "github.com/owner/repo" 形态（小写，去协议/.git/锚点），本地路径原样返回
+    static func normalizeSource(_ raw: String) -> String {
+        var s = raw.trimmingCharacters(in: .whitespaces)
+        if s.hasPrefix("~") || s.hasPrefix("/") { return s }
+        for p in ["https://", "http://", "git@"] where s.hasPrefix(p) { s.removeFirst(p.count) }
+        s = s.replacingOccurrences(of: "github.com:", with: "github.com/")
+        if let hash = s.firstIndex(of: "#") { s = String(s[..<hash]) }
+        if s.hasSuffix(".git") { s.removeLast(4) }
+        if !s.contains(".") && s.split(separator: "/").count == 2 { s = "github.com/" + s }   // "owner/repo" 简写
+        return s.lowercased()
+    }
+
+    private func provenance(name: String, dir: URL, type: CapType, meta: StoreMeta,
+                            lock: [String: LockEntry]) -> (source: String?, subdir: String?) {
+        if let s = meta.entries[name]?.sourceUrl { return (StoreFS.normalizeSource(s), nil) }
+        if let l = lock[name] {
+            let src = StoreFS.normalizeSource(l.sourceUrl ?? l.source)
+            let subdir = l.skillPath.map { ($0 as NSString).deletingLastPathComponent }
+            return (src, (subdir?.isEmpty ?? true) ? nil : subdir)
+        }
+        if let remote = gitRemote(dir) { return (StoreFS.normalizeSource(remote), nil) }
+        if type != .cli, let home = frontmatterHomepage(dir), home.contains("/") {
+            return (StoreFS.normalizeSource(home), nil)
+        }
+        return (nil, nil)
+    }
+
+    /// 源式套装（v2.1）：同一上游仓库的 ≥2 个平铺成员归拢成一张套装卡。
+    /// 磁盘不动、symlink 逐成员——套装只是源的视图。
+    private func groupBySource(_ entries: [Entry], meta: StoreMeta) -> [Entry] {
+        var bySource: [String: [Int]] = [:]
+        for (i, e) in entries.enumerated() {
+            guard !e.isBundle, let src = e.sourceUrl,
+                  SourceKind.of(src) == .github,
+                  !isSymlink(e.cap.dirURL) else { continue }   // 本地开发软链不归拢
+            bySource[src, default: []].append(i)
+        }
+        let groups = bySource.filter { $0.value.count >= 2 }
+        guard !groups.isEmpty else { return entries }
+        var grouped: Set<Int> = []
+        var bundleAt: [Int: Entry] = [:]
+        for (src, idxs) in groups {
+            let members = idxs.map { entries[$0].cap }
+            let repoName = src.split(separator: "/").dropFirst().joined(separator: "/")   // owner/repo
+            var head = Capability(
+                id: "src:\(src)", name: repoName, type: .bundle,
+                desc: "同源套装 · \(members.count) 项", version: nil, author: nil,
+                tokens: members.reduce(0) { $0 + $1.tokens },
+                dirURL: members[0].dirURL.deletingLastPathComponent()
+            )
+            head.links = [:]
+            let m = meta.entries[repoName]
+            bundleAt[idxs[0]] = Entry(id: "src:\(src)", cap: head, children: members,
+                                      bundleKind: .source, sourceUrl: src,
+                                      latest: m?.latest, autoUpdate: m?.autoUpdate ?? false)
+            idxs.forEach { grouped.insert($0) }
+        }
+        var out: [Entry] = []
+        for (i, e) in entries.enumerated() {
+            if let bundle = bundleAt[i] { out.append(bundle) }
+            else if !grouped.contains(i) { out.append(e) }
+        }
+        return out
     }
 
     private func hasManifest(_ dir: URL) -> Bool {
@@ -142,8 +253,11 @@ struct StoreFS {
         return subs.contains { hasManifest(dir.appendingPathComponent($0)) }
     }
 
-    private func makeStandalone(name: String, type: CapType, dir: URL, tools: [Tool], meta: StoreMeta) -> Entry {
+    private func makeStandalone(name: String, type: CapType, dir: URL, tools: [Tool],
+                                meta: StoreMeta, lock: [String: LockEntry]) -> Entry {
         var cap = makeCap(name: name, type: type, dir: dir)
+        let (source, subdir) = provenance(name: name, dir: dir, type: type, meta: meta, lock: lock)
+        cap.repoSubdir = subdir
         for t in tools {
             let (st, cause) = linkStatus(linkPath: toolLinkPath(t, kind: type, name: name), expectedTarget: dir)
             cap.links[t.id] = st
@@ -151,7 +265,7 @@ struct StoreFS {
         }
         let m = meta.entries[name]
         return Entry(id: name, cap: cap, children: nil,
-                     sourceUrl: m?.sourceUrl, latest: m?.latest, autoUpdate: m?.autoUpdate ?? false)
+                     sourceUrl: source, latest: m?.latest, autoUpdate: m?.autoUpdate ?? false)
     }
 
     private func makeBundle(name: String, dir: URL, tools: [Tool], meta: StoreMeta) -> Entry {
@@ -174,8 +288,9 @@ struct StoreFS {
             head.desc = "\(children.count) 项 skill 套装"
         }
         let m = meta.entries[name]
-        return Entry(id: name, cap: head, children: children,
-                     sourceUrl: m?.sourceUrl, latest: m?.latest, autoUpdate: m?.autoUpdate ?? false)
+        let source = m?.sourceUrl.map(StoreFS.normalizeSource) ?? gitRemote(dir).map(StoreFS.normalizeSource)
+        return Entry(id: name, cap: head, children: children, bundleKind: .directory,
+                     sourceUrl: source, latest: m?.latest, autoUpdate: m?.autoUpdate ?? false)
     }
 
     private func makeCap(name: String, type: CapType, dir: URL, id: String? = nil) -> Capability {
@@ -405,14 +520,23 @@ struct StoreFS {
             return ResolvedSource(url: url, kind: kind, entryName: name, isBundle: false,
                                   items: [item], stagingDir: dir, version: front["version"])
         }
-        // 套装：找带 SKILL.md 的子目录
-        let subs = ((try? fm.contentsOfDirectory(atPath: dir.path)) ?? []).sorted()
-            .filter { !$0.hasPrefix(".") && hasManifest(dir.appendingPathComponent($0)) }
+        // 套装：找带 SKILL.md 的子目录；直接子目录没有就按 monorepo 约定看 skills/
+        var base = dir
+        var subs = ((try? fm.contentsOfDirectory(atPath: base.path)) ?? []).sorted()
+            .filter { !$0.hasPrefix(".") && hasManifest(base.appendingPathComponent($0)) }
+        if subs.isEmpty {
+            let skillsDir = dir.appendingPathComponent("skills")
+            if fm.fileExists(atPath: skillsDir.path) {
+                base = skillsDir
+                subs = ((try? fm.contentsOfDirectory(atPath: base.path)) ?? []).sorted()
+                    .filter { !$0.hasPrefix(".") && hasManifest(base.appendingPathComponent($0)) }
+            }
+        }
         guard !subs.isEmpty else {
             throw StoreError.resolveFailed("未找到 SKILL.md — 该源不是 skill 也不是套装")
         }
         let items = subs.map { sub -> PlanItem in
-            let d = dir.appendingPathComponent(sub)
+            let d = base.appendingPathComponent(sub)
             let f = frontmatter(d.appendingPathComponent("SKILL.md"))
             return PlanItem(name: sub, type: .skill, desc: f["description"] ?? "",
                             version: f["version"], tokens: estimateTokens(d))
@@ -439,6 +563,21 @@ struct StoreFS {
 
     /// 移除条目：撤全部 symlink（含物化目录）→ store 副本移入回收站
     func removeEntry(_ entry: Entry, tools: [Tool]) throws {
+        // 源式套装 = 平铺成员的集合，逐成员按独立条目移除
+        if entry.bundleKind == .source {
+            var meta = loadMeta()
+            for cap in entry.children ?? [] {
+                for t in tools {
+                    let link = toolLinkPath(t, kind: cap.type, name: cap.name)
+                    if isSymlink(link) { try removeLink(at: link) }
+                }
+                try moveToTrash(cap.dirURL)
+                meta.entries.removeValue(forKey: cap.name)
+            }
+            meta.entries.removeValue(forKey: entry.name)
+            saveMeta(meta)
+            return
+        }
         for t in tools {
             let link = toolLinkPath(t, kind: entry.cap.type, name: entry.name)
             if isSymlink(link) {
@@ -490,36 +629,83 @@ struct StoreFS {
 
     struct UpdateCheck {
         let entryId: String
-        let latest: String      // 上游版本号；无版本号时为 "新版"
+        let latest: String          // 单成员 = 上游版本号/"新版"；源式套装 = "N 项"
+        let changedMembers: [String]
+        let upstreamNew: [String]   // 上游有、本地没装的技能（monorepo 月度痛点）
     }
 
-    /// 比对单个源的上游：哈希不同 ⇒ 有更新。返回 nil = 已最新或无法检查。
-    /// 同时支持 github（浅 clone）与本地路径源。
+    /// 上游仓库内定位某个成员的目录：lock 的 skillPath 优先，
+    /// 其次仓库根（单 skill 仓）、skills/<name>（monorepo 约定）、<name>。
+    private func stagedMemberDir(staging: URL, cap: Capability) -> URL? {
+        if cap.type == .bundle { return staging }   // 目录形套装 = 整仓比对
+        if let sub = cap.repoSubdir {
+            let d = staging.appendingPathComponent(sub)
+            if fm.fileExists(atPath: d.path) { return d }
+        }
+        if hasManifest(staging) { return staging }
+        for candidate in ["skills/\(cap.name)", cap.name] {
+            let d = staging.appendingPathComponent(candidate)
+            if fm.fileExists(atPath: d.path) { return d }
+        }
+        return nil
+    }
+
+    /// 比对一个源：clone/读取一次上游，逐成员比内容哈希。
+    /// 返回 nil = 全部最新。本地开发软链成员自动跳过。
     func checkUpdate(_ entry: Entry) throws -> UpdateCheck? {
         guard let url = entry.sourceUrl, SourceKind.of(url) != .npm else { return nil }
         let resolved = try resolve(url)
         defer { if resolved.kind == .github { try? fm.removeItem(at: resolved.stagingDir) } }
-        let localHash = computeDirHash(entry.cap.dirURL)
-        let upstreamHash = computeDirHash(resolved.stagingDir)
-        guard localHash != upstreamHash else { return nil }
-        let upstreamVersion = resolved.version
-        let latest = (upstreamVersion != nil && upstreamVersion != entry.cap.version) ? upstreamVersion! : "新版"
-        return UpdateCheck(entryId: entry.id, latest: latest)
+
+        let members = entry.isBundle && entry.bundleKind == .source ? (entry.children ?? []) : [entry.cap]
+        var changed: [String] = []
+        var changedVersion: String?
+        for cap in members where !isSymlink(cap.dirURL) {
+            guard let staged = stagedMemberDir(staging: resolved.stagingDir, cap: cap) else { continue }
+            if computeDirHash(cap.dirURL) != computeDirHash(staged) {
+                changed.append(cap.name)
+                changedVersion = frontmatter(staged.appendingPathComponent("SKILL.md"))["version"]
+            }
+        }
+        let upstreamNew = upstreamOnlySkills(staging: resolved.stagingDir, knownNames: Set(members.map(\.name)))
+        guard !changed.isEmpty else { return nil }
+        let latest: String
+        if changed.count == 1 && members.count == 1 {
+            latest = (changedVersion != nil && changedVersion != members[0].version) ? changedVersion! : "新版"
+        } else {
+            latest = "\(changed.count) 项"
+        }
+        return UpdateCheck(entryId: entry.id, latest: latest, changedMembers: changed, upstreamNew: upstreamNew)
     }
 
-    /// 执行更新：备份现版进回收站 → 上游副本落 store → symlink 路径不变自动延续。
-    func applyUpdate(_ entry: Entry) throws {
+    /// 上游 skills/ 下有 SKILL.md、但本地没装的目录名
+    private func upstreamOnlySkills(staging: URL, knownNames: Set<String>) -> [String] {
+        let skillsDir = staging.appendingPathComponent("skills")
+        let base = fm.fileExists(atPath: skillsDir.path) ? skillsDir : staging
+        return ((try? fm.contentsOfDirectory(atPath: base.path)) ?? []).sorted()
+            .filter { !$0.hasPrefix(".") && !knownNames.contains($0) && hasManifest(base.appendingPathComponent($0)) }
+    }
+
+    /// 执行更新：clone 一次，只换有变化的成员；每个被换的成员先备份进回收站。
+    /// symlink 路径不变自动延续。返回 (更新了哪些, 上游新增未装)。
+    @discardableResult
+    func applyUpdate(_ entry: Entry) throws -> (updated: [String], upstreamNew: [String]) {
         guard let url = entry.sourceUrl else { throw StoreError.resolveFailed("该源没有记录 URL，无法更新") }
         let resolved = try resolve(url)
-        let dest = entry.cap.dirURL
-        try moveToTrash(dest)
-        try fm.copyItem(at: resolved.stagingDir, to: dest)
-        if resolved.kind == .github { try? fm.removeItem(at: resolved.stagingDir) }
-        var meta = loadMeta()
-        var m = meta.entries[entry.name] ?? StoreMeta.EntryMeta()
-        m.latest = nil
-        meta.entries[entry.name] = m
-        saveMeta(meta)
+        defer { if resolved.kind == .github { try? fm.removeItem(at: resolved.stagingDir) } }
+
+        let members = entry.isBundle && entry.bundleKind == .source ? (entry.children ?? []) : [entry.cap]
+        var updated: [String] = []
+        for cap in members where !isSymlink(cap.dirURL) {
+            guard let staged = stagedMemberDir(staging: resolved.stagingDir, cap: cap),
+                  computeDirHash(cap.dirURL) != computeDirHash(staged) else { continue }
+            try moveToTrash(cap.dirURL)
+            try fm.copyItem(at: staged, to: cap.dirURL)
+            updated.append(cap.name)
+        }
+        let upstreamNew = upstreamOnlySkills(staging: resolved.stagingDir, knownNames: Set(members.map(\.name)))
+        saveLatest(entry.name, latest: nil)
+        return (updated, upstreamNew)
     }
 
     func saveLatest(_ entryName: String, latest: String?) {

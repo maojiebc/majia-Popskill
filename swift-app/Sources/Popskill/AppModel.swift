@@ -164,11 +164,12 @@ final class AppModel {
             mutateFake(capId: cap.id, toolId: tool.id, to: to)
         } else {
             do {
-                if entry.isBundle && cap.id != entry.cap.id {
+                if entry.bundleKind == .directory && cap.id != entry.cap.id {
                     try fs.setBundleChildLink(
                         tool: tool, bundleName: entry.name, bundleDir: entry.cap.dirURL,
                         childName: cap.name, allChildren: (entry.children ?? []).map(\.name), on: to == .on)
                 } else {
+                    // 独立条目 / 源式套装成员：都是平铺 symlink
                     try fs.setLink(tool: tool, kind: cap.type, name: cap.name, storeDir: cap.dirURL, on: to == .on)
                 }
                 refresh()
@@ -253,14 +254,14 @@ final class AppModel {
     }
 
     private func linkPath(cap: Capability, entry: Entry, tool: Tool) -> URL {
-        if entry.isBundle && cap.id != entry.cap.id {
+        if entry.bundleKind == .directory && cap.id != entry.cap.id {
             return fs.toolLinkPath(tool, kind: .bundle, name: entry.name).appendingPathComponent(cap.name)
         }
         return fs.toolLinkPath(tool, kind: cap.type, name: cap.name)
     }
 
     private func relink(cap: Capability, entry: Entry, tool: Tool) throws {
-        if entry.isBundle && cap.id != entry.cap.id {
+        if entry.bundleKind == .directory && cap.id != entry.cap.id {
             try fs.setBundleChildLink(tool: tool, bundleName: entry.name, bundleDir: entry.cap.dirURL,
                                       childName: cap.name, allChildren: (entry.children ?? []).map(\.name), on: true)
         } else {
@@ -358,17 +359,23 @@ final class AppModel {
         updatingIds.insert(entryId)
         let fsCopy = fs
         Task { [weak self] in
-            let result: Result<Void, Error> = await Task.detached {
-                do { try fsCopy.applyUpdate(entry); return .success(()) }
+            let result: Result<(updated: [String], upstreamNew: [String]), Error> = await Task.detached {
+                do { return .success(try fsCopy.applyUpdate(entry)) }
                 catch { return .failure(error) }
             }.value
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 self.updatingIds.remove(entryId)
                 switch result {
-                case .success:
+                case .success(let r):
                     self.refresh()
-                    if !quiet { self.say("已更新 \(entry.name)（旧版已入回收站）") }
+                    if !quiet {
+                        var msg = r.updated.count == 1 && !entry.isBundle
+                            ? "已更新 \(entry.name)（旧版已入回收站）"
+                            : "已更新 \(entry.name) 的 \(r.updated.count) 项（旧版已入回收站）"
+                        if !r.upstreamNew.isEmpty { msg += " · 上游另有 \(r.upstreamNew.count) 个未安装技能" }
+                        self.say(msg)
+                    }
                 case .failure(let err):
                     self.say("更新 \(entry.name) 失败：\(err.localizedDescription)")
                 }
@@ -387,7 +394,7 @@ final class AppModel {
 
     func importUnmanaged() {
         guard !fake else { say("原型数据模式不可导入"); return }
-        let known = Set(entries.map(\.name))
+        let known = Set(entries.flatMap { $0.allCaps.map(\.name) + [$0.name] })
         let found = fs.scanUnmanaged(tools: tools, knownNames: known)
         guard !found.isEmpty else { say("没有发现未托管的技能目录"); return }
         do {

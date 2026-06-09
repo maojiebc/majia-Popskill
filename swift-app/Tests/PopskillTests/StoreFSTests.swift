@@ -1,6 +1,29 @@
 import XCTest
 @testable import Popskill
 
+/// 真实环境只读冒烟（POPSKILL_REAL_SMOKE=1 才跑）：扫真 ~/.agents 验证来源回填与归拢，零写入。
+final class RealEnvSmoke: XCTestCase {
+    func testScanRealEnvironmentReadOnly() throws {
+        guard ProcessInfo.processInfo.environment["POPSKILL_REAL_SMOKE"] == "1" else {
+            throw XCTSkip("仅手动触发")
+        }
+        let fs = StoreFS(env: .real())
+        let meta = fs.loadMeta()
+        let tools = fs.scanTools(meta: meta)
+        let entries = fs.scanEntries(tools: tools, meta: meta)
+        print("== 条目总数: \(entries.count)")
+        for e in entries where e.isBundle {
+            print("== 套装[\(e.bundleKind == .source ? "源式" : "目录")] \(e.name): \(e.children?.count ?? 0) 项 · src=\(e.sourceUrl ?? "-")")
+        }
+        let sourced = entries.filter { $0.sourceUrl != nil }
+        print("== 有来源条目: \(sourced.count)/\(entries.count)")
+        for e in entries where !e.isBundle && e.sourceUrl != nil {
+            print("   · \(e.name) ← \(e.sourceUrl!)")
+        }
+        XCTAssertFalse(entries.isEmpty)
+    }
+}
+
 /// 文件系统引擎测试 — 全部在临时目录沙盘里跑，不碰真实 ~/.agents。
 final class StoreFSTests: XCTestCase {
     var sandbox: URL!
@@ -317,6 +340,100 @@ final class StoreFSTests: XCTestCase {
         }
         let count = ((try? fm.contentsOfDirectory(atPath: fs.trashURL.path)) ?? []).count
         XCTAssertLessThanOrEqual(count, StoreFS.trashRetainCount, "回收站最多保留 \(StoreFS.trashRetainCount) 份")
+    }
+
+    // ── 来源回填 + 源式套装（v2.1）────────────────────────
+
+    func writeLock(_ skills: [String: [String: String]]) throws {
+        let dict: [String: Any] = ["version": 3, "skills": skills]
+        let data = try JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
+        try data.write(to: env.storeRoot.appendingPathComponent(".skill-lock.json"))
+    }
+
+    func testLockProvenanceGroupsIntoSourceBundle() throws {
+        try makeSkill("alpha")
+        try makeSkill("beta")
+        try makeSkill("loner")
+        try writeLock([
+            "alpha": ["source": "jim/x", "sourceUrl": "https://github.com/Jim/X.git", "skillPath": "skills/alpha/SKILL.md"],
+            "beta":  ["source": "jim/x", "sourceUrl": "https://github.com/Jim/X.git", "skillPath": "skills/beta/SKILL.md"],
+            "loner": ["source": "other/y", "sourceUrl": "https://github.com/other/y.git", "skillPath": "SKILL.md"],
+        ])
+        let entries = scan()
+        let bundle = try XCTUnwrap(entries.first(where: \.isBundle))
+        XCTAssertEqual(bundle.bundleKind, .source)
+        XCTAssertEqual(bundle.sourceUrl, "github.com/jim/x", "URL 应归一化（去协议/.git/小写）")
+        XCTAssertEqual(bundle.children?.map(\.name), ["alpha", "beta"])
+        XCTAssertEqual(bundle.children?.first?.repoSubdir, "skills/alpha")
+        // 单成员的源不归拢
+        let loner = try XCTUnwrap(entries.first(where: { $0.name == "loner" }))
+        XCTAssertFalse(loner.isBundle)
+        XCTAssertEqual(loner.sourceUrl, "github.com/other/y")
+    }
+
+    func testGitRemoteProvenance() throws {
+        let dir = try makeSkill("cloned")
+        _ = fs.run("/usr/bin/git", ["-C", dir.path, "init", "-q"])
+        _ = fs.run("/usr/bin/git", ["-C", dir.path, "remote", "add", "origin", "https://github.com/op/Cloned-Skill.git"])
+        let entry = try XCTUnwrap(scan().first(where: { $0.name == "cloned" }))
+        XCTAssertEqual(entry.sourceUrl, "github.com/op/cloned-skill")
+    }
+
+    func testDevSymlinkEntryNotGrouped() throws {
+        // store 里指向私有仓的软链接成员：不参与归拢、更新时跳过
+        try makeSkill("alpha")
+        let priv = sandbox.appendingPathComponent("private-repo/dev-skill")
+        try fm.createDirectory(at: priv, withIntermediateDirectories: true)
+        try "---\nname: dev-skill\n---\n".write(to: priv.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        try fm.createSymbolicLink(
+            at: env.storeRoot.appendingPathComponent("skills/dev-skill"), withDestinationURL: priv)
+        try writeLock([
+            "alpha": ["source": "jim/x", "sourceUrl": "https://github.com/jim/x.git", "skillPath": "skills/alpha/SKILL.md"],
+            "dev-skill": ["source": "jim/x", "sourceUrl": "https://github.com/jim/x.git", "skillPath": "skills/dev-skill/SKILL.md"],
+        ])
+        let entries = scan()
+        XCTAssertNil(entries.first(where: \.isBundle), "软链成员不计入，单成员不成套装")
+    }
+
+    func testSourceBundleUpdateOnlyChangedMember() throws {
+        // 本地 monorepo 当上游：skills/a + skills/b
+        let upstream = sandbox.appendingPathComponent("mono")
+        for n in ["a", "b"] {
+            let d = upstream.appendingPathComponent("skills/\(n)")
+            try fm.createDirectory(at: d, withIntermediateDirectories: true)
+            try "---\nname: \(n)\nversion: 1.0.0\n---\n旧\n".write(to: d.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        }
+        // 本地安装态 = 从 monorepo 拷出来的平铺目录 + lock 记录
+        for n in ["a", "b"] {
+            try fm.copyItem(at: upstream.appendingPathComponent("skills/\(n)"),
+                            to: env.storeRoot.appendingPathComponent("skills/\(n)"))
+        }
+        try writeLock([
+            "a": ["source": upstream.path, "sourceUrl": upstream.path, "skillPath": "skills/a/SKILL.md"],
+            "b": ["source": upstream.path, "sourceUrl": upstream.path, "skillPath": "skills/b/SKILL.md"],
+        ])
+        var entries = scan()
+        // 本地路径源不参与 github 归拢 → 仍是两个独立条目，但带来源可检查
+        let a = try XCTUnwrap(entries.first(where: { $0.name == "a" }))
+        XCTAssertNil(try fs.checkUpdate(a), "未变化不报更新")
+
+        // 上游改 a + 新增 c
+        try "---\nname: a\nversion: 2.0.0\n---\n新\n".write(
+            to: upstream.appendingPathComponent("skills/a/SKILL.md"), atomically: true, encoding: .utf8)
+        let cDir = upstream.appendingPathComponent("skills/c")
+        try fm.createDirectory(at: cDir, withIntermediateDirectories: true)
+        try "---\nname: c\n---\n".write(to: cDir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+
+        let check = try XCTUnwrap(try fs.checkUpdate(a))
+        XCTAssertEqual(check.latest, "2.0.0")
+        XCTAssertEqual(check.changedMembers, ["a"])
+        XCTAssertTrue(check.upstreamNew.contains("c"), "应报告上游新增未安装的技能")
+
+        let result = try fs.applyUpdate(a)
+        XCTAssertEqual(result.updated, ["a"])
+        entries = scan()
+        XCTAssertEqual(entries.first(where: { $0.name == "a" })?.cap.version, "2.0.0")
+        XCTAssertEqual(entries.first(where: { $0.name == "b" })?.cap.version, "1.0.0", "未变化成员不应被动")
     }
 
     // ── 安全校验（v2.1）──────────────────────────────────
