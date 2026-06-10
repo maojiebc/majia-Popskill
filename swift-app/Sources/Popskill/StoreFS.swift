@@ -834,16 +834,30 @@ struct StoreFS {
 
     // ── 解析辅助 ──────────────────────────────────────────
 
-    /// SKILL.md YAML frontmatter 的扁平 key: value
+    /// SKILL.md YAML frontmatter 的扁平 key: value（支持 | / > 多行块标量，取首段文本）
     func frontmatter(_ url: URL) -> [String: String] {
         guard let text = try? String(contentsOf: url, encoding: .utf8),
               text.hasPrefix("---") else { return [:] }
         var out: [String: String] = [:]
-        for line in text.split(separator: "\n", omittingEmptySubsequences: false).dropFirst() {
+        let lines = Array(text.split(separator: "\n", omittingEmptySubsequences: false).dropFirst())
+        var i = 0
+        while i < lines.count {
+            let line = lines[i]
+            i += 1
             if line.hasPrefix("---") { break }
             guard let colon = line.firstIndex(of: ":"), !line.hasPrefix(" "), !line.hasPrefix("\t") else { continue }
             let key = String(line[..<colon]).trimmingCharacters(in: .whitespaces)
             var val = String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
+            if ["|", "|-", ">", ">-"].contains(val) {
+                // 块标量：收集后续缩进行，拼成一段（够展示用即可）
+                var parts: [String] = []
+                while i < lines.count, lines[i].hasPrefix(" ") || lines[i].isEmpty {
+                    let t = lines[i].trimmingCharacters(in: .whitespaces)
+                    if !t.isEmpty { parts.append(t) } else if !parts.isEmpty { break }
+                    i += 1
+                }
+                val = parts.joined(separator: " ")
+            }
             if val.hasPrefix("\"") && val.hasSuffix("\"") && val.count >= 2 { val = String(val.dropFirst().dropLast()) }
             if !key.isEmpty && !val.isEmpty { out[key] = val }
         }

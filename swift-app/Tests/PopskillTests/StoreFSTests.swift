@@ -94,6 +94,24 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(entries[0].children?.map(\.name), ["alpha", "beta"])
     }
 
+    func testFrontmatterBlockScalar() throws {
+        let dir = try makeSkill("blocky")
+        try """
+        ---
+        name: blocky
+        description: |
+          第一行描述。
+          第二行接着说。
+
+          空行后的不要。
+        version: 1.0.0
+        ---
+        """.write(to: dir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let front = fs.frontmatter(dir.appendingPathComponent("SKILL.md"))
+        XCTAssertEqual(front["description"], "第一行描述。 第二行接着说。", "块标量应取首段，不再显示 |")
+        XCTAssertEqual(front["version"], "1.0.0", "块标量后的 key 不能丢")
+    }
+
     func testFrontmatterParsing() throws {
         let dir = try makeSkill("fm")
         try "---\nname: fm\ndescription: \"带引号的描述\"\nversion: 2.1.0\nauthor: majia\n---\n正文".write(

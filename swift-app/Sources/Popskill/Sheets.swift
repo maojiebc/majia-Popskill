@@ -95,6 +95,7 @@ struct SheetShell<Content: View>: View {
                 .frame(width: width)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Ink.window))
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Ink.control, lineWidth: 1))
+                .compositingGroup()   // 先压成一层再投影——否则每个子行各自投影，把暖纸底糊成灰
                 .shadow(color: .black.opacity(0.30), radius: 32, y: 24)
         }
     }

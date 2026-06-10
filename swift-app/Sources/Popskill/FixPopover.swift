@@ -55,6 +55,7 @@ struct FixPopoverView: View {
         .frame(width: width)
         .background(RoundedRectangle(cornerRadius: 9).fill(.white))
         .overlay(RoundedRectangle(cornerRadius: 9).stroke(Ink.control, lineWidth: 1))
+        .compositingGroup()
         .shadow(color: .black.opacity(0.18), radius: 18, y: 12)
         .offset(x: clampedX, y: offsetY)
     }
