@@ -12,15 +12,13 @@ concurrency:
 
 jobs:
   macos:
-    name: macOS Build
+    name: macOS Build & Test
     runs-on: macos-14
     timeout-minutes: 30
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Select Xcode 16
         timeout-minutes: 2
@@ -30,18 +28,10 @@ jobs:
           sudo xcode-select -s "$XCODE_PATH"
           swift --version
 
-      - name: Install Rust
-        timeout-minutes: 5
-        run: rustup toolchain install stable --profile minimal
+      - name: Build (release)
+        timeout-minutes: 15
+        run: swift build -c release --package-path swift-app
 
-      - name: Build sidecar
-        timeout-minutes: 10
-        run: cargo build --locked --manifest-path skill-cli/Cargo.toml
-
-      - name: Build SwiftUI app
-        timeout-minutes: 10
-        run: swift build --package-path swift-app
-
-      - name: Run Swift tests
+      - name: Test
         timeout-minutes: 10
         run: swift test --package-path swift-app

@@ -4,8 +4,8 @@
 
 | Version | Supported |
 |---------|-----------|
-| 1.0.x   | ✅        |
-| < 1.0.0 | ❌        |
+| 2.1.x   | ✅        |
+| < 2.1.0 | ❌（v1.x 已下线）|
 
 ## Reporting a vulnerability
 
@@ -17,7 +17,7 @@ Please don't open a public GitHub issue for security bugs — file them privatel
 
 Popskill runs **100% locally** on the user's Mac. It does **NOT**:
 
-- Make outbound network requests, except via Sparkle for update checks
+- Make outbound network requests, except: (a) Sparkle checking for app updates, (b) `git clone` of the upstream repos of **your own skills** when you run a skill update check
 - Collect usage analytics or telemetry
 - Read or write outside the user's home directory
 
@@ -25,11 +25,14 @@ Paths Popskill reads / writes (all in `$HOME`):
 
 | Path | Purpose |
 |---|---|
-| `~/.cc-switch/skills/` | SSOT — the real skill files (managed by CC Switch upstream) |
-| `~/.claude/skills/`, `~/.codex/skills/`, `~/.agents/skills/` | symlinks to the above per AI-tool root |
-| `~/.popskill/backups/` | Snapshot backups created by safe uninstalls |
-| `~/.claude/projects/*.jsonl` | Read-only — for token usage analysis |
+| `~/.agents/skills/` (+ `agents/ mcp/ bin/`) | Store (SSOT) — the real skill folders |
+| `~/.agents/.popskill.json` | App metadata: sources / auto-update flags |
+| `~/.agents/.trash/` | Recycle bin — anything replaced or removed lands here (20 kept) |
+| `~/.claude/skills/`, `~/.codex/skills/` | Per-tool symlinks into the store |
+| `~/.agents/.skill-lock.json` | Read-only — provenance from the `npx skills` ecosystem |
 | `~/Library/Caches/Sparkle/` | Sparkle's update download cache |
+
+Three hard safety rules, enforced by unit tests: only symlinks are ever deleted; real directories always go to `~/.agents/.trash/`; store directories are never touched by enable/disable toggles.
 
 ## Sparkle auto-update integrity
 
