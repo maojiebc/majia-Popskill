@@ -242,8 +242,17 @@ struct MainView: View {
 
     // ── 卡片网格 ──────────────────────────────────────────
 
+    /// v2.7.1：展开的套装提升到最前（通栏块连续，折叠卡打包不被打断、不再留孤行）
+    private func promoteExpanded(_ list: [DisplayItem]) -> [DisplayItem] {
+        var expanded: [DisplayItem] = [], rest: [DisplayItem] = []
+        for it in list {
+            if case .bundle(_, let kids) = it, kids != nil { expanded.append(it) } else { rest.append(it) }
+        }
+        return expanded + rest
+    }
+
     private var grid: some View {
-        let list = items
+        let list = promoteExpanded(items)
         return GeometryReader { geo in
             // 自适应列数（v2.7）：~440pt/卡，1280→2 列、1700→3 列、2100+→4 列
             let cols = max(2, min(4, Int((geo.size.width - 56 + 10) / 450)))
@@ -637,21 +646,34 @@ struct BundleCard: View {
     }
 
     private func childList(_ kids: [Capability]) -> some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                Spacer()
-                ForEach(model.tools) { t in
-                    Text(String(t.name.split(separator: " ").first ?? "").uppercased())
-                        .frame(width: 52)
+        // v2.7.1：子项自适应分栏——1280 单栏（PATCH-02 原样），~1900 双栏，2400+ 三栏
+        let cols = max(1, min(3, Int((model.winSize.width - 120) / 620)))
+        let rows = stride(from: 0, to: kids.count, by: cols).map { Array(kids[$0..<min($0 + cols, kids.count)]) }
+        return VStack(spacing: 0) {
+            if cols == 1 {
+                HStack(spacing: 10) {
+                    Spacer()
+                    ForEach(model.tools) { t in
+                        Text(String(t.name.split(separator: " ").first ?? "").uppercased())
+                            .frame(width: 52)
+                    }
+                    Text("版本").frame(width: 96, alignment: .trailing)
+                    Color.clear.frame(width: 46)
                 }
-                Text("版本").frame(width: 96, alignment: .trailing)
-                Color.clear.frame(width: 46)
+                .font(.ui(9, .bold)).kerning(0.7)
+                .foregroundStyle(Color(hex: 0xB3AE9E))
+                .padding(EdgeInsets(top: 6, leading: 8, bottom: 3, trailing: 8))
             }
-            .font(.ui(9, .bold)).kerning(0.7)
-            .foregroundStyle(Color(hex: 0xB3AE9E))
-            .padding(EdgeInsets(top: 6, leading: 8, bottom: 3, trailing: 8))
-            ForEach(Array(kids.enumerated()), id: \.element.id) { i, c in
-                childRow(c, isLast: i == kids.count - 1)
+            ForEach(Array(rows.enumerated()), id: \.offset) { ri, row in
+                HStack(alignment: .top, spacing: 18) {
+                    ForEach(row) { c in
+                        childRow(c, isLast: ri == rows.count - 1)
+                            .frame(maxWidth: .infinity)
+                    }
+                    ForEach(0..<(cols - row.count), id: \.self) { _ in
+                        Color.clear.frame(maxWidth: .infinity)
+                    }
+                }
             }
         }
         .padding(EdgeInsets(top: 4, leading: 8, bottom: 8, trailing: 8))
