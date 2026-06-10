@@ -227,13 +227,17 @@ struct AddSheet: View {
                 }
                 VStack(alignment: .leading, spacing: 0) {
                     SectionLabel(text: "将写入")
-                    Text(terminalPreview(plan))
-                        .font(.mono(11))
-                        .foregroundStyle(Ink.terminalText)
-                        .lineSpacing(5)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Ink.terminalBg))
+                    // 设计：pre 不折行 + 横向滚动
+                    ScrollView(.horizontal, showsIndicators: true) {
+                        Text(terminalPreview(plan))
+                            .font(.mono(11))
+                            .foregroundStyle(Ink.terminalText)
+                            .lineSpacing(5)
+                            .fixedSize(horizontal: true, vertical: false)
+                            .padding(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Ink.terminalBg))
                 }
             }
             .padding(EdgeInsets(top: 16, leading: 20, bottom: 16, trailing: 20))

@@ -39,7 +39,8 @@ struct Tool: Identifiable, Equatable {
 struct Capability: Identifiable, Equatable {
     let id: String
     let name: String
-    let type: CapType
+    var type: CapType          // 展示/过滤用类型（可由 frontmatter / 名称特征推断）
+    var linkKind: CapType?     // 链接布局用：store 里实际所在的 kind 目录（nil = 同 type）
     var desc: String
     var version: String?      // 来自 frontmatter，可能没有
     var author: String?
@@ -51,6 +52,8 @@ struct Capability: Identifiable, Equatable {
     var brokenCause: [String: String] = [:] // toolId → 成因
 
     func status(_ toolId: String) -> LinkStatus { links[toolId] ?? .off }
+    /// symlink 路径计算永远用这个，不用展示类型（guancli 显示为 CLI 但链接仍在 skills/）
+    var layoutKind: CapType { linkKind ?? type }
 }
 
 /// 套装的两种形态（v2.1）：

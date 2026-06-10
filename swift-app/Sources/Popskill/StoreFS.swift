@@ -130,7 +130,18 @@ struct StoreFS {
                 }
             }
         }
-        return groupBySource(entries, meta: meta)
+        return sortEntries(groupBySource(entries, meta: meta))
+    }
+
+    /// 排序：套装置顶（按名称），独立项按 类型（Skill→Agent→MCP→CLI）→ 名称
+    func sortEntries(_ entries: [Entry]) -> [Entry] {
+        let rank: [CapType: Int] = [.skill: 1, .agent: 2, .mcp: 3, .cli: 4]
+        return entries.sorted { a, b in
+            let ra = a.isBundle ? 0 : (rank[a.cap.type] ?? 9)
+            let rb = b.isBundle ? 0 : (rank[b.cap.type] ?? 9)
+            if ra != rb { return ra < rb }
+            return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
+        }
     }
 
     // ── 来源回填链（v2.1，对应真实环境的多种安装机制）──────
@@ -215,12 +226,36 @@ struct StoreFS {
                   !isSymlink(e.cap.dirURL) else { continue }   // 本地开发软链不归拢
             bySource[src, default: []].append(i)
         }
-        let groups = bySource.filter { $0.value.count >= 2 }
+        var groups = bySource.filter { $0.value.count >= 2 }
         guard !groups.isEmpty else { return entries }
+
+        // 前缀族收编：无来源的散件（如 baoyu-diagram 既不在 lock、frontmatter 又没 homepage），
+        // 若名称前缀与某个大套装的成员族一致（≥5 个成员共享 "<prefix>-"），并入该套装。
+        // repoSubdir 按 monorepo 约定猜 skills/<name>，更新检查时 stagedMemberDir 会再核实。
+        for (src, idxs) in groups {
+            let memberNames = idxs.map { entries[$0].name }
+            guard memberNames.count >= 5,
+                  let prefix = memberNames.first?.split(separator: "-").first.map(String.init),
+                  prefix.count >= 3,
+                  memberNames.filter({ $0.hasPrefix("\(prefix)-") }).count * 10 >= memberNames.count * 8
+            else { continue }
+            for (i, e) in entries.enumerated()
+            where !e.isBundle && e.sourceUrl == nil && e.name.hasPrefix("\(prefix)-")
+                && !isSymlink(e.cap.dirURL) && !idxs.contains(i) {
+                groups[src]?.append(i)
+            }
+        }
+
         var grouped: Set<Int> = []
         var bundleAt: [Int: Entry] = [:]
         for (src, idxs) in groups {
-            let members = idxs.map { entries[$0].cap }
+            let members = idxs.sorted().map { i -> Capability in
+                var c = entries[i].cap
+                if c.repoSubdir == nil && entries[i].sourceUrl == nil {
+                    c.repoSubdir = "skills/\(c.name)"   // 收编成员：按 monorepo 约定猜
+                }
+                return c
+            }
             let repoName = src.split(separator: "/").dropFirst().joined(separator: "/")   // owner/repo
             var head = Capability(
                 id: "src:\(src)", name: repoName, type: .bundle,
@@ -295,10 +330,12 @@ struct StoreFS {
 
     private func makeCap(name: String, type: CapType, dir: URL, id: String? = nil) -> Capability {
         let front = frontmatter(dir.appendingPathComponent("SKILL.md"))
+        let display = inferType(name: name, front: front, scanned: type)
         return Capability(
             id: id ?? name,
             name: name,
-            type: type,
+            type: display,
+            linkKind: type,
             desc: front["description"] ?? "",
             version: front["version"],
             author: front["author"],
@@ -306,6 +343,24 @@ struct StoreFS {
             dirURL: dir,
             readme: extractReadme(dir, type: type)
         )
+    }
+
+    /// 展示类型推断：frontmatter 显式 `type:` 优先，其次名称特征。
+    /// 只影响 tag/过滤；链接布局永远走 layoutKind（实际 kind 目录）。
+    func inferType(name: String, front: [String: String], scanned: CapType) -> CapType {
+        guard scanned == .skill else { return scanned }   // agents/mcp/bin 目录已是强信号
+        if let t = front["type"]?.lowercased() {
+            switch t {
+            case "cli": return .cli
+            case "mcp": return .mcp
+            case "agent": return .agent
+            default: break
+            }
+        }
+        let n = name.lowercased()
+        if n.hasSuffix("-cli") || n.hasSuffix("cli") { return .cli }
+        if n.hasSuffix("-mcp") || n.hasPrefix("mcp-") { return .mcp }
+        return .skill
     }
 
     /// 详情 peek 的文档摘要（PATCH-01）：SKILL.md 正文首段截 ~120 字；
@@ -568,7 +623,7 @@ struct StoreFS {
             var meta = loadMeta()
             for cap in entry.children ?? [] {
                 for t in tools {
-                    let link = toolLinkPath(t, kind: cap.type, name: cap.name)
+                    let link = toolLinkPath(t, kind: cap.layoutKind, name: cap.name)
                     if isSymlink(link) { try removeLink(at: link) }
                 }
                 try moveToTrash(cap.dirURL)
@@ -579,7 +634,7 @@ struct StoreFS {
             return
         }
         for t in tools {
-            let link = toolLinkPath(t, kind: entry.cap.type, name: entry.name)
+            let link = toolLinkPath(t, kind: entry.cap.layoutKind, name: entry.name)
             if isSymlink(link) {
                 try removeLink(at: link)
             } else if entry.isBundle, fm.fileExists(atPath: link.path) {

@@ -2,7 +2,9 @@ import AppKit
 import Observation
 import SwiftUI
 
-let popskillVersion = "2.1.0"
+// 打包后以 Info.plist 为准（发版脚本写入），裸二进制退回常量
+let popskillVersion: String =
+    (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "2.1.2"
 
 /// 修复弹层的目标：哪个能力 × 哪个工具 × 锚点在哪
 struct FixTarget: Equatable {
@@ -174,7 +176,7 @@ final class AppModel {
                         childName: cap.name, allChildren: (entry.children ?? []).map(\.name), on: to == .on)
                 } else {
                     // 独立条目 / 源式套装成员：都是平铺 symlink
-                    try fs.setLink(tool: tool, kind: cap.type, name: cap.name, storeDir: cap.dirURL, on: to == .on)
+                    try fs.setLink(tool: tool, kind: cap.layoutKind, name: cap.name, storeDir: cap.dirURL, on: to == .on)
                 }
                 refresh()
             } catch {
@@ -207,7 +209,9 @@ final class AppModel {
                                       toast: "已重链 \(t.cap.name) · \(t.tool.name)"))
             }
             if let url = t.entry.sourceUrl, SourceKind.of(url) == .github {
-                opts.append(FixOption(kind: .repull, label: "从源重新拉取", desc: "从 \(url) 重新获取该项", rec: !storeExists,
+                // 推荐唯一：有更新推更新，store 健在推重链，都没有才推重拉
+                opts.append(FixOption(kind: .repull, label: "从源重新拉取", desc: "从 \(url) 重新获取该项",
+                                      rec: !t.entry.hasUpdate && !storeExists,
                                       toast: "已从源重新拉取 \(t.cap.name)"))
             }
             opts.append(FixOption(kind: .unlink, label: "移除该侧链接", desc: "撤掉这条 symlink，其他工具不受影响", rec: false,
@@ -261,7 +265,7 @@ final class AppModel {
         if entry.bundleKind == .directory && cap.id != entry.cap.id {
             return fs.toolLinkPath(tool, kind: .bundle, name: entry.name).appendingPathComponent(cap.name)
         }
-        return fs.toolLinkPath(tool, kind: cap.type, name: cap.name)
+        return fs.toolLinkPath(tool, kind: cap.layoutKind, name: cap.name)
     }
 
     private func relink(cap: Capability, entry: Entry, tool: Tool) throws {
@@ -269,7 +273,7 @@ final class AppModel {
             try fs.setBundleChildLink(tool: tool, bundleName: entry.name, bundleDir: entry.cap.dirURL,
                                       childName: cap.name, allChildren: (entry.children ?? []).map(\.name), on: true)
         } else {
-            try fs.setLink(tool: tool, kind: cap.type, name: cap.name, storeDir: cap.dirURL, on: true)
+            try fs.setLink(tool: tool, kind: cap.layoutKind, name: cap.name, storeDir: cap.dirURL, on: true)
         }
     }
 

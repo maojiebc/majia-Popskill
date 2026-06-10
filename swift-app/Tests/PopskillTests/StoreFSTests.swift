@@ -436,6 +436,52 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(entries.first(where: { $0.name == "b" })?.cap.version, "1.0.0", "未变化成员不应被动")
     }
 
+    // ── 排序 / 类型推断 / 前缀收编（v2.1.2）──────────────
+
+    func testSortBundlesFirstThenType() throws {
+        try makeSkill("zeta")                      // Skill
+        try makeSkill("acme-cli")                  // → CLI（名称特征）
+        try makeBundle("suite", children: ["a"])   // 目录形套装
+        let names = scan().map(\.name)
+        XCTAssertEqual(names, ["suite", "zeta", "acme-cli"], "套装置顶 → Skill → CLI")
+    }
+
+    func testInferTypeKeepsLinkLayout() throws {
+        let dir = try makeSkill("guancli")
+        let entry = scan()[0]
+        XCTAssertEqual(entry.cap.type, .cli, "名称特征应推断为 CLI")
+        XCTAssertEqual(entry.cap.layoutKind, .skill, "链接布局必须留在 skills/")
+        // 开关仍写到 ~/.claude/skills/，不是 bin/
+        let tool = tools.first { $0.id == "claude" }!
+        try fs.setLink(tool: tool, kind: entry.cap.layoutKind, name: "guancli", storeDir: dir, on: true)
+        XCTAssertTrue(fs.isSymlink(claudeLink("guancli")))
+    }
+
+    func testFrontmatterExplicitTypeWins() throws {
+        let dir = try makeSkill("weird-name")
+        try "---\nname: weird-name\ntype: mcp\n---\n".write(
+            to: dir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        XCTAssertEqual(scan()[0].cap.type, .mcp)
+    }
+
+    func testPrefixFamilyAbsorbsOrphan() throws {
+        // 5 个 lock 成员 + 1 个无来源同前缀散件 → 收编成 6 项
+        var lock: [String: [String: String]] = [:]
+        for i in 1...5 {
+            try makeSkill("fam-s\(i)")
+            lock["fam-s\(i)"] = ["source": "own/fam", "sourceUrl": "https://github.com/own/fam.git",
+                                 "skillPath": "skills/fam-s\(i)/SKILL.md"]
+        }
+        try makeSkill("fam-orphan")    // 不在 lock、无 homepage
+        try makeSkill("other-thing")   // 不同前缀，不该被收
+        try writeLock(lock)
+        let entries = scan()
+        let bundle = try XCTUnwrap(entries.first(where: \.isBundle))
+        XCTAssertEqual(bundle.children?.count, 6, "散件应被前缀族收编")
+        XCTAssertEqual(bundle.children?.first(where: { $0.name == "fam-orphan" })?.repoSubdir, "skills/fam-orphan")
+        XCTAssertNotNil(entries.first(where: { $0.name == "other-thing" }), "异前缀不收")
+    }
+
     // ── 安全校验（v2.1）──────────────────────────────────
 
     func testSanitizeNameRejectsTraversal() {
