@@ -259,6 +259,10 @@ final class AppModel {
     // ── 开关 ─────────────────────────────────────────────
 
     func toggle(cap: Capability, entry: Entry, tool: Tool) {
+        guard !entry.isManagedExternally else {
+            say("Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 操作")
+            return
+        }
         let from = cap.status(tool.id)
         guard from == .on || from == .off else { return }   // stub/broken 走修复弹层
         let to: LinkStatus = from == .on ? .off : .on
@@ -403,7 +407,7 @@ final class AppModel {
     func checkUpdates(auto: Bool = false) {
         guard !fake else { say("原型数据模式不检查更新"); return }
         guard !checkingUpdates else { return }
-        let candidates = entries.filter { $0.sourceUrl != nil && SourceKind.of($0.sourceUrl) != .npm }
+        let candidates = entries.filter { $0.sourceUrl != nil && SourceKind.of($0.sourceUrl) != .npm && !$0.isManagedExternally }
         guard !candidates.isEmpty else { say("没有可检查的源（需要 GitHub 或本地路径来源）"); return }
         checkingUpdates = true
         let fsCopy = fs
@@ -582,6 +586,10 @@ final class AppModel {
     }
 
     func removeEntry(_ entry: Entry) {
+        guard !entry.isManagedExternally else {
+            say("Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 卸载")
+            return
+        }
         let alert = NSAlert()
         alert.messageText = "移除 \(entry.name)？"
         alert.informativeText = entry.isBundle

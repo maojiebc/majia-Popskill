@@ -61,6 +61,9 @@ struct Capability: Identifiable, Equatable {
 /// source    = 平铺成员按同一上游仓库归拢的视图（如 baoyu 系），工具侧逐成员 symlink。
 enum BundleKind: String, Codable, Equatable {
     case directory, source
+    /// Claude Code Marketplace 插件（v2.6）：只读可见层——进矩阵/可搜索/可 peek/计入统计，
+    /// 但生命周期归 Claude Code（/plugin），开关/移除/更新一律不碰
+    case marketplace
 }
 
 /// 已添加的源 — 唯一顶层概念。套装带 children，独立条目自身即能力。
@@ -75,6 +78,7 @@ struct Entry: Identifiable, Equatable {
     var autoUpdate: Bool = false
 
     var isBundle: Bool { children != nil }
+    var isManagedExternally: Bool { bundleKind == .marketplace }
     var name: String { cap.name }
     var allCaps: [Capability] { children ?? [cap] }
     /// latest 只在 checkUpdate 确认内容有差异时写入、applyUpdate 后清除，

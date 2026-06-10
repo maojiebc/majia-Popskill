@@ -474,6 +474,15 @@ struct BundleCard: View {
                         .foregroundStyle(Ink.ink)
                         .lineLimit(1)
                     TypeTag(type: .bundle)
+                    if entry.isManagedExternally {
+                        Text("MARKETPLACE")
+                            .font(.ui(9.5, .bold)).kerning(0.6)
+                            .foregroundStyle(Ink.monoDim)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(RoundedRectangle(cornerRadius: 3).fill(.white))
+                            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Ink.control2, lineWidth: 1))
+                            .help("Claude Code Marketplace 插件——只读展示，操作用 /plugin")
+                    }
                     Text("\(entry.children?.count ?? 0) 项")
                         .font(.ui(11.5))
                         .foregroundStyle(Ink.secondary)
@@ -515,7 +524,9 @@ struct BundleCard: View {
             HStack(spacing: 2) {
                 if hovered {
                     HoverAction(symbol: "↗", danger: false, help: "在编辑器中打开") { model.openInEditor(entry.cap.dirURL) }
-                    HoverAction(symbol: "✕", danger: true, help: "移除套装（含全部子项）") { model.removeEntry(entry) }
+                    if !entry.isManagedExternally {
+                        HoverAction(symbol: "✕", danger: true, help: "移除套装（含全部子项）") { model.removeEntry(entry) }
+                    }
                 }
             }
             .frame(width: 46, alignment: .trailing)

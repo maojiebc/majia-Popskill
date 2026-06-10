@@ -356,11 +356,15 @@ struct SettingsSheet: View {
                             Text(sourceSub(e)).font(.ui(10.5)).foregroundStyle(Ink.tertiary)
                         }
                         Spacer(minLength: 8)
-                        if e.hasUpdate, let latest = e.latest {
-                            UpdateBadge(latest: latest) { model.runUpdate(e.id) }
+                        if e.isManagedExternally {
+                            Text("/plugin 管理").font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+                        } else {
+                            if e.hasUpdate, let latest = e.latest {
+                                UpdateBadge(latest: latest) { model.runUpdate(e.id) }
+                            }
+                            PsSwitch(on: e.autoUpdate) { model.toggleAutoUpdate(e.id) }
+                            HoverAction(symbol: "✕", danger: true, help: "移除该源（含其能力）") { model.removeEntry(e) }
                         }
-                        PsSwitch(on: e.autoUpdate) { model.toggleAutoUpdate(e.id) }
-                        HoverAction(symbol: "✕", danger: true, help: "移除该源（含其能力）") { model.removeEntry(e) }
                     }
                 }
             }

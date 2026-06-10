@@ -657,6 +657,41 @@ final class StoreFSTests: XCTestCase {
         XCTAssertTrue(fs.isSymlink(wild))
     }
 
+    // ── Marketplace 插件只读层（v2.6）────────────────────
+
+    func testMarketplacePluginScanReadOnly() throws {
+        // 仿真 ~/.claude/plugins：installed_plugins.json v2 + known_marketplaces + cache/skills
+        let claude = env.toolRoots["claude"]!
+        let plugins = claude.appendingPathComponent("plugins")
+        let install = plugins.appendingPathComponent("cache/mkt/dbs/1.0.0")
+        for n in ["dbs-hook", "dbs-save"] {
+            let d = install.appendingPathComponent("skills/\(n)")
+            try fm.createDirectory(at: d, withIntermediateDirectories: true)
+            try "---\nname: \(n)\ndescription: 测试 \(n)\n---\n正文。\n".write(
+                to: d.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        }
+        try JSONSerialization.data(withJSONObject: [
+            "version": 2,
+            "plugins": ["dbs@mkt": [["scope": "user", "installPath": install.path, "version": "1.0.0"]]],
+        ]).write(to: plugins.appendingPathComponent("installed_plugins.json"))
+        try JSONSerialization.data(withJSONObject: [
+            "mkt": ["source": ["source": "github", "repo": "dontbesilent2025/dbskill"]],
+        ]).write(to: plugins.appendingPathComponent("known_marketplaces.json"))
+
+        let entries = scan()
+        let plugin = try XCTUnwrap(entries.first { $0.bundleKind == .marketplace })
+        XCTAssertEqual(plugin.name, "dbs")
+        XCTAssertEqual(plugin.cap.version, "1.0.0")
+        XCTAssertEqual(plugin.sourceUrl, "github.com/dontbesilent2025/dbskill")
+        XCTAssertEqual(plugin.children?.count, 2)
+        XCTAssertEqual(plugin.children?.first?.status("claude"), .on, "插件由 Claude 加载")
+        XCTAssertEqual(plugin.children?.first?.status("codex"), .off, "Codex 不消费插件")
+        // 只读三守卫
+        XCTAssertThrowsError(try fs.removeEntry(plugin, tools: tools), "引擎层必须拒删插件")
+        XCTAssertNil(try fs.checkUpdate(plugin), "插件更新检查必须跳过")
+        XCTAssertTrue(plugin.isManagedExternally)
+    }
+
     // ── 元数据 ───────────────────────────────────────────
 
     func testMetaRoundtrip() throws {

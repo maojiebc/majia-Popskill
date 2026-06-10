@@ -135,7 +135,70 @@ struct StoreFS {
                 }
             }
         }
-        return sortEntries(groupBySource(entries, meta: meta))
+        entries = groupBySource(entries, meta: meta)
+        entries += scanMarketplacePlugins(tools: tools)
+        return sortEntries(entries)
+    }
+
+    // ── Marketplace 插件只读层（v2.6）─────────────────────
+    // dbs 这类二十件套活在 ~/.claude/plugins/cache（Claude Code 自管），
+    // 不在任何 skills 目录——必须单独扫，但只看不动。
+
+    func scanMarketplacePlugins(tools: [Tool]) -> [Entry] {
+        guard let claudeRoot = env.toolRoots["claude"] else { return [] }
+        let pluginsDir = claudeRoot.appendingPathComponent("plugins")
+        guard let data = try? Data(contentsOf: pluginsDir.appendingPathComponent("installed_plugins.json")),
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let plugins = root["plugins"] as? [String: [[String: Any]]] else { return [] }
+
+        // marketplace 名 → github repo（known_marketplaces.json）
+        var repos: [String: String] = [:]
+        if let kd = try? Data(contentsOf: pluginsDir.appendingPathComponent("known_marketplaces.json")),
+           let known = try? JSONSerialization.jsonObject(with: kd) as? [String: [String: Any]] {
+            for (mk, v) in known {
+                if let src = v["source"] as? [String: Any], let repo = src["repo"] as? String {
+                    repos[mk] = StoreFS.normalizeSource(repo)
+                }
+            }
+        }
+
+        var out: [Entry] = []
+        for (key, installs) in plugins.sorted(by: { $0.key < $1.key }) {
+            guard let install = installs.first,
+                  let pathStr = install["installPath"] as? String else { continue }
+            let parts = key.split(separator: "@", maxSplits: 1).map(String.init)
+            let pluginName = parts.first ?? key
+            let marketplace = parts.count > 1 ? parts[1] : ""
+            let installPath = URL(fileURLWithPath: pathStr)
+            let skillsBase = fm.fileExists(atPath: installPath.appendingPathComponent("skills").path)
+                ? installPath.appendingPathComponent("skills") : installPath
+
+            var children: [Capability] = []
+            for sub in ((try? fm.contentsOfDirectory(atPath: skillsBase.path)) ?? []).sorted()
+            where !sub.hasPrefix(".") && hasManifest(skillsBase.appendingPathComponent(sub)) {
+                var c = makeCap(name: sub, type: .skill,
+                                dir: skillsBase.appendingPathComponent(sub),
+                                id: "plugin:\(key)/\(sub)")
+                for t in tools {
+                    // 展示性状态：插件由 Claude Code 加载（claude=on），Codex 不消费（off）
+                    c.links[t.id] = t.id == "claude" ? .on : .off
+                }
+                children.append(c)
+            }
+            guard !children.isEmpty else { continue }
+
+            var head = Capability(
+                id: "plugin:\(key)", name: pluginName, type: .bundle,
+                desc: "Marketplace 插件（\(marketplace)）· 由 Claude Code 管理，操作用 /plugin",
+                version: install["version"] as? String, author: nil,
+                tokens: children.reduce(0) { $0 + $1.tokens },
+                dirURL: installPath
+            )
+            head.links = [:]
+            out.append(Entry(id: "plugin:\(key)", cap: head, children: children,
+                             bundleKind: .marketplace, sourceUrl: repos[marketplace]))
+        }
+        return out
     }
 
     /// 排序：套装置顶（按名称），独立项按 类型（Skill→Agent→MCP→CLI）→ 名称
@@ -649,6 +712,9 @@ struct StoreFS {
 
     /// 移除条目：撤全部 symlink（含物化目录）→ store 副本移入回收站
     func removeEntry(_ entry: Entry, tools: [Tool]) throws {
+        guard entry.bundleKind != .marketplace else {
+            throw StoreError.sourceUnsupported("Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 卸载")
+        }
         // 源式套装 = 平铺成员的集合，逐成员按独立条目移除
         if entry.bundleKind == .source {
             var meta = loadMeta()
@@ -739,6 +805,7 @@ struct StoreFS {
     /// 比对一个源：clone/读取一次上游，逐成员比内容哈希。
     /// 返回 nil = 全部最新。本地开发软链成员自动跳过。
     func checkUpdate(_ entry: Entry) throws -> UpdateCheck? {
+        guard entry.bundleKind != .marketplace else { return nil }   // 插件更新归 /plugin
         guard let url = entry.sourceUrl, SourceKind.of(url) != .npm else { return nil }
         let resolved = try resolve(url)
         defer { if resolved.kind == .github { try? fm.removeItem(at: resolved.stagingDir) } }
