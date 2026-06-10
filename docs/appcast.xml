@@ -8,176 +8,29 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
-      <title>v2.0.0</title>
-      <pubDate>Wed, 10 Jun 2026 04:30:00 +0000</pubDate>
+      <title>v2.1.0</title>
+      <pubDate>Wed, 10 Jun 2026 05:30:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <description><![CDATA[
-        <h2>v2.0.0 — 第一性原理重写</h2>
-        <p>从头重写的大版本，回到最初的问题：<b>技能装一次，挂到多个 AI 工具上；坏了能修，旧了能升。</b></p>
+        <h2>v2.1.0 — 首个正式对外版本</h2>
+        <p>本地 AI 能力管理器：<b>技能装一次，挂到多个 AI 工具上；坏了能修，旧了能升。</b></p>
         <ul>
-          <li><b>一个屏幕</b> —— 能力矩阵（卡片式）+ 添加 / 设置弹层 + 行内修复弹层 + 详情 peek。没有侧栏、没有路由。</li>
-          <li><b>文件系统就是数据库</b> —— store 在 ~/.agents/（跨工具约定目录），~/.claude / ~/.codex 只是 symlink；无 sidecar、无 SQLite。</li>
-          <li><b>套装</b> —— 多 skill 目录自动识别为套装，整套挂载或逐子项开关（自动物化）。</li>
-          <li><b>修复</b> —— 断链 / 本地副本一键处理；危险操作全部进 store 回收站（~/.agents/.trash/），可恢复。</li>
-          <li><b>详情 peek</b> —— 点能力名称看 SKILL.md 摘要，深读走「在编辑器中打开」。</li>
+          <li><b>来源自动识别</b> —— 四级回填：popskill 自装记录 → .skill-lock.json（npx skills 生态）→ 技能目录 git remote → frontmatter homepage。</li>
+          <li><b>源式套装</b> —— 同一上游仓库的技能自动归拢成一张套装卡（如宝玉系 22 项、飞书系 26 项），磁盘平铺、symlink 不动。</li>
+          <li><b>内容哈希更新</b> —— 不依赖版本号，逐成员 SHA-256 比对上游；monorepo 一次 clone 检完全员、只换变化成员，并提示上游新增未安装技能。</li>
+          <li><b>更新前自动备份</b> —— 旧版进 store 回收站（~/.agents/.trash/，保留 20 份）。</li>
+          <li><b>未托管目录导入</b> —— 一键把散落在 ~/.claude / ~/.codex 的真实技能目录收编进 store 并换成 symlink。</li>
+          <li>一个屏幕：能力矩阵 + 添加/设置弹层 + 行内修复 + 详情 peek；断链/本地副本一键处理。</li>
         </ul>
-        <p><b>注意</b>：v2 不再读取 ~/.cc-switch/skills，请将技能目录移入 ~/.agents/skills/（拷过去即可自动识别）。</p>
+        <p><b>升级提示</b>：本版起 store 在 ~/.agents/（跨工具约定目录）。v1.x 的 ~/.cc-switch/skills 不再读取，目录拷入 ~/.agents/skills/ 即自动识别。</p>
       ]]></description>
       <enclosure
-        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.0.0/Popskill-2.0.0.dmg"
-        sparkle:version="200"
-        sparkle:shortVersionString="2.0.0"
-        sparkle:edSignature="bub2qGbA3Hz41ST94iyeC0K4SCdIWN6uqNvn00Ov3PDIhb1z7BXC1giRGe5iFBkKa5xAMQbsm3kf/SU6Ol4/Bw=="
-        length="3690723"
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.1.0/Popskill-2.1.0.dmg"
+        sparkle:version="210"
+        sparkle:shortVersionString="2.1.0"
+        sparkle:edSignature="yJVpUESi3JOxfBmLMzRPD2rKXYqrgplkIpIaeQ35S0rgCDvGx16tn33j9i1cqeP2q4DP/o8FLk5NCq93Sz+jCA=="
+        length="3755018"
         type="application/octet-stream"/>
-    </item>
-    <item>
-      <title>v1.1.0</title>
-      <pubDate>Sun, 07 Jun 2026 04:41:00 +0000</pubDate>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[
-        <h2>v1.1.0 — 紧凑账本 redesign</h2>
-        <p>整个 app 改用「紧凑账本」设计语言：暖纸色、仅亮色、单一电光蓝强调。v1.0.5 用户会自动收到升级提示。</p>
-        <ul>
-          <li><b>全新设计语言</b> —— 全局暖纸色配色 + 强制亮色 + 自定义账本窗口外壳（symlink 品牌标题栏 / 固定文字侧栏 / 底部状态栏）</li>
-          <li><b>矩阵重做</b> —— 密集齐边账本表（名称/类型/作者/Claude/Codex/版本/Tokens/调用）、可点击的 ●/—/◐/✕ 链接字形、彩色类型标签、套装覆盖分数+迷你条、树形子项、三段式头部</li>
-          <li><b>整页 Inspector</b> —— 点击行打开整页详情（面包屑 + hero + 覆盖卡 + 组件清单 + 来源/SSOT/版本/本机 右栏），取代旧的侧边面板</li>
-          <li><b>新屏</b> —— 新建能力（Create）、组装套装（Compose），带实时预览 / 覆盖 / manifest</li>
-          <li><b>重做</b> —— 修复中心（健康 + 修复）、源 / 更新（可更新项 + 你的 GitHub 源 + URL 添加）、设置（连接 / 同步 / 源 / 安装 / 配额 / 关于 分页）</li>
-          <li><b>信息架构</b> —— 侧栏精简为 6 个目的地（矩阵 / 修复中心 / 源·更新 / 新建能力 / 组装套装 / 设置）；用量数据并入矩阵和详情页</li>
-        </ul>
-        <p>这是 UI 版本,不是数据迁移 —— 你的 skill、源、同步设置保持不变。</p>
-      ]]></description>
-      <enclosure
-        url="https://github.com/maojiebc/majia-Popskill/releases/download/v1.1.0/Popskill-1.1.0.dmg"
-        sparkle:version="110"
-        sparkle:shortVersionString="1.1.0"
-        length="20003746"
-        type="application/octet-stream"
-        sparkle:edSignature="weSQtopok4ThBz7ELyjW36uJgt69A1x60Uak80HRFsBYvMudts788UJ67sm2gwnGWutJP+emIWtldlTxbduJDA==" />
-    </item>
-    <item>
-      <title>v1.0.5</title>
-      <pubDate>Thu, 21 May 2026 00:48:00 +0000</pubDate>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[
-        <h2>v1.0.5 — 套装矩阵 + Inspector 进化</h2>
-        <p>把最近基于 HTML 参考稿的 UI / 易用性 / 性能迭代合并成一个正式版本。v1.0.4 用户会自动收到升级提示。</p>
-        <ul>
-          <li><b>套装成为一等矩阵行</b> —— bundle/package 现在有独立行、组件展开、Claude/Codex 覆盖、版本、调用量、token 和 broken-link 聚合</li>
-          <li><b>套装 Inspector</b> —— 新增 Overview / README / Usage / Version / Sync / Metadata 分页,显示组件状态、版本、用量、本机路径、同步与安全操作</li>
-          <li><b>覆盖卡解释缺口</b> —— 不只显示 2/3,还显示百分比和 占位 / 未启用 说明</li>
-          <li><b>Usage 指标进矩阵和详情页</b> —— skill、bundle、展开组件都能看到 30 天调用、token 和趋势</li>
-          <li><b>Command-K / Spotlight 升级</b> —— 可搜索套装名、来源、组件、kind、状态和 CJK 触发词,默认结果优先最近 30 天高频使用项</li>
-          <li><b>搜索与 sidebar shortcuts</b> —— 支持 baoyu-comic / baoyu comic 等格式归一,并提供套装、Claude-only、Codex-only、broken links、CLI、MCP、agent 等一键过滤</li>
-          <li><b>同步和依赖诊断</b> —— Settings 与 Inspector 显示结构化同步状态、link health、required commands 和 update state</li>
-          <li><b>CI 稳定性</b> —— PR checks 去重、Xcode 16 Swift Testing、step timeout 和 MainActor-safe SwiftUI 状态访问</li>
-        </ul>
-      ]]></description>
-      <enclosure
-        url="https://github.com/maojiebc/majia-Popskill/releases/download/v1.0.5/Popskill-1.0.5.dmg"
-        sparkle:version="105"
-        sparkle:shortVersionString="1.0.5"
-        length="18620707"
-        type="application/octet-stream"
-        sparkle:edSignature="fqUHHvNTbYXv4O+0NA1+w8XxF/+xxF2yZV1yXm54XA0oA+dMmJzCF5PXugEy7gFQZ5LIillphvstEB5PGpzeBQ==" />
-    </item>
-    <item>
-      <title>v1.0.4</title>
-      <pubDate>Sun, 17 May 2026 05:00:00 +0000</pubDate>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[
-        <h2>v1.0.4 — 跳转修复 + 删除确认 + Insights 流式扫描</h2>
-        <p>体验修复 + 性能提升。v1.0.3 用户会自动收到升级提示。</p>
-        <ul>
-          <li><b>Spotlight / Idle / Link Health 跳转修复</b> —— 从 ⌘K 选 skill、从闲置 view 点 "Inspect"、从链接健康点行,inspector 现在能可靠打开正确的 skill (修了 raw id 与 namespaced capability id 混淆 bug)</li>
-          <li><b>数据源删除前确认对话框</b> —— 不再误触即删,弹"确定删 owner/name?"</li>
-          <li><b>Loading guards + 同步状态正确化</b> —— 各 view 的 refresh / update 按钮在请求进行中真正 disabled;WebDAV / iCloud SOON 标签的同步按钮真正灰掉</li>
-          <li><b>"全部更新" 安全化</b> —— 扫描或单条更新进行中不可再次点击</li>
-          <li><b>Onboarding SSOT 文案再修</b> —— wizard "扫描能力" 说明从 .agents/skills 改成正确的 .cc-switch/skills</li>
-          <li><b>设计 token 统一</b> —— v1.0.3 加的 canvas glow blur 圆球撤了 (视觉收益有限 + GPU 成本),全部走 Popskill token 体系</li>
-          <li><b>Insights transcript 扫描重写成 streaming</b> —— 之前一次性读整个 .jsonl 进内存;新版按行 streaming。223 个文件几百 MB 总数据时,内存峰值从 ~600MB 降到 ~50MB</li>
-          <li><b>Hot UI path</b> —— Formatter 重复实例化挪出每帧路径</li>
-          <li><b>+6 个新单元测试</b> —— PopskillStoreTests + SettingsViewTests,swift test 88/88 → 94/94</li>
-        </ul>
-      ]]></description>
-      <enclosure
-        url="https://github.com/maojiebc/majia-Popskill/releases/download/v1.0.4/Popskill-1.0.4.dmg"
-        sparkle:version="104"
-        sparkle:shortVersionString="1.0.4"
-        length="16360771"
-        type="application/octet-stream"
-        sparkle:edSignature="yAk7treHXtgA+PN6ZsucEjebJ6ojiYAljVCZvlg5D/j985czt38kC5FmYDPNUh+8Mya5wYObisWjm1XkEYe8Bw==" />
-    </item>
-    <item>
-      <title>v1.0.3</title>
-      <pubDate>Sun, 17 May 2026 03:30:00 +0000</pubDate>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[
-        <h2>v1.0.3 — UI 打磨 + 更新查找 O(1)</h2>
-        <p>体验打磨版本。矩阵主视图加了一组 named design token 和真正的"无结果"状态。v1.0.2 用户会自动收到升级提示。</p>
-        <ul>
-          <li><b>Hover 反馈</b> —— 鼠标停在矩阵行上时,行背景轻微高亮(尊重 prefers-reduced-motion)</li>
-          <li><b>选中行左侧 3pt 蓝色指示条</b> —— 看哪行被选中再也不靠脑补</li>
-          <li><b>搜索框 focus state</b> —— 聚焦时变 accent 描边;有内容时出现 × 一键清空</li>
-          <li><b>无匹配页面</b> —— 搜了不存在的关键词,显示专属"无匹配"页 + 一键重置 filter,不再被"暂无能力"的全局空状态盖住</li>
-          <li><b>filter chip 描边</b> —— 暗模式下激活/非激活状态分得更清楚</li>
-          <li><b>Canvas 背景柔光</b> —— 顶右 accent / 底左 orange 两个 blur 圆球,氛围感不抢戏</li>
-          <li><b>Update 查找 O(1)</b> —— 切到"可更新"filter 不再触发 O(n²) 扫描;60+ 行的矩阵能感觉到滑动顺很多</li>
-          <li><b>VoiceOver 提示</b> —— 每行加 accessibilityHint 把 capability summary 念出来</li>
-        </ul>
-      ]]></description>
-      <enclosure
-        url="https://github.com/maojiebc/majia-Popskill/releases/download/v1.0.3/Popskill-1.0.3.dmg"
-        sparkle:version="103"
-        sparkle:shortVersionString="1.0.3"
-        length="16330236"
-        type="application/octet-stream"
-        sparkle:edSignature="fx0vJbMAUuXfnO/97dTlyKXXNmUyDmTMjqAJMBDrGSgFccpARhCBwW2TOVhD80OVyxkO/QUDdv7bqqJ60q/2CQ==" />
-    </item>
-    <item>
-      <title>v1.0.2</title>
-      <pubDate>Sun, 17 May 2026 03:00:00 +0000</pubDate>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[
-        <h2>v1.0.2 — UX 修复 + 落地页打磨</h2>
-        <p>体验修复版本,没新功能但补了几个看得见的 bug。v1.0.1 用户会自动收到升级提示。</p>
-        <ul>
-          <li>设置 → "打开能力根目录" 不再跳到不存在的 <code>~/.agents/skills</code>,而是真实的 <code>~/.cc-switch/skills</code></li>
-          <li>只装 agent 没装 skill 的用户,矩阵不再被"暂无能力"空状态盖住</li>
-          <li>sidecar 错误以前只写不读,现在主窗顶部冒出 toast,带 X 关掉</li>
-          <li>30 秒 refresh TTL —— 来回切 sidebar 不再每次 ping sidecar / GitHub</li>
-          <li>"全部更新" 按钮在扫描 / 单条更新进行中不可点,防止重复触发</li>
-        </ul>
-      ]]></description>
-      <enclosure
-        url="https://github.com/maojiebc/majia-Popskill/releases/download/v1.0.2/Popskill-1.0.2.dmg"
-        sparkle:version="102"
-        sparkle:shortVersionString="1.0.2"
-        length="16278580"
-        type="application/octet-stream"
-        sparkle:edSignature="0iLxlnbDGO5qukBJdjXumnnrod7ZcmsfqErVaasYx+PY+LPn1/6qUcZVtiTj47te8C7GzrpvmYm1zf3gMfJFBA==" />
-    </item>
-    <item>
-      <title>v1.0.1</title>
-      <pubDate>Sat, 16 May 2026 16:00:00 +0000</pubDate>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[
-        <h2>v1.0.1 — Sparkle 自动更新接通</h2>
-        <p>Popskill 现在能自动检查并提示新版本。第一次从 v1.0.0 升上来需要手工下载 DMG;之后 v1.0.2+ 都会从应用内提醒。</p>
-        <ul>
-          <li>Info.plist 内嵌 <code>SUFeedURL</code> + <code>SUPublicEDKey</code>,启动 + 每日定时检查 GitHub Pages 上的 appcast.xml</li>
-          <li>EdDSA 签名校验保证下载的 DMG 是 majia 本人签发,中间被替换会被 Sparkle 拒绝</li>
-          <li>体积与 v1.0.0 几乎一致(~16 MB)</li>
-        </ul>
-      ]]></description>
-      <enclosure
-        url="https://github.com/maojiebc/majia-Popskill/releases/download/v1.0.1/Popskill-1.0.1.dmg"
-        sparkle:version="101"
-        sparkle:shortVersionString="1.0.1"
-        length="16281665"
-        type="application/octet-stream"
-        sparkle:edSignature="uewRXNWY9YDTAr7otIWyIuXJ/MKP/WqSZ3xmmA/y1NaOCaNuOCLDapuKwiGW5axAp3IjA38FKLbgy69GFr1xAQ==" />
     </item>
   </channel>
 </rss>
