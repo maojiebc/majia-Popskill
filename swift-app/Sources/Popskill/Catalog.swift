@@ -8,6 +8,9 @@ import Foundation
 struct CatalogEntry {
     let desc: String
     var type: CapType? = nil
+    /// 来源提示（v2.4）：复制安装类 skill（如 guanskill 套娃）四级溯源全落空时，
+    /// 由目录补一手——能归拢成套装；npm 源更新检查自动跳过
+    var source: String? = nil
 }
 
 enum Catalog {
@@ -77,11 +80,11 @@ enum Catalog {
         "lark-workflow-standup-report": .init(desc: "工作流：日程 + 待办生成站会摘要"),
 
         // ── 观远系（guanskill）──────────────────────────
-        "guancli": .init(desc: "观远 BI 全能查询：ETL / 数据集 / 页面 / 血缘 / 指标", type: .cli),
-        "guands": .init(desc: "观远数据连接与数据集管理：增量 / 调度 / 计算字段"),
-        "guanetl": .init(desc: "观远 ETL 全流程：拉取 / 编辑 / 预览 / 发布 / 调度"),
-        "guanvis": .init(desc: "观远卡片与仪表板搭建：30+ 图表类型脚本化"),
-        "guanwf": .init(desc: "观远工作流引擎数据流：创建 / 编辑 / 运行"),
+        "guancli": .init(desc: "观远 BI 全能查询：ETL / 数据集 / 页面 / 血缘 / 指标", type: .cli, source: "npm:@guandata/guanskill"),
+        "guands": .init(desc: "观远数据连接与数据集管理：增量 / 调度 / 计算字段", source: "npm:@guandata/guanskill"),
+        "guanetl": .init(desc: "观远 ETL 全流程：拉取 / 编辑 / 预览 / 发布 / 调度", source: "npm:@guandata/guanskill"),
+        "guanvis": .init(desc: "观远卡片与仪表板搭建：30+ 图表类型脚本化", source: "npm:@guandata/guanskill"),
+        "guanwf": .init(desc: "观远工作流引擎数据流：创建 / 编辑 / 运行", source: "npm:@guandata/guanskill"),
 
         // ── 马甲自研 ────────────────────────────────────
         "majia-getnote": .init(desc: "得到 Get 笔记一站式：存搜管 + 订阅抓取总结"),

@@ -189,10 +189,11 @@ struct StoreFS {
         return line.split(separator: ":", maxSplits: 1).last.map { $0.trimmingCharacters(in: .whitespaces) }
     }
 
-    /// 统一成 "github.com/owner/repo" 形态（小写，去协议/.git/锚点），本地路径原样返回
+    /// 统一成 "github.com/owner/repo" 形态（小写，去协议/.git/锚点）；npm:/本地路径原样返回
     static func normalizeSource(_ raw: String) -> String {
         var s = raw.trimmingCharacters(in: .whitespaces)
         if s.hasPrefix("~") || s.hasPrefix("/") { return s }
+        if s.lowercased().hasPrefix("npm:") { return s.lowercased() }
         for p in ["https://", "http://", "git@"] where s.hasPrefix(p) { s.removeFirst(p.count) }
         s = s.replacingOccurrences(of: "github.com:", with: "github.com/")
         if let hash = s.firstIndex(of: "#") { s = String(s[..<hash]) }
@@ -213,6 +214,10 @@ struct StoreFS {
         if type != .cli, let home = frontmatterHomepage(dir), home.contains("/") {
             return (StoreFS.normalizeSource(home), nil)
         }
+        // 第五级（v2.4）：精选目录的来源提示——救复制安装类的来源孤儿（如 guanskill 五件套）
+        if let curated = Catalog.entry(name)?.source {
+            return (StoreFS.normalizeSource(curated), nil)
+        }
         return (nil, nil)
     }
 
@@ -222,7 +227,7 @@ struct StoreFS {
         var bySource: [String: [Int]] = [:]
         for (i, e) in entries.enumerated() {
             guard !e.isBundle, let src = e.sourceUrl,
-                  SourceKind.of(src) == .github,
+                  SourceKind.of(src) != .local,                // github + npm 都归拢（npm 更新检查自动跳过）
                   !isSymlink(e.cap.dirURL) else { continue }   // 本地开发软链不归拢
             bySource[src, default: []].append(i)
         }

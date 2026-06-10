@@ -468,10 +468,30 @@ final class StoreFSTests: XCTestCase {
     func testCatalogTypeHint() throws {
         try makeSkill("guancli")   // 目录提示 CLI（名称特征也会命中，但 guands 只有目录能定）
         try makeSkill("guands")
+        let caps = scan().flatMap(\.allCaps)
+        XCTAssertEqual(caps.first { $0.name == "guancli" }?.type, .cli)
+        XCTAssertEqual(caps.first { $0.name == "guands" }?.type, .skill)
+        XCTAssertEqual(caps.first { $0.name == "guancli" }?.layoutKind, .skill, "链接布局不受目录影响")
+    }
+
+    // ── 目录来源提示 + npm 套装归拢（v2.4）───────────────
+
+    func testNormalizeSourceNpmPassthrough() {
+        XCTAssertEqual(StoreFS.normalizeSource("npm:@guandata/guanskill"), "npm:@guandata/guanskill")
+        XCTAssertEqual(StoreFS.normalizeSource("https://github.com/A/B.git"), "github.com/a/b")
+    }
+
+    func testCatalogSourceGroupsCopyInstalledFamily() throws {
+        // guanskill 复制安装五件套：lock 无 / .git 无 / homepage 无 → 目录 source 提示归拢
+        for n in ["guancli", "guands", "guanetl", "guanvis", "guanwf"] { try makeSkill(n) }
         let entries = scan()
-        XCTAssertEqual(entries.first { $0.name == "guancli" }?.cap.type, .cli)
-        XCTAssertEqual(entries.first { $0.name == "guands" }?.cap.type, .skill)
-        XCTAssertEqual(entries.first { $0.name == "guancli" }?.cap.layoutKind, .skill, "链接布局不受目录影响")
+        let bundle = try XCTUnwrap(entries.first(where: \.isBundle))
+        XCTAssertEqual(bundle.bundleKind, .source)
+        XCTAssertEqual(bundle.name, "guanskill")
+        XCTAssertEqual(bundle.sourceUrl, "npm:@guandata/guanskill")
+        XCTAssertEqual(bundle.children?.count, 5)
+        XCTAssertEqual(bundle.children?.first { $0.name == "guancli" }?.type, .cli, "套装内 CLI tag 保留")
+        XCTAssertNil(try fs.checkUpdate(bundle), "npm 源更新检查应安全跳过")
     }
 
     // ── 排序 / 类型推断 / 前缀收编（v2.1.2）──────────────
