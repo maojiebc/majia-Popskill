@@ -96,9 +96,10 @@ extension LinkStatus {
         case .broken: "断链"
         }
     }
+    // PATCH-02 色语义：激活 = 绿（与同步指示统一），电光蓝收窄为纯交互色（聚焦/链接/焦点环）
     var color: Color {
         switch self {
-        case .on: Ink.blue
+        case .on: Ink.green
         case .off: Ink.offGlyph
         case .stub: Ink.amber
         case .broken: Ink.red
@@ -106,7 +107,7 @@ extension LinkStatus {
     }
     var pillText: Color {
         switch self {
-        case .on: Ink.blue
+        case .on: Color(hex: 0x177A3E)
         case .off: Ink.tertiary
         case .stub: Ink.amberText
         case .broken: Ink.red
@@ -114,7 +115,7 @@ extension LinkStatus {
     }
     var pillBg: Color {
         switch self {
-        case .on: Ink.blue.opacity(0.06)
+        case .on: Ink.green.opacity(0.07)
         case .off: .clear
         case .stub: Ink.amber.opacity(0.05)
         case .broken: Ink.red.opacity(0.04)
@@ -122,7 +123,7 @@ extension LinkStatus {
     }
     var pillBorder: Color {
         switch self {
-        case .on: Color(hex: 0xAABDE8)
+        case .on: Color(hex: 0xA5D1B3)
         case .off: Ink.control
         case .stub: Color(hex: 0xDCC27A)
         case .broken: Color(hex: 0xE0A3A3)

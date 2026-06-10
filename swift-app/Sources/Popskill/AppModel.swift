@@ -36,6 +36,14 @@ struct FixOption: Identifiable {
 
 enum SheetKind { case add, settings }
 
+/// 键盘导航焦点项（PATCH-02）：与可见顺序一致的扁平序列
+struct KbItem: Equatable, Identifiable {
+    let id: String          // 行 id（套装=entry.id，能力=cap.id）
+    let isBundle: Bool
+    let entryId: String
+    let capId: String?      // 套装行为 nil
+}
+
 @MainActor
 @Observable
 final class AppModel {
@@ -59,6 +67,13 @@ final class AppModel {
     var checkingUpdates = false
     var updatingIds: Set<String> = []
 
+    // 键盘导航（PATCH-02）
+    var kbFocusId: String?
+    var kbToolIdx = 0
+    var kbFocusList: [KbItem] = []           // MainView 按可见顺序回填
+    var kbFocusFrame: CGRect = .zero         // 聚焦行的窗口坐标（修复弹层锚点用）
+    var winSize: CGSize = .zero
+
     @ObservationIgnored private var toastTask: Task<Void, Never>?
 
     // 派生
@@ -73,6 +88,7 @@ final class AppModel {
         if pe["POPSKILL_FAKE_DATA"] == "1" {
             fake = true
             (tools, entries) = Fixtures.make()
+            entries = fs.sortEntries(entries)
             syncInfo = SyncInfo(isGitRepo: true, clean: true, lastSync: Date().addingTimeInterval(-120), storeSizeMB: 482)
         } else {
             refresh()
@@ -83,7 +99,7 @@ final class AppModel {
         case "settings": sheet = .settings
         default: break
         }
-        if let first = entries.first(where: \.isBundle) { expanded.insert(first.id) }
+        // PATCH-02：套装默认全折叠（首屏密度），不再自动展开第一个
         // 调试钩子：POPSKILL_EXPAND=id1,id2 启动即展开指定套装（截图用）
         if let ids = pe["POPSKILL_EXPAND"]?.split(separator: ",") {
             ids.forEach { expanded.insert(String($0)) }
@@ -93,6 +109,25 @@ final class AppModel {
             Task { [weak self] in
                 try? await Task.sleep(for: .seconds(2))   // 不抢首屏
                 await MainActor.run { self?.checkUpdates(auto: true) }
+            }
+        }
+        // 调试钩子：POPSKILL_KB_SIM=d,d,u,l,r,space 启动后模拟键盘导航（E2E 截图用）
+        if let sim = pe["POPSKILL_KB_SIM"] {
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(1.5))
+                await MainActor.run {
+                    guard let self else { return }
+                    for step in sim.split(separator: ",") {
+                        switch step {
+                        case "d": self.kbMove(1)
+                        case "u": self.kbMove(-1)
+                        case "l": self.kbSetTool(self.kbToolIdx - 1)
+                        case "r": self.kbSetTool(self.kbToolIdx + 1)
+                        case "space": self.kbActivate()
+                        default: break
+                        }
+                    }
+                }
             }
         }
         // 调试钩子：POPSKILL_PEEK=capId 启动即开详情 peek（截图验证用）
@@ -145,6 +180,58 @@ final class AppModel {
         Task {
             try? await Task.sleep(for: .seconds(1.8))
             if flashId == id { flashId = nil }
+        }
+    }
+
+    // ── 键盘导航（PATCH-02）───────────────────────────────
+
+    private var kbIdx: Int? {
+        guard let id = kbFocusId else { return nil }
+        return kbFocusList.firstIndex { $0.id == id }
+    }
+
+    func kbMove(_ delta: Int) {
+        guard !kbFocusList.isEmpty else { return }
+        if let i = kbIdx {
+            kbFocusId = kbFocusList[max(0, min(kbFocusList.count - 1, i + delta))].id
+        } else {
+            kbFocusId = (delta > 0 ? kbFocusList.first : kbFocusList.last)?.id
+        }
+    }
+
+    func kbSetTool(_ idx: Int) {
+        guard kbFocusId != nil else { return }
+        kbToolIdx = max(0, min(tools.count - 1, idx))
+    }
+
+    /// 空格/回车：套装行折叠/展开；能力行 on/off 切换、stub/broken 开修复弹层
+    func kbActivate() {
+        guard let i = kbIdx else { return }
+        let item = kbFocusList[i]
+        if item.isBundle {
+            guard query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+            if expanded.contains(item.entryId) { expanded.remove(item.entryId) }
+            else { expanded.insert(item.entryId) }
+            return
+        }
+        guard let entry = entries.first(where: { $0.id == item.entryId }),
+              let cap = entry.allCaps.first(where: { $0.id == item.capId }),
+              kbToolIdx < tools.count else { return }
+        let tool = tools[kbToolIdx]
+        let st = cap.status(tool.id)
+        if st == .on || st == .off {
+            toggle(cap: cap, entry: entry, tool: tool)
+        } else {
+            let anchor = CGPoint(x: kbFocusFrame.midX, y: kbFocusFrame.maxY)
+            let flip = winSize.height > 0 && kbFocusFrame.maxY > winSize.height * 0.63
+            openFix(FixTarget(issueKind: st, cap: cap, entry: entry, tool: tool, anchor: anchor, flip: flip))
+        }
+    }
+
+    /// 焦点列表更新后校验：当前焦点已不可见则清除
+    func kbValidate() {
+        if let id = kbFocusId, !kbFocusList.contains(where: { $0.id == id }) {
+            kbFocusId = nil
         }
     }
 

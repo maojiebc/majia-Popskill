@@ -89,6 +89,7 @@ struct RootView: View {
         }
         .ignoresSafeArea(.all, edges: .top)
         .animation(.easeOut(duration: 0.12), value: model.toast)
+        .onGeometryChange(for: CGSize.self, of: \.size) { model.winSize = $0 }
         .onAppear { installKeyMonitor() }
         .onDisappear {
             if let m = keyMonitor { NSEvent.removeMonitor(m) }
@@ -103,6 +104,7 @@ struct RootView: View {
                 if model.peekTarget != nil { model.peekTarget = nil; return nil }
                 if model.fixTarget != nil { model.fixTarget = nil; return nil }
                 if model.sheet != nil { model.sheet = nil; return nil }
+                if model.kbFocusId != nil { model.kbFocusId = nil; return nil }
                 return event
             }
             if event.charactersIgnoringModifiers == "/",
@@ -110,6 +112,20 @@ struct RootView: View {
                !(NSApp.keyWindow?.firstResponder is NSTextView) {
                 model.searchFocused = true
                 return nil
+            }
+            // 键盘导航（PATCH-02）：弹层/浮层/输入框打开时不响应
+            if model.sheet == nil, model.fixTarget == nil, model.peekTarget == nil,
+               !(NSApp.keyWindow?.firstResponder is NSTextView) {
+                switch event.keyCode {
+                case 125: model.kbMove(1); return nil          // ↓
+                case 126: model.kbMove(-1); return nil         // ↑
+                case 123: model.kbSetTool(model.kbToolIdx - 1); return model.kbFocusId == nil ? event : nil  // ←
+                case 124: model.kbSetTool(model.kbToolIdx + 1); return model.kbFocusId == nil ? event : nil  // →
+                case 49, 36:                                   // 空格 / 回车
+                    if model.kbFocusId != nil { model.kbActivate(); return nil }
+                    return event
+                default: break
+                }
             }
             return event
         }

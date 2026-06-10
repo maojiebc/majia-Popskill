@@ -209,14 +209,14 @@ struct FractionCell: View {
     let agg: ToolAgg
 
     var body: some View {
-        let color: Color = agg.on == agg.total ? Ink.blue : (agg.on == 0 && agg.stub == 0 ? Color(hex: 0x888888) : Ink.amber)
+        let color: Color = agg.on == agg.total ? Ink.green : (agg.on == 0 && agg.stub == 0 ? Color(hex: 0x888888) : Ink.amber)
         VStack(spacing: 3) {
             Text("\(agg.on)/\(agg.total)")
                 .font(.mono(11, .bold))
                 .foregroundStyle(color)
             GeometryReader { geo in
                 HStack(spacing: 0) {
-                    seg(Ink.blue, agg.on, width: geo.size.width)
+                    seg(Ink.green, agg.on, width: geo.size.width)
                     seg(Color(hex: 0xE1A51A), agg.stub, width: geo.size.width)
                     seg(Ink.red, agg.broken, width: geo.size.width)
                     seg(Color(hex: 0xE6E2D4), agg.off, width: geo.size.width)

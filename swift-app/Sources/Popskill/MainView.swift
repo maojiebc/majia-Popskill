@@ -167,7 +167,7 @@ struct MainView: View {
             ForEach(CapType.allCases) { t in chip(t, t.rawValue) }
             Spacer()
             let filtering = !model.query.trimmingCharacters(in: .whitespaces).isEmpty || model.typeFilter != nil
-            Text(filtering ? "\(capCount) 项匹配" : "排序：类型 ↓")
+            Text(filtering ? "\(capCount) 项匹配" : "↑↓ 行 · ←→ 列 · 空格 切换")
                 .font(.ui(11.5, filtering ? .semibold : .regular))
                 .foregroundStyle(filtering ? Ink.blue : Color(hex: 0x888888))
         }
@@ -243,33 +243,63 @@ struct MainView: View {
     // ── 卡片网格 ──────────────────────────────────────────
 
     private var grid: some View {
-        ScrollView {
-            let list = items
-            if list.isEmpty {
-                VStack(spacing: 4) {
-                    Text("无匹配结果").font(.ui(13, .semibold)).foregroundStyle(Ink.secondary2)
-                    (Text("没有能力匹配 “") + Text(model.query).font(.mono(12)).foregroundStyle(Ink.ink) + Text("”。试试别的关键词，或 + 添加。"))
-                        .font(.ui(12)).foregroundStyle(Ink.tertiary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 64)
-            } else {
-                VStack(spacing: 10) {
-                    ForEach(rows(list), id: \.first!.id) { row in
-                        if row.count == 1, case .bundle = row[0] {
-                            itemView(row[0])
-                        } else {
-                            HStack(alignment: .top, spacing: 10) {
-                                ForEach(row) { itemView($0).frame(maxWidth: .infinity, alignment: .top) }
-                                if row.count == 1 { Color.clear.frame(maxWidth: .infinity) }
+        let list = items
+        return ScrollViewReader { proxy in
+            ScrollView {
+                if list.isEmpty {
+                    VStack(spacing: 4) {
+                        Text("无匹配结果").font(.ui(13, .semibold)).foregroundStyle(Ink.secondary2)
+                        (Text("没有能力匹配 “") + Text(model.query).font(.mono(12)).foregroundStyle(Ink.ink) + Text("”。试试别的关键词，或 + 添加。"))
+                            .font(.ui(12)).foregroundStyle(Ink.tertiary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 64)
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(rows(list), id: \.first!.id) { row in
+                            if row.count == 1, case .bundle = row[0] {
+                                itemView(row[0])
+                            } else {
+                                HStack(alignment: .top, spacing: 10) {
+                                    ForEach(row) { itemView($0).frame(maxWidth: .infinity, alignment: .top) }
+                                    if row.count == 1 { Color.clear.frame(maxWidth: .infinity) }
+                                }
                             }
                         }
                     }
+                    .padding(EdgeInsets(top: 16, leading: 28, bottom: 28, trailing: 28))
                 }
-                .padding(EdgeInsets(top: 16, leading: 28, bottom: 28, trailing: 28))
+            }
+            .onChange(of: model.kbFocusId) { _, id in
+                if let id { withAnimation(.easeOut(duration: 0.1)) { proxy.scrollTo(id) } }
             }
         }
         .background(Ink.window)
+        .onAppear { syncKbList(list) }
+        .onChange(of: kbIds(list)) { _, _ in syncKbList(items) }
+    }
+
+    /// 键盘焦点序列 = 可见顺序（套装行 + 展开的子项 + 独立卡）
+    private func kbIds(_ list: [DisplayItem]) -> [String] {
+        list.flatMap { item -> [String] in
+            switch item {
+            case .bundle(let e, let kids): [e.id] + (kids ?? []).map(\.id)
+            case .cap(let c, _, _): [c.id]
+            }
+        }
+    }
+
+    private func syncKbList(_ list: [DisplayItem]) {
+        model.kbFocusList = list.flatMap { item -> [KbItem] in
+            switch item {
+            case .bundle(let e, let kids):
+                [KbItem(id: e.id, isBundle: true, entryId: e.id, capId: nil)]
+                    + (kids ?? []).map { KbItem(id: $0.id, isBundle: false, entryId: e.id, capId: $0.id) }
+            case .cap(let c, let e, _):
+                [KbItem(id: c.id, isBundle: false, entryId: e.id, capId: c.id)]
+            }
+        }
+        model.kbValidate()
     }
 
     /// 套装独占一行，独立能力两两成行
@@ -339,21 +369,26 @@ struct CapCard: View {
                 metaRow
             }
             VStack(spacing: 5) {
-                ForEach(model.tools) { t in
+                ForEach(Array(model.tools.enumerated()), id: \.element.id) { i, t in
                     TogglePill(status: cap.status(t.id), label: pillLabel(t)) {
                         cellTap(tool: t)
                     }
+                    .kbCellRing(focused && model.kbToolIdx == i)
                 }
             }
             .frame(minWidth: 118)
         }
         .padding(EdgeInsets(top: 13, leading: 15, bottom: 13, trailing: 15))
         .background(RoundedRectangle(cornerRadius: 10).fill(flashing ? Ink.flashBg : Ink.card))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(flashing ? Ink.blue : Ink.hairline, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(focused || flashing ? Ink.blue : Ink.hairline, lineWidth: 1))
+        .kbRowFocus(focused, radius: 10, model: model)
         .shadow(color: .black.opacity(0.03), radius: 1, y: 1)
         .onHover { hovered = $0 }
         .animation(.easeOut(duration: 1.2), value: flashing)
+        .id(cap.id)
     }
+
+    private var focused: Bool { model.kbFocusId == cap.id }
 
     private func pillLabel(_ t: Tool) -> String {
         String(t.name.split(separator: " ").first ?? "")
@@ -411,11 +446,15 @@ struct BundleCard: View {
             if let kids, !kids.isEmpty { childList(kids) }
         }
         .background(RoundedRectangle(cornerRadius: 10).fill(flashing ? Ink.flashBg : Ink.bundleBody))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(flashing ? Ink.blue : Ink.hairline, lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(headFocused || flashing ? Ink.blue : Ink.hairline, lineWidth: 1))
+        .kbRowFocus(headFocused, radius: 10, model: model)
         .shadow(color: .black.opacity(0.03), radius: 1, y: 1)
         .onHover { hovered = $0 }
+        .id(entry.id)
     }
+
+    private var headFocused: Bool { model.kbFocusId == entry.id }
 
     private var header: some View {
         HStack(spacing: 12) {
@@ -439,15 +478,15 @@ struct BundleCard: View {
                         .font(.ui(11.5))
                         .foregroundStyle(Ink.secondary)
                         .lineLimit(1)
-                    if let url = entry.sourceUrl {
-                        Text("· ↗ \(url)")
-                            .font(.mono(10))
-                            .foregroundStyle(Ink.tertiary)
-                            .lineLimit(1)
-                    }
+                    // PATCH-02：套装头部补总 tokens
+                    Text("· \(formatTokens(entry.cap.tokens))\(entry.sourceUrl.map { " · ↗ \($0)" } ?? "")")
+                        .font(.mono(10))
+                        .foregroundStyle(Ink.tertiary)
+                        .lineLimit(1)
                 }
             }
             Spacer(minLength: 12)
+            // PATCH-02：固定列宽，与子项清单列对齐
             ForEach(model.tools) { t in
                 VStack(spacing: 3) {
                     Text(String(t.name.split(separator: " ").first ?? "").uppercased())
@@ -455,10 +494,11 @@ struct BundleCard: View {
                         .foregroundStyle(Ink.tertiary)
                     FractionCell(agg: aggregate(entry.children ?? [], toolId: t.id))
                 }
-                .frame(minWidth: 52)
+                .frame(width: 52)
             }
-            HStack(spacing: 6) {
-                if let v = entry.cap.version { Text("v\(v)") }
+            HStack(spacing: 4) {
+                Spacer(minLength: 0)
+                if let v = entry.cap.version { Text("v\(v)").lineLimit(1).fixedSize() }
                 if entry.hasUpdate, let latest = entry.latest {
                     UpdateBadge(latest: latest) { model.runUpdate(entry.id) }
                 }
@@ -466,13 +506,14 @@ struct BundleCard: View {
             .font(.ui(11.5))
             .foregroundStyle(Ink.secondary)
             .monospacedDigit()
+            .frame(width: 104)
             HStack(spacing: 2) {
                 if hovered {
                     HoverAction(symbol: "↗", danger: false, help: "在编辑器中打开") { model.openInEditor(entry.cap.dirURL) }
                     HoverAction(symbol: "✕", danger: true, help: "移除套装（含全部子项）") { model.removeEntry(entry) }
                 }
             }
-            .frame(width: 48, alignment: .trailing)
+            .frame(width: 46, alignment: .trailing)
         }
         .padding(EdgeInsets(top: 12, leading: 15, bottom: 12, trailing: 15))
         .background(Ink.bundleHead)
@@ -491,10 +532,10 @@ struct BundleCard: View {
                 Spacer()
                 ForEach(model.tools) { t in
                     Text(String(t.name.split(separator: " ").first ?? "").uppercased())
-                        .frame(width: 44)
+                        .frame(width: 52)
                 }
-                Text("版本").frame(width: 54, alignment: .trailing)
-                Color.clear.frame(width: 22)
+                Text("版本").frame(width: 96, alignment: .trailing)
+                Color.clear.frame(width: 46)
             }
             .font(.ui(9, .bold)).kerning(0.7)
             .foregroundStyle(Color(hex: 0xB3AE9E))
@@ -507,7 +548,8 @@ struct BundleCard: View {
     }
 
     private func childRow(_ c: Capability, isLast: Bool) -> some View {
-        HStack(spacing: 10) {
+        let cf = model.kbFocusId == c.id
+        return HStack(spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(treeGlyph(isLast: isLast))
                     .font(.mono(12))
@@ -519,27 +561,34 @@ struct BundleCard: View {
                     .foregroundStyle(Ink.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            ForEach(model.tools) { t in
+            ForEach(Array(model.tools.enumerated()), id: \.element.id) { i, t in
                 StatusCell(status: c.status(t.id)) { childCellTap(c, tool: t) }
-                    .frame(width: 44)
+                    .frame(width: 52)
+                    .background(RoundedRectangle(cornerRadius: 6)
+                        .fill(cf && model.kbToolIdx == i ? Ink.blue.opacity(0.12) : .clear))
             }
             Text(c.version ?? "—")
                 .font(.ui(11))
                 .foregroundStyle(Ink.tertiary)
                 .monospacedDigit()
-                .frame(width: 54, alignment: .trailing)
+                .frame(width: 96, alignment: .trailing)
             HStack {
                 if hoverChild == c.id {
                     HoverAction(symbol: "↗", danger: false, help: "在编辑器中打开") { model.openInEditor(c.dirURL) }
                 }
             }
-            .frame(width: 22)
+            .frame(width: 46, alignment: .trailing)
         }
         .padding(.horizontal, 8).padding(.vertical, 4)
-        .background(RoundedRectangle(cornerRadius: 6).fill(hoverChild == c.id ? Ink.chrome : .clear))
+        .background(RoundedRectangle(cornerRadius: 6).fill(cf ? Color(hex: 0xEEF3FD) : (hoverChild == c.id ? Ink.chrome : .clear)))
+        .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .global) }) { frame in
+            if cf { model.kbFocusFrame = frame }
+        }
         .onHover { hoverChild = $0 ? c.id : (hoverChild == c.id ? nil : hoverChild) }
+        .id(c.id)
     }
 
     private func childCellTap(_ c: Capability, tool: Tool) {
@@ -606,6 +655,32 @@ func currentClickPoint() -> CGPoint {
     guard let event = NSApp.currentEvent, let window = event.window else { return CGPoint(x: 640, y: 300) }
     let p = event.locationInWindow
     return CGPoint(x: p.x, y: window.frame.height - p.y)
+}
+
+// ── 键盘焦点视觉（PATCH-02）──────────────────────────────
+
+extension View {
+    /// 行焦点环：蓝描边 + 2px 外环；并把行的窗口坐标回填给 model（修复弹层锚点）
+    func kbRowFocus(_ focused: Bool, radius: CGFloat, model: AppModel) -> some View {
+        overlay(
+            RoundedRectangle(cornerRadius: radius)
+                .stroke(Ink.blue.opacity(focused ? 0.18 : 0), lineWidth: 2)
+                .padding(-2)
+        )
+        .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .global) }) { frame in
+            if focused { model.kbFocusFrame = frame }
+        }
+    }
+
+    /// pill / 单元格的工具列焦点环
+    @ViewBuilder
+    func kbCellRing(_ active: Bool) -> some View {
+        if active {
+            overlay(Capsule().stroke(Ink.blue.opacity(0.40), lineWidth: 2).padding(-2))
+        } else {
+            self
+        }
+    }
 }
 
 @MainActor
