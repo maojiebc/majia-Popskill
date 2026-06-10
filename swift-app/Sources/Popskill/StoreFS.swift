@@ -193,17 +193,31 @@ struct StoreFS {
         return line.split(separator: ":", maxSplits: 1).last.map { $0.trimmingCharacters(in: .whitespaces) }
     }
 
-    /// 统一成 "github.com/owner/repo" 形态（小写，去协议/.git/锚点）；npm:/本地路径原样返回
+    /// 统一成 "github.com/owner/repo" 形态（小写，去协议/.git/锚点/查询串，
+    /// **仓库内深路径截到 owner/repo**——/tree/main/skills/x 这类逐 skill 不同的
+    /// homepage 必须收敛到同一个分组键，否则同仓技能归拢不了（v2.4.2 异机实测教训）。
+    /// npm:/本地路径原样返回。
     static func normalizeSource(_ raw: String) -> String {
         var s = raw.trimmingCharacters(in: .whitespaces)
         if s.hasPrefix("~") || s.hasPrefix("/") { return s }
         if s.lowercased().hasPrefix("npm:") { return s.lowercased() }
-        for p in ["https://", "http://", "git@"] where s.hasPrefix(p) { s.removeFirst(p.count) }
+        for p in ["https://", "http://", "git@", "ssh://git@"] where s.hasPrefix(p) { s.removeFirst(p.count) }
         s = s.replacingOccurrences(of: "github.com:", with: "github.com/")
-        if let hash = s.firstIndex(of: "#") { s = String(s[..<hash]) }
-        if s.hasSuffix(".git") { s.removeLast(4) }
-        if !s.contains(".") && s.split(separator: "/").count == 2 { s = "github.com/" + s }   // "owner/repo" 简写
-        return s.lowercased()
+        for cut in ["#", "?"] {
+            if let i = s.firstIndex(of: Character(cut)) { s = String(s[..<i]) }
+        }
+        if s.hasPrefix("www.") { s.removeFirst(4) }
+        s = s.lowercased()
+        var parts = s.split(separator: "/").map(String.init)
+        guard !parts.isEmpty else { return s }
+        if parts[0] == "raw.githubusercontent.com" { parts[0] = "github.com" }
+        if !parts[0].contains(".") {
+            parts.insert("github.com", at: 0)   // "owner/repo" 简写
+        }
+        // host + owner + repo，深路径截断
+        parts = Array(parts.prefix(3))
+        if parts.count == 3, parts[2].hasSuffix(".git") { parts[2].removeLast(4) }
+        return parts.joined(separator: "/")
     }
 
     private func provenance(name: String, dir: URL, type: CapType, meta: StoreMeta,
@@ -229,10 +243,12 @@ struct StoreFS {
     /// 磁盘不动、symlink 逐成员——套装只是源的视图。
     private func groupBySource(_ entries: [Entry], meta: StoreMeta) -> [Entry] {
         var bySource: [String: [Int]] = [:]
+        // 归拢只看来源是否同一远程仓——store 条目本身是 symlink 也照样归
+        // （dotfiles 同步类布局整 store 都是软链；更新读写仍在 checkUpdate/applyUpdate
+        //  里逐成员跳过软链，安全性不变）
         for (i, e) in entries.enumerated() {
             guard !e.isBundle, let src = e.sourceUrl,
-                  SourceKind.of(src) != .local,                // github + npm 都归拢（npm 更新检查自动跳过）
-                  !isSymlink(e.cap.dirURL) else { continue }   // 本地开发软链不归拢
+                  SourceKind.of(src) != .local else { continue }   // 本地路径来源（私有开发）不归拢
             bySource[src, default: []].append(i)
         }
         var groups = bySource.filter { $0.value.count >= 2 }

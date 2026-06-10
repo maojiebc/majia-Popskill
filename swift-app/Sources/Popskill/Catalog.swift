@@ -98,6 +98,7 @@ enum Catalog {
         "majia-video-png": .init(desc: "视频抽帧转 PNG 截图集"),
 
         // ── 社区常用 ────────────────────────────────────
+        "agent-reach": .init(desc: "给 Agent 装上全网之眼：17 个平台的 CLI 触达"),
         "anything-to-notebooklm": .init(desc: "多源内容进 NotebookLM：转播客 / PPT / 思维导图"),
         "claude-to-im": .init(desc: "Claude Code 桥接到飞书 / TG / Discord，手机上聊"),
         "defuddle": .init(desc: "网页正文净化抽取：去广告导航留正文"),

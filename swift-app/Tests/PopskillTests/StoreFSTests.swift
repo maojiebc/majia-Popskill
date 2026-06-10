@@ -416,20 +416,88 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(entry.sourceUrl, "github.com/op/cloned-skill")
     }
 
-    func testDevSymlinkEntryNotGrouped() throws {
-        // store 里指向私有仓的软链接成员：不参与归拢、更新时跳过
-        try makeSkill("alpha")
-        let priv = sandbox.appendingPathComponent("private-repo/dev-skill")
-        try fm.createDirectory(at: priv, withIntermediateDirectories: true)
-        try "---\nname: dev-skill\n---\n".write(to: priv.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
-        try fm.createSymbolicLink(
-            at: env.storeRoot.appendingPathComponent("skills/dev-skill"), withDestinationURL: priv)
-        try writeLock([
-            "alpha": ["source": "jim/x", "sourceUrl": "https://github.com/jim/x.git", "skillPath": "skills/alpha/SKILL.md"],
-            "dev-skill": ["source": "jim/x", "sourceUrl": "https://github.com/jim/x.git", "skillPath": "skills/dev-skill/SKILL.md"],
-        ])
+    func testNormalizeSourceCollapsesDeepPaths() {
+        // 异机实测教训（v2.4.2）：逐 skill 不同的深路径必须收敛到同一分组键
+        let expect = "github.com/jimliu/baoyu-skills"
+        for raw in [
+            "https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-comic",
+            "github.com/jimliu/baoyu-skills/blob/main/skills/baoyu-diagram/SKILL.md",
+            "https://www.github.com/JimLiu/baoyu-skills.git",
+            "https://raw.githubusercontent.com/JimLiu/baoyu-skills/main/README.md",
+            "github.com/jimliu/baoyu-skills#baoyu-comic",
+            "github.com/jimliu/baoyu-skills/",
+            "git@github.com:JimLiu/baoyu-skills.git",
+        ] {
+            XCTAssertEqual(StoreFS.normalizeSource(raw), expect, raw)
+        }
+    }
+
+    func testPerSkillDeepHomepageStillGroups() throws {
+        // 每个 skill 的 homepage 指向仓库内自己的子路径 → 仍应归成一个套装
+        for n in ["deep-a", "deep-b"] {
+            let dir = try makeSkill(n)
+            try """
+            ---
+            name: \(n)
+            homepage: https://github.com/Own/Mono/tree/main/skills/\(n)
+            ---
+            """.write(to: dir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        }
         let entries = scan()
-        XCTAssertNil(entries.first(where: \.isBundle), "软链成员不计入，单成员不成套装")
+        let bundle = try XCTUnwrap(entries.first(where: \.isBundle), "深路径 homepage 应收敛归拢")
+        XCTAssertEqual(bundle.sourceUrl, "github.com/own/mono")
+        XCTAssertEqual(bundle.children?.count, 2)
+    }
+
+    func testSymlinkStoreEntriesStillGroup() throws {
+        // dotfiles 同步类布局：store 条目本身是软链 + github 来源 → 照样归拢（显示层）
+        let real = sandbox.appendingPathComponent("dotfiles")
+        for n in ["s-a", "s-b"] {
+            let d = real.appendingPathComponent(n)
+            try fm.createDirectory(at: d, withIntermediateDirectories: true)
+            try "---\nname: \(n)\n---\n".write(to: d.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+            try fm.createSymbolicLink(at: env.storeRoot.appendingPathComponent("skills/\(n)"),
+                                      withDestinationURL: d)
+        }
+        try writeLock([
+            "s-a": ["source": "own/dots", "sourceUrl": "https://github.com/own/dots.git", "skillPath": "skills/s-a/SKILL.md"],
+            "s-b": ["source": "own/dots", "sourceUrl": "https://github.com/own/dots.git", "skillPath": "skills/s-b/SKILL.md"],
+        ])
+        let bundle = try XCTUnwrap(scan().first(where: \.isBundle), "整 store 软链的机器也应归拢")
+        XCTAssertEqual(bundle.children?.count, 2)
+    }
+
+    func testUpdateSkipsSymlinkMembers() throws {
+        // 安全层不变：套装更新逐成员跳过软链（手工构造 entry，源用本地路径走通 resolve）
+        let upstream = sandbox.appendingPathComponent("mono2")
+        for n in ["s-a", "s-b"] {
+            let d = upstream.appendingPathComponent("skills/\(n)")
+            try fm.createDirectory(at: d, withIntermediateDirectories: true)
+            try "---\nname: \(n)\nversion: 1.0.0\n---\n旧\n".write(to: d.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        }
+        try fm.copyItem(at: upstream.appendingPathComponent("skills/s-a"),
+                        to: env.storeRoot.appendingPathComponent("skills/s-a"))
+        try fm.createSymbolicLink(at: env.storeRoot.appendingPathComponent("skills/s-b"),
+                                  withDestinationURL: upstream.appendingPathComponent("skills/s-b"))
+        func cap(_ n: String) -> Capability {
+            var c = Capability(id: n, name: n, type: .skill, linkKind: .skill, desc: "", version: "1.0.0",
+                               author: nil, tokens: 0,
+                               dirURL: env.storeRoot.appendingPathComponent("skills/\(n)"))
+            c.repoSubdir = "skills/\(n)"
+            return c
+        }
+        var head = cap("bundle-head"); head.type = .bundle
+        let entry = Entry(id: "src:test", cap: head, children: [cap("s-a"), cap("s-b")],
+                          bundleKind: .source, sourceUrl: upstream.path)
+
+        for n in ["s-a", "s-b"] {
+            try "---\nname: \(n)\nversion: 2.0.0\n---\n新\n".write(
+                to: upstream.appendingPathComponent("skills/\(n)/SKILL.md"), atomically: true, encoding: .utf8)
+        }
+        let check = try XCTUnwrap(try fs.checkUpdate(entry))
+        XCTAssertEqual(check.changedMembers, ["s-a"], "软链成员必须被更新检查跳过")
+        let result = try fs.applyUpdate(entry)
+        XCTAssertEqual(result.updated, ["s-a"], "软链成员绝不能被更新写入")
     }
 
     func testSourceBundleUpdateOnlyChangedMember() throws {
