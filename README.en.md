@@ -130,6 +130,14 @@ v2 is a first-principles rewrite (one screen, filesystem as database). v1.x (sid
 
 ---
 
+## Acknowledgments
+
+- **[CC Switch](https://github.com/farion1231/cc-switch)** — where this project started. Popskill v1 used its Rust services layer as the storage engine via a zero-fork git submodule; and although v2 went pure-Swift against the filesystem, v2.1's update machinery — content-hash comparison against upstream, automatic backup before update, per-app enable flags — is directly modeled on its skill management design.
+- **[Sparkle](https://sparkle-project.org)** — the de-facto standard for Mac in-app updates, powering this app's update delivery.
+- **The `npx skills` ecosystem** — the `~/.agents/skills/` cross-tool convention and the `.skill-lock.json` lock file are the foundation of Popskill's provenance detection and interoperability.
+
+---
+
 ## 👤 Author / Contact
 
 **Majia (@maojiebc)** · 超级马甲 (Super Majia)
