@@ -8,6 +8,22 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.7.1</title>
+      <pubDate>Thu, 11 Jun 2026 02:30:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.7.1 — 展开态空间优化</h2>
+        <p><b>展开置顶</b>：展开的套装提升到最前，折叠卡连续打包不再留孤行；<b>子项自适应分栏</b>：宽屏下套装子项双栏/三栏排布，20 项从一面墙变 10 行。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.7.1/Popskill-2.7.1.dmg"
+        sparkle:version="271"
+        sparkle:shortVersionString="2.7.1"
+        sparkle:edSignature="HoJlEoP3gwmsNRcSQY48bZAu8FRK3ecOX0mnaDiTJUHFMWwErlS4pn61yAg74TFSXFqzgJpVBZxqDJ8yuBbzAA=="
+        length="2379812"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.7.0</title>
       <pubDate>Wed, 10 Jun 2026 20:00:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
