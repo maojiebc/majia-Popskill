@@ -8,6 +8,22 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.4.1</title>
+      <pubDate>Wed, 10 Jun 2026 14:00:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.4.1 — 新用户引导打通</h2>
+        <p>空态「扫描本地目录」现在会发现 ~/.claude / ~/.codex 里的存量技能，确认后一键收编进 store 并建链——Claude Code 老用户装完点一下，矩阵直接成型。未安装的工具默认不挂载。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.4.1/Popskill-2.4.1.dmg"
+        sparkle:version="241"
+        sparkle:shortVersionString="2.4.1"
+        sparkle:edSignature="RVKprWnMN82r4qjop+2uJbkNXeffk9aZiwFJ8wuCkmPnUPY24NDYRhPEsTrsFEK1gDl4dRxn3ObaxN6Ar5DlAA=="
+        length="2325458"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.4.0</title>
       <pubDate>Wed, 10 Jun 2026 12:30:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
