@@ -8,6 +8,22 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.3.1</title>
+      <pubDate>Wed, 10 Jun 2026 11:30:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.3.1 — 弹层底色修复</h2>
+        <p>修复添加 / 设置弹层、修复弹层、详情 peek 的底色被阴影糊成灰色的问题（恢复暖纸 #fafaf8，与设计一致）；frontmatter 多行描述不再显示成 "|"。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.3.1/Popskill-2.3.1.dmg"
+        sparkle:version="231"
+        sparkle:shortVersionString="2.3.1"
+        sparkle:edSignature="wcxvCOu3iI1Z8/God4w9M6K4GM9d0wxAZFeeXuUBJjJZFeB7cuuUXPce6PGclap5qVYyo7VXBIj58RXQwWJxBg=="
+        length="2319729"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.3.0</title>
       <pubDate>Wed, 10 Jun 2026 10:00:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
