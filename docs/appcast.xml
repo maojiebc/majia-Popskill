@@ -8,6 +8,25 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.5.0</title>
+      <pubDate>Wed, 10 Jun 2026 16:30:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.5.0 — 更新提醒看得见</h2>
+        <ul>
+          <li><b>App 自动更新真正开启</b> —— 此前 Sparkle 未启用自动检查且默认 24 小时间隔，提醒从未触发；现在每小时检查一次，设置 → 关于也有「检查 App 更新…」手动按钮。</li>
+          <li><b>套装更新提醒到具体成员</b> —— 展开套装后有新版的成员行带 ↑ 角标，头部徽标悬停列名单，更新完成提示报具体名字。</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.5.0/Popskill-2.5.0.dmg"
+        sparkle:version="250"
+        sparkle:shortVersionString="2.5.0"
+        sparkle:edSignature="97sTm6ncungXG4hVEDS1Mk6Q8OB0PRkq7N2ZeJaJMp3TA/yZhvXKIKkwckzBgCkLqen1Xg+Y23EZQMO4nhs3Dw=="
+        length="2332259"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.4.2</title>
       <pubDate>Wed, 10 Jun 2026 15:30:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>

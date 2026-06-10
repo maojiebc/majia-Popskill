@@ -95,7 +95,7 @@ DEVELOPER_DIR=/Applications/Xcode.app swift test --package-path swift-app   # CL
 
 ## Release Pipeline
 
-与 v1 相同（scripts/ 全套保留）：pre-flight 验 notary profile → `package-dev-app.sh` → `notarize.sh` → `package-dmg.sh` → DMG 签名公证 → `sparkle-sign-update.sh` → 手动加 appcast `<item>` → `gh release create`。完整命令见 git 历史中 v1.1.0 版 CLAUDE.md 或 majia-ota-app skill。
+与 v1 相同（scripts/ 全套保留）：pre-flight 验 notary profile → `package-dev-app.sh` → `notarize.sh` → `package-dmg.sh` → DMG 签名公证 → `sparkle-sign-update.sh` → `scripts/append-appcast.py`（带断言，禁手搓/禁静默 heredoc）→ `gh release create`。完整命令见 git 历史中 v1.1.0 版 CLAUDE.md 或 majia-ota-app skill。
 
 **发版后必验**：① appcast `curl -sI` 非 404 且含新版 enclosure（Pages 会被静默禁用，坑 #10）；② **README 双语装机直链跟版**（`releases/latest/download/Popskill-X.Y.Z.dmg` 资产名随版本变，不跟会 404）。
 
@@ -116,6 +116,7 @@ DEVELOPER_DIR=/Applications/Xcode.app swift test --package-path swift-app   # CL
 13. **app 图标要留 Apple 网格边距** — 满幅 1024 在 Dock 里显得比别的 app 大；内容缩到 824 居中 + 投影（scripts 见 git 历史 /tmp/pad-icon.swift 模式）
 14. **状态栏版本号读 Bundle** — `popskillVersion` 从 CFBundleShortVersionString 读，裸二进制才退常量；发版只 bump 常量会漏
 15. **容器 .shadow 会传染子视图** — SwiftUI 给带子背景的容器加 .shadow，每个子行各自投影把底色糊灰（v2.3.1 用户实机发现）；浮层/弹层投影前必须 `compositingGroup()`
+16. **发版链禁静默步骤** — v2.5.0 事故：appcast 注入静默 no-op，DMG/Release 都成了、更新源没更，用户看到「最新 2.4.2/正跑 2.5.0」倒挂。appcast 一律走 `scripts/append-appcast.py`（断言：重复版本拒绝/锚点必中/写后校验）；另注意 Pages CDN max-age=600，发版后 10 分钟内手动检查可能命中旧缓存
 
 ## 当前状态（2026-06-10）
 
