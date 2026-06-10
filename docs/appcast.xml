@@ -8,6 +8,22 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.4.0</title>
+      <pubDate>Wed, 10 Jun 2026 12:30:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.4.0 — 目录来源提示</h2>
+        <p>复制安装的「来源孤儿」由内置目录补来源：观远五件套（guancli / guands / guanetl / guanvis / guanwf）归拢为一张 <b>guanskill</b> 套装卡；套装归拢支持 npm 源（更新检查自动跳过，npm 包的更新仍走 npm）。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.4.0/Popskill-2.4.0.dmg"
+        sparkle:version="240"
+        sparkle:shortVersionString="2.4.0"
+        sparkle:edSignature="SDzUfWARZZhvEUAs9YI8vPfAMCD+9JKQjTtQzCWwsHgl3qjDKQBFySY8z+pHWrDIyCvmcxwpgsFHDeiBRRzxAg=="
+        length="2320511"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.3.1</title>
       <pubDate>Wed, 10 Jun 2026 11:30:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
