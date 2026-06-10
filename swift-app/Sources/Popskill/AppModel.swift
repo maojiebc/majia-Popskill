@@ -2,9 +2,9 @@ import AppKit
 import Observation
 import SwiftUI
 
-// 打包后以 Info.plist 为准（发版脚本写入），裸二进制退回常量
+// 打包后以 Info.plist 为准（发版脚本写入），裸二进制显示 dev（常量版本号必腐，不再写死）
 let popskillVersion: String =
-    (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "2.1.2"
+    (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "dev"
 
 /// 修复弹层的目标：哪个能力 × 哪个工具 × 锚点在哪
 struct FixTarget: Equatable {

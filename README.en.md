@@ -22,7 +22,7 @@
 
 ## Install
 
-[**↓ Download Popskill (2.2 MB, signed + notarized)**](https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-2.1.1.dmg)
+[**↓ Download Popskill (2.3 MB, signed + notarized)**](https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-2.4.0.dmg)
 
 Requires macOS 14 (Sonoma) or newer. After first install, updates arrive in-app via Sparkle.
 
@@ -54,7 +54,7 @@ The filesystem is the database. No sidecar, no SQLite — your directory tree al
 <td><img src="docs/screenshots/peek.png" alt="Detail peek"></td>
 </tr>
 <tr>
-<td><b>Automatic provenance</b> — four-level backfill (lock file / git remote / frontmatter); installed skills know where they came from</td>
+<td><b>Automatic provenance</b> — five-level backfill (lock file / git remote / frontmatter / curated catalog); installed skills know where they came from</td>
 <td><b>Detail peek</b> — click a name for the SKILL.md digest; deep reading happens in your editor</td>
 </tr>
 <tr>
@@ -77,6 +77,8 @@ The filesystem is the database. No sidecar, no SQLite — your directory tree al
 - **Backup before update** — replaced versions go to a recycle bin (20 kept), restorable anytime
 - **Inline repair** — broken links and unmanaged local copies fixed in place; destructive operations only ever touch symlinks, real directories go to the recycle bin
 - **Unmanaged import** — one click adopts stray skill folders from `~/.claude` / `~/.codex` into the store, replaced with symlinks
+- **Keyboard navigation** — `↑↓` row focus, `←→` tool column, `Space` to toggle or repair, `/` search, `Esc` to exit
+- **Curated catalog** — built-in one-line Chinese summaries and type hints for ~80 popular skills; no more raw upstream walls of text on cards
 
 ---
 
@@ -96,7 +98,7 @@ The filesystem is the database. No sidecar, no SQLite — your directory tree al
 
 *(diagram labels are in Chinese; the flow reads: upstream sources → Popskill's six modules → the `~/.agents` store → symlinks consumed by Claude Code / Codex CLI)*
 
-Provenance is a four-level backfill: Popskill's own install records → `.skill-lock.json` (the `npx skills` lock file) → the skill folder's git remote → SKILL.md frontmatter homepage. Update detection hashes directory contents (SHA-256), so **skills without proper version numbers still get update detection**.
+Provenance is a five-level backfill: Popskill's own install records → `.skill-lock.json` (the `npx skills` lock file) → the skill folder's git remote → SKILL.md frontmatter homepage → the built-in curated catalog (rescuing copy-installed "provenance orphans" like the guanskill family). Update detection hashes directory contents (SHA-256), so **skills without proper version numbers still get update detection**.
 
 ---
 
@@ -112,7 +114,7 @@ No. 100% local, no analytics, no telemetry. The only network calls: `git clone` 
 Skills live in `~/.agents/` (your data, not Popskill's); the app's own metadata is a single `~/.agents/.popskill.json`. Uninstall = drag Popskill.app to Trash; your skills and symlinks stay intact.
 
 **Q: Will it touch my files?**
-Three hard safety rules: only symlinks are ever deleted; real directories always go to the recycle bin (`~/.agents/.trash/`, 20 kept); store directories are never touched by toggles. 30 engine unit tests enforce these.
+Three hard safety rules: only symlinks are ever deleted; real directories always go to the recycle bin (`~/.agents/.trash/`, 20 kept); store directories are never touched by toggles. 40 engine unit tests enforce these.
 
 **Q: Tools beyond Claude Code / Codex?**
 The tool list is dynamic in the architecture, but this version deliberately ships with just these two (my actual daily need). Tools that natively scan `~/.agents/skills/` (like opencode) work with zero configuration.
@@ -124,7 +126,7 @@ No. Pure SwiftUI, Mac only.
 
 ## Releases
 
-Current: [v2.1.1](https://github.com/maojiebc/majia-Popskill/releases/tag/v2.1.1) · all versions on [Releases](https://github.com/maojiebc/majia-Popskill/releases) · changelogs in `docs/release/`
+Current: [v2.4.0](https://github.com/maojiebc/majia-Popskill/releases/tag/v2.4.0) · all versions on [Releases](https://github.com/maojiebc/majia-Popskill/releases) · changelogs in `docs/release/`
 
 v2 is a first-principles rewrite (one screen, filesystem as database). v1.x (sidecar architecture) has been retired; design history is archived in `docs/design/`.
 
