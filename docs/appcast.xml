@@ -8,6 +8,22 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.3.0</title>
+      <pubDate>Wed, 10 Jun 2026 10:00:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.3.0 — 内置精选目录</h2>
+        <p>约 80 个热门常见 skill 的<b>中文一句话简介</b>编译内置（宝玉系 / 飞书系 / 观远系 / 官方 / 社区），卡片不再直出上游英文长描述；附类型提示（如 guancli → CLI）。本地完整文档与详情 peek 不受影响。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.3.0/Popskill-2.3.0.dmg"
+        sparkle:version="230"
+        sparkle:shortVersionString="2.3.0"
+        sparkle:edSignature="ZkN/re2+0je+bM9z+Dfx4hGKT1TA2vPNl/Rn0Kmd3jwVkAX/6GvwyCCxeJAvxBu/8GSHSZwlAy2k87i9ZZ0rDA=="
+        length="2317781"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.2.0</title>
       <pubDate>Wed, 10 Jun 2026 09:00:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
