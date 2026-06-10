@@ -436,6 +436,26 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(entries.first(where: { $0.name == "b" })?.cap.version, "1.0.0", "未变化成员不应被动")
     }
 
+    // ── 内置精选目录（v2.3）──────────────────────────────
+
+    func testCatalogDescOverridesFrontmatter() throws {
+        try makeSkill("defuddle", desc: "Extract clean article content from web pages")
+        let cap = scan()[0].cap
+        XCTAssertEqual(cap.desc, "网页正文净化抽取：去广告导航留正文", "目录简介应覆盖上游英文描述")
+        // 不在目录里的保持 frontmatter
+        try makeSkill("zz-unknown", desc: "原始描述")
+        XCTAssertEqual(scan().first { $0.name == "zz-unknown" }?.cap.desc, "原始描述")
+    }
+
+    func testCatalogTypeHint() throws {
+        try makeSkill("guancli")   // 目录提示 CLI（名称特征也会命中，但 guands 只有目录能定）
+        try makeSkill("guands")
+        let entries = scan()
+        XCTAssertEqual(entries.first { $0.name == "guancli" }?.cap.type, .cli)
+        XCTAssertEqual(entries.first { $0.name == "guands" }?.cap.type, .skill)
+        XCTAssertEqual(entries.first { $0.name == "guancli" }?.cap.layoutKind, .skill, "链接布局不受目录影响")
+    }
+
     // ── 排序 / 类型推断 / 前缀收编（v2.1.2）──────────────
 
     func testSortBundlesFirstThenType() throws {

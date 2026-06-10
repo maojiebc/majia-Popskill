@@ -330,13 +330,14 @@ struct StoreFS {
 
     private func makeCap(name: String, type: CapType, dir: URL, id: String? = nil) -> Capability {
         let front = frontmatter(dir.appendingPathComponent("SKILL.md"))
-        let display = inferType(name: name, front: front, scanned: type)
+        let curated = Catalog.entry(name)
+        let display = inferType(name: name, front: front, scanned: type, curated: curated)
         return Capability(
             id: id ?? name,
             name: name,
             type: display,
             linkKind: type,
-            desc: front["description"] ?? "",
+            desc: curated?.desc ?? front["description"] ?? "",
             version: front["version"],
             author: front["author"],
             tokens: type == .cli ? 0 : estimateTokens(dir),
@@ -345,9 +346,9 @@ struct StoreFS {
         )
     }
 
-    /// 展示类型推断：frontmatter 显式 `type:` 优先，其次名称特征。
+    /// 展示类型推断：frontmatter 显式 `type:` > 内置目录提示 > 名称特征。
     /// 只影响 tag/过滤；链接布局永远走 layoutKind（实际 kind 目录）。
-    func inferType(name: String, front: [String: String], scanned: CapType) -> CapType {
+    func inferType(name: String, front: [String: String], scanned: CapType, curated: CatalogEntry? = nil) -> CapType {
         guard scanned == .skill else { return scanned }   // agents/mcp/bin 目录已是强信号
         if let t = front["type"]?.lowercased() {
             switch t {
@@ -357,6 +358,7 @@ struct StoreFS {
             default: break
             }
         }
+        if let t = curated?.type { return t }
         let n = name.lowercased()
         if n.hasSuffix("-cli") || n.hasSuffix("cli") { return .cli }
         if n.hasSuffix("-mcp") || n.hasPrefix("mcp-") { return .mcp }
