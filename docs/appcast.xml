@@ -8,6 +8,27 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.2.0</title>
+      <pubDate>Wed, 10 Jun 2026 09:00:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.2.0 — 键盘导航 + 色彩语义定稿</h2>
+        <ul>
+          <li><b>键盘导航</b> —— ↑↓ 行焦点、←→ 选工具列、空格/回车 切换挂载或打开修复弹层、套装行空格折叠、Esc 清焦点。</li>
+          <li><b>状态色语义</b> —— 「已激活」改为绿色（与同步指示统一），电光蓝收窄为交互色。</li>
+          <li><b>首屏密度</b> —— 套装默认折叠，独立能力直接上首屏。</li>
+          <li><b>套装头部</b> —— 补总 tokens；各列固定宽度与子项清单严格对齐。</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.2.0/Popskill-2.2.0.dmg"
+        sparkle:version="220"
+        sparkle:shortVersionString="2.2.0"
+        sparkle:edSignature="Qu41jZZKoJ21LuHAglZ8HAtGl7CZNhm3bWUAigNk6rO85aLJal8zPydc/Cmfy1WAPJckQSCqf2PDeu9+SFf0Bw=="
+        length="2312277"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.1.2</title>
       <pubDate>Wed, 10 Jun 2026 07:30:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
