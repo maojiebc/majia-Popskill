@@ -82,6 +82,10 @@ final class AppModel {
         default: break
         }
         if let first = entries.first(where: \.isBundle) { expanded.insert(first.id) }
+        // 调试钩子：POPSKILL_EXPAND=id1,id2 启动即展开指定套装（截图用）
+        if let ids = pe["POPSKILL_EXPAND"]?.split(separator: ",") {
+            ids.forEach { expanded.insert(String($0)) }
+        }
         // 启动后台检查更新；开了自动更新的源直接更（v2.1）
         if !fake && pe["POPSKILL_NO_AUTOCHECK"] != "1" {
             Task { [weak self] in

@@ -1,10 +1,10 @@
 # Popskill
 
-> **One control surface for AI capabilities on macOS.** Skills × tools matrix for Claude Code and Codex, with one-click toggles, link health, iCloud sync, and token usage insights.
+> **Local AI capability manager.** Install a skill once, mount it to every AI tool; fix what breaks, update what's stale. One ledger for all your Claude Code and Codex skills.
 
 <p align="center">
-  <a href="https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.1.0.dmg">
-    <img src="docs/screenshots/hero.jpg" alt="Popskill capability × tool matrix" width="900">
+  <a href="https://github.com/maojiebc/majia-Popskill/releases/latest">
+    <img src="docs/screenshots/hero.png" alt="Popskill capability matrix — source bundles auto-grouped" width="900">
   </a>
 </p>
 
@@ -22,24 +22,27 @@
 
 ## Install
 
-[**↓ Download Popskill 1.1.0 (19.1 MB, signed + notarized)**](https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-1.1.0.dmg)
+[**↓ Download Popskill (2.2 MB, signed + notarized)**](https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-2.1.1.dmg)
 
-Requires macOS 14 (Sonoma) or newer. After first install, Sparkle prompts in-app for future versions — no need to come back here.
+Requires macOS 14 (Sonoma) or newer. After first install, updates arrive in-app via Sparkle.
 
-The DMG is signed with an Apple Developer ID, notarized, and stapled, so **Gatekeeper opens it cleanly** — no "unidentified developer" warning.
+The DMG is Developer ID signed, notarized, and stapled — **no "unidentified developer" warning**.
 
 ---
 
 ## Why this exists
 
-I use Claude Code and Codex daily. Both keep skills in their own roots (`~/.claude/skills/` and `~/.codex/skills/`). Sharing a skill between both means manually symlinking, which I keep forgetting.
+My Mac runs **72 skills from 9 upstreams using 6 mutually incompatible update mechanisms** — npm packages, git monorepos, standalone clones, `npx skills`, custom installers, marketplaces. Before Popskill, keeping it all fresh took a 178-line shell script on a launchd timer, and no tool could answer "what do I have, what's stale, which link is broken".
+
+Popskill's answer builds on the simplest possible fact: **a skill is a folder, enabling it is a symlink.**
 
 ```text
-~/.claude/skills/baoyu-comic/        ← Claude finds it
-~/.codex/skills/baoyu-comic/         ← Codex doesn't (until I manually ln -s)
+~/.agents/skills/baoyu-comic/          ← store: the skill itself (installed once)
+~/.claude/skills/baoyu-comic  → link   ← used by Claude Code
+~/.codex/skills/baoyu-comic   → link   ← used by Codex
 ```
 
-The annoying part isn't the symlink itself — it's **not knowing which side has what right now**. Popskill makes that visible: every skill / agent / CLI / MCP lined up against every AI tool in a matrix, one click to toggle.
+The filesystem is the database. No sidecar, no SQLite — your directory tree already is the complete state. Popskill just gives it a face you can see and click.
 
 ---
 
@@ -47,20 +50,20 @@ The annoying part isn't the symlink itself — it's **not knowing which side has
 
 <table>
 <tr>
-<td width="50%"><img src="docs/screenshots/inspector.jpg" alt="Full-page Inspector"></td>
-<td width="50%"><img src="docs/screenshots/create.jpg" alt="New Capability"></td>
+<td><img src="docs/screenshots/settings.png" alt="Automatic provenance"></td>
+<td><img src="docs/screenshots/peek.png" alt="Detail peek"></td>
 </tr>
 <tr>
-<td><b>Full-page Inspector</b> — open any capability: Claude/Codex coverage, component list, source / SSOT / version / this-machine usage</td>
-<td><b>New Capability</b> — editor + live matrix-row preview + install-target toggles + a "will write" terminal plan</td>
+<td><b>Automatic provenance</b> — four-level backfill (lock file / git remote / frontmatter); installed skills know where they came from</td>
+<td><b>Detail peek</b> — click a name for the SKILL.md digest; deep reading happens in your editor</td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/screenshots/compose.jpg" alt="Compose Bundle"></td>
-<td width="50%"><img src="docs/screenshots/settings.jpg" alt="Settings"></td>
+<td><img src="docs/screenshots/fix.png" alt="Inline repair"></td>
+<td><img src="docs/screenshots/add.png" alt="Install plan"></td>
 </tr>
 <tr>
-<td><b>Compose Bundle</b> — check existing capabilities → live coverage + a generated popskill.toml</td>
-<td><b>Settings</b> — tabbed (Connect / Sync / Sources / Install / Quota / About): tool connections + source management</td>
+<td><b>Inline repair</b> — broken links / local copies handled in place; recommended option highlighted</td>
+<td><b>Install plan</b> — paste a URL, see exactly what will be written (ln -s preview) before installing</td>
 </tr>
 </table>
 
@@ -68,115 +71,70 @@ The annoying part isn't the symlink itself — it's **not knowing which side has
 
 ## Features
 
-- **Capability matrix** — Skill / Agent / CLI / MCP / Package across Claude Code + Codex, one-click toggle. Packages (suites) are first-class rows that expand to show their components
-- **⌘K command palette** — search capabilities and run quick actions without leaving the keyboard. Empty-query results ranked by 30-day usage; CJK aliases supported (`baoyu-comic` / `baoyu comic` / `宝玉漫画` all resolve)
-- **Link health monitor** — see SSOT real path + per-tool symlink status; broken links surface immediately, with sidebar shortcuts to filter
-- **Token usage insights** — local-only scan of ~/.claude/projects/*.jsonl for total tokens + top 10 capabilities. Streaming parser keeps memory at ~50MB even on hundreds of MB of transcripts
-- **5-step onboarding wizard** — first launch detects installed tools, scans existing capabilities, helps pick sync
-- **iCloud Drive sync** — change config on one Mac, other Macs pick it up on next launch
-- **Safe-by-default uninstalls** — every uninstall creates a backup snapshot; idle (60+ days) capabilities surface their own view
-- **Sparkle auto-update** — EdDSA-verified updates, fake DMGs rejected
+- **Capability matrix** — every skill in one ledger: one row per capability, Claude / Codex status pills, one click to mount or unmount
+- **Source bundles** — skills from the same upstream repo auto-group into one card (e.g. 22 baoyu skills, 26 lark skills); disk stays flat, symlinks untouched
+- **Content-hash updates** — no semver required: per-member SHA-256 against upstream; one clone checks a whole monorepo, only changed members get replaced, and you're told about upstream skills you haven't installed yet
+- **Backup before update** — replaced versions go to a recycle bin (20 kept), restorable anytime
+- **Inline repair** — broken links and unmanaged local copies fixed in place; destructive operations only ever touch symlinks, real directories go to the recycle bin
+- **Unmanaged import** — one click adopts stray skill folders from `~/.claude` / `~/.codex` into the store, replaced with symlinks
 
 ---
 
 ## Quickstart
 
-First launch runs the onboarding wizard:
-
-1. **Welcome** — intro to what Popskill does
-2. **Detect tools** — looks at your machine for Claude Code, Codex, brew CLIs, npm globals
-3. **Scan capabilities** — lists everything already in ~/.agents/skills/, ~/.claude/skills/, ~/.codex/skills/
-4. **Storage + sync** — pick iCloud Drive or Git remote for cross-Mac sync
-5. **Done** — drops you on the matrix view
-
-If you already have skills installed, you see them immediately; no "configure Popskill first" step.
+1. Install and launch — if you already use `~/.agents/skills/` (the `npx skills` ecosystem convention), the matrix fills with your existing skills immediately
+2. Starting fresh? Hit **+ Add** and paste a GitHub repo, e.g. `github.com/anthropics/skills`
+3. Click the Claude / Codex pill on a card to mount; click ✕ or ◐ to repair; flip on auto-update in Settings
 
 ---
 
 ## How it works
 
-```
-┌─────────────────────────────────────────┐
-│  SwiftUI front-end (this app)           │
-│  • Matrix + Inspector                   │
-│  • ⌘K Spotlight                         │
-│  • Onboarding wizard                    │
-└────────────────────┬────────────────────┘
-                     │ JSON over stdin/stdout
-                     ▼
-┌─────────────────────────────────────────┐
-│  skill-cli (Rust sidecar)               │
-│  • list / toggle / install / uninstall  │
-│  • scans ~/.claude / ~/.codex / ~/.agents│
-│  • link-health / sync (Git / iCloud)    │
-└────────────────────┬────────────────────┘
-                     │ git submodule (zero-fork)
-                     ▼
-┌─────────────────────────────────────────┐
-│   CC Switch (upstream skill store)      │
-└─────────────────────────────────────────┘
+```text
+┌──────────────────────────────────────────┐
+│      Popskill (SwiftUI, ~3k LOC)         │
+│   scan ── readlink ── ln -s ── git clone │
+└──────────────────┬───────────────────────┘
+                   ▼
+   ~/.agents/            ← store (SSOT), cross-tool convention dir
+   ├── skills/<name>/    ← skill folders (flat)
+   ├── .popskill.json    ← metadata (sources / auto-update), syncs with store
+   └── .trash/           ← recycle bin (20 kept)
+                   ▼
+   ~/.claude/skills/* ─→ symlinks ←─ ~/.codex/skills/*
 ```
 
-Zero-fork dependency on [CC Switch](https://github.com/farion1231/cc-switch) as a git submodule — Popskill reuses upstream skill storage logic and adds UI + cross-tool orchestration.
+Provenance is a four-level backfill: Popskill's own install records → `.skill-lock.json` (the `npx skills` lock file) → the skill folder's git remote → SKILL.md frontmatter homepage. Update detection hashes directory contents (SHA-256), so **skills without proper version numbers still get update detection**.
 
 ---
 
 ## FAQ
 
-**Why isn't this in the Mac App Store?**
-App Store sandbox rules block the symlink management Popskill needs to do. Direct Developer ID distribution lets the app actually work; the trade-off is you download from here instead of the App Store.
+**Q: Why not the Mac App Store?**
+The App Store sandbox won't let an app manage symlinks in `~/.claude` and `~/.codex`. Direct distribution is what makes the app able to do its job. Signing + notarization provide equivalent safety.
 
-**Do you collect any data?**
-No. 100% local — no telemetry, no analytics. Token usage insights are computed from `~/.claude/projects/*.jsonl` on your Mac; nothing leaves the machine.
+**Q: Any data collection?**
+No. 100% local, no analytics, no telemetry. The only network calls: `git clone` of your own skills' upstream repos during update checks, and Sparkle checking for app updates.
 
-**Is Sparkle auto-update safe?**
-Yes. Every DMG is signed with an EdDSA private key (in my Keychain) and the running app verifies with the public key baked into Info.plist (`SUPublicEDKey=h7HOqj21MlKe5UJFFa9GKBmV6MtdlcDSeJa9rmAguq8=`). Even if GitHub Releases were compromised, a forged DMG would fail verification.
+**Q: Where is data stored? How do I uninstall?**
+Skills live in `~/.agents/` (your data, not Popskill's); the app's own metadata is a single `~/.agents/.popskill.json`. Uninstall = drag Popskill.app to Trash; your skills and symlinks stay intact.
 
-**How do I uninstall?**
-Drag `/Applications/Popskill.app` to the Trash. To also wipe data, delete `~/.popskill/`. Your actual skills (`~/.cc-switch/skills/`) are yours — Popskill doesn't own them.
+**Q: Will it touch my files?**
+Three hard safety rules: only symlinks are ever deleted; real directories always go to the recycle bin (`~/.agents/.trash/`, 20 kept); store directories are never touched by toggles. 30 engine unit tests enforce these.
 
-**Where is data stored?**
-- SSOT (your skills' real files): `~/.cc-switch/skills/`
-- Popskill backups: `~/.popskill/backups/`
-- Sparkle cache: `~/Library/Caches/Sparkle/`
+**Q: Tools beyond Claude Code / Codex?**
+The tool list is dynamic in the architecture, but this version deliberately ships with just these two (my actual daily need). Tools that natively scan `~/.agents/skills/` (like opencode) work with zero configuration.
 
-All within your home directory; no system-level state.
-
-**Windows / Linux support?**
-Mac only. Rust sidecar is portable; SwiftUI front-end isn't. If someone wants to port the UI to GTK / Qt, the sidecar IPC protocol is stable.
-
----
-
-## System requirements
-
-| macOS | Status | Notes |
-|---|---|---|
-| 26 Tahoe | ✅ | Primary target |
-| 14 Sonoma | ✅ | LSMinimumSystemVersion |
-| 13 Ventura | ❓ | Not tested; may work |
-| 12 Monterey | ❌ | Below minimum |
+**Q: Windows / Linux?**
+No. Pure SwiftUI, Mac only.
 
 ---
 
 ## Releases
 
-See [GitHub Releases](https://github.com/maojiebc/majia-Popskill/releases) for changelogs and signed DMGs.
+Current: [v2.1.1](https://github.com/maojiebc/majia-Popskill/releases/tag/v2.1.1) · all versions on [Releases](https://github.com/maojiebc/majia-Popskill/releases) · changelogs in `docs/release/`
 
-- [v1.1.0](./docs/release/v1.1.0.md) — 紧凑账本 redesign: warm-paper ledger UI + full-page Inspector + rebuilt Create/Compose/Fix/Sources/Settings (**Latest**)
-- [v1.0.5](./docs/release/v1.0.5.md) — Package matrix as first-class rows + Inspector tabs + Spotlight CJK aliases
-- [v1.0.4](./docs/release/v1.0.4.md) — Spotlight/Idle jump fixes + delete confirmation + Insights streaming parser
-- [v1.0.3](./docs/release/v1.0.3.md) — UI design tokens + Hover/Selected states + O(1) update lookup
-- [v1.0.2](./docs/release/v1.0.2.md) — SSOT path fix + global error toast + 30s refresh TTL
-- [v1.0.1](./docs/release/v1.0.1.md) — Sparkle auto-update wired
-- [v1.0.0](./docs/release/v1.0.0.md) — first signed + notarized release
-
----
-
-## Contributing
-
-PRs welcome. Open an issue first for substantial changes.
-
-Bug reports / ideas: [GitHub Issues](https://github.com/maojiebc/majia-Popskill/issues) or email me (see below).
+v2 is a first-principles rewrite (one screen, filesystem as database). v1.x (sidecar architecture) has been retired; design history is archived in `docs/design/`.
 
 ---
 
@@ -195,18 +153,8 @@ If this Mac app helps you, find me on any of these channels — happy to chat ab
 | 📕 Xiaohongshu | [Super Majia](https://xhslink.com/m/4fQMJeHHWKC) |
 | 📰 WeChat Official Account | **超级马甲** |
 
-> Built from 14 years of user-operations work plus hands-on AI tooling integration on macOS.
-
----
-
-## Acknowledgements
-
-- [CC Switch](https://github.com/farion1231/cc-switch) — skill storage engine, zero-fork git submodule
-- [Sparkle](https://sparkle-project.org/) — auto-update framework
-- [@dotey](https://x.com/dotey), [@op7418](https://x.com/op7418), and the broader Claude Skill author community — who made the whole AI Skill ecosystem real
-
----
+> Built from 14 years of user-operations work + hands-on macOS app development.
 
 ## License
 
-[MIT](./LICENSE) · Copyright © 2026 majia
+[MIT](./LICENSE)
