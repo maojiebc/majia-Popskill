@@ -401,7 +401,7 @@ struct CapCard: View {
                 UpdateBadge(latest: latest) { model.runUpdate(entry.id) }
             }
             if let a = cap.author { Text(highlight(a, query)) }
-            if cap.tokens > 0 { Text(formatTokens(cap.tokens)) }
+            if cap.tokens >= 100 { Text(formatTokens(cap.tokens)) }
             if let from = fromBundle {
                 Text("⊂ \(from)").font(.mono(10))
             } else if let url = entry.sourceUrl {
@@ -632,8 +632,7 @@ struct EmptyPane: View {
                 }
                 .buttonStyle(.plain)
                 Button {
-                    model.refresh()
-                    model.say(model.entries.isEmpty ? "扫描完成：store 仍为空" : "扫描完成：发现 \(model.stats.total) 项能力")
+                    model.scanLocalForOnboarding()
                 } label: {
                     Text("扫描本地目录")
                         .font(.ui(12.5, .semibold)).foregroundStyle(Color(hex: 0x444444))

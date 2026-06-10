@@ -111,6 +111,13 @@ final class AppModel {
                 await MainActor.run { self?.checkUpdates(auto: true) }
             }
         }
+        // 调试钩子：POPSKILL_ONBOARD_SCAN=1 启动后自动触发空态扫描（新用户旅程 E2E）
+        if pe["POPSKILL_ONBOARD_SCAN"] == "1" {
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(1.5))
+                await MainActor.run { self?.scanLocalForOnboarding() }
+            }
+        }
         // 调试钩子：POPSKILL_KB_SIM=d,d,u,l,r,space 启动后模拟键盘导航（E2E 截图用）
         if let sim = pe["POPSKILL_KB_SIM"] {
             Task { [weak self] in
@@ -496,6 +503,37 @@ final class AppModel {
             let imported = try fs.importUnmanaged(found)
             refresh()
             say("已导入 \(imported.count) 个未托管目录进 store（原目录已入回收站）")
+        } catch {
+            say(error.localizedDescription)
+        }
+    }
+
+    /// 空态「扫描本地目录」= 新用户引导（v2.4.1）：
+    /// ① 重扫 store；② store 仍为空则扫工具目录里的未托管技能，确认后收编建链。
+    func scanLocalForOnboarding() {
+        refresh()
+        guard entries.isEmpty else {
+            say("扫描完成：发现 \(stats.total) 项能力")
+            return
+        }
+        let found = fs.scanUnmanaged(tools: tools, knownNames: [])
+        guard !found.isEmpty else {
+            say("store 为空，工具目录里也没有发现技能——点「+ 添加」装第一个")
+            return
+        }
+        let names = Set(found.map(\.name))
+        if ProcessInfo.processInfo.environment["POPSKILL_AUTOCONFIRM"] != "1" {
+            let alert = NSAlert()
+            alert.messageText = "发现 \(names.count) 个未托管的技能目录"
+            alert.informativeText = "在 Claude / Codex 目录里发现现有技能（如 \(names.sorted().prefix(3).joined(separator: "、"))…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。"
+            alert.addButton(withTitle: "导入 \(names.count) 个")
+            alert.addButton(withTitle: "暂不")
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+        }
+        do {
+            let imported = try fs.importUnmanaged(found)
+            refresh()
+            say("已导入 \(imported.count) 个技能进 store 并建链——这就是你的能力矩阵")
         } catch {
             say(error.localizedDescription)
         }

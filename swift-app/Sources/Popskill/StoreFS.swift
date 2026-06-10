@@ -12,13 +12,17 @@ struct StoreEnv {
     var toolRoots: [String: URL]   // toolId → ~/.claude 等
 
     static func real() -> StoreEnv {
+        let pe = ProcessInfo.processInfo.environment
         let home = FileManager.default.homeDirectoryForCurrentUser
-        let store = ProcessInfo.processInfo.environment["POPSKILL_STORE_ROOT"]
+        let store = pe["POPSKILL_STORE_ROOT"]
             .map { URL(fileURLWithPath: NSString(string: $0).expandingTildeInPath) }
             ?? home.appendingPathComponent(".agents")
+        // 沙盘钩子：POPSKILL_TOOLS_ROOT=<base> → <base>/.claude、<base>/.codex（新用户旅程测试用）
+        let toolBase = pe["POPSKILL_TOOLS_ROOT"]
+            .map { URL(fileURLWithPath: NSString(string: $0).expandingTildeInPath) } ?? home
         return StoreEnv(storeRoot: store, toolRoots: [
-            "claude": home.appendingPathComponent(".claude"),
-            "codex": home.appendingPathComponent(".codex"),
+            "claude": toolBase.appendingPathComponent(".claude"),
+            "codex": toolBase.appendingPathComponent(".codex"),
         ])
     }
 }

@@ -218,6 +218,25 @@ final class StoreFSTests: XCTestCase {
         XCTAssertTrue(fm.fileExists(atPath: src.path), "local 源安装是复制，原目录保留")
     }
 
+    func testFreshMachineScanAndInstall() throws {
+        // 新用户零基建：store 根本不存在 → 扫描得空表；首次安装自建全部目录
+        let virgin = StoreEnv(storeRoot: sandbox.appendingPathComponent("virgin/.agents"),
+                              toolRoots: ["claude": sandbox.appendingPathComponent("virgin/.claude")])
+        let vfs = StoreFS(env: virgin)
+        let vtools = vfs.scanTools(meta: StoreMeta())
+        XCTAssertEqual(vfs.scanEntries(tools: vtools, meta: StoreMeta()).count, 0, "无 store 应得空表而非崩溃")
+        XCTAssertFalse(vtools[0].connected, "工具根不存在应显示未连接")
+
+        let src = sandbox.appendingPathComponent("first-skill")
+        try fm.createDirectory(at: src, withIntermediateDirectories: true)
+        try "---\nname: first-skill\ndescription: 第一个\n---\n".write(
+            to: src.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        try vfs.install(try vfs.resolve(src.path), linkTools: vtools)
+        let entries = vfs.scanEntries(tools: vfs.scanTools(meta: StoreMeta()), meta: vfs.loadMeta())
+        XCTAssertEqual(entries.map(\.name), ["first-skill"], "首次安装应自建 store 目录并入册")
+        XCTAssertEqual(entries[0].cap.status("claude"), .on)
+    }
+
     func testInstallRefusesDuplicate() throws {
         try makeSkill("dup")
         let src = sandbox.appendingPathComponent("dup")

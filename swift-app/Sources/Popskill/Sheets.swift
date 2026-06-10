@@ -123,7 +123,8 @@ struct AddSheet: View {
             }
         }
         .onAppear {
-            targets = Dictionary(uniqueKeysWithValues: model.tools.map { ($0.id, $0.defaultTarget) })
+            // 未安装的工具默认不挂载（避免给新用户凭空创建 ~/.codex）
+            targets = Dictionary(uniqueKeysWithValues: model.tools.map { ($0.id, $0.defaultTarget && $0.connected) })
             urlFocus = true
             // 调试钩子：POPSKILL_ADD_URL 预填并自动解析（截图验证用）
             if let preset = ProcessInfo.processInfo.environment["POPSKILL_ADD_URL"], plan == nil {

@@ -63,6 +63,9 @@ POPSKILL_PEEK=<capId>           # 启动即开详情 peek
 POPSKILL_STORE_ROOT=<path>      # 替换 store 根（沙盘）
 POPSKILL_NO_AUTOCHECK=1         # 关掉启动自动检查更新
 POPSKILL_KB_SIM=d,d,r,space     # 模拟键盘导航（E2E 截图）
+POPSKILL_TOOLS_ROOT=<base>      # 工具根沙盘（<base>/.claude 等，新用户旅程）
+POPSKILL_ONBOARD_SCAN=1         # 启动自动触发空态扫描
+POPSKILL_AUTOCONFIRM=1          # 跳过确认弹窗（配合 E2E）
 ```
 
 自截流程（v1 验证过，沿用）：启动 app → osascript 调窗口 1280×820 → `screencapture -x -R` → Read 截图。
