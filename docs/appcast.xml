@@ -8,6 +8,22 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.1.1</title>
+      <pubDate>Wed, 10 Jun 2026 06:20:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.1.1 — 全新应用图标</h2>
+        <p>应用图标换为 Popskill 品牌符号：墨黑底上两圆一线的 <b>symlink 标记</b>，与「紧凑账本」视觉统一。功能与 v2.1.0 一致。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.1.1/Popskill-2.1.1.dmg"
+        sparkle:version="211"
+        sparkle:shortVersionString="2.1.1"
+        sparkle:edSignature="51A8jS5AzmMKX0/we83elt/5OZph0pfjoEBeQD1AnEs2ALyU5ecpUu7E0zDPlFCpfAgabKkm8f0P8P4LoOXVCg=="
+        length="2240496"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.1.0</title>
       <pubDate>Wed, 10 Jun 2026 05:30:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
