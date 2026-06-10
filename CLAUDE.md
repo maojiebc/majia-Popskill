@@ -112,6 +112,7 @@ DEVELOPER_DIR=/Applications/Xcode.app swift test --package-path swift-app   # CL
 12. **截图必须按 PID 选窗口** — 用户装的正式版和 debug 实例同名 "Popskill"，按面积选窗会抓错；winid 脚本要 `kCGWindowOwnerPID == 启动的 pid`
 13. **app 图标要留 Apple 网格边距** — 满幅 1024 在 Dock 里显得比别的 app 大；内容缩到 824 居中 + 投影（scripts 见 git 历史 /tmp/pad-icon.swift 模式）
 14. **状态栏版本号读 Bundle** — `popskillVersion` 从 CFBundleShortVersionString 读，裸二进制才退常量；发版只 bump 常量会漏
+15. **容器 .shadow 会传染子视图** — SwiftUI 给带子背景的容器加 .shadow，每个子行各自投影把底色糊灰（v2.3.1 用户实机发现）；浮层/弹层投影前必须 `compositingGroup()`
 
 ## 当前状态（2026-06-10）
 
