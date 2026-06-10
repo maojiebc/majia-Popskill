@@ -1,0 +1,120 @@
+<svg viewBox="0 0 880 640" xmlns="http://www.w3.org/2000/svg" font-family="'PingFang SC','Microsoft YaHei',-apple-system,sans-serif">
+  <!-- 账本视觉：暖纸 #fafaf8 / 墨黑 #111 / 电光蓝 #1f4ed8 / 发丝线 #e8e6df -->
+  <rect width="880" height="640" fill="#fafaf8"/>
+
+  <!-- 标题 -->
+  <text x="32" y="44" font-size="22" font-weight="700" fill="#111">Popskill 功能架构</text>
+  <text x="32" y="66" font-size="12" fill="#7c7869">文件系统就是数据库 — 技能是文件夹，启用是 symlink</text>
+
+  <!-- ── 第一层：上游来源 ─────────────────────────── -->
+  <text x="32" y="100" font-size="10" font-weight="700" letter-spacing="1" fill="#9a9684">上游来源</text>
+  <g font-size="12.5" font-weight="600" fill="#111">
+    <rect x="32"  y="110" width="196" height="52" rx="8" fill="#fff" stroke="#e8e6df"/>
+    <text x="46" y="132">GitHub monorepo</text>
+    <text x="46" y="150" font-size="11" font-weight="400" fill="#7c7869">宝玉系 22 项 · 飞书系 26 项</text>
+
+    <rect x="240" y="110" width="196" height="52" rx="8" fill="#fff" stroke="#e8e6df"/>
+    <text x="254" y="132">独立 GitHub 仓库</text>
+    <text x="254" y="150" font-size="11" font-weight="400" fill="#7c7869">单技能仓 · 目录自带 .git</text>
+
+    <rect x="448" y="110" width="196" height="52" rx="8" fill="#fff" stroke="#e8e6df"/>
+    <text x="462" y="132">本地路径</text>
+    <text x="462" y="150" font-size="11" font-weight="400" fill="#7c7869">~/path · 私有开发软链</text>
+
+    <rect x="656" y="110" width="192" height="52" rx="8" fill="#fff" stroke="#e8e6df"/>
+    <text x="670" y="132">npx skills 生态</text>
+    <text x="670" y="150" font-size="11" font-weight="400" fill="#7c7869">.skill-lock.json 溯源</text>
+  </g>
+
+  <!-- 箭头：来源 → app -->
+  <g stroke="#1f4ed8" stroke-width="1.5" fill="none">
+    <path d="M440 162 L440 196"/>
+    <path d="M434 189 L440 197 L446 189" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="452" y="186" font-size="11" fill="#1f4ed8" font-weight="600">安装 · 溯源（四级回填）· 内容哈希比对</text>
+
+  <!-- ── 第二层：Popskill 核心模块 ──────────────────── -->
+  <rect x="32" y="204" width="816" height="170" rx="12" fill="#fcfbf6" stroke="#e8e6df"/>
+  <rect x="32" y="204" width="816" height="40" rx="12" fill="#f4f1e8"/>
+  <rect x="32" y="232" width="816" height="12" fill="#f4f1e8"/>
+  <text x="50" y="230" font-size="14" font-weight="700" fill="#111">Popskill.app</text>
+  <text x="156" y="229" font-size="11" fill="#7c7869">纯 SwiftUI · ~3k 行 · 无 sidecar · 无数据库 · 一个主屏</text>
+  <text x="806" y="229" font-size="11" font-weight="600" fill="#1f4ed8" text-anchor="end">macOS 14+</text>
+
+  <g font-size="12.5" font-weight="700" fill="#111">
+    <rect x="50"  y="258" width="252" height="44" rx="7" fill="#fff" stroke="#e8e6df"/>
+    <circle cx="68" cy="280" r="4" fill="#1f4ed8"/>
+    <text x="82" y="277">能力矩阵</text>
+    <text x="82" y="293" font-size="11" font-weight="400" fill="#7c7869">每行一个能力 · 点 pill 挂载/摘除</text>
+
+    <rect x="314" y="258" width="252" height="44" rx="7" fill="#fff" stroke="#e8e6df"/>
+    <circle cx="332" cy="280" r="4" fill="#5a4a14"/>
+    <text x="346" y="277">源式套装</text>
+    <text x="346" y="293" font-size="11" font-weight="400" fill="#7c7869">同仓库自动归拢 · 磁盘保持平铺</text>
+
+    <rect x="578" y="258" width="252" height="44" rx="7" fill="#fff" stroke="#e8e6df"/>
+    <circle cx="596" cy="280" r="4" fill="#b88300"/>
+    <text x="610" y="277">内容哈希更新</text>
+    <text x="610" y="293" font-size="11" font-weight="400" fill="#7c7869">SHA-256 逐成员比对 · 换前备份</text>
+
+    <rect x="50"  y="314" width="252" height="44" rx="7" fill="#fff" stroke="#e8e6df"/>
+    <circle cx="68" cy="336" r="4" fill="#c01818"/>
+    <text x="82" y="333">行内修复</text>
+    <text x="82" y="349" font-size="11" font-weight="400" fill="#7c7869">断链 ✕ / 本地副本 ◐ 一键处理</text>
+
+    <rect x="314" y="314" width="252" height="44" rx="7" fill="#fff" stroke="#e8e6df"/>
+    <circle cx="332" cy="336" r="4" fill="#1a4d33"/>
+    <text x="346" y="333">详情 peek</text>
+    <text x="346" y="349" font-size="11" font-weight="400" fill="#7c7869">点名称看 SKILL.md 摘要</text>
+
+    <rect x="578" y="314" width="252" height="44" rx="7" fill="#fff" stroke="#e8e6df"/>
+    <circle cx="596" cy="336" r="4" fill="#3c1d5a"/>
+    <text x="610" y="333">未托管导入</text>
+    <text x="610" y="349" font-size="11" font-weight="400" fill="#7c7869">散落目录收编进 store 换软链</text>
+  </g>
+
+  <!-- 箭头：app → store -->
+  <g stroke="#1f4ed8" stroke-width="1.5" fill="none">
+    <path d="M440 374 L440 408"/>
+    <path d="M434 401 L440 409 L446 401" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="452" y="398" font-size="11" fill="#1f4ed8" font-weight="600">扫描 · readlink · ln -s · git clone</text>
+
+  <!-- ── 第三层：store ──────────────────────────────── -->
+  <rect x="32" y="416" width="816" height="76" rx="12" fill="#fff" stroke="#e8e6df"/>
+  <text x="50" y="444" font-size="14" font-weight="700" fill="#111" font-family="Menlo,monospace">~/.agents/</text>
+  <text x="150" y="443" font-size="11" fill="#7c7869">store（SSOT）· 跨工具约定目录 · git 仓即同步与备份</text>
+  <g font-size="11.5" font-family="Menlo,monospace" fill="#5e5a4e">
+    <rect x="50"  y="456" width="250" height="24" rx="5" fill="#fafaf8" stroke="#efede5"/>
+    <text x="62" y="472">skills/&lt;name&gt;/  ← 技能本体（平铺）</text>
+    <rect x="314" y="456" width="270" height="24" rx="5" fill="#fafaf8" stroke="#efede5"/>
+    <text x="326" y="472">.popskill.json  ← 来源/自动更新元数据</text>
+    <rect x="598" y="456" width="232" height="24" rx="5" fill="#fafaf8" stroke="#efede5"/>
+    <text x="610" y="472">.trash/  ← 回收站（留 20 份）</text>
+  </g>
+
+  <!-- 箭头：store → 双工具（symlink） -->
+  <g stroke="#1f4ed8" stroke-width="1.5" fill="none">
+    <path d="M260 492 L260 526"/>
+    <path d="M254 519 L260 527 L266 519" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M620 492 L620 526"/>
+    <path d="M614 519 L620 527 L626 519" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="440" y="514" font-size="11" fill="#1f4ed8" font-weight="600" text-anchor="middle">symlink（只删链接 · 真目录进回收站 · store 绝不被开关动到）</text>
+
+  <!-- ── 第四层：消费工具 ───────────────────────────── -->
+  <g font-size="13" font-weight="700" fill="#111">
+    <rect x="80" y="534" width="360" height="52" rx="8" fill="#fff" stroke="#e8e6df"/>
+    <circle cx="104" cy="560" r="5" fill="#1f4ed8"/>
+    <text x="120" y="557">Claude Code</text>
+    <text x="120" y="574" font-size="11" font-weight="400" fill="#7c7869" font-family="Menlo,monospace">~/.claude/skills/* → store</text>
+
+    <rect x="456" y="534" width="360" height="52" rx="8" fill="#fff" stroke="#e8e6df"/>
+    <circle cx="480" cy="560" r="5" fill="#1f4ed8"/>
+    <text x="496" y="557">Codex CLI</text>
+    <text x="496" y="574" font-size="11" font-weight="400" fill="#7c7869" font-family="Menlo,monospace">~/.codex/skills/* → store</text>
+  </g>
+
+  <!-- 底部标语 -->
+  <text x="440" y="620" font-size="12" fill="#9a9684" text-anchor="middle">技能装一次，挂到多个 AI 工具上；坏了能修，旧了能升。</text>
+</svg>

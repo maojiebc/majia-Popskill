@@ -90,19 +90,9 @@ Popskill 的回答是把管理建立在一个最简单的事实上：**技能就
 
 ## 工作原理
 
-```text
-┌──────────────────────────────────────────┐
-│      Popskill (SwiftUI, ~3k 行)          │
-│   扫描 ── readlink ── ln -s ── git clone │
-└──────────────────┬───────────────────────┘
-                   ▼
-   ~/.agents/            ← store（SSOT），跨工具约定目录
-   ├── skills/<name>/    ← 技能本体（平铺）
-   ├── .popskill.json    ← 元数据（来源 / 自动更新），随 store 同步
-   └── .trash/           ← 回收站（保留 20 份）
-                   ▼
-   ~/.claude/skills/* ─→ symlink ←─ ~/.codex/skills/*
-```
+<p align="center">
+  <img src="docs/architecture.png" alt="Popskill 功能架构 — 上游来源 → 六大模块 → ~/.agents store → symlink 到 Claude/Codex" width="820">
+</p>
 
 来源识别是四级回填：popskill 自装记录 → `.skill-lock.json`（`npx skills` 生态锁文件）→ 技能目录自带的 git remote → SKILL.md frontmatter homepage。更新比对用目录内容哈希（SHA-256），所以**没有规范版本号的技能也能发现更新**。
 

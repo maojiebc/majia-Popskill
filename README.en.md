@@ -90,19 +90,11 @@ The filesystem is the database. No sidecar, no SQLite — your directory tree al
 
 ## How it works
 
-```text
-┌──────────────────────────────────────────┐
-│      Popskill (SwiftUI, ~3k LOC)         │
-│   scan ── readlink ── ln -s ── git clone │
-└──────────────────┬───────────────────────┘
-                   ▼
-   ~/.agents/            ← store (SSOT), cross-tool convention dir
-   ├── skills/<name>/    ← skill folders (flat)
-   ├── .popskill.json    ← metadata (sources / auto-update), syncs with store
-   └── .trash/           ← recycle bin (20 kept)
-                   ▼
-   ~/.claude/skills/* ─→ symlinks ←─ ~/.codex/skills/*
-```
+<p align="center">
+  <img src="docs/architecture.png" alt="Popskill architecture — upstream sources → six modules → ~/.agents store → symlinks into Claude/Codex" width="820">
+</p>
+
+*(diagram labels are in Chinese; the flow reads: upstream sources → Popskill's six modules → the `~/.agents` store → symlinks consumed by Claude Code / Codex CLI)*
 
 Provenance is a four-level backfill: Popskill's own install records → `.skill-lock.json` (the `npx skills` lock file) → the skill folder's git remote → SKILL.md frontmatter homepage. Update detection hashes directory contents (SHA-256), so **skills without proper version numbers still get update detection**.
 
