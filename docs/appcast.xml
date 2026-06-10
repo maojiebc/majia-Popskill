@@ -8,6 +8,22 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.4.2</title>
+      <pubDate>Wed, 10 Jun 2026 15:30:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.4.2 — 异机套装归拢修复</h2>
+        <p>修复两类机器上同仓技能不成套装的问题：① 来源是仓库内深路径（/tree/main/skills/x 逐 skill 不同）时归一化未收敛到仓库根；② 整 store 软链布局（dotfiles 同步）被排除在归拢外。更新检查仍跳过软链成员，安全语义不变。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.4.2/Popskill-2.4.2.dmg"
+        sparkle:version="242"
+        sparkle:shortVersionString="2.4.2"
+        sparkle:edSignature="iby8RZJqqrssZwv1RXzLiAPmOFO3a5J2pO5r5dfU9PkRIiLfGzZLSF+3XDAw95X/fjhWzoZJlZr9RU+1ycyoDA=="
+        length="2326200"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.4.1</title>
       <pubDate>Wed, 10 Jun 2026 14:00:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
