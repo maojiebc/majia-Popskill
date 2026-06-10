@@ -8,6 +8,22 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.6.0</title>
+      <pubDate>Wed, 10 Jun 2026 18:00:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.6.0 — Marketplace 插件可见</h2>
+        <p>Claude Code Marketplace 插件（如 dbs 二十件套）以<b>只读套装卡</b>进入矩阵——可搜索、可 peek、计入统计；生命周期仍归 Claude Code，开关/移除/更新提示走 /plugin。「我装了什么」一张表答全。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.6.0/Popskill-2.6.0.dmg"
+        sparkle:version="260"
+        sparkle:shortVersionString="2.6.0"
+        sparkle:edSignature="cgu8AWpKWqNJXW5vy+WLvcA5T58IQ2NFqINvnCk1I97ShYVy5FTVqE6CIgQG1/KwMzxYLMVVgs7RHQZsVdVDBg=="
+        length="2348444"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.5.0</title>
       <pubDate>Wed, 10 Jun 2026 16:30:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
