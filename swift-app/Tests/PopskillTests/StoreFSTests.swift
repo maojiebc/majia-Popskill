@@ -661,12 +661,13 @@ final class StoreFSTests: XCTestCase {
 
     func testMetaRoundtrip() throws {
         var meta = StoreMeta()
-        meta.entries["foo"] = StoreMeta.EntryMeta(sourceUrl: "github.com/a/b", autoUpdate: true, latest: nil)
+        meta.entries["foo"] = StoreMeta.EntryMeta(sourceUrl: "github.com/a/b", autoUpdate: true, latest: "2 项", changed: ["x", "y"])
         meta.tools["claude"] = StoreMeta.ToolMeta(defaultTarget: false)
         fs.saveMeta(meta)
         let loaded = fs.loadMeta()
         XCTAssertEqual(loaded.entries["foo"]?.sourceUrl, "github.com/a/b")
         XCTAssertEqual(loaded.entries["foo"]?.autoUpdate, true)
+        XCTAssertEqual(loaded.entries["foo"]?.changed, ["x", "y"], "变更成员名要能持久化往返")
         XCTAssertEqual(loaded.tools["claude"]?.defaultTarget, false)
     }
 

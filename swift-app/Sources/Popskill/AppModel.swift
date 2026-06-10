@@ -75,6 +75,8 @@ final class AppModel {
     var winSize: CGSize = .zero
 
     @ObservationIgnored private var toastTask: Task<Void, Never>?
+    /// Sparkle 手动检查入口（PopskillApp 注入；裸二进制为 nil）
+    @ObservationIgnored var checkAppUpdate: (() -> Void)?
 
     // 派生
     var stats: Stats { deriveStats(entries, tools: tools) }
@@ -431,7 +433,8 @@ final class AppModel {
                 for check in found {
                     if let i = self.entries.firstIndex(where: { $0.id == check.entryId }) {
                         self.entries[i].latest = check.latest
-                        self.fs.saveLatest(self.entries[i].name, latest: check.latest)
+                        self.entries[i].changedMembers = check.changedMembers
+                        self.fs.saveLatest(self.entries[i].name, latest: check.latest, changed: check.changedMembers)
                     }
                 }
                 let autoTargets = auto ? self.entries.filter { $0.hasUpdate && $0.autoUpdate } : []
@@ -472,9 +475,11 @@ final class AppModel {
                 case .success(let r):
                     self.refresh()
                     if !quiet {
+                        let names = r.updated.count <= 3 ? r.updated.joined(separator: "、")
+                            : r.updated.prefix(3).joined(separator: "、") + " 等"
                         var msg = r.updated.count == 1 && !entry.isBundle
                             ? "已更新 \(entry.name)（旧版已入回收站）"
-                            : "已更新 \(entry.name) 的 \(r.updated.count) 项（旧版已入回收站）"
+                            : "已更新 \(entry.name)：\(names)（旧版已入回收站）"
                         if !r.upstreamNew.isEmpty { msg += " · 上游另有 \(r.upstreamNew.count) 个未安装技能" }
                         self.say(msg)
                     }

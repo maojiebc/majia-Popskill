@@ -25,13 +25,15 @@ enum Fixtures {
         }
 
         func bundle(_ id: String, _ desc: String, _ version: String, latest: String? = nil,
+                    changed: [String]? = nil,
                     autoUpdate: Bool = false, _ author: String, _ sourceUrl: String, _ tokens: Int,
                     _ children: [Capability]) -> Entry {
             var head = Capability(id: id, name: id, type: .bundle, desc: desc, version: version,
                                   author: author, tokens: tokens, dirURL: URL(fileURLWithPath: "/tmp/\(id)"))
             head.links = [:]
             return Entry(id: id, cap: head, children: children, bundleKind: .directory,
-                         sourceUrl: sourceUrl, latest: latest, autoUpdate: autoUpdate)
+                         sourceUrl: sourceUrl, latest: latest,
+                         changedMembers: latest != nil ? changed : nil, autoUpdate: autoUpdate)
         }
 
         func standalone(_ id: String, _ type: CapType, _ desc: String, _ version: String,
@@ -44,6 +46,7 @@ enum Fixtures {
 
         let entries: [Entry] = [
             bundle("feishu-suite", "飞书全家桶 · 1 CLI + 1 MCP + 6 项 skill", "1.2.0", latest: "1.3.0",
+                   changed: ["feishu-mcp", "approval-skill", "base-analyst"],
                    autoUpdate: true, "feishu", "github.com/feishu/lark-suite", 412_800, [
                 cap("fs-lark-cli", "lark-cli", .cli, "飞书官方命令行", "2.4.0", "feishu", 0, .on, .on),
                 cap("fs-mcp", "feishu-mcp", .mcp, "飞书 OpenAPI 接入", "0.3.1", "feishu", 24800, .on, .off),

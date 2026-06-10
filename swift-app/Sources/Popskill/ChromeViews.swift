@@ -239,6 +239,7 @@ struct FractionCell: View {
 
 struct UpdateBadge: View {
     let latest: String
+    var help: String? = nil
     let action: () -> Void
 
     var body: some View {
@@ -251,7 +252,20 @@ struct UpdateBadge: View {
                 .overlay(RoundedRectangle(cornerRadius: 3).stroke(Ink.amberBadgeBorder, lineWidth: 1))
         }
         .buttonStyle(.plain)
-        .help("更新到 \(latest)")
+        .help(help ?? "更新到 \(latest)")
+    }
+}
+
+/// 套装子项行的「有新版」迷你角标（v2.5：提醒到具体成员）
+struct MemberUpdateDot: View {
+    var body: some View {
+        Text("↑")
+            .font(.mono(10, .bold))
+            .foregroundStyle(Ink.amberText)
+            .padding(.horizontal, 3)
+            .background(RoundedRectangle(cornerRadius: 3).fill(Ink.amberBadgeBg))
+            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Ink.amberBadgeBorder, lineWidth: 1))
+            .help("上游有新版——点套装头部 ↑ 徽标更新")
     }
 }
 

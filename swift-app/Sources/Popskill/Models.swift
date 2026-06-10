@@ -71,6 +71,7 @@ struct Entry: Identifiable, Equatable {
     var bundleKind: BundleKind?         // 仅 Bundle 有
     var sourceUrl: String?
     var latest: String?                 // 上游最新版；存在且 ≠ version ⇒ 可更新
+    var changedMembers: [String]? = nil // 套装里具体哪些成员有新版（提醒到行）
     var autoUpdate: Bool = false
 
     var isBundle: Bool { children != nil }

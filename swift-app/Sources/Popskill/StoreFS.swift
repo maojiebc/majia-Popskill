@@ -33,6 +33,7 @@ struct StoreMeta: Codable {
         var sourceUrl: String?
         var autoUpdate: Bool?
         var latest: String?
+        var changed: [String]?   // 上次检查发现有变化的成员名（套装提醒到具体哪个）
     }
     struct ToolMeta: Codable {
         var defaultTarget: Bool?
@@ -292,7 +293,8 @@ struct StoreFS {
             let m = meta.entries[repoName]
             bundleAt[idxs[0]] = Entry(id: "src:\(src)", cap: head, children: members,
                                       bundleKind: .source, sourceUrl: src,
-                                      latest: m?.latest, autoUpdate: m?.autoUpdate ?? false)
+                                      latest: m?.latest, changedMembers: m?.changed,
+                                      autoUpdate: m?.autoUpdate ?? false)
             idxs.forEach { grouped.insert($0) }
         }
         var out: [Entry] = []
@@ -325,7 +327,8 @@ struct StoreFS {
         }
         let m = meta.entries[name]
         return Entry(id: name, cap: cap, children: nil,
-                     sourceUrl: source, latest: m?.latest, autoUpdate: m?.autoUpdate ?? false)
+                     sourceUrl: source, latest: m?.latest, changedMembers: m?.changed,
+                     autoUpdate: m?.autoUpdate ?? false)
     }
 
     private func makeBundle(name: String, dir: URL, tools: [Tool], meta: StoreMeta) -> Entry {
@@ -350,7 +353,8 @@ struct StoreFS {
         let m = meta.entries[name]
         let source = m?.sourceUrl.map(StoreFS.normalizeSource) ?? gitRemote(dir).map(StoreFS.normalizeSource)
         return Entry(id: name, cap: head, children: children, bundleKind: .directory,
-                     sourceUrl: source, latest: m?.latest, autoUpdate: m?.autoUpdate ?? false)
+                     sourceUrl: source, latest: m?.latest, changedMembers: m?.changed,
+                     autoUpdate: m?.autoUpdate ?? false)
     }
 
     private func makeCap(name: String, type: CapType, dir: URL, id: String? = nil) -> Capability {
@@ -790,10 +794,11 @@ struct StoreFS {
         return (updated, upstreamNew)
     }
 
-    func saveLatest(_ entryName: String, latest: String?) {
+    func saveLatest(_ entryName: String, latest: String?, changed: [String]? = nil) {
         var meta = loadMeta()
         var m = meta.entries[entryName] ?? StoreMeta.EntryMeta()
         m.latest = latest
+        m.changed = latest == nil ? nil : changed
         meta.entries[entryName] = m
         saveMeta(meta)
     }

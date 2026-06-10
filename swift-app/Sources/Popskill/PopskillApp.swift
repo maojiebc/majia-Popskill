@@ -14,6 +14,13 @@ struct PopskillApp: App {
         WindowGroup {
             RootView()
                 .environment(model)
+                .onAppear {
+                    if updaterController.updater.canCheckForUpdates || Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") != nil {
+                        model.checkAppUpdate = { [weak updaterController = updaterController] in
+                            updaterController?.checkForUpdates(nil)
+                        }
+                    }
+                }
                 .preferredColorScheme(.light)
                 .tint(Ink.blue)
                 .frame(minWidth: 1080, minHeight: 720)

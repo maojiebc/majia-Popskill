@@ -92,6 +92,11 @@ if [[ -n "${POPSKILL_SPARKLE_PUBLIC_ED_KEY:-}" ]]; then
   /usr/libexec/PlistBuddy -c "Add :SUPublicEDKey string ${POPSKILL_SPARKLE_PUBLIC_ED_KEY}" "$CONTENTS_DIR/Info.plist"
 fi
 
+# Sparkle 自动检查：默认开 + 1 小时间隔（否则 Sparkle 要等第二次启动的许可弹窗，
+# 且默认 24h 间隔——同日多版本用户永远收不到提醒）
+/usr/libexec/PlistBuddy -c "Add :SUEnableAutomaticChecks bool true" "$CONTENTS_DIR/Info.plist"
+/usr/libexec/PlistBuddy -c "Add :SUScheduledCheckInterval integer 3600" "$CONTENTS_DIR/Info.plist"
+
 if command -v codesign > /dev/null 2>&1; then
   if [[ -d "$FRAMEWORKS_DIR/Sparkle.framework" ]]; then
     run_quietly codesign --force --sign - "$FRAMEWORKS_DIR/Sparkle.framework"

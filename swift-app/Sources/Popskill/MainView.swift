@@ -456,6 +456,11 @@ struct BundleCard: View {
 
     private var headFocused: Bool { model.kbFocusId == entry.id }
 
+    private var bundleUpdateHelp: String {
+        guard let changed = entry.changedMembers, !changed.isEmpty else { return "更新此套装" }
+        return "有新版：\(changed.sorted().joined(separator: "、"))——点击全部更新"
+    }
+
     private var header: some View {
         HStack(spacing: 12) {
             Text(kids != nil ? "▼" : "▶")
@@ -500,7 +505,7 @@ struct BundleCard: View {
                 Spacer(minLength: 0)
                 if let v = entry.cap.version { Text("v\(v)").lineLimit(1).fixedSize() }
                 if entry.hasUpdate, let latest = entry.latest {
-                    UpdateBadge(latest: latest) { model.runUpdate(entry.id) }
+                    UpdateBadge(latest: latest, help: bundleUpdateHelp) { model.runUpdate(entry.id) }
                 }
             }
             .font(.ui(11.5))
@@ -570,11 +575,15 @@ struct BundleCard: View {
                     .background(RoundedRectangle(cornerRadius: 6)
                         .fill(cf && model.kbToolIdx == i ? Ink.blue.opacity(0.12) : .clear))
             }
-            Text(c.version ?? "—")
-                .font(.ui(11))
-                .foregroundStyle(Ink.tertiary)
-                .monospacedDigit()
-                .frame(width: 96, alignment: .trailing)
+            HStack(spacing: 4) {
+                Spacer(minLength: 0)
+                if entry.changedMembers?.contains(c.name) == true { MemberUpdateDot() }
+                Text(c.version ?? "—")
+                    .font(.ui(11))
+                    .foregroundStyle(Ink.tertiary)
+                    .monospacedDigit()
+            }
+            .frame(width: 96, alignment: .trailing)
             HStack {
                 if hoverChild == c.id {
                     HoverAction(symbol: "↗", danger: false, help: "在编辑器中打开") { model.openInEditor(c.dirURL) }

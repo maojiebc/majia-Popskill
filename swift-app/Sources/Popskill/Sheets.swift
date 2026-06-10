@@ -465,7 +465,20 @@ struct SettingsSheet: View {
     private var aboutSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionLabel(text: "关于")
-            Text(aboutLine).font(.ui(11.5)).foregroundStyle(Ink.secondary)
+            HStack(spacing: 10) {
+                Text(aboutLine).font(.ui(11.5)).foregroundStyle(Ink.secondary)
+                Spacer()
+                if model.checkAppUpdate != nil {
+                    Button { model.checkAppUpdate?() } label: {
+                        Text("检查 App 更新…")
+                            .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
+                            .padding(.horizontal, 8).frame(height: 24)
+                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .help("立即向更新源询问新版本（自动检查每小时一次）")
+                }
+            }
         }
         .padding(.bottom, 4)
     }
