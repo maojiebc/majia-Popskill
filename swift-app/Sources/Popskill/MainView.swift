@@ -244,34 +244,40 @@ struct MainView: View {
 
     private var grid: some View {
         let list = items
-        return ScrollViewReader { proxy in
-            ScrollView {
-                if list.isEmpty {
-                    VStack(spacing: 4) {
-                        Text("无匹配结果").font(.ui(13, .semibold)).foregroundStyle(Ink.secondary2)
-                        (Text("没有能力匹配 “") + Text(model.query).font(.mono(12)).foregroundStyle(Ink.ink) + Text("”。试试别的关键词，或 + 添加。"))
-                            .font(.ui(12)).foregroundStyle(Ink.tertiary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 64)
-                } else {
-                    VStack(spacing: 10) {
-                        ForEach(rows(list), id: \.first!.id) { row in
-                            if row.count == 1, case .bundle = row[0] {
-                                itemView(row[0])
-                            } else {
-                                HStack(alignment: .top, spacing: 10) {
-                                    ForEach(row) { itemView($0).frame(maxWidth: .infinity, alignment: .top) }
-                                    if row.count == 1 { Color.clear.frame(maxWidth: .infinity) }
+        return GeometryReader { geo in
+            // 自适应列数（v2.7）：~440pt/卡，1280→2 列、1700→3 列、2100+→4 列
+            let cols = max(2, min(4, Int((geo.size.width - 56 + 10) / 450)))
+            ScrollViewReader { proxy in
+                ScrollView {
+                    if list.isEmpty {
+                        VStack(spacing: 4) {
+                            Text("无匹配结果").font(.ui(13, .semibold)).foregroundStyle(Ink.secondary2)
+                            (Text("没有能力匹配 “") + Text(model.query).font(.mono(12)).foregroundStyle(Ink.ink) + Text("”。试试别的关键词，或 + 添加。"))
+                                .font(.ui(12)).foregroundStyle(Ink.tertiary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 64)
+                    } else {
+                        VStack(spacing: 10) {
+                            ForEach(rows(list, columns: cols), id: \.first!.id) { row in
+                                if row.count == 1, case .bundle(_, let kids) = row[0], kids != nil {
+                                    itemView(row[0])   // 展开的套装才通栏
+                                } else {
+                                    HStack(alignment: .top, spacing: 10) {
+                                        ForEach(row) { itemView($0).frame(maxWidth: .infinity, alignment: .top) }
+                                        ForEach(0..<(cols - row.count), id: \.self) { _ in
+                                            Color.clear.frame(maxWidth: .infinity)
+                                        }
+                                    }
                                 }
                             }
                         }
+                        .padding(EdgeInsets(top: 16, leading: 28, bottom: 28, trailing: 28))
                     }
-                    .padding(EdgeInsets(top: 16, leading: 28, bottom: 28, trailing: 28))
                 }
-            }
-            .onChange(of: model.kbFocusId) { _, id in
-                if let id { withAnimation(.easeOut(duration: 0.1)) { proxy.scrollTo(id) } }
+                .onChange(of: model.kbFocusId) { _, id in
+                    if let id { withAnimation(.easeOut(duration: 0.1)) { proxy.scrollTo(id) } }
+                }
             }
         }
         .background(Ink.window)
@@ -302,17 +308,17 @@ struct MainView: View {
         model.kbValidate()
     }
 
-    /// 套装独占一行，独立能力两两成行
-    private func rows(_ list: [DisplayItem]) -> [[DisplayItem]] {
+    /// v2.7 布局：只有「展开的」套装通栏；折叠套装与独立卡一起按列数打包进网格
+    private func rows(_ list: [DisplayItem], columns: Int) -> [[DisplayItem]] {
         var rows: [[DisplayItem]] = []
         var pending: [DisplayItem] = []
         for it in list {
-            if case .bundle = it {
+            if case .bundle(_, let kids) = it, kids != nil {
                 if !pending.isEmpty { rows.append(pending); pending = [] }
                 rows.append([it])
             } else {
                 pending.append(it)
-                if pending.count == 2 { rows.append(pending); pending = [] }
+                if pending.count == columns { rows.append(pending); pending = [] }
             }
         }
         if !pending.isEmpty { rows.append(pending) }
@@ -323,10 +329,98 @@ struct MainView: View {
     private func itemView(_ item: DisplayItem) -> some View {
         switch item {
         case .bundle(let e, let kids):
-            BundleCard(entry: e, kids: kids, query: q)
+            if kids == nil {
+                BundleCompactCard(entry: e, query: q)
+            } else {
+                BundleCard(entry: e, kids: kids, query: q)
+            }
         case .cap(let c, let e, let from):
             CapCard(cap: c, entry: e, fromBundle: from, query: q)
         }
+    }
+}
+
+// ── 折叠套装紧凑卡（v2.7）：与独立卡同宽混排，展开才通栏 ──
+
+struct BundleCompactCard: View {
+    @Environment(AppModel.self) private var model
+    let entry: Entry
+    let query: String
+    @State private var hovered = false
+
+    var body: some View {
+        let focused = model.kbFocusId == entry.id
+        HStack(alignment: .top, spacing: 12) {
+            Text("▶")
+                .font(.mono(11))
+                .foregroundStyle(Color(hex: 0x444444))
+                .frame(width: 38, height: 38)
+                .background(RoundedRectangle(cornerRadius: 9).fill(Ink.bundleHead))
+                .overlay(RoundedRectangle(cornerRadius: 9).stroke(Ink.hairline, lineWidth: 1))
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(highlight(entry.name, query))
+                        .font(.ui(13.5, .bold))
+                        .foregroundStyle(Ink.ink)
+                        .lineLimit(1)
+                    TypeTag(type: .bundle)
+                    Text("\(entry.children?.count ?? 0) 项")
+                        .font(.ui(11))
+                        .foregroundStyle(Ink.secondary)
+                        .fixedSize()
+                    Spacer(minLength: 0)
+                    if hovered {
+                        HoverAction(symbol: "↗", danger: false, help: "在编辑器中打开") { model.openInEditor(entry.cap.dirURL) }
+                        if !entry.isManagedExternally {
+                            HoverAction(symbol: "✕", danger: true, help: "移除套装（含全部子项）") { model.removeEntry(entry) }
+                        }
+                    }
+                }
+                .frame(height: 22)
+                Text(highlight(entry.cap.desc, query))
+                    .font(.ui(11.5))
+                    .foregroundStyle(Ink.secondary)
+                    .lineLimit(1)
+                HStack(spacing: 8) {
+                    if entry.isManagedExternally {
+                        Text("MARKETPLACE").font(.ui(8.5, .bold)).kerning(0.5).foregroundStyle(Ink.monoDim)
+                    }
+                    if let v = entry.cap.version { Text("v\(v)") }
+                    if entry.hasUpdate, let latest = entry.latest {
+                        UpdateBadge(latest: latest) { model.runUpdate(entry.id) }
+                    }
+                    if entry.cap.tokens >= 100 { Text(formatTokens(entry.cap.tokens)) }
+                    if let url = entry.sourceUrl {
+                        Text("↗ \(url)").font(.mono(10)).lineLimit(1).truncationMode(.tail)
+                    }
+                }
+                .font(.ui(11))
+                .foregroundStyle(Ink.tertiary)
+                .monospacedDigit()
+            }
+            HStack(spacing: 10) {
+                ForEach(model.tools) { t in
+                    VStack(spacing: 3) {
+                        Text(String(t.name.split(separator: " ").first ?? "").uppercased())
+                            .font(.ui(8.5, .bold)).kerning(0.6)
+                            .foregroundStyle(Ink.tertiary)
+                        FractionCell(agg: aggregate(entry.children ?? [], toolId: t.id))
+                    }
+                }
+            }
+            .frame(minWidth: 100)
+            .padding(.top, 2)
+        }
+        .padding(EdgeInsets(top: 13, leading: 15, bottom: 13, trailing: 15))
+        .background(RoundedRectangle(cornerRadius: 10).fill(Ink.bundleBody))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(focused ? Ink.blue : Ink.hairline, lineWidth: 1))
+        .kbRowFocus(focused, radius: 10, model: model)
+        .shadow(color: .black.opacity(0.03), radius: 1, y: 1)
+        .contentShape(Rectangle())
+        .onTapGesture { model.expanded.insert(entry.id) }
+        .onHover { hovered = $0 }
+        .help("点击展开套装")
+        .id(entry.id)
     }
 }
 
