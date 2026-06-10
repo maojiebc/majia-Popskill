@@ -8,6 +8,28 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.1.2</title>
+      <pubDate>Wed, 10 Jun 2026 07:30:00 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.1.2 — 实机反馈打磨</h2>
+        <ul>
+          <li><b>排序</b> —— 套装永远置顶，独立能力按 类型（Skill→Agent→MCP→CLI）→ 名称 排列。</li>
+          <li><b>类型识别</b> —— guancli 这类 CLI 包装技能不再误标为 SKILL（frontmatter type: 优先，名称特征兜底；symlink 布局不受影响）。</li>
+          <li><b>套装收编</b> —— 既不在 lock、又没 homepage 的同族散件（如 baoyu-diagram）自动并入源式套装。</li>
+          <li><b>应用图标</b> —— 缩入 Apple 图标网格，Dock 里不再偏大。</li>
+          <li><b>细节</b> —— 状态栏版本号修正；修复弹层推荐方案唯一化；安装计划终端预览不再折行。</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.1.2/Popskill-2.1.2.dmg"
+        sparkle:version="212"
+        sparkle:shortVersionString="2.1.2"
+        sparkle:edSignature="GmzDZ+UdfwElgrfovRvl76CcQZiMBQuCe95OqAMyxGr6qfG/ItxOfYBi6br3FFnbDPEdY/nBUHkEij8i6Y8MCA=="
+        length="2290541"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.1.1</title>
       <pubDate>Wed, 10 Jun 2026 06:20:00 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
