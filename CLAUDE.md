@@ -94,7 +94,7 @@ DEVELOPER_DIR=/Applications/Xcode.app swift test --package-path swift-app   # CL
 
 与 v1 相同（scripts/ 全套保留）：pre-flight 验 notary profile → `package-dev-app.sh` → `notarize.sh` → `package-dmg.sh` → DMG 签名公证 → `sparkle-sign-update.sh` → 手动加 appcast `<item>` → `gh release create`。完整命令见 git 历史中 v1.1.0 版 CLAUDE.md 或 majia-ota-app skill。
 
-**发版后必验**：`curl -sI https://maojiebc.github.io/majia-Popskill/appcast.xml` 非 404 且含新版 enclosure（Pages 会被静默禁用，见坑 #10）。
+**发版后必验**：① appcast `curl -sI` 非 404 且含新版 enclosure（Pages 会被静默禁用，坑 #10）；② **README 双语装机直链跟版**（`releases/latest/download/Popskill-X.Y.Z.dmg` 资产名随版本变，不跟会 404）。
 
 ## 已知坑（不要再踩）
 
