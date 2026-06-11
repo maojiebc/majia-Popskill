@@ -39,3 +39,4 @@ target/
 
 # Logs
 *.log
+__pycache__/
