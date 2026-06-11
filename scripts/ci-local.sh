@@ -1,75 +1,40 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# 本地 CI（v2 纯 Swift 链）：语法 → 构建+测试 → 启动冒烟 → bundle 冒烟
+# → 截图资产 → 发布工件冒烟。任何一步失败立即停。
+# v1 的 cc-switch/skill-cli 预检已随架构删除。
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-RUN_MUTATING=false
 
 for arg in "$@"; do
   case "$arg" in
-    --mutating)
-      RUN_MUTATING=true
-      ;;
     -h|--help)
       cat <<'USAGE'
-Usage: scripts/ci-local.sh [--mutating]
+Usage: scripts/ci-local.sh
 
-Runs the local verification suite:
-  - Rust sidecar build and read-only smoke
-  - SwiftUI app build
-  - Swift tests
-  - native launch smoke
-  - .app bundle launch smoke
-  - screenshot asset smoke
-  - release artifact smoke
-
-Pass --mutating to also run sidecar smoke tests that create and remove
-a temporary CC Switch skill repository.
+Runs the local verification suite (v2, pure Swift):
+  - shell script syntax check
+  - Swift build + full test suite (scripts/test.sh)
+  - native launch smoke (FAKE_DATA sandbox)
+  - .app bundle launch smoke (asserts version == VERSION file)
+  - screenshot asset smoke (assets actually referenced by README)
+  - release artifact smoke (DMG + manifest)
 USAGE
       exit 0
       ;;
     *)
       echo "unknown argument: $arg" >&2
-      echo "usage: scripts/ci-local.sh [--mutating]" >&2
       exit 64
       ;;
   esac
 done
-
-echo "==> Local CI: prerequisites"
-# Submodule preflight: skill-cli has a path dependency on cc-switch via
-# .gitmodules. A fresh clone without --recurse-submodules will fail with
-# an opaque cargo error pointing at the missing Cargo.toml. Fail early
-# with a readable message instead.
-CC_SWITCH_MANIFEST="$ROOT_DIR/cc-switch/src-tauri/Cargo.toml"
-if [[ ! -f "$CC_SWITCH_MANIFEST" ]]; then
-  cat >&2 <<'PREFLIGHT'
-error: cc-switch submodule is not initialized.
-
-popskill depends on the cc-switch submodule for its skill-cli Rust path
-dependency. The current working tree is missing:
-  cc-switch/src-tauri/Cargo.toml
-
-Run this from the repo root, then re-run scripts/ci-local.sh:
-  git submodule update --init --recursive
-
-If you originally cloned without submodules, you can also do:
-  git clone --recurse-submodules <repo-url> popskill
-
-Network-restricted environments must reach github.com/farion1231/cc-switch
-to fetch the submodule.
-PREFLIGHT
-  echo "" >&2
-  echo "current submodule status:" >&2
-  git -C "$ROOT_DIR" submodule status >&2 || true
-  exit 65
-fi
 
 echo "==> Local CI: shell script syntax"
 for script in "$ROOT_DIR"/scripts/*.sh; do
   bash -n "$script"
 done
 
-echo "==> Local CI: build, read-only smoke, and tests"
+echo "==> Local CI: build and tests"
 "$ROOT_DIR/scripts/dev-build.sh"
 
 echo "==> Local CI: native app launch smoke"
@@ -83,12 +48,5 @@ echo "==> Local CI: screenshot asset smoke"
 
 echo "==> Local CI: release artifact smoke"
 "$ROOT_DIR/scripts/smoke-release.sh"
-
-if [[ "$RUN_MUTATING" == true ]]; then
-  echo "==> Local CI: mutating sidecar smoke"
-  "$ROOT_DIR/scripts/smoke-cli-mutating.sh"
-else
-  echo "==> Local CI: skipped mutating smoke (pass --mutating to run it)"
-fi
 
 echo "==> Local CI: ok"

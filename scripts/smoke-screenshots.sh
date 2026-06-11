@@ -2,17 +2,31 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCREENSHOT_DIR="$ROOT_DIR/docs/assets/screenshots"
+# v2：校验 README 实际引用的资产（曾指向 v1 孤儿目录 docs/assets/screenshots，
+# README 换了图脚本照样绿——形同虚设）
+SCREENSHOT_DIR="$ROOT_DIR/docs/screenshots"
 MIN_WIDTH=1200
-MIN_HEIGHT=800
+MIN_HEIGHT=700
 MIN_BYTES=100000
 
 required=(
-  "popskill-discover.png"
-  "popskill-library.png"
-  "popskill-usage.png"
-  "popskill-idle-candidates.png"
+  "hero.png"
+  "settings.png"
+  "peek.png"
+  "fix.png"
+  "add.png"
 )
+
+# 防再次漂移：README 引用的每张图都必须在 required 清单里
+while IFS= read -r ref; do
+  name="$(basename "$ref")"
+  found=false
+  for r in "${required[@]}"; do [[ "$r" == "$name" ]] && found=true; done
+  if [[ "$found" == false ]]; then
+    echo "README 引用了 $ref 但不在 smoke 清单里——同步 required 数组" >&2
+    exit 1
+  fi
+done < <(grep -oh 'docs/screenshots/[a-zA-Z0-9._-]*\.png' "$ROOT_DIR/README.md" "$ROOT_DIR/README.en.md" | sort -u)
 
 if ! command -v sips >/dev/null 2>&1; then
   echo "sips is required for screenshot smoke tests" >&2

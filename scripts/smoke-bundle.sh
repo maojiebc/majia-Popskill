@@ -5,8 +5,6 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_SECONDS="${1:-3}"
 APP_DIR="$ROOT_DIR/build/Popskill.app"
 APP_BIN="$APP_DIR/Contents/MacOS/Popskill"
-BUNDLED_CLI="$APP_DIR/Contents/Resources/skill-cli"
-BUNDLED_DOCS="$APP_DIR/Contents/Resources/ipc.md"
 BUNDLED_SPARKLE="$APP_DIR/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle"
 WINDOW_CHECKER="$(mktemp "${TMPDIR:-/tmp}/popskill-window-check.XXXXXX.swift")"
 APP_PID=""
@@ -35,13 +33,14 @@ if [[ ! -x "$APP_BIN" ]]; then
   exit 1
 fi
 
-if [[ ! -x "$BUNDLED_CLI" ]]; then
-  echo "missing bundled skill-cli sidecar: $BUNDLED_CLI" >&2
-  exit 1
-fi
-
-if [[ ! -f "$BUNDLED_DOCS" ]]; then
-  echo "missing bundled IPC docs: $BUNDLED_DOCS" >&2
+# v2 断言：Info.plist 版本必须与 VERSION 单源一致（曾人肉同步 6+ 处）
+EXPECTED_VERSION="$(sed -n '1p' "$ROOT_DIR/VERSION")"
+EXPECTED_BUILD="$(sed -n '2p' "$ROOT_DIR/VERSION")"
+PLIST="$APP_DIR/Contents/Info.plist"
+GOT_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")"
+GOT_BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$PLIST")"
+if [[ "$GOT_VERSION" != "$EXPECTED_VERSION" || "$GOT_BUILD" != "$EXPECTED_BUILD" ]]; then
+  echo "bundle 版本 ($GOT_VERSION/$GOT_BUILD) 与 VERSION 文件 ($EXPECTED_VERSION/$EXPECTED_BUILD) 不一致" >&2
   exit 1
 fi
 
@@ -91,7 +90,7 @@ let hasMainWindow = windows.contains { window in
 exit(hasMainWindow ? 0 : 1)
 SWIFT
 
-env -u POPSKILL_CLI open -n "$APP_DIR"
+open -n "$APP_DIR"
 
 for _ in {1..50}; do
   APP_PID="$(running_app_pids | head -n 1)"

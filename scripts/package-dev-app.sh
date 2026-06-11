@@ -7,8 +7,20 @@ CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 FRAMEWORKS_DIR="$CONTENTS_DIR/Frameworks"
-APP_VERSION="${POPSKILL_APP_VERSION:-2.0.0}"
-APP_BUILD="${POPSKILL_APP_BUILD:-200}"
+# 版本/build 单源在仓库根 VERSION 文件（第一行版本号，第二行 build），env 可覆盖。
+# 曾经默认值钉死 2.0.0/200——漏传 env 就产出错版二进制（v2.8 审计修复）。
+# build number 与版本号解耦、单调递增（去点方案在 x.y.10 时会让 Sparkle 更新链断裂）。
+VERSION_FILE="$ROOT_DIR/VERSION"
+if [[ ! -f "$VERSION_FILE" ]]; then
+  echo "缺少 VERSION 文件（第一行版本号，第二行 build number）" >&2
+  exit 64
+fi
+APP_VERSION="${POPSKILL_APP_VERSION:-$(sed -n '1p' "$VERSION_FILE")}"
+APP_BUILD="${POPSKILL_APP_BUILD:-$(sed -n '2p' "$VERSION_FILE")}"
+if [[ -z "$APP_VERSION" || -z "$APP_BUILD" ]]; then
+  echo "VERSION 文件不完整：需要第一行版本号、第二行 build number" >&2
+  exit 64
+fi
 BUNDLE_IDENTIFIER="${POPSKILL_BUNDLE_IDENTIFIER:-com.majia.popskill}"
 ICON_SRC="$ROOT_DIR/swift-app/Resources/AppIcon.icns"
 # Sparkle defaults — every release after v1.0.0 carries these so the binary
@@ -76,6 +88,10 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
   <string>AppIcon</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
+  <key>LSApplicationCategoryType</key>
+  <string>public.app-category.developer-tools</string>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>zh_CN</string>
   <key>NSHighResolutionCapable</key>
   <true/>
   <key>NSHumanReadableCopyright</key>
@@ -92,10 +108,10 @@ if [[ -n "${POPSKILL_SPARKLE_PUBLIC_ED_KEY:-}" ]]; then
   /usr/libexec/PlistBuddy -c "Add :SUPublicEDKey string ${POPSKILL_SPARKLE_PUBLIC_ED_KEY}" "$CONTENTS_DIR/Info.plist"
 fi
 
-# Sparkle 自动检查：默认开 + 1 小时间隔（否则 Sparkle 要等第二次启动的许可弹窗，
-# 且默认 24h 间隔——同日多版本用户永远收不到提醒）
+# Sparkle 自动检查：默认开 + 24 小时间隔（v2.8 起回归 Sparkle 默认节奏；
+# 设置页有开关，用户可关；同日多版本场景用「检查 App 更新…」手动覆盖）
 /usr/libexec/PlistBuddy -c "Add :SUEnableAutomaticChecks bool true" "$CONTENTS_DIR/Info.plist"
-/usr/libexec/PlistBuddy -c "Add :SUScheduledCheckInterval integer 3600" "$CONTENTS_DIR/Info.plist"
+/usr/libexec/PlistBuddy -c "Add :SUScheduledCheckInterval integer 86400" "$CONTENTS_DIR/Info.plist"
 
 if command -v codesign > /dev/null 2>&1; then
   if [[ -d "$FRAMEWORKS_DIR/Sparkle.framework" ]]; then

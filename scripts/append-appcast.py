@@ -12,6 +12,7 @@
 """
 import argparse
 import pathlib
+import re
 import sys
 
 APPCAST = pathlib.Path(__file__).resolve().parent.parent / "docs/appcast.xml"
@@ -56,6 +57,15 @@ def main() -> int:
     s = APPCAST.read_text()
     if f"<title>v{args.version}</title>" in s:
         sys.exit(f"[appcast] v{args.version} 已存在，拒绝重复插入")
+
+    # build 必须严格递增（v2.8 起与版本号解耦）：Sparkle 按 sparkle:version
+    # （即 CFBundleVersion）整数比较——不递增的话用户永远收不到这一版
+    if not args.build.isdigit():
+        sys.exit(f"[appcast] build 必须是纯数字，拿到 {args.build!r}")
+    m = re.search(r'sparkle:version="(\d+)"', s)
+    if m and int(args.build) <= int(m.group(1)):
+        sys.exit(f"[appcast] build {args.build} 必须严格大于现有顶部 item 的 "
+                 f"{m.group(1)}（VERSION 第二行 +1 再来）")
 
     item = TEMPLATE.format(version=args.version, build=args.build, sig=args.sig,
                            length=args.length, pubdate=args.pubdate,

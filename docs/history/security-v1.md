@@ -1,4 +1,7 @@
-# Security Notes
+# Security Notes（v1 已归档）
+
+> ⚠️ 本文描述的是 v1 架构（KeychainService / skill-cli / SQLite），v2 已全部移除。
+> 现行安全模型见仓库根目录 [SECURITY.md](../../SECURITY.md)。
 
 Popskill manages local automation skills, so it should treat credentials and executable skill content as high-trust surfaces.
 
