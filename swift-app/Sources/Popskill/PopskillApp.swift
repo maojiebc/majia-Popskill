@@ -28,6 +28,13 @@ struct PopskillApp: App {
                         model.checkAppUpdate = { [weak updaterController = updaterController] in
                             updaterController?.checkForUpdates(nil)
                         }
+                        // Sparkle 把该偏好写进 user defaults，覆盖 Info.plist 烤入值
+                        model.sparkleAutoCheckGet = { [weak updaterController = updaterController] in
+                            updaterController?.updater.automaticallyChecksForUpdates ?? false
+                        }
+                        model.sparkleAutoCheckSet = { [weak updaterController = updaterController] in
+                            updaterController?.updater.automaticallyChecksForUpdates = $0
+                        }
                     }
                 }
                 .preferredColorScheme(.light)
@@ -117,7 +124,7 @@ struct RootView: View {
                 if let toast = model.toast {
                     VStack {
                         Spacer()
-                        ToastView(msg: toast).padding(.bottom, 44)
+                        ToastView(msg: toast, isError: model.toastIsError).padding(.bottom, 44)
                     }
                     .frame(maxWidth: .infinity)
                     .allowsHitTesting(false)

@@ -22,6 +22,7 @@ struct PsSwitch: View {
             .animation(.easeOut(duration: 0.15), value: on)
         }
         .buttonStyle(.plain)
+        .accessibilityValue(on ? "开" : "关")
     }
 }
 
@@ -112,7 +113,7 @@ struct AddSheet: View {
     @State private var error: String?
     @FocusState private var urlFocus: Bool
 
-    private let examples = ["github.com/dotey/prompt-engineering", "npm:@upstash/context7-mcp", "~/work/my-skills/ppt-generator"]
+    private let examples = ["github.com/dotey/prompt-engineering", "github.com/anthropics/skills", "~/work/my-skills/ppt-generator"]
 
     var body: some View {
         SheetShell(width: 520, onDismiss: { model.sheet = nil }) {
@@ -122,6 +123,9 @@ struct AddSheet: View {
                 foot
             }
         }
+        // 任何方式离开弹层（取消/遮罩/esc/安装完成）都清掉 github 临时 clone——
+        // 曾经取消即把整仓副本泄漏在临时目录
+        .onDisappear { discardPlan(plan) }
         .onAppear {
             // 未安装的工具默认不挂载（避免给新用户凭空创建 ~/.codex）
             targets = Dictionary(uniqueKeysWithValues: model.tools.map { ($0.id, $0.defaultTarget && $0.connected) })
@@ -137,7 +141,7 @@ struct AddSheet: View {
     private var head: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("添加能力").font(.ui(15.5, .bold)).foregroundStyle(Ink.ink)
-            Text("粘贴 GitHub 仓库 / npm 包 / 本地路径 — 安装一次进 store，再选择挂载到哪些工具。")
+            Text("粘贴 GitHub 仓库 / 本地路径 — 安装一次进 store，再选择挂载到哪些工具。")
                 .font(.ui(11.5)).foregroundStyle(Ink.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -149,7 +153,7 @@ struct AddSheet: View {
     private var urlBody: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionLabel(text: "来源 URL")
-            TextField("github.com/owner/repo · npm:pkg · ~/path", text: $url)
+            TextField("github.com/owner/repo · ~/path", text: $url)
                 .textFieldStyle(.plain)
                 .font(.mono(12.5))
                 .foregroundStyle(Ink.ink)
@@ -259,7 +263,7 @@ struct AddSheet: View {
     private var foot: some View {
         HStack(spacing: 8) {
             if plan != nil {
-                SheetButton(label: "← 返回") { plan = nil; error = nil }
+                SheetButton(label: "← 返回") { discardPlan(plan); plan = nil; error = nil }
             }
             Spacer()
             SheetButton(label: "取消") { model.sheet = nil }
@@ -294,12 +298,21 @@ struct AddSheet: View {
             }
         }
     }
+
+    /// github 计划的临时 clone（连 stage 父目录）后台清掉；local 源原地目录不动
+    private func discardPlan(_ p: StoreFS.ResolvedSource?) {
+        guard let p, p.kind == .github, !model.fake else { return }
+        let fsCopy = model.fs
+        let dir = p.stagingDir
+        Task.detached { fsCopy.discardStagingDir(dir) }
+    }
 }
 
 // ── 设置弹层 ─────────────────────────────────────────────
 
 struct SettingsSheet: View {
     @Environment(AppModel.self) private var model
+    @State private var sparkleAuto = false
 
     var body: some View {
         SheetShell(width: 560, onDismiss: { model.sheet = nil }) {
@@ -310,6 +323,7 @@ struct SettingsSheet: View {
                         sourcesSection
                         toolsSection
                         storeSection
+                        trashSection
                         aboutSection
                     }
                     .padding(EdgeInsets(top: 16, leading: 20, bottom: 16, trailing: 20))
@@ -413,14 +427,6 @@ struct SettingsSheet: View {
                     }
                 }
             }
-            Button { model.say("自定义工具将在 v2.1 支持") } label: {
-                Text("+ 添加工具…")
-                    .font(.ui(11.5, .semibold)).foregroundStyle(Color(hex: 0x444444))
-                    .padding(.horizontal, 10).frame(height: 26)
-                    .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 2)
         }
     }
 
@@ -466,12 +472,75 @@ struct SettingsSheet: View {
         return model.syncInfo.clean ? "Git · 已同步" : "Git · 有未提交改动"
     }
 
+    // ── 回收站（v2.8：兑现「进回收站，可恢复」的全部 UI 承诺）──
+
+    private var trashSection: some View {
+        let items = model.fs.listTrash()
+        return VStack(alignment: .leading, spacing: 0) {
+            SectionLabel(text: "回收站（\(items.count)）")
+            if items.isEmpty {
+                Text("空——移除能力和更新换版时，旧目录会进这里（最多留 \(StoreFS.trashRetainCount) 份，先进先出）。")
+                    .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+            } else {
+                VStack(spacing: 6) {
+                    ForEach(items.prefix(5)) { item in
+                        SheetRow {
+                            Text(item.name)
+                                .font(.mono(11.5)).foregroundStyle(Ink.ink)
+                                .lineLimit(1).truncationMode(.middle)
+                            Spacer(minLength: 8)
+                            if let d = item.date {
+                                Text(relativeLabel(d)).font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+                            }
+                            Button { model.restoreTrashItem(item) } label: {
+                                Text("恢复到 store")
+                                    .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
+                                    .padding(.horizontal, 8).frame(height: 24)
+                                    .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
+                            }
+                            .buttonStyle(.plain)
+                            .help("移回 store skills/——同名能力已存在时会拒绝")
+                        }
+                    }
+                }
+                HStack(spacing: 8) {
+                    if items.count > 5 {
+                        Text("仅列最近 5 项，其余在文件夹里").font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+                    }
+                    Button { model.openTrash() } label: {
+                        Text("↗ 打开回收站文件夹")
+                            .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
+                            .padding(.horizontal, 8).frame(height: 24)
+                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.top, 6)
+            }
+        }
+    }
+
+    private func relativeLabel(_ d: Date) -> String {
+        let f = RelativeDateTimeFormatter()
+        f.locale = Locale(identifier: "zh_CN")
+        f.unitsStyle = .short
+        return f.localizedString(for: d, relativeTo: Date())
+    }
+
     private var aboutSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionLabel(text: "关于")
             HStack(spacing: 10) {
                 Text(aboutLine).font(.ui(11.5)).foregroundStyle(Ink.secondary)
                 Spacer()
+                Button { model.reportIssue() } label: {
+                    Text("报告问题…")
+                        .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
+                        .padding(.horizontal, 8).frame(height: 24)
+                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .help("打开 GitHub issue，自动带上 app 与 macOS 版本")
                 if model.checkAppUpdate != nil {
                     Button { model.checkAppUpdate?() } label: {
                         Text("检查 App 更新…")
@@ -480,8 +549,22 @@ struct SettingsSheet: View {
                             .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
-                    .help("立即向更新源询问新版本（自动检查每小时一次）")
+                    .help("立即向更新源询问新版本")
                 }
+            }
+            // Sparkle 自动检查曾硬编码开启、无开关——成熟 app 必须让用户能关掉
+            if model.sparkleAutoCheckGet != nil {
+                HStack(spacing: 10) {
+                    Text("自动检查 App 更新（每天一次）")
+                        .font(.ui(11.5)).foregroundStyle(Ink.secondary)
+                    Spacer()
+                    PsSwitch(on: sparkleAuto) {
+                        sparkleAuto.toggle()
+                        model.sparkleAutoCheckSet?(sparkleAuto)
+                    }
+                }
+                .padding(.top, 8)
+                .onAppear { sparkleAuto = model.sparkleAutoCheckGet?() ?? false }
             }
         }
         .padding(.bottom, 4)

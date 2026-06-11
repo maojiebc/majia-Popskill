@@ -589,6 +589,44 @@ struct StoreFS {
         for old in sorted.dropFirst(keep) { try? fm.removeItem(at: old) }
     }
 
+    // ── 回收站清单 / 恢复（v2.8：UI 文案到处承诺「可恢复」，这里兑现）──
+
+    struct TrashItem: Identifiable, Equatable {
+        let id: String      // 回收站内目录名（含时间戳后缀）
+        let name: String    // 原能力名
+        let date: Date?     // 入站时间（解析自名称后缀）
+        let url: URL
+    }
+
+    /// 回收站清单，新入站在前
+    func listTrash() -> [TrashItem] {
+        let names = (try? fm.contentsOfDirectory(atPath: trashURL.path)) ?? []
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd'T'HH-mm-ss'Z'"
+        f.timeZone = TimeZone(identifier: "UTC")
+        return names.filter { !$0.hasPrefix(".") }.map { n in
+            let suffix = String(n.suffix(20))
+            var name = n
+            var date: Date?
+            if suffix.count == 20, suffix.hasSuffix("Z"), suffix.dropFirst(4).first == "-",
+               let d = f.date(from: suffix) {
+                date = d
+                name = String(n.dropLast(21))   // 去掉 "-<stamp>"
+            }
+            return TrashItem(id: n, name: name, date: date, url: trashURL.appendingPathComponent(n))
+        }
+        .sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
+    }
+
+    /// 恢复到 store skills/<原名>；同名已存在则拒绝（先移走现有的再恢复）
+    func restoreFromTrash(_ item: TrashItem) throws {
+        let name = try sanitizeName(item.name)
+        let dest = env.storeRoot.appendingPathComponent(CapType.skill.dirName).appendingPathComponent(name)
+        guard !fm.fileExists(atPath: dest.path) else { throw StoreError.alreadyExists(name) }
+        try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try fm.moveItem(at: item.url, to: dest)
+    }
+
     /// 独立能力 / 套装整体 开↔关
     func setLink(tool: Tool, kind: CapType, name: String, storeDir: URL, on: Bool) throws {
         let link = toolLinkPath(tool, kind: kind, name: name)
@@ -653,7 +691,7 @@ struct StoreFS {
         let kind = SourceKind.of(url)
         switch kind {
         case .npm:
-            throw StoreError.sourceUnsupported("npm 源将在 v2.1 支持，目前请用 GitHub 仓库或本地路径")
+            throw StoreError.sourceUnsupported("npm 源暂不支持——请用 GitHub 仓库或本地路径")
         case .local:
             let dir = URL(fileURLWithPath: NSString(string: url).expandingTildeInPath).standardizedFileURL
             guard fm.fileExists(atPath: dir.path) else { throw StoreError.resolveFailed("路径不存在：\(url)") }

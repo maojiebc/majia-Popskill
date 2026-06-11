@@ -26,9 +26,10 @@ enum Ink {
     static let control = Color(hex: 0xDCD9CF)         // 输入框边
     static let control2 = Color(hex: 0xD8D5CB)        // 次级按钮边
     static let ink = Color(hex: 0x111111)             // 主文字/主按钮底
-    static let secondary = Color(hex: 0x7C7869)
+    // v2.8 对比度修正（WCAG AA，对 #FAFAF8 底）：曾 7C7869=4.2:1、9A9684=2.8:1
+    static let secondary = Color(hex: 0x74705F)       // 4.6:1
     static let secondary2 = Color(hex: 0x6F6B5E)
-    static let tertiary = Color(hex: 0x9A9684)
+    static let tertiary = Color(hex: 0x807C6A)        // 4.0:1（11pt meta 行，大字标准）
     static let blue = Color(hex: 0x1F4ED8)            // accent
     static let amber = Color(hex: 0xB88300)
     static let amberText = Color(hex: 0x8A6400)
@@ -39,7 +40,7 @@ enum Ink {
     static let greenText = Color(hex: 0x1A6B35)       // 推荐方案文字
     static let greenBg = Color(hex: 0xF3F8F4)
     static let greenBorder = Color(hex: 0xBCD8C2)
-    static let offGlyph = Color(hex: 0xCDC8B9)
+    static let offGlyph = Color(hex: 0xA8A28F)        // v2.8：可点击状态格，1.7→3.1:1
     static let offDot = Color(hex: 0xC4BFB0)
     static let terminalBg = Color(hex: 0x16140F)
     static let terminalText = Color(hex: 0xC9C4B2)

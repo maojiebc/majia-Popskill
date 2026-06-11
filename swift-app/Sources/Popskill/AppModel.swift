@@ -83,6 +83,9 @@ final class AppModel {
     @ObservationIgnored private var toastTask: Task<Void, Never>?
     /// Sparkle 手动检查入口（PopskillApp 注入；裸二进制为 nil）
     @ObservationIgnored var checkAppUpdate: (() -> Void)?
+    /// Sparkle 自动检查读/写（PopskillApp 注入）——设置页开关用，AppModel 不直接依赖 Sparkle
+    @ObservationIgnored var sparkleAutoCheckGet: (() -> Bool)?
+    @ObservationIgnored var sparkleAutoCheckSet: ((Bool) -> Void)?
 
     // 派生
     var stats: Stats { deriveStats(entries, tools: tools) }
@@ -726,6 +729,42 @@ final class AppModel {
         m.defaultTarget = tools[i].defaultTarget
         meta.tools[toolId] = m
         fs.saveMeta(meta)
+    }
+
+    // ── 回收站（v2.8）─────────────────────────────────────
+
+    func restoreTrashItem(_ item: StoreFS.TrashItem) {
+        do {
+            try fs.restoreFromTrash(item)
+            plog.info("回收站恢复 \(item.name, privacy: .public)")
+            refresh()
+            say("已恢复 \(item.name) 到 store——按需重新链接工具")
+        } catch {
+            sayError("恢复 \(item.name) 失败：\(error.localizedDescription)")
+        }
+    }
+
+    func openTrash() {
+        let t = fs.trashURL
+        if !FileManager.default.fileExists(atPath: t.path) {
+            try? FileManager.default.createDirectory(at: t, withIntermediateDirectories: true)
+        }
+        NSWorkspace.shared.open(t)
+    }
+
+    // ── 反馈渠道（v2.8：崩了/错了至少有条路找到作者）───────
+
+    func reportIssue() {
+        let os = ProcessInfo.processInfo.operatingSystemVersionString
+        var comps = URLComponents(string: "https://github.com/maojiebc/majia-Popskill/issues/new")!
+        comps.queryItems = [URLQueryItem(name: "body", value: """
+        App: Popskill v\(popskillVersion)
+        macOS: \(os)
+
+        <!-- 描述问题。若 app 崩溃过，请附上 ~/Library/Logs/DiagnosticReports 里最新的 Popskill-*.ips 文件 -->
+
+        """)]
+        if let u = comps.url { NSWorkspace.shared.open(u) }
     }
 
     // ── 打开 ─────────────────────────────────────────────

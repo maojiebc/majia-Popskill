@@ -157,6 +157,7 @@ struct TypeTag: View {
 
 struct StatusCell: View {
     let status: LinkStatus
+    var a11y: String?         // "<能力> · <工具>"，VoiceOver 念语义而不是 "black circle"
     let action: () -> Void
     @State private var hovered = false
 
@@ -171,6 +172,8 @@ struct StatusCell: View {
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
         .help("点击切换 / 处理")
+        .accessibilityLabel("\(a11y.map { "\($0)：" } ?? "")\(status.stateLabel)")
+        .accessibilityHint("点击切换或处理")
     }
 }
 
@@ -200,6 +203,8 @@ struct TogglePill: View {
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
         .help("点击切换 / 处理")
+        .accessibilityLabel("\(label)：\(status.stateLabel)")
+        .accessibilityHint("点击切换或处理")
     }
 }
 
@@ -225,6 +230,8 @@ struct FractionCell: View {
             .frame(width: 36, height: 3)
             .clipShape(RoundedRectangle(cornerRadius: 1))
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(agg.total) 项中 \(agg.on) 项已激活\(agg.broken > 0 ? "，\(agg.broken) 项断链" : "")\(agg.stub > 0 ? "，\(agg.stub) 项占位" : "")")
     }
 
     @ViewBuilder
@@ -253,6 +260,7 @@ struct UpdateBadge: View {
         }
         .buttonStyle(.plain)
         .help(help ?? "更新到 \(latest)")
+        .accessibilityLabel(help ?? "更新到 \(latest)")
     }
 }
 
@@ -288,6 +296,7 @@ struct HoverAction: View {
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
         .help(help)
+        .accessibilityLabel(help)
     }
 }
 
@@ -295,14 +304,16 @@ struct HoverAction: View {
 
 struct ToastView: View {
     let msg: String
+    var isError = false
 
     var body: some View {
         Text(msg)
             .font(.ui(12, .medium))
             .foregroundStyle(.white)
             .padding(.horizontal, 16).padding(.vertical, 8)
-            .background(RoundedRectangle(cornerRadius: 7).fill(Ink.ink))
+            .background(RoundedRectangle(cornerRadius: 7).fill(isError ? Ink.red : Ink.ink))
             .shadow(color: .black.opacity(0.25), radius: 12, y: 8)
+            .accessibilityLabel(isError ? "错误：\(msg)" : msg)
     }
 }
 

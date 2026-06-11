@@ -261,13 +261,13 @@ struct MainView: View {
                     if list.isEmpty {
                         VStack(spacing: 4) {
                             Text("无匹配结果").font(.ui(13, .semibold)).foregroundStyle(Ink.secondary2)
-                            (Text("没有能力匹配 “") + Text(model.query).font(.mono(12)).foregroundStyle(Ink.ink) + Text("”。试试别的关键词，或 + 添加。"))
-                                .font(.ui(12)).foregroundStyle(Ink.tertiary)
+                            noMatchHint
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 64)
                     } else {
-                        VStack(spacing: 10) {
+                        // Lazy：屏外卡片不构建——搜索逐键/方向键移动不再全量重建几十张卡
+                        LazyVStack(spacing: 10) {
                             ForEach(rows(list, columns: cols), id: \.first!.id) { row in
                                 if row.count == 1, case .bundle(_, let kids) = row[0], kids != nil {
                                     itemView(row[0])   // 展开的套装才通栏
@@ -292,6 +292,18 @@ struct MainView: View {
         .background(Ink.window)
         .onAppear { syncKbList(list) }
         .onChange(of: kbIds(list)) { _, _ in syncKbList(items) }
+    }
+
+    /// 空结果提示按原因分支——类型过滤、空搜索时曾显示病句『没有能力匹配 ""』
+    @ViewBuilder
+    private var noMatchHint: some View {
+        if q.isEmpty, let tf = model.typeFilter {
+            Text("没有 \(tf.rawValue.uppercased()) 类型的能力。点 + 添加，或切回「全部」。")
+                .font(.ui(12)).foregroundStyle(Ink.tertiary)
+        } else {
+            (Text("没有能力匹配 “") + Text(model.query).font(.mono(12)).foregroundStyle(Ink.ink) + Text("”。试试别的关键词，或 + 添加。"))
+                .font(.ui(12)).foregroundStyle(Ink.tertiary)
+        }
     }
 
     /// 键盘焦点序列 = 可见顺序（套装行 + 展开的子项 + 独立卡）
@@ -395,7 +407,9 @@ struct BundleCompactCard: View {
                         Text("MARKETPLACE").font(.ui(8.5, .bold)).kerning(0.5).foregroundStyle(Ink.monoDim)
                     }
                     if let v = entry.cap.version { Text("v\(v)") }
-                    if entry.hasUpdate, let latest = entry.latest {
+                    if model.updatingIds.contains(entry.id) {
+                        UpdatingDot()
+                    } else if entry.hasUpdate, let latest = entry.latest {
                         UpdateBadge(latest: latest) { model.runUpdate(entry.id) }
                     }
                     if entry.cap.tokens >= 100 { Text(formatTokens(entry.cap.tokens)) }
@@ -429,7 +443,21 @@ struct BundleCompactCard: View {
         .onTapGesture { model.expanded.insert(entry.id) }
         .onHover { hovered = $0 }
         .help("点击展开套装")
+        // hover 才入树的 ↗/✕ 对 VoiceOver 不存在——动作挂在卡片上兜底
+        .accessibilityAction(named: "在编辑器中打开") { model.openInEditor(entry.cap.dirURL) }
+        .accessibilityAction(named: "移除套装") { if !entry.isManagedExternally { model.removeEntry(entry) } }
         .id(entry.id)
+    }
+}
+
+/// 后台换版进行中的指示（v2.8：曾经更新期间界面毫无表示）
+struct UpdatingDot: View {
+    var body: some View {
+        HStack(spacing: 4) {
+            ProgressView().controlSize(.mini)
+            Text("更新中…").font(.ui(10, .medium)).foregroundStyle(Ink.amberText)
+        }
+        .accessibilityLabel("更新中")
     }
 }
 
@@ -488,6 +516,8 @@ struct CapCard: View {
         .shadow(color: .black.opacity(0.03), radius: 1, y: 1)
         .onHover { hovered = $0 }
         .animation(.easeOut(duration: 1.2), value: flashing)
+        .accessibilityAction(named: "在编辑器中打开") { model.openInEditor(cap.dirURL) }
+        .accessibilityAction(named: "移除") { if fromBundle == nil { model.removeEntry(entry) } }
         .id(cap.id)
     }
 
@@ -500,7 +530,9 @@ struct CapCard: View {
     private var metaRow: some View {
         HStack(spacing: 10) {
             if let v = cap.version { Text("v\(v)") }
-            if entry.hasUpdate, fromBundle == nil, let latest = entry.latest {
+            if fromBundle == nil, model.updatingIds.contains(entry.id) {
+                UpdatingDot()
+            } else if entry.hasUpdate, fromBundle == nil, let latest = entry.latest {
                 UpdateBadge(latest: latest) { model.runUpdate(entry.id) }
             }
             if let a = cap.author { Text(highlight(a, query)) }
@@ -616,7 +648,9 @@ struct BundleCard: View {
             HStack(spacing: 4) {
                 Spacer(minLength: 0)
                 if let v = entry.cap.version { Text("v\(v)").lineLimit(1).fixedSize() }
-                if entry.hasUpdate, let latest = entry.latest {
+                if model.updatingIds.contains(entry.id) {
+                    UpdatingDot()
+                } else if entry.hasUpdate, let latest = entry.latest {
                     UpdateBadge(latest: latest, help: bundleUpdateHelp) { model.runUpdate(entry.id) }
                 }
             }
@@ -697,7 +731,7 @@ struct BundleCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             ForEach(Array(model.tools.enumerated()), id: \.element.id) { i, t in
-                StatusCell(status: c.status(t.id)) { childCellTap(c, tool: t) }
+                StatusCell(status: c.status(t.id), a11y: "\(c.name) · \(t.name)") { childCellTap(c, tool: t) }
                     .frame(width: 52)
                     .background(RoundedRectangle(cornerRadius: 6)
                         .fill(cf && model.kbToolIdx == i ? Ink.blue.opacity(0.12) : .clear))
@@ -724,6 +758,7 @@ struct BundleCard: View {
             if cf { model.kbFocusFrame = frame }
         }
         .onHover { hoverChild = $0 ? c.id : (hoverChild == c.id ? nil : hoverChild) }
+        .accessibilityAction(named: "在编辑器中打开") { model.openInEditor(c.dirURL) }
         .id(c.id)
     }
 
@@ -753,7 +788,7 @@ struct EmptyPane: View {
                 .font(.ui(18, .bold))
                 .foregroundStyle(Ink.ink)
                 .padding(.bottom, 6)
-            Text("粘贴一个 GitHub 仓库、npm 包或本地路径，\n安装一次，挂载到所有 AI 工具。")
+            Text("粘贴一个 GitHub 仓库或本地路径，\n安装一次，挂载到所有 AI 工具。")
                 .font(.ui(12.5))
                 .foregroundStyle(Ink.secondary2)
                 .multilineTextAlignment(.center)

@@ -447,6 +447,31 @@ final class StoreFSTests: XCTestCase {
         XCTAssertFalse(names.contains("junk2-2020-01-02T00-00-00Z"))
     }
 
+    func testTrashListAndRestore() throws {
+        try makeSkill("revive-me", desc: "要被复活的")
+        let entry = scan()[0]
+        try fs.removeEntry(entry, tools: tools)
+        XCTAssertTrue(scan().isEmpty, "移除后 store 应为空")
+
+        let items = fs.listTrash()
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items[0].name, "revive-me", "名称应去掉时间戳后缀")
+        XCTAssertNotNil(items[0].date, "入站时间应可解析")
+
+        try fs.restoreFromTrash(items[0])
+        let back = scan()
+        XCTAssertEqual(back.count, 1)
+        XCTAssertEqual(back[0].name, "revive-me")
+        XCTAssertTrue(fs.listTrash().isEmpty, "恢复后回收站应清空该项")
+
+        // 同名已存在时拒绝恢复
+        try makeSkill("blocker")
+        let dup = scan().first { $0.name == "blocker" }!
+        try fs.removeEntry(dup, tools: tools)
+        try makeSkill("blocker")
+        XCTAssertThrowsError(try fs.restoreFromTrash(fs.listTrash()[0]))
+    }
+
     func testApplyUpdateCopyFailureLeavesStoreIntact() throws {
         // 上游有不可读文件 → 拷贝必败。曾经先弃旧版再拷，失败即丢数据 + symlink 全断。
         let src = sandbox.appendingPathComponent("frag-skill")
