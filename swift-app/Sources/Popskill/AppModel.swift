@@ -1,6 +1,11 @@
 import AppKit
 import Observation
 import SwiftUI
+import os
+
+/// 关键写路径留痕（Console.app 按 subsystem 过滤可见）——
+/// toast 2.6 秒即逝，出问题后这是唯一能回看的证据链。
+let plog = Logger(subsystem: "com.majia.popskill", category: "store")
 
 // 打包后以 Info.plist 为准（发版脚本写入），裸二进制显示 dev（常量版本号必腐，不再写死）
 let popskillVersion: String =
@@ -57,6 +62,7 @@ final class AppModel {
     // UI 态
     var sheet: SheetKind?
     var toast: String?
+    var toastIsError = false
     var flashId: String?
     var query = ""
     var typeFilter: CapType?         // nil = 全部
@@ -175,13 +181,20 @@ final class AppModel {
 
     // ── toast / flash ────────────────────────────────────
 
-    func say(_ msg: String) {
+    func say(_ msg: String, error: Bool = false) {
         toast = msg
+        toastIsError = error
         toastTask?.cancel()
         toastTask = Task {
-            try? await Task.sleep(for: .seconds(2.6))
+            // 错误必须比成功提示活得久——它是用户唯一的现场证据
+            try? await Task.sleep(for: .seconds(error ? 6 : 2.6))
             if !Task.isCancelled { toast = nil }
         }
+    }
+
+    func sayError(_ msg: String) {
+        plog.error("\(msg, privacy: .public)")
+        say(msg, error: true)
     }
 
     func flash(_ id: String) {
@@ -263,6 +276,10 @@ final class AppModel {
             say("Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 操作")
             return
         }
+        guard !updatingIds.contains(entry.id) else {
+            say("\(entry.name) 正在更新中，稍候再操作")
+            return
+        }
         let from = cap.status(tool.id)
         guard from == .on || from == .off else { return }   // stub/broken 走修复弹层
         let to: LinkStatus = from == .on ? .off : .on
@@ -280,7 +297,7 @@ final class AppModel {
                 }
                 refresh()
             } catch {
-                say(error.localizedDescription)
+                sayError("\(to == .on ? "链接" : "断开") \(cap.name) 失败：\(error.localizedDescription)")
                 return
             }
         }
@@ -344,12 +361,8 @@ final class AppModel {
                 try fs.removeLink(at: link)
             case .repull:
                 guard let url = t.entry.sourceUrl else { return }
-                let resolved = try fs.resolve(url)
-                try fs.removeEntry(t.entry, tools: tools)
-                let relinkTools = tools.filter { tool in
-                    tool.id == t.tool.id || t.entry.allCaps.contains { $0.status(tool.id) != .off }
-                }
-                try fs.install(resolved, linkTools: relinkTools)
+                repull(entry: t.entry, primaryToolId: t.tool.id, url: url, toast: opt.toast)
+                return   // 网络在后台跑，toast 由 repull 收尾时发
             case .update:
                 try? relink(cap: t.cap, entry: t.entry, tool: t.tool)   // 先把这格链上，更新落盘后自动生效
                 runUpdate(t.entry.id)
@@ -357,7 +370,43 @@ final class AppModel {
             refresh()
             if !opt.toast.isEmpty { say(opt.toast) }
         } catch {
-            say(error.localizedDescription)
+            sayError("修复 \(t.cap.name) 失败：\(error.localizedDescription)")
+        }
+    }
+
+    /// 从源重拉：曾在 @MainActor 上同步跑 git clone，网络慢时整个 UI 冻死。
+    /// 现照 resolveSource/runUpdate 的模式下放后台，期间条目置 updating 态。
+    /// 顺序不变：先 resolve（clone 失败时本地分毫未动）→ removeEntry → install。
+    private func repull(entry: Entry, primaryToolId: String, url: String, toast toastMsg: String) {
+        guard !updatingIds.contains(entry.id) else { return }
+        updatingIds.insert(entry.id)
+        say("正在从源重新拉取 \(entry.name)…")
+        let fsCopy = fs
+        let allTools = tools
+        Task { [weak self] in
+            let result: Result<Void, Error> = await Task.detached {
+                do {
+                    let resolved = try fsCopy.resolve(url)
+                    try fsCopy.removeEntry(entry, tools: allTools)
+                    let relinkTools = allTools.filter { tool in
+                        tool.id == primaryToolId || entry.allCaps.contains { $0.status(tool.id) != .off }
+                    }
+                    try fsCopy.install(resolved, linkTools: relinkTools)
+                    return .success(())
+                } catch { return .failure(error) }
+            }.value
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.updatingIds.remove(entry.id)
+                self.refresh()
+                switch result {
+                case .success:
+                    plog.info("repull \(entry.name, privacy: .public) ← \(url, privacy: .public) 完成")
+                    if !toastMsg.isEmpty { self.say(toastMsg) }
+                case .failure(let err):
+                    self.sayError("重新拉取 \(entry.name) 失败：\(err.localizedDescription)")
+                }
+            }
         }
     }
 
@@ -380,12 +429,16 @@ final class AppModel {
     /// 全部修复：对每个问题执行其推荐方案
     func fixAll() {
         let list = issues
+        var fixed = 0
+        var firstError: String?
         for issue in list {
             guard let entry = entries.first(where: { $0.id == issue.entryId }),
                   let cap = entry.allCaps.first(where: { $0.id == issue.capId }),
-                  let tool = tools.first(where: { $0.id == issue.toolId }) else { continue }
+                  let tool = tools.first(where: { $0.id == issue.toolId }),
+                  !updatingIds.contains(entry.id) else { continue }   // 正在后台换版的条目不碰
             if fake {
                 mutateFake(capId: cap.id, toolId: tool.id, to: .on)
+                fixed += 1
             } else {
                 let storeExists = FileManager.default.fileExists(atPath: cap.dirURL.path)
                 do {
@@ -394,11 +447,21 @@ final class AppModel {
                     } else {
                         try fs.removeLink(at: linkPath(cap: cap, entry: entry, tool: tool))
                     }
-                } catch { say(error.localizedDescription) }
+                    fixed += 1
+                } catch {
+                    if firstError == nil { firstError = error.localizedDescription }
+                    plog.error("fixAll \(cap.name, privacy: .public) · \(tool.id, privacy: .public) 失败: \(error.localizedDescription, privacy: .public)")
+                }
             }
         }
         if !fake { refresh() }
-        say("已修复 \(list.count) 个链接问题")
+        // 实际成功数说话——曾经无条件报「已修复 N 个」，失败也算成功
+        let failedCount = list.count - fixed
+        if failedCount == 0 {
+            say("已修复 \(fixed) 个链接问题")
+        } else {
+            sayError("修复 \(fixed) 个，\(failedCount) 个失败\(firstError.map { "：\($0)" } ?? "")")
+        }
     }
 
     // ── 更新（v2.1：内容哈希比对，吸收自 cc-switch）────────
@@ -414,23 +477,34 @@ final class AppModel {
         Task { [weak self] in
             var found: [StoreFS.UpdateCheck] = []
             var failed = 0
-            await withTaskGroup(of: StoreFS.UpdateCheck?.self) { group in
+            // 失败和「确实最新」必须是两个态——曾用 try? 把断网/源被删压成 nil，
+            // 然后对用户谎报「全部源已是最新」
+            await withTaskGroup(of: Result<StoreFS.UpdateCheck?, Error>.self) { group in
                 var pending = candidates.makeIterator()
                 var running = 0
                 func enqueue() {
                     while running < 4, let e = pending.next() {
                         running += 1
-                        group.addTask { try? fsCopy.checkUpdate(e) }
+                        group.addTask {
+                            do { return .success(try fsCopy.checkUpdate(e)) }
+                            catch {
+                                plog.error("检查更新失败 \(e.name, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                                return .failure(error)
+                            }
+                        }
                     }
                 }
                 enqueue()
                 for await result in group {
                     running -= 1
-                    if let result { found.append(result) } else { failed += 0 }
+                    switch result {
+                    case .success(let check): if let check { found.append(check) }
+                    case .failure: failed += 1
+                    }
                     enqueue()
                 }
             }
-            _ = failed
+            let failedCount = failed
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 self.checkingUpdates = false
@@ -445,6 +519,14 @@ final class AppModel {
                 if !autoTargets.isEmpty {
                     for e in autoTargets { self.runUpdate(e.id, quiet: true) }
                     self.say("自动更新 \(autoTargets.count) 个源")
+                } else if failedCount > 0 {
+                    // 启动自动检查的失败不弹 toast 打扰（断网开机最常见），日志已留痕；手动检查必须如实报
+                    if !auto {
+                        let head = found.isEmpty ? "" : "发现 \(found.count) 个源可更新；"
+                        self.sayError("\(head)\(failedCount) 个源检查失败（网络或源不可达）")
+                    } else if !found.isEmpty {
+                        self.say("发现 \(found.count) 个源可更新（另有 \(failedCount) 个检查失败）")
+                    }
                 } else if !auto || !found.isEmpty {
                     self.say(found.isEmpty ? "全部源已是最新" : "发现 \(found.count) 个源可更新")
                 }
@@ -477,6 +559,7 @@ final class AppModel {
                 self.updatingIds.remove(entryId)
                 switch result {
                 case .success(let r):
+                    plog.info("更新 \(entry.name, privacy: .public) 完成：\(r.updated.joined(separator: ","), privacy: .public)")
                     self.refresh()
                     if !quiet {
                         let names = r.updated.count <= 3 ? r.updated.joined(separator: "、")
@@ -488,7 +571,7 @@ final class AppModel {
                         self.say(msg)
                     }
                 case .failure(let err):
-                    self.say("更新 \(entry.name) 失败：\(err.localizedDescription)")
+                    self.sayError("更新 \(entry.name) 失败：\(err.localizedDescription)")
                 }
             }
         }
@@ -510,10 +593,11 @@ final class AppModel {
         guard !found.isEmpty else { say("没有发现未托管的技能目录"); return }
         do {
             let imported = try fs.importUnmanaged(found)
+            plog.info("导入未托管目录 \(imported.joined(separator: ","), privacy: .public)")
             refresh()
             say("已导入 \(imported.count) 个未托管目录进 store（原目录已入回收站）")
         } catch {
-            say(error.localizedDescription)
+            sayError("导入失败：\(error.localizedDescription)")
         }
     }
 
@@ -541,10 +625,11 @@ final class AppModel {
         }
         do {
             let imported = try fs.importUnmanaged(found)
+            plog.info("空态收编 \(imported.joined(separator: ","), privacy: .public)")
             refresh()
             say("已导入 \(imported.count) 个技能进 store 并建链——这就是你的能力矩阵")
         } catch {
-            say(error.localizedDescription)
+            sayError("导入失败：\(error.localizedDescription)")
         }
     }
 
@@ -574,9 +659,10 @@ final class AppModel {
         } else {
             do {
                 try fs.install(src, linkTools: linkTools)
+                plog.info("安装 \(src.entryName, privacy: .public) ← \(src.url, privacy: .public)，链 \(linkTools.count) 个工具")
                 refresh()
             } catch {
-                say(error.localizedDescription)
+                sayError("安装 \(src.entryName) 失败：\(error.localizedDescription)")
                 return
             }
         }
@@ -588,6 +674,10 @@ final class AppModel {
     func removeEntry(_ entry: Entry) {
         guard !entry.isManagedExternally else {
             say("Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 卸载")
+            return
+        }
+        guard !updatingIds.contains(entry.id) else {
+            say("\(entry.name) 正在更新中，稍候再操作")
             return
         }
         let alert = NSAlert()
@@ -604,9 +694,10 @@ final class AppModel {
         } else {
             do {
                 try fs.removeEntry(entry, tools: tools)
+                plog.info("移除 \(entry.name, privacy: .public)（store 副本入回收站）")
                 refresh()
             } catch {
-                say(error.localizedDescription)
+                sayError("移除 \(entry.name) 失败：\(error.localizedDescription)")
                 return
             }
         }
