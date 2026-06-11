@@ -10,7 +10,9 @@ WINDOW_CHECKER="$(mktemp "${TMPDIR:-/tmp}/popskill-window-check.XXXXXX.swift")"
 APP_PID=""
 
 running_app_pids() {
-  pgrep -f "$APP_BIN" 2> /dev/null || true
+  # 用相对后缀匹配：内核记录的 exec 路径大小写可能与 ROOT_DIR 不一致
+  # （APFS 大小写不敏感，/Users/majia/Projects ↔ projects），全路径 pgrep 会漏
+  pgrep -f "Popskill.app/Contents/MacOS/Popskill" 2> /dev/null || true
 }
 
 cleanup() {
