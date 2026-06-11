@@ -344,6 +344,50 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(h2, fs.computeDirHash(dir), "隐藏文件不应影响哈希")
     }
 
+    func testDirHashDoesNotFollowSymlinks() throws {
+        let dir = try makeSkill("linky")
+        // 环路软链 + 逃逸软链：遍历都不得跟随
+        try fm.createSymbolicLink(at: dir.appendingPathComponent("loop"), withDestinationURL: dir)
+        let secret = sandbox.appendingPathComponent("secret.txt")
+        try "外部内容 v1".write(to: secret, atomically: true, encoding: .utf8)
+        try fm.createSymbolicLink(at: dir.appendingPathComponent("escape"), withDestinationURL: secret)
+        let h1 = fs.computeDirHash(dir)   // 环路下正常返回即通过防护
+        try "外部内容 v2 变了".write(to: secret, atomically: true, encoding: .utf8)
+        XCTAssertEqual(h1, fs.computeDirHash(dir), "软链目标的内容不参与哈希——绝不跟随读 store 外文件")
+        try fm.removeItem(at: dir.appendingPathComponent("escape"))
+        XCTAssertNotEqual(h1, fs.computeDirHash(dir), "软链本身（指向路径）参与哈希")
+    }
+
+    func testRunTimeoutKillsHungProcess() throws {
+        let t0 = Date()
+        let r = fs.run("/bin/sleep", ["30"], timeout: 2)
+        XCTAssertEqual(r.status, -1)
+        XCTAssertTrue(r.err.contains("超时"), "超时要在错误信息里说清楚")
+        XCTAssertLessThan(Date().timeIntervalSince(t0), 15, "watchdog 必须在超时后很快返回")
+    }
+
+    func testRunDrainsBigStderrWithoutDeadlock() throws {
+        // stderr 灌 200KB（远超 64KB 管道缓冲）——顺序 readToEnd 的旧实现会死锁
+        let r = fs.run("/bin/sh", ["-c",
+            "dd if=/dev/zero bs=1024 count=200 2>/dev/null | tr '\\0' 'x' 1>&2; echo done"], timeout: 30)
+        XCTAssertEqual(r.status, 0)
+        XCTAssertEqual(r.out.trimmingCharacters(in: .whitespacesAndNewlines), "done")
+        XCTAssertGreaterThan(r.err.count, 100_000, "stderr 必须被完整排空")
+    }
+
+    func testGithubTargetDerivesRepoName() throws {
+        // 安装目录名必须 = 仓库名（曾用随机临时目录名 popskill-stage-xxxx 入库）
+        let a = try StoreFS.githubTarget("https://github.com/Foo/My-Skills.git")
+        XCTAssertEqual(a.repoName, "my-skills")
+        XCTAssertEqual(a.cloneURL, "https://github.com/foo/my-skills.git")
+        // 深路径粘贴也要收敛到 owner/repo
+        let b = try StoreFS.githubTarget("github.com/foo/bar/tree/main/skills/x")
+        XCTAssertEqual(b.cloneURL, "https://github.com/foo/bar.git")
+        // owner/repo 简写
+        XCTAssertEqual(try StoreFS.githubTarget("foo/bar").repoName, "bar")
+        XCTAssertThrowsError(try StoreFS.githubTarget("github.com/onlyowner"))
+    }
+
     func testCheckUpdateAndApply() throws {
         // 本地源安装 → 上游改动 → 检查到更新 → 执行更新（备份 + 落盘 + 链接延续）
         let src = sandbox.appendingPathComponent("up-skill")
@@ -370,13 +414,64 @@ final class StoreFSTests: XCTestCase {
     }
 
     func testTrashPruneKeepsNewest() throws {
-        for i in 0..<25 {
+        for i in 0..<12 {
             let d = sandbox.appendingPathComponent("junk\(i)")
             try fm.createDirectory(at: d, withIntermediateDirectories: true)
             try fs.moveToTrash(d)
         }
+        fs.pruneTrash(keep: 10)
         let count = ((try? fm.contentsOfDirectory(atPath: fs.trashURL.path)) ?? []).count
-        XCTAssertLessThanOrEqual(count, StoreFS.trashRetainCount, "回收站最多保留 \(StoreFS.trashRetainCount) 份")
+        XCTAssertEqual(count, 10, "超过 keep 的部分应被清掉")
+    }
+
+    func testTrashPruneIsFIFOByTrashTime() throws {
+        try fm.createDirectory(at: fs.trashURL, withIntermediateDirectories: true)
+        // 老内容、新入站：目录 mtime 一年前（rename 入站不会更新它），入站戳是现在 → 必须存活。
+        // 曾按 contentModificationDate 排序，这种刚备份的旧技能会被当「最旧」误删。
+        let ancient = sandbox.appendingPathComponent("ancient")
+        try fm.createDirectory(at: ancient, withIntermediateDirectories: true)
+        try fm.setAttributes([.modificationDate: Date(timeIntervalSinceNow: -86400 * 365)],
+                             ofItemAtPath: ancient.path)
+        let kept = try fs.moveToTrash(ancient)
+        // 伪造 5 条早入站的条目（戳在 2020 年，mtime 是现在）
+        for i in 1...5 {
+            let d = fs.trashURL.appendingPathComponent("junk\(i)-2020-01-0\(i)T00-00-00Z")
+            try fm.createDirectory(at: d, withIntermediateDirectories: true)
+        }
+        fs.pruneTrash(keep: 3)
+        let names = try fm.contentsOfDirectory(atPath: fs.trashURL.path)
+        XCTAssertEqual(names.count, 3)
+        XCTAssertTrue(names.contains(kept.lastPathComponent),
+                      "刚入站的备份必须存活——按入站时间 FIFO，不看内容 mtime")
+        XCTAssertFalse(names.contains("junk1-2020-01-01T00-00-00Z"), "最早入站的先被清")
+        XCTAssertFalse(names.contains("junk2-2020-01-02T00-00-00Z"))
+    }
+
+    func testApplyUpdateCopyFailureLeavesStoreIntact() throws {
+        // 上游有不可读文件 → 拷贝必败。曾经先弃旧版再拷，失败即丢数据 + symlink 全断。
+        let src = sandbox.appendingPathComponent("frag-skill")
+        try fm.createDirectory(at: src, withIntermediateDirectories: true)
+        try "---\nname: frag-skill\nversion: 1.0.0\n---\n旧内容\n".write(
+            to: src.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let resolved = try fs.resolve(src.path)
+        try fs.install(resolved, linkTools: tools.filter { $0.id == "claude" })
+
+        try "---\nname: frag-skill\nversion: 2.0.0\n---\n新内容\n".write(
+            to: src.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let locked = src.appendingPathComponent("locked.md")
+        try "不可读".write(to: locked, atomically: true, encoding: .utf8)
+        try fm.setAttributes([.posixPermissions: 0o000], ofItemAtPath: locked.path)
+        defer { try? fm.setAttributes([.posixPermissions: 0o644], ofItemAtPath: locked.path) }
+
+        let entry = scan()[0]
+        XCTAssertThrowsError(try fs.applyUpdate(entry), "拷贝失败必须抛错而不是吞掉")
+
+        let storeDir = env.storeRoot.appendingPathComponent("skills").appendingPathComponent("frag-skill")
+        let text = try String(contentsOf: storeDir.appendingPathComponent("SKILL.md"), encoding: .utf8)
+        XCTAssertTrue(text.contains("1.0.0"), "更新失败 store 必须保持旧版无损")
+        XCTAssertEqual(scan()[0].cap.status("claude"), .on, "symlink 不能断")
+        let kindDir = try fm.contentsOfDirectory(atPath: storeDir.deletingLastPathComponent().path)
+        XCTAssertFalse(kindDir.contains { $0.hasPrefix(".popskill-incoming-") }, "不能留半成品")
     }
 
     // ── 来源回填 + 源式套装（v2.1）────────────────────────

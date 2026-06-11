@@ -565,17 +565,27 @@ struct StoreFS {
         return dest
     }
 
-    static let trashRetainCount = 20
+    static let trashRetainCount = 200
 
+    /// 按入站时间 FIFO 轮换。排序键 = moveToTrash 写进名字的时间戳后缀——
+    /// 不能用 contentModificationDate：mv/rename 不更新目录自身 mtime，
+    /// 半年没改过的技能刚备份进来就会被当「最旧」误删。
+    /// 上限 200：一次大套装更新会同时入站几十份，全局 20 一冲就把别人的备份清光。
     func pruneTrash(keep: Int = StoreFS.trashRetainCount) {
         guard let items = try? fm.contentsOfDirectory(
-            at: trashURL, includingPropertiesForKeys: [.contentModificationDateKey]) else { return }
+            at: trashURL, includingPropertiesForKeys: [.addedToDirectoryDateKey]) else { return }
         guard items.count > keep else { return }
-        let sorted = items.sorted {
-            let a = (try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-            let b = (try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-            return a > b
+        func stampKey(_ url: URL) -> String {
+            // 形如 2026-06-11T08-30-00Z（20 字符，字典序即时间序）；
+            // 非本程序写入的条目退回「加入目录时间」
+            let suffix = String(url.lastPathComponent.suffix(20))
+            if suffix.count == 20, suffix.hasSuffix("Z"), suffix.dropFirst(4).first == "-" {
+                return suffix
+            }
+            let date = (try? url.resourceValues(forKeys: [.addedToDirectoryDateKey]).addedToDirectoryDate) ?? .distantPast
+            return ISO8601DateFormatter().string(from: date).replacingOccurrences(of: ":", with: "-")
         }
+        let sorted = items.sorted { stampKey($0) > stampKey($1) }
         for old in sorted.dropFirst(keep) { try? fm.removeItem(at: old) }
     }
 
@@ -649,15 +659,48 @@ struct StoreFS {
             guard fm.fileExists(atPath: dir.path) else { throw StoreError.resolveFailed("路径不存在：\(url)") }
             return try resolveDir(dir, url: url, kind: .local)
         case .github:
-            var clean = url
-            for prefix in ["https://", "http://"] where clean.hasPrefix(prefix) { clean.removeFirst(prefix.count) }
-            let cloneURL = "https://\(clean).git"
-            let tmp = fm.temporaryDirectory.appendingPathComponent("popskill-stage-\(UUID().uuidString.prefix(8))")
-            let r = run("/usr/bin/git", ["clone", "--depth", "1", cloneURL, tmp.path])
-            guard r.status == 0 else { throw StoreError.resolveFailed("git clone 失败：\(r.err.prefix(200))") }
+            let (cloneURL, repoName, norm) = try StoreFS.githubTarget(url)
+            let stageRoot = fm.temporaryDirectory.appendingPathComponent("popskill-stage-\(UUID().uuidString.prefix(8))")
+            // clone 目标目录名 = 仓库名——它会一路成为 store 目录名和 symlink 名
+            //（曾直接用随机临时目录名，装出来的条目叫 popskill-stage-xxxx）
+            let tmp = stageRoot.appendingPathComponent(repoName)
+            let r = run("/usr/bin/git", ["clone", "--depth", "1", cloneURL, tmp.path], timeout: 300)
+            guard r.status == 0 else {
+                discardStagingDir(tmp)
+                throw StoreError.resolveFailed("git clone 失败：\(r.err.prefix(200))")
+            }
             try? fm.removeItem(at: tmp.appendingPathComponent(".git"))
-            return try resolveDir(tmp, url: clean, kind: .github)
+            do { return try resolveDir(tmp, url: norm, kind: .github) }
+            catch {
+                discardStagingDir(tmp)   // 解析失败不能把整仓副本留在临时目录
+                throw error
+            }
         }
+    }
+
+    /// github 源 → (clone URL, 仓库名, 规范化源)。深路径/简写/大小写都收敛到 owner/repo。
+    static func githubTarget(_ url: String) throws -> (cloneURL: String, repoName: String, norm: String) {
+        let norm = normalizeSource(url)
+        let parts = norm.split(separator: "/")
+        guard parts.count == 3, parts[0] == "github.com" else {
+            throw StoreError.resolveFailed("无法识别 GitHub 仓库：\(url)")
+        }
+        return ("https://\(norm).git", String(parts[2]), norm)
+    }
+
+    /// 丢弃 github 临时 staging（连同它的 popskill-stage-* 父目录）。
+    /// local 源的 stagingDir 是用户原地目录，绝不能删——调用方自己 guard。
+    func discardStagingDir(_ dir: URL) {
+        var root = dir
+        if root.deletingLastPathComponent().lastPathComponent.hasPrefix("popskill-stage-") {
+            root = root.deletingLastPathComponent()
+        }
+        try? fm.removeItem(at: root)
+    }
+
+    func discardStaging(_ src: ResolvedSource) {
+        guard src.kind == .github else { return }
+        discardStagingDir(src.stagingDir)
     }
 
     private func resolveDir(_ dir: URL, url: String, kind: SourceKind) throws -> ResolvedSource {
@@ -701,7 +744,7 @@ struct StoreFS {
         guard !fm.fileExists(atPath: dest.path) else { throw StoreError.alreadyExists(src.entryName) }
         try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
         try fm.copyItem(at: src.stagingDir, to: dest)
-        if src.kind == .github { try? fm.removeItem(at: src.stagingDir) }
+        discardStaging(src)
         for t in linkTools {
             try createLink(at: toolLinkPath(t, kind: src.isBundle ? .bundle : .skill, name: src.entryName), to: dest)
         }
@@ -756,24 +799,36 @@ struct StoreFS {
     // 内容哈希（相对路径字典序，"path\0content\0" 级联，跳过隐藏文件），
     // 拉上游后比对哈希判断「有更新」。
 
+    /// symlink 不跟随——软链只把「指向的路径字符串」纳入哈希：
+    /// 恶意/异常仓库里的软链不能把遍历带出目录（读到 store 外文件）或带进环；
+    /// 深度硬上限 32 防御构造的深嵌套。
     func computeDirHash(_ dir: URL) -> String {
-        var files: [(String, URL)] = []
-        func walk(_ d: URL, rel: String) {
+        enum Leaf { case file(URL), link(String) }
+        var leaves: [(String, Leaf)] = []
+        func walk(_ d: URL, rel: String, depth: Int) {
+            guard depth < 32 else { return }
             let items = ((try? fm.contentsOfDirectory(atPath: d.path)) ?? []).sorted()
             for name in items where !name.hasPrefix(".") {
                 let url = d.appendingPathComponent(name)
                 let relPath = rel.isEmpty ? name : "\(rel)/\(name)"
+                if let dest = try? fm.destinationOfSymbolicLink(atPath: url.path) {
+                    leaves.append((relPath, .link(dest)))
+                    continue
+                }
                 var isDir: ObjCBool = false
                 guard fm.fileExists(atPath: url.path, isDirectory: &isDir) else { continue }
-                if isDir.boolValue { walk(url, rel: relPath) } else { files.append((relPath, url)) }
+                if isDir.boolValue { walk(url, rel: relPath, depth: depth + 1) } else { leaves.append((relPath, .file(url))) }
             }
         }
-        walk(dir, rel: "")
+        walk(dir, rel: "", depth: 0)
         var hasher = SHA256()
-        for (rel, url) in files {
+        for (rel, leaf) in leaves {
             hasher.update(data: Data(rel.utf8))
             hasher.update(data: Data([0]))
-            hasher.update(data: (try? Data(contentsOf: url)) ?? Data())
+            switch leaf {
+            case .file(let url): hasher.update(data: (try? Data(contentsOf: url)) ?? Data())
+            case .link(let dest): hasher.update(data: Data(dest.utf8))
+            }
             hasher.update(data: Data([0]))
         }
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
@@ -808,7 +863,7 @@ struct StoreFS {
         guard entry.bundleKind != .marketplace else { return nil }   // 插件更新归 /plugin
         guard let url = entry.sourceUrl, SourceKind.of(url) != .npm else { return nil }
         let resolved = try resolve(url)
-        defer { if resolved.kind == .github { try? fm.removeItem(at: resolved.stagingDir) } }
+        defer { discardStaging(resolved) }
 
         let members = entry.isBundle && entry.bundleKind == .source ? (entry.children ?? []) : [entry.cap]
         var changed: [String] = []
@@ -845,15 +900,26 @@ struct StoreFS {
     func applyUpdate(_ entry: Entry) throws -> (updated: [String], upstreamNew: [String]) {
         guard let url = entry.sourceUrl else { throw StoreError.resolveFailed("该源没有记录 URL，无法更新") }
         let resolved = try resolve(url)
-        defer { if resolved.kind == .github { try? fm.removeItem(at: resolved.stagingDir) } }
+        defer { discardStaging(resolved) }
 
         let members = entry.isBundle && entry.bundleKind == .source ? (entry.children ?? []) : [entry.cap]
         var updated: [String] = []
         for cap in members where !isSymlink(cap.dirURL) {
             guard let staged = stagedMemberDir(staging: resolved.stagingDir, cap: cap),
                   computeDirHash(cap.dirURL) != computeDirHash(staged) else { continue }
-            try moveToTrash(cap.dirURL)
-            try fm.copyItem(at: staged, to: cap.dirURL)
+            // 原子换版：先把新版拷到隐藏临时名——copy 失败（磁盘满/源不可读）时旧版原样无损。
+            // 曾经是先弃旧版再 copy，失败即丢数据且 symlink 全断。
+            let incoming = cap.dirURL.deletingLastPathComponent()
+                .appendingPathComponent(".popskill-incoming-\(cap.name)")
+            try? fm.removeItem(at: incoming)
+            do { try fm.copyItem(at: staged, to: incoming) }
+            catch { try? fm.removeItem(at: incoming); throw error }
+            let backup = try moveToTrash(cap.dirURL)
+            do { try fm.moveItem(at: incoming, to: cap.dirURL) }
+            catch {
+                try? fm.moveItem(at: backup, to: cap.dirURL)   // 换名失败回滚
+                throw error
+            }
             updated.append(cap.name)
         }
         let upstreamNew = upstreamOnlySkills(staging: resolved.stagingDir, knownNames: Set(members.map(\.name)))
@@ -979,7 +1045,7 @@ struct StoreFS {
     }
 
     @discardableResult
-    func run(_ bin: String, _ args: [String]) -> (status: Int32, out: String, err: String) {
+    func run(_ bin: String, _ args: [String], timeout: TimeInterval = 120) -> (status: Int32, out: String, err: String) {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: bin)
         p.arguments = args
@@ -987,9 +1053,27 @@ struct StoreFS {
         p.standardOutput = outPipe
         p.standardError = errPipe
         do { try p.run() } catch { return (-1, "", "\(error)") }
-        let out = String(data: outPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        let err = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        // 两路管道必须并发排空——顺序 readDataToEndOfFile 会在 stderr 写满 64KB 缓冲时与子进程互相卡死
+        var outData = Data(), errData = Data()
+        let drained = DispatchGroup()
+        DispatchQueue.global().async(group: drained) { outData = outPipe.fileHandleForReading.readDataToEndOfFile() }
+        DispatchQueue.global().async(group: drained) { errData = errPipe.fileHandleForReading.readDataToEndOfFile() }
+        // watchdog：git 遇到网络黑洞可以永远不退出，不能让调用线程跟着无限期挂住
+        let timedOut = drained.wait(timeout: .now() + timeout) == .timedOut
+        if timedOut {
+            p.terminate()
+            if drained.wait(timeout: .now() + 5) == .timedOut, p.isRunning {
+                kill(p.processIdentifier, SIGKILL)
+            }
+            drained.wait()
+        }
         p.waitUntilExit()
+        let out = String(data: outData, encoding: .utf8) ?? ""
+        let err = String(data: errData, encoding: .utf8) ?? ""
+        if timedOut {
+            let cmd = URL(fileURLWithPath: bin).lastPathComponent
+            return (-1, out, "命令超时（\(Int(timeout))s）已终止：\(cmd) \(args.first ?? "")")
+        }
         return (p.terminationStatus, out, err)
     }
 }
