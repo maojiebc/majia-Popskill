@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 import Sparkle
 
@@ -10,8 +11,16 @@ struct PopskillApp: App {
         updaterDelegate: nil, userDriverDelegate: nil
     )
 
+    init() {
+        // 产品决策是全亮色账本视觉。只靠 preferredColorScheme 锁不住 AppKit 层——
+        // 深色模式下 NSAlert/Sparkle 弹窗/菜单会保持深色，与暖纸白主窗割裂
+        NSApplication.shared.appearance = NSAppearance(named: .aqua)
+    }
+
     var body: some Scene {
-        WindowGroup {
+        // 单窗口产品用 Window 而非 WindowGroup：系统自动去掉「新建窗口 ⌘N」。
+        // 曾经 ⌘N 能开出第二个共享同一 model 的窗口，弹层在所有窗口重复渲染
+        Window("Popskill", id: "main") {
             RootView()
                 .environment(model)
                 .onAppear {
@@ -30,6 +39,28 @@ struct PopskillApp: App {
         .commands {
             CommandGroup(after: .appInfo) {
                 Button("检查更新…") { updaterController.checkForUpdates(nil) }
+            }
+            // 标准 ⌘, ——设置一直在标题栏 ⚙ 里，但 mac 用户的手指头先去按 ⌘,
+            CommandGroup(replacing: .appSettings) {
+                Button("设置…") { model.sheet = .settings }
+                    .keyboardShortcut(",", modifiers: .command)
+            }
+            CommandGroup(replacing: .help) {
+                Button("Popskill 帮助") {
+                    NSWorkspace.shared.open(URL(string: "https://github.com/maojiebc/majia-Popskill#readme")!)
+                }
+            }
+            // CLI 用户在终端动了 ~/.agents 后需要一条不重启的回家路
+            CommandGroup(after: .toolbar) {
+                Button("刷新") {
+                    model.refresh()
+                    model.say("已重新扫描 store 与工具目录")
+                }
+                .keyboardShortcut("r", modifiers: .command)
+            }
+            CommandGroup(after: .textEditing) {
+                Button("查找") { model.searchFocused = true }
+                    .keyboardShortcut("f", modifiers: .command)
             }
         }
     }
@@ -101,6 +132,11 @@ struct RootView: View {
         .onDisappear {
             if let m = keyMonitor { NSEvent.removeMonitor(m) }
         }
+        // 回到前台自动重扫——目标用户天天在终端直接动 ~/.agents，
+        // 「文件系统即数据库」的界面不能和磁盘脱节到要重启 app
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            model.refresh()
+        }
     }
 
     /// `/` 聚焦搜索；Esc 关闭弹层/浮层
@@ -114,14 +150,17 @@ struct RootView: View {
                 if model.kbFocusId != nil { model.kbFocusId = nil; return nil }
                 return event
             }
+            // 带 ⌘/⌥/⌃ 的组合键一律放行给系统/菜单——曾经 ⌘↑、⌥↓、⌘/ 全被吞掉
+            let mods = event.modifierFlags.intersection([.command, .option, .control, .shift])
             if event.charactersIgnoringModifiers == "/",
+               mods.subtracting(.shift).isEmpty,   // 德语等布局 / 在 ⇧7 上，shift 要留
                model.sheet == nil,
                !(NSApp.keyWindow?.firstResponder is NSTextView) {
                 model.searchFocused = true
                 return nil
             }
             // 键盘导航（PATCH-02）：弹层/浮层/输入框打开时不响应
-            if model.sheet == nil, model.fixTarget == nil, model.peekTarget == nil,
+            if mods.isEmpty, model.sheet == nil, model.fixTarget == nil, model.peekTarget == nil,
                !(NSApp.keyWindow?.firstResponder is NSTextView) {
                 switch event.keyCode {
                 case 125: model.kbMove(1); return nil          // ↓
