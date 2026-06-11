@@ -34,6 +34,7 @@ struct StoreMeta: Codable {
         var autoUpdate: Bool?
         var latest: String?
         var changed: [String]?   // 上次检查发现有变化的成员名（套装提醒到具体哪个）
+        var lastHead: String?    // 上次完整比对时的上游 HEAD sha（ls-remote 短路用，v2.8）
     }
     struct ToolMeta: Codable {
         var defaultTarget: Bool?
@@ -683,6 +684,7 @@ struct StoreFS {
         let items: [PlanItem]
         let stagingDir: URL    // 待入 store 的目录（local 源 = 原地，github = 临时 clone）
         let version: String?
+        var headSha: String? = nil   // github 源 clone 时的 HEAD（ls-remote 短路用）
     }
 
     /// 解析来源：local 直接扫描；github 浅 clone 到临时目录再扫描；npm 暂不支持。
@@ -707,9 +709,14 @@ struct StoreFS {
                 discardStagingDir(tmp)
                 throw StoreError.resolveFailed("git clone 失败：\(r.err.prefix(200))")
             }
+            let sha = run("/usr/bin/git", ["-C", tmp.path, "rev-parse", "HEAD"], timeout: 30)
+                .out.trimmingCharacters(in: .whitespacesAndNewlines)
             try? fm.removeItem(at: tmp.appendingPathComponent(".git"))
-            do { return try resolveDir(tmp, url: norm, kind: .github) }
-            catch {
+            do {
+                var src = try resolveDir(tmp, url: norm, kind: .github)
+                src.headSha = sha.isEmpty ? nil : sha
+                return src
+            } catch {
                 discardStagingDir(tmp)   // 解析失败不能把整仓副本留在临时目录
                 throw error
             }
@@ -895,11 +902,37 @@ struct StoreFS {
         return nil
     }
 
+    /// 上游 HEAD 一次网络往返（github 源专用，失败返回 nil 走完整比对）
+    func remoteHead(_ url: String) -> String? {
+        guard let target = try? StoreFS.githubTarget(url) else { return nil }
+        let r = run("/usr/bin/git", ["ls-remote", target.cloneURL, "HEAD"], timeout: 30)
+        guard r.status == 0,
+              let sha = r.out.split(separator: "\t").first?.trimmingCharacters(in: .whitespacesAndNewlines),
+              sha.count >= 7 else { return nil }
+        return sha
+    }
+
+    func saveLastHead(_ entryName: String, _ sha: String) {
+        var meta = loadMeta()
+        var m = meta.entries[entryName] ?? StoreMeta.EntryMeta()
+        m.lastHead = sha
+        meta.entries[entryName] = m
+        saveMeta(meta)
+    }
+
     /// 比对一个源：clone/读取一次上游，逐成员比内容哈希。
     /// 返回 nil = 全部最新。本地开发软链成员自动跳过。
     func checkUpdate(_ entry: Entry) throws -> UpdateCheck? {
         guard entry.bundleKind != .marketplace else { return nil }   // 插件更新归 /plugin
         guard let url = entry.sourceUrl, SourceKind.of(url) != .npm else { return nil }
+        // HEAD 短路（v2.8 性能）：上游 commit 没动就不整仓 clone——
+        // 一次 ls-remote 替代几十 MB 下载，13 个源的启动检查从分钟级降到秒级。
+        // ls-remote 失败（断网等）不吞：落到下面的完整 resolve，让错误如实抛出
+        if SourceKind.of(url) == .github,
+           let last = loadMeta().entries[entry.name]?.lastHead, !last.isEmpty,
+           let head = remoteHead(url), head == last {
+            return nil
+        }
         let resolved = try resolve(url)
         defer { discardStaging(resolved) }
 
@@ -914,6 +947,7 @@ struct StoreFS {
             }
         }
         let upstreamNew = upstreamOnlySkills(staging: resolved.stagingDir, knownNames: Set(members.map(\.name)))
+        if let sha = resolved.headSha { saveLastHead(entry.name, sha) }
         guard !changed.isEmpty else { return nil }
         let latest: String
         if changed.count == 1 && members.count == 1 {
@@ -961,6 +995,7 @@ struct StoreFS {
             updated.append(cap.name)
         }
         let upstreamNew = upstreamOnlySkills(staging: resolved.stagingDir, knownNames: Set(members.map(\.name)))
+        if let sha = resolved.headSha { saveLastHead(entry.name, sha) }
         saveLatest(entry.name, latest: nil)
         return (updated, upstreamNew)
     }
