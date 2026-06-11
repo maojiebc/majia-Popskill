@@ -313,6 +313,7 @@ struct AddSheet: View {
 struct SettingsSheet: View {
     @Environment(AppModel.self) private var model
     @State private var sparkleAuto = false
+    @State private var trashItems: [StoreFS.TrashItem] = []
 
     var body: some View {
         SheetShell(width: 560, onDismiss: { model.sheet = nil }) {
@@ -475,15 +476,14 @@ struct SettingsSheet: View {
     // ── 回收站（v2.8：兑现「进回收站，可恢复」的全部 UI 承诺）──
 
     private var trashSection: some View {
-        let items = model.fs.listTrash()
-        return VStack(alignment: .leading, spacing: 0) {
-            SectionLabel(text: "回收站（\(items.count)）")
-            if items.isEmpty {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionLabel(text: "回收站（\(trashItems.count)）")
+            if trashItems.isEmpty {
                 Text("空——移除能力和更新换版时，旧目录会进这里（最多留 \(StoreFS.trashRetainCount) 份，先进先出）。")
                     .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
             } else {
                 VStack(spacing: 6) {
-                    ForEach(items.prefix(5)) { item in
+                    ForEach(trashItems.prefix(5)) { item in
                         SheetRow {
                             Text(item.name)
                                 .font(.mono(11.5)).foregroundStyle(Ink.ink)
@@ -492,19 +492,22 @@ struct SettingsSheet: View {
                             if let d = item.date {
                                 Text(relativeLabel(d)).font(.ui(10.5)).foregroundStyle(Ink.tertiary)
                             }
-                            Button { model.restoreTrashItem(item) } label: {
+                            Button {
+                                model.restoreTrashItem(item)
+                                trashItems = model.fs.listTrash()
+                            } label: {
                                 Text("恢复到 store")
                                     .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
                                     .padding(.horizontal, 8).frame(height: 24)
                                     .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
                             }
                             .buttonStyle(.plain)
-                            .help("移回 store skills/——同名能力已存在时会拒绝")
+                            .help("移回 store 原目录（\(item.kindDir)/）——同名能力已存在时会拒绝")
                         }
                     }
                 }
                 HStack(spacing: 8) {
-                    if items.count > 5 {
+                    if trashItems.count > 5 {
                         Text("仅列最近 5 项，其余在文件夹里").font(.ui(10.5)).foregroundStyle(Ink.tertiary)
                     }
                     Button { model.openTrash() } label: {
@@ -518,6 +521,8 @@ struct SettingsSheet: View {
                 .padding(.top, 6)
             }
         }
+        // 读盘一次进 @State，不在每次渲染路径上扫目录
+        .onAppear { trashItems = model.fs.listTrash() }
     }
 
     private func relativeLabel(_ d: Date) -> String {

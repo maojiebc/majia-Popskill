@@ -266,8 +266,10 @@ struct MainView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 64)
                     } else {
-                        // Lazy：屏外卡片不构建——搜索逐键/方向键移动不再全量重建几十张卡
-                        LazyVStack(spacing: 10) {
+                        // 不用 LazyVStack：Lazy 下屏外行不实体化，scrollTo 对未实体化目标
+                        // 不滚动，键盘导航焦点移出首屏即失踪（审查实证）。
+                        // 这个量级（几十张卡）全量构建成本可接受。
+                        VStack(spacing: 10) {
                             ForEach(rows(list, columns: cols), id: \.first!.id) { row in
                                 if row.count == 1, case .bundle(_, let kids) = row[0], kids != nil {
                                     itemView(row[0])   // 展开的套装才通栏

@@ -35,6 +35,7 @@ struct StoreMeta: Codable {
         var latest: String?
         var changed: [String]?   // 上次检查发现有变化的成员名（套装提醒到具体哪个）
         var lastHead: String?    // 上次完整比对时的上游 HEAD sha（ls-remote 短路用，v2.8）
+        var localDigest: String? // 上次完整比对时本地成员的组合哈希——短路必须同时验证本地未漂移
     }
     struct ToolMeta: Codable {
         var defaultTarget: Bool?
@@ -97,6 +98,17 @@ struct StoreFS {
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
         try? enc.encode(meta).write(to: metaURL, options: .atomic)
+    }
+
+    /// meta 的读-改-写必须走这里：checkUpdate 在 4 路并发的后台任务里写 meta，
+    /// 与主线程设置页的写互相覆盖会静默丢更新（.atomic 只保证不撕裂，不保证不丢）。
+    private static let metaLock = NSLock()
+    func mutateMeta(_ body: (inout StoreMeta) -> Void) {
+        StoreFS.metaLock.lock()
+        defer { StoreFS.metaLock.unlock() }
+        var meta = loadMeta()
+        body(&meta)
+        saveMeta(meta)
     }
 
     // ── 扫描 ─────────────────────────────────────────────
@@ -554,16 +566,39 @@ struct StoreFS {
         (try? fm.attributesOfItem(atPath: url.path))?[.type] as? FileAttributeType == .typeSymbolicLink
     }
 
+    static let trashBuckets = ["skills", "agents", "mcp", "bin"]
+
     /// 真实目录移入 store 回收站（可逆），返回回收位置。
-    /// 吸收 cc-switch 的备份保留策略：回收站最多留 20 份，旧的物理删除。
+    /// 最多留 trashRetainCount（200）份，按入站时间 FIFO 轮换。
+    /// 按来源的 kind 目录分桶存放（.trash/skills/ 等）——恢复时必须回到原 kind，
+    /// 否则 MCP/Agent 被恢复进 skills/ 会让 layoutKind 和 symlink 路径静默错位。
     @discardableResult
     func moveToTrash(_ url: URL) throws -> URL {
-        try fm.createDirectory(at: trashURL, withIntermediateDirectories: true)
+        let parent = url.deletingLastPathComponent().lastPathComponent
+        let bucket = StoreFS.trashBuckets.contains(parent) ? parent : CapType.skill.dirName
+        let bucketURL = trashURL.appendingPathComponent(bucket)
+        try fm.createDirectory(at: bucketURL, withIntermediateDirectories: true)
         let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
-        let dest = trashURL.appendingPathComponent("\(url.lastPathComponent)-\(stamp)")
+        let dest = bucketURL.appendingPathComponent("\(url.lastPathComponent)-\(stamp)")
         try fm.moveItem(at: url, to: dest)
         pruneTrash()
         return dest
+    }
+
+    /// 全部回收站条目（分桶 + 兼容 v2.8 前的平铺历史条目，视作 skills）
+    private func trashEntryURLs() -> [(url: URL, bucket: String)] {
+        var out: [(URL, String)] = []
+        for name in ((try? fm.contentsOfDirectory(atPath: trashURL.path)) ?? []).sorted() where !name.hasPrefix(".") {
+            let url = trashURL.appendingPathComponent(name)
+            if StoreFS.trashBuckets.contains(name) {
+                for sub in ((try? fm.contentsOfDirectory(atPath: url.path)) ?? []).sorted() where !sub.hasPrefix(".") {
+                    out.append((url.appendingPathComponent(sub), name))
+                }
+            } else {
+                out.append((url, CapType.skill.dirName))   // 旧版平铺条目
+            }
+        }
+        return out
     }
 
     static let trashRetainCount = 200
@@ -573,8 +608,7 @@ struct StoreFS {
     /// 半年没改过的技能刚备份进来就会被当「最旧」误删。
     /// 上限 200：一次大套装更新会同时入站几十份，全局 20 一冲就把别人的备份清光。
     func pruneTrash(keep: Int = StoreFS.trashRetainCount) {
-        guard let items = try? fm.contentsOfDirectory(
-            at: trashURL, includingPropertiesForKeys: [.addedToDirectoryDateKey]) else { return }
+        let items = trashEntryURLs().map(\.url)
         guard items.count > keep else { return }
         func stampKey(_ url: URL) -> String {
             // 形如 2026-06-11T08-30-00Z（20 字符，字典序即时间序）；
@@ -593,36 +627,39 @@ struct StoreFS {
     // ── 回收站清单 / 恢复（v2.8：UI 文案到处承诺「可恢复」，这里兑现）──
 
     struct TrashItem: Identifiable, Equatable {
-        let id: String      // 回收站内目录名（含时间戳后缀）
+        let id: String      // 桶/目录名（含时间戳后缀）
         let name: String    // 原能力名
+        let kindDir: String // 入站时的 kind 目录（skills/agents/mcp/bin），恢复回原处
         let date: Date?     // 入站时间（解析自名称后缀）
         let url: URL
     }
 
     /// 回收站清单，新入站在前
     func listTrash() -> [TrashItem] {
-        let names = (try? fm.contentsOfDirectory(atPath: trashURL.path)) ?? []
         let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")   // 锁死：跟随系统会在佛历/12小时制下解析成 1483 年
         f.dateFormat = "yyyy-MM-dd'T'HH-mm-ss'Z'"
         f.timeZone = TimeZone(identifier: "UTC")
-        return names.filter { !$0.hasPrefix(".") }.map { n in
+        return trashEntryURLs().map { url, bucket in
+            let n = url.lastPathComponent
             let suffix = String(n.suffix(20))
             var name = n
             var date: Date?
-            if suffix.count == 20, suffix.hasSuffix("Z"), suffix.dropFirst(4).first == "-",
-               let d = f.date(from: suffix) {
-                date = d
+            // 去后缀只看形状，不依赖 date 解析成功（解析失败顶多没时间，名字必须干净）
+            if suffix.count == 20, suffix.hasSuffix("Z"), suffix.dropFirst(4).first == "-" {
                 name = String(n.dropLast(21))   // 去掉 "-<stamp>"
+                date = f.date(from: suffix)
             }
-            return TrashItem(id: n, name: name, date: date, url: trashURL.appendingPathComponent(n))
+            return TrashItem(id: "\(bucket)/\(n)", name: name, kindDir: bucket, date: date, url: url)
         }
         .sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
     }
 
-    /// 恢复到 store skills/<原名>；同名已存在则拒绝（先移走现有的再恢复）
+    /// 恢复到 store 的原 kind 目录；同名已存在则拒绝（先移走现有的再恢复）
     func restoreFromTrash(_ item: TrashItem) throws {
         let name = try sanitizeName(item.name)
-        let dest = env.storeRoot.appendingPathComponent(CapType.skill.dirName).appendingPathComponent(name)
+        let kind = StoreFS.trashBuckets.contains(item.kindDir) ? item.kindDir : CapType.skill.dirName
+        let dest = env.storeRoot.appendingPathComponent(kind).appendingPathComponent(name)
         guard !fm.fileExists(atPath: dest.path) else { throw StoreError.alreadyExists(name) }
         try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
         try fm.moveItem(at: item.url, to: dest)
@@ -793,9 +830,9 @@ struct StoreFS {
         for t in linkTools {
             try createLink(at: toolLinkPath(t, kind: src.isBundle ? .bundle : .skill, name: src.entryName), to: dest)
         }
-        var meta = loadMeta()
-        meta.entries[src.entryName] = StoreMeta.EntryMeta(sourceUrl: src.url, autoUpdate: false, latest: nil)
-        saveMeta(meta)
+        mutateMeta { meta in
+            meta.entries[src.entryName] = StoreMeta.EntryMeta(sourceUrl: src.url, autoUpdate: false, latest: nil)
+        }
     }
 
     /// 移除条目：撤全部 symlink（含物化目录）→ store 副本移入回收站
@@ -805,17 +842,17 @@ struct StoreFS {
         }
         // 源式套装 = 平铺成员的集合，逐成员按独立条目移除
         if entry.bundleKind == .source {
-            var meta = loadMeta()
             for cap in entry.children ?? [] {
                 for t in tools {
                     let link = toolLinkPath(t, kind: cap.layoutKind, name: cap.name)
                     if isSymlink(link) { try removeLink(at: link) }
                 }
                 try moveToTrash(cap.dirURL)
-                meta.entries.removeValue(forKey: cap.name)
             }
-            meta.entries.removeValue(forKey: entry.name)
-            saveMeta(meta)
+            mutateMeta { meta in
+                for cap in entry.children ?? [] { meta.entries.removeValue(forKey: cap.name) }
+                meta.entries.removeValue(forKey: entry.name)
+            }
             return
         }
         for t in tools {
@@ -834,9 +871,7 @@ struct StoreFS {
             }
         }
         try moveToTrash(entry.cap.dirURL)
-        var meta = loadMeta()
-        meta.entries.removeValue(forKey: entry.name)
-        saveMeta(meta)
+        mutateMeta { meta in meta.entries.removeValue(forKey: entry.name) }
     }
 
     // ── 更新机制（v2.1，吸收 cc-switch 的内容哈希方案）─────
@@ -912,12 +947,29 @@ struct StoreFS {
         return sha
     }
 
-    func saveLastHead(_ entryName: String, _ sha: String) {
-        var meta = loadMeta()
-        var m = meta.entries[entryName] ?? StoreMeta.EntryMeta()
-        m.lastHead = sha
-        meta.entries[entryName] = m
-        saveMeta(meta)
+    /// 完整比对后的检查点：上游 HEAD + 本地组合哈希一起落盘
+    func saveCheckpoint(_ entryName: String, head: String, localDigest: String) {
+        mutateMeta { meta in
+            var m = meta.entries[entryName] ?? StoreMeta.EntryMeta()
+            m.lastHead = head
+            m.localDigest = localDigest
+            meta.entries[entryName] = m
+        }
+    }
+
+    /// 本地成员目录的组合哈希——纯磁盘 IO，毫秒级。
+    /// HEAD 短路必须同时验证它：否则用户在终端改坏 store 里的技能后，
+    /// 上游 commit 没动就永远检不出本地漂移（审查发现，v2.8 短路的配套约束）。
+    func localDigest(_ entry: Entry) -> String {
+        let members = entry.isBundle && entry.bundleKind == .source ? (entry.children ?? []) : [entry.cap]
+        var hasher = SHA256()
+        for cap in members.sorted(by: { $0.name < $1.name }) where !isSymlink(cap.dirURL) {
+            hasher.update(data: Data(cap.name.utf8))
+            hasher.update(data: Data([0]))
+            hasher.update(data: Data(computeDirHash(cap.dirURL).utf8))
+            hasher.update(data: Data([0]))
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
     /// 比对一个源：clone/读取一次上游，逐成员比内容哈希。
@@ -925,11 +977,15 @@ struct StoreFS {
     func checkUpdate(_ entry: Entry) throws -> UpdateCheck? {
         guard entry.bundleKind != .marketplace else { return nil }   // 插件更新归 /plugin
         guard let url = entry.sourceUrl, SourceKind.of(url) != .npm else { return nil }
-        // HEAD 短路（v2.8 性能）：上游 commit 没动就不整仓 clone——
+        // HEAD 短路（v2.8 性能）：上游 commit 没动 且 本地未漂移 才跳过整仓 clone——
         // 一次 ls-remote 替代几十 MB 下载，13 个源的启动检查从分钟级降到秒级。
+        // 本地不变性必须一起验（localDigest，纯磁盘 IO）：目标用户天天在终端动
+        // ~/.agents，只比 HEAD 会让本地改坏的技能永远检不出来。
         // ls-remote 失败（断网等）不吞：落到下面的完整 resolve，让错误如实抛出
         if SourceKind.of(url) == .github,
-           let last = loadMeta().entries[entry.name]?.lastHead, !last.isEmpty,
+           let m = loadMeta().entries[entry.name],
+           let last = m.lastHead, !last.isEmpty,
+           m.localDigest == localDigest(entry),
            let head = remoteHead(url), head == last {
             return nil
         }
@@ -947,7 +1003,7 @@ struct StoreFS {
             }
         }
         let upstreamNew = upstreamOnlySkills(staging: resolved.stagingDir, knownNames: Set(members.map(\.name)))
-        if let sha = resolved.headSha { saveLastHead(entry.name, sha) }
+        if let sha = resolved.headSha { saveCheckpoint(entry.name, head: sha, localDigest: localDigest(entry)) }
         guard !changed.isEmpty else { return nil }
         let latest: String
         if changed.count == 1 && members.count == 1 {
@@ -995,18 +1051,19 @@ struct StoreFS {
             updated.append(cap.name)
         }
         let upstreamNew = upstreamOnlySkills(staging: resolved.stagingDir, knownNames: Set(members.map(\.name)))
-        if let sha = resolved.headSha { saveLastHead(entry.name, sha) }
+        // 落盘后再算 digest——此刻本地已是新版内容
+        if let sha = resolved.headSha { saveCheckpoint(entry.name, head: sha, localDigest: localDigest(entry)) }
         saveLatest(entry.name, latest: nil)
         return (updated, upstreamNew)
     }
 
     func saveLatest(_ entryName: String, latest: String?, changed: [String]? = nil) {
-        var meta = loadMeta()
-        var m = meta.entries[entryName] ?? StoreMeta.EntryMeta()
-        m.latest = latest
-        m.changed = latest == nil ? nil : changed
-        meta.entries[entryName] = m
-        saveMeta(meta)
+        mutateMeta { meta in
+            var m = meta.entries[entryName] ?? StoreMeta.EntryMeta()
+            m.latest = latest
+            m.changed = latest == nil ? nil : changed
+            meta.entries[entryName] = m
+        }
     }
 
     // ── 未托管目录导入（v2.1，吸收 cc-switch 的 scan_unmanaged）──
@@ -1133,18 +1190,24 @@ struct StoreFS {
         DispatchQueue.global().async(group: drained) { errData = errPipe.fileHandleForReading.readDataToEndOfFile() }
         // watchdog：git 遇到网络黑洞可以永远不退出，不能让调用线程跟着无限期挂住
         let timedOut = drained.wait(timeout: .now() + timeout) == .timedOut
+        let cmd = URL(fileURLWithPath: bin).lastPathComponent
         if timedOut {
-            p.terminate()
-            if drained.wait(timeout: .now() + 5) == .timedOut, p.isRunning {
-                kill(p.processIdentifier, SIGKILL)
+            p.terminate()   // Foundation 按进程组发 TERM
+            if drained.wait(timeout: .now() + 5) == .timedOut {
+                // 组 KILL（不看 p.isRunning：TERM 可能已杀掉 git 本体，
+                // 但孙进程——hook/credential helper——还握着管道写端）
+                kill(-p.processIdentifier, SIGKILL)
+                if drained.wait(timeout: .now() + 5) == .timedOut {
+                    // 病理场景（D 态进程钉死管道）：放弃读取立即返回——
+                    // outData/errData 可能仍被后台读线程写入，此后不许再碰
+                    return (-1, "", "命令超时且输出管道无法排空，已放弃：\(cmd)")
+                }
             }
-            drained.wait()
         }
         p.waitUntilExit()
         let out = String(data: outData, encoding: .utf8) ?? ""
         let err = String(data: errData, encoding: .utf8) ?? ""
         if timedOut {
-            let cmd = URL(fileURLWithPath: bin).lastPathComponent
             return (-1, out, "命令超时（\(Int(timeout))s）已终止：\(cmd) \(args.first ?? "")")
         }
         return (p.terminationStatus, out, err)

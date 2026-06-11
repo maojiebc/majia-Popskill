@@ -2,9 +2,29 @@ import Combine
 import SwiftUI
 import Sparkle
 
+/// 退出保护：后台换版（applyUpdate/repull）进行中时延迟退出，等收尾再走——
+/// 原子换版保证中断也不丢数据，但没必要把一次更新切成「备份完成、新版没落盘」。
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    weak var model: AppModel?
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let model, !model.updatingIds.isEmpty else { return .terminateNow }
+        Task { @MainActor in
+            let deadline = ContinuousClock.now + .seconds(30)
+            while let m = self.model, !m.updatingIds.isEmpty, ContinuousClock.now < deadline {
+                try? await Task.sleep(for: .milliseconds(200))
+            }
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
+    }
+}
+
 @main
 struct PopskillApp: App {
     @State private var model = AppModel()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     // 裸二进制（无 Info.plist feed）下不启动 updater，避免 debug 弹错
     private let updaterController = SPUStandardUpdaterController(
         startingUpdater: Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") != nil,
@@ -24,6 +44,7 @@ struct PopskillApp: App {
             RootView()
                 .environment(model)
                 .onAppear {
+                    appDelegate.model = model
                     if updaterController.updater.canCheckForUpdates || Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") != nil {
                         model.checkAppUpdate = { [weak updaterController = updaterController] in
                             updaterController?.checkForUpdates(nil)
@@ -48,8 +69,9 @@ struct PopskillApp: App {
                 Button("检查更新…") { updaterController.checkForUpdates(nil) }
             }
             // 标准 ⌘, ——设置一直在标题栏 ⚙ 里，但 mac 用户的手指头先去按 ⌘,
+            // 添加弹层开着时不抢（已解析的安装计划不能被静默销毁）
             CommandGroup(replacing: .appSettings) {
-                Button("设置…") { model.sheet = .settings }
+                Button("设置…") { if model.sheet == nil { model.sheet = .settings } }
                     .keyboardShortcut(",", modifiers: .command)
             }
             CommandGroup(replacing: .help) {
@@ -57,16 +79,20 @@ struct PopskillApp: App {
                     NSWorkspace.shared.open(URL(string: "https://github.com/maojiebc/majia-Popskill#readme")!)
                 }
             }
-            // CLI 用户在终端动了 ~/.agents 后需要一条不重启的回家路
+            // CLI 用户在终端动了 ~/.agents 后需要一条不重启的回家路。
+            // 修复弹层/peek 先关——它们持有的快照在重扫后就过期了
             CommandGroup(after: .toolbar) {
                 Button("刷新") {
+                    model.fixTarget = nil
+                    model.peekTarget = nil
                     model.refresh()
                     model.say("已重新扫描 store 与工具目录")
                 }
                 .keyboardShortcut("r", modifiers: .command)
             }
+            // 弹层开着时不偷焦点给背后的搜索框
             CommandGroup(after: .textEditing) {
-                Button("查找") { model.searchFocused = true }
+                Button("查找") { if model.sheet == nil { model.searchFocused = true } }
                     .keyboardShortcut("f", modifiers: .command)
             }
         }

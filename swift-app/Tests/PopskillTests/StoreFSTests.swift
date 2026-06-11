@@ -72,6 +72,8 @@ final class StoreFSTests: XCTestCase {
     var tools: [Tool] { fs.scanTools(meta: StoreMeta()) }
     func scan() -> [Entry] { fs.scanEntries(tools: tools, meta: fs.loadMeta()) }
     func claudeLink(_ name: String) -> URL { env.toolRoots["claude"]!.appendingPathComponent("skills").appendingPathComponent(name) }
+    /// 回收站全部条目名（v2.8 起按 kind 分桶 + 兼容历史平铺）
+    func trashNames() -> [String] { fs.listTrash().map { $0.url.lastPathComponent } }
 
     // ── 扫描 ─────────────────────────────────────────────
 
@@ -253,8 +255,7 @@ final class StoreFSTests: XCTestCase {
         try fs.removeEntry(entry, tools: tools)
         XCTAssertFalse(fm.fileExists(atPath: dir.path))
         XCTAssertFalse(fs.isSymlink(claudeLink("foo")))
-        let trash = (try? fm.contentsOfDirectory(atPath: fs.trashURL.path)) ?? []
-        XCTAssertEqual(trash.filter { $0.hasPrefix("foo-") }.count, 1, "store 副本应进回收站而不是直接删除")
+        XCTAssertEqual(trashNames().filter { $0.hasPrefix("foo-") }.count, 1, "store 副本应进回收站而不是直接删除")
     }
 
     func testRemoveBundleCleansMaterializedDir() throws {
@@ -279,8 +280,7 @@ final class StoreFSTests: XCTestCase {
         XCTAssertTrue(fs.isSymlink(claudeLink("foo")))
         XCTAssertEqual(scan()[0].cap.status("claude"), .on)
         // 原目录进了回收站
-        let trash = (try? fm.contentsOfDirectory(atPath: fs.trashURL.path)) ?? []
-        XCTAssertEqual(trash.filter { $0.hasPrefix("foo-") }.count, 1)
+        XCTAssertEqual(trashNames().filter { $0.hasPrefix("foo-") }.count, 1)
     }
 
     // ── 文档摘要提取（PATCH-01 详情 peek）─────────────────
@@ -409,8 +409,7 @@ final class StoreFSTests: XCTestCase {
         entry = scan()[0]
         XCTAssertEqual(entry.cap.version, "1.1.0", "store 应换成上游新版")
         XCTAssertEqual(entry.cap.status("claude"), .on, "symlink 路径不变应自动延续")
-        let trash = (try? fm.contentsOfDirectory(atPath: fs.trashURL.path)) ?? []
-        XCTAssertEqual(trash.filter { $0.hasPrefix("up-skill-") }.count, 1, "更新前必须备份旧版")
+        XCTAssertEqual(trashNames().filter { $0.hasPrefix("up-skill-") }.count, 1, "更新前必须备份旧版")
     }
 
     func testTrashPruneKeepsNewest() throws {
@@ -420,8 +419,7 @@ final class StoreFSTests: XCTestCase {
             try fs.moveToTrash(d)
         }
         fs.pruneTrash(keep: 10)
-        let count = ((try? fm.contentsOfDirectory(atPath: fs.trashURL.path)) ?? []).count
-        XCTAssertEqual(count, 10, "超过 keep 的部分应被清掉")
+        XCTAssertEqual(trashNames().count, 10, "超过 keep 的部分应被清掉")
     }
 
     func testTrashPruneIsFIFOByTrashTime() throws {
@@ -433,18 +431,49 @@ final class StoreFSTests: XCTestCase {
         try fm.setAttributes([.modificationDate: Date(timeIntervalSinceNow: -86400 * 365)],
                              ofItemAtPath: ancient.path)
         let kept = try fs.moveToTrash(ancient)
-        // 伪造 5 条早入站的条目（戳在 2020 年，mtime 是现在）
+        // 伪造 5 条早入站的平铺条目（v2.8 前的历史格式，戳在 2020 年，mtime 是现在）
         for i in 1...5 {
             let d = fs.trashURL.appendingPathComponent("junk\(i)-2020-01-0\(i)T00-00-00Z")
             try fm.createDirectory(at: d, withIntermediateDirectories: true)
         }
         fs.pruneTrash(keep: 3)
-        let names = try fm.contentsOfDirectory(atPath: fs.trashURL.path)
+        let names = trashNames()
         XCTAssertEqual(names.count, 3)
         XCTAssertTrue(names.contains(kept.lastPathComponent),
                       "刚入站的备份必须存活——按入站时间 FIFO，不看内容 mtime")
         XCTAssertFalse(names.contains("junk1-2020-01-01T00-00-00Z"), "最早入站的先被清")
         XCTAssertFalse(names.contains("junk2-2020-01-02T00-00-00Z"))
+    }
+
+    func testLocalDigestDetectsDrift() throws {
+        // HEAD 短路的本地不变性校验：成员内容一变 digest 必变
+        try makeSkill("drifty")
+        let entry = scan()[0]
+        let d1 = fs.localDigest(entry)
+        XCTAssertEqual(d1, fs.localDigest(entry), "同内容 digest 必须稳定")
+        try "改动".write(to: entry.cap.dirURL.appendingPathComponent("extra.md"),
+                        atomically: true, encoding: .utf8)
+        XCTAssertNotEqual(d1, fs.localDigest(entry), "本地漂移必须反映在 digest 里")
+    }
+
+    func testTrashRestoreKeepsKindDirectory() throws {
+        // agent 类型条目移除后恢复，必须回 agents/ 而不是 skills/——
+        // 错位会让 layoutKind 与 symlink 路径静默错乱（审查发现）
+        let agentsDir = env.storeRoot.appendingPathComponent("agents")
+        try fm.createDirectory(at: agentsDir, withIntermediateDirectories: true)
+        let dir = try makeSkill("my-agent", in: agentsDir)
+        var entry = scan().first { $0.name == "my-agent" }!
+        XCTAssertEqual(entry.cap.layoutKind, .agent)
+        try fs.removeEntry(entry, tools: tools)
+        XCTAssertFalse(fm.fileExists(atPath: dir.path))
+
+        let item = fs.listTrash().first { $0.name == "my-agent" }!
+        XCTAssertEqual(item.kindDir, "agents", "入站桶必须记住原 kind")
+        try fs.restoreFromTrash(item)
+        XCTAssertTrue(fm.fileExists(atPath: agentsDir.appendingPathComponent("my-agent").path),
+                      "必须恢复回 agents/ 原位")
+        entry = scan().first { $0.name == "my-agent" }!
+        XCTAssertEqual(entry.cap.layoutKind, .agent)
     }
 
     func testTrashListAndRestore() throws {

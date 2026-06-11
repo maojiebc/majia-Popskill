@@ -175,10 +175,34 @@ final class AppModel {
         let meta = fs.loadMeta()
         tools = fs.scanTools(meta: meta)
         entries = fs.scanEntries(tools: tools, meta: meta)
+        revalidateOverlays()
         let fsCopy = fs
         Task.detached { @Sendable [weak self] in
             let info = fsCopy.syncInfo()
             await MainActor.run { [weak self] in self?.syncInfo = info }
+        }
+    }
+
+    /// refresh 换掉 entries 后，开着的修复弹层 / 详情 peek 持有的是旧快照——
+    /// 按 id 重新解析：还在且状态没变就原位续上，否则关掉（盘面已变，别对着幻影操作）
+    private func revalidateOverlays() {
+        if let t = fixTarget {
+            if let entry = entries.first(where: { $0.id == t.entry.id }),
+               let cap = entry.allCaps.first(where: { $0.id == t.cap.id }),
+               cap.status(t.tool.id) == t.issueKind {
+                fixTarget = FixTarget(issueKind: t.issueKind, cap: cap, entry: entry,
+                                      tool: t.tool, anchor: t.anchor, flip: t.flip)
+            } else {
+                fixTarget = nil
+            }
+        }
+        if let pk = peekTarget {
+            if let entry = entries.first(where: { $0.id == pk.entry.id }),
+               let cap = entry.allCaps.first(where: { $0.id == pk.cap.id }) {
+                peekTarget = PeekTarget(cap: cap, entry: entry, anchor: pk.anchor, flip: pk.flip)
+            } else {
+                peekTarget = nil
+            }
         }
     }
 
@@ -390,11 +414,17 @@ final class AppModel {
             let result: Result<Void, Error> = await Task.detached {
                 do {
                     let resolved = try fsCopy.resolve(url)
-                    try fsCopy.removeEntry(entry, tools: allTools)
-                    let relinkTools = allTools.filter { tool in
-                        tool.id == primaryToolId || entry.allCaps.contains { $0.status(tool.id) != .off }
+                    do {
+                        try fsCopy.removeEntry(entry, tools: allTools)
+                        let relinkTools = allTools.filter { tool in
+                            tool.id == primaryToolId || entry.allCaps.contains { $0.status(tool.id) != .off }
+                        }
+                        try fsCopy.install(resolved, linkTools: relinkTools)
+                    } catch {
+                        // SECURITY.md 承诺临时 clone「用完即删，失败也删」——失败路径必须兜底
+                        fsCopy.discardStaging(resolved)
+                        throw error
                     }
-                    try fsCopy.install(resolved, linkTools: relinkTools)
                     return .success(())
                 } catch { return .failure(error) }
             }.value
@@ -433,12 +463,16 @@ final class AppModel {
     func fixAll() {
         let list = issues
         var fixed = 0
+        var skipped = 0
         var firstError: String?
         for issue in list {
             guard let entry = entries.first(where: { $0.id == issue.entryId }),
                   let cap = entry.allCaps.first(where: { $0.id == issue.capId }),
                   let tool = tools.first(where: { $0.id == issue.toolId }),
-                  !updatingIds.contains(entry.id) else { continue }   // 正在后台换版的条目不碰
+                  !updatingIds.contains(entry.id) else {
+                skipped += 1   // 条目消失或正在后台换版——是跳过，不是失败
+                continue
+            }
             if fake {
                 mutateFake(capId: cap.id, toolId: tool.id, to: .on)
                 fixed += 1
@@ -458,12 +492,14 @@ final class AppModel {
             }
         }
         if !fake { refresh() }
-        // 实际成功数说话——曾经无条件报「已修复 N 个」，失败也算成功
-        let failedCount = list.count - fixed
-        if failedCount == 0 {
-            say("已修复 \(fixed) 个链接问题")
-        } else {
+        // 成功/失败/跳过三态分开——红色错误只留给真出错的
+        let failedCount = list.count - fixed - skipped
+        if failedCount > 0 {
             sayError("修复 \(fixed) 个，\(failedCount) 个失败\(firstError.map { "：\($0)" } ?? "")")
+        } else if skipped > 0 {
+            say("已修复 \(fixed) 个，跳过 \(skipped) 个（正在更新中）")
+        } else {
+            say("已修复 \(fixed) 个链接问题")
         }
     }
 
@@ -713,22 +749,24 @@ final class AppModel {
         guard let i = entries.firstIndex(where: { $0.id == entryId }) else { return }
         entries[i].autoUpdate.toggle()
         guard !fake else { return }
-        var meta = fs.loadMeta()
-        var m = meta.entries[entryId] ?? StoreMeta.EntryMeta()
-        m.autoUpdate = entries[i].autoUpdate
-        meta.entries[entryId] = m
-        fs.saveMeta(meta)
+        let on = entries[i].autoUpdate
+        fs.mutateMeta { meta in
+            var m = meta.entries[entryId] ?? StoreMeta.EntryMeta()
+            m.autoUpdate = on
+            meta.entries[entryId] = m
+        }
     }
 
     func toggleDefaultTarget(_ toolId: String) {
         guard let i = tools.firstIndex(where: { $0.id == toolId }) else { return }
         tools[i].defaultTarget.toggle()
         guard !fake else { return }
-        var meta = fs.loadMeta()
-        var m = meta.tools[toolId] ?? StoreMeta.ToolMeta()
-        m.defaultTarget = tools[i].defaultTarget
-        meta.tools[toolId] = m
-        fs.saveMeta(meta)
+        let on = tools[i].defaultTarget
+        fs.mutateMeta { meta in
+            var m = meta.tools[toolId] ?? StoreMeta.ToolMeta()
+            m.defaultTarget = on
+            meta.tools[toolId] = m
+        }
     }
 
     // ── 回收站（v2.8）─────────────────────────────────────
