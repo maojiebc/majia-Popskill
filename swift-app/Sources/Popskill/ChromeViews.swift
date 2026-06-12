@@ -195,13 +195,19 @@ struct TogglePill: View {
     let action: () -> Void
     @State private var hovered = false
 
+    // v2.11 压缩：常态（on/off）圆点配色已携带完整状态语义，不再常驻状态文字，
+    // pill 自适应内容宽（原先内部 Spacer 撑满 118pt 列）；
+    // 警示态（stub/broken）的文字是问题可见性，保留
+    private var showState: Bool { status == .stub || status == .broken }
+
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 7) {
+            HStack(spacing: 6) {
                 Text(status.pillGlyph).font(.mono(11)).frame(width: 12)
                 Text(label)
-                Spacer(minLength: 0)
-                Text(status.stateLabel).font(.ui(10, .medium)).opacity(0.75)
+                if showState {
+                    Text(status.stateLabel).font(.ui(10, .medium)).opacity(0.75)
+                }
             }
             .font(.ui(11, .semibold))
             .foregroundStyle(status.pillText)
@@ -212,7 +218,7 @@ struct TogglePill: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
-        .help("点击切换 / 处理")
+        .help("\(label)：\(status.stateLabel)。点击切换 / 处理")
         .accessibilityLabel("\(label)：\(status.stateLabel)")
         .accessibilityHint("点击切换或处理")
     }

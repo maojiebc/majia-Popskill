@@ -501,7 +501,8 @@ struct CapCard: View {
                     .lineLimit(2)
                 metaRow
             }
-            VStack(spacing: 5) {
+            // v2.11：pill 自适应内容宽、整列右对齐——省出的宽度还给左侧信息区
+            VStack(alignment: .trailing, spacing: 5) {
                 ForEach(Array(model.tools.enumerated()), id: \.element.id) { i, t in
                     TogglePill(status: cap.status(t.id), label: pillLabel(t)) {
                         cellTap(tool: t)
@@ -509,7 +510,7 @@ struct CapCard: View {
                     .kbCellRing(focused && model.kbToolIdx == i)
                 }
             }
-            .frame(minWidth: 118)
+            .frame(minWidth: 64, alignment: .trailing)
         }
         .padding(EdgeInsets(top: 13, leading: 15, bottom: 13, trailing: 15))
         .background(RoundedRectangle(cornerRadius: 10).fill(flashing ? Ink.flashBg : Ink.card))

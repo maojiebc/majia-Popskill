@@ -41,6 +41,7 @@ Tests/PopskillTests/SchedTests.swift     定时任务解析测试（plist/cron/l
 
 - **文件系统就是数据库**。无 GRDB、无 sidecar、无 cc-switch submodule。唯一持久化元数据是 `~/.agents/.popskill.json`（源 URL / 自动更新 / 工具默认挂载），随 store 同步。
 - **SSOT = `~/.agents/`**（v1 的 `~/.cc-switch/skills` 已废弃）。`~/.claude/skills`、`~/.codex/skills` 里是指向 store 的裸 symlink。
+- **工具注册表**：唯一定义点 = `scanTools` 的 defs 数组 + `StoreEnv.real()` 的 toolRoots，UI 列全部数据驱动。曾实现过第三工具 CodeBuddy（腾讯，~/.codebuddy/skills，标准 Agent Skills）后按用户决定撤下（2026-06-13）——如重启：linkStatus 的 relativeTo 解析已兼容 skills.sh CLI 的相对 symlink；~/.local 前缀旧版 guancli 有 copyDirectory 写 ~/.codebuddy 的潜在污染源。
 - **LinkStatus 四态**：`on`=symlink 有效 / `off`=未链接 / `stub`=**真实目录占位（本地副本，未托管）** / `broken`=symlink 目标丢失。注意 stub 的真实语义和原型（占位待校验）不同。
 - **套装双形态**：工具侧既可能是「整套一条 symlink」（全部子项 on），也可能是「物化目录 + 逐子项 symlink」。单独关某个子项时 `setBundleChildLink` 自动物化。移除套装时物化目录会被清理。
 - **防呆三条**：`removeLink` 只删 symlink、真实目录一律走 store 回收站（`~/.agents/.trash/`，带时间戳）、store 目录绝不被开关动到。改 StoreFS 必须跑测试。
@@ -134,7 +135,7 @@ scripts/release.sh
 
 ## 当前状态（2026-06-12）
 
-- 线上 **v2.9.0**；main 上已落 **v2.10 定时任务人性化重做**（未发版）：按行为分组（定时跑/常驻/自启）、下次运行倒计时 + 按它排序（StartCalendarInterval/cron 的 next-fire 纯函数计算）、上次运行时间从日志 mtime 推断、人话名（prettyLabel 去 reverse-DNS 噪音 + 可编辑备注存 meta.schedNotes）、停摆 daemon 红条 + 行内重启、今天还会跑摘要条。
+- 线上 **v2.11.0**：① 激活 pill 压缩靠右（常态只留圆点+名，stub/broken 警示文字保留——偏离 v2-handoff-patch-02 SPEC 的「pill 显示状态文案」约定，体验修订）；② 定时任务面板人性化重做（v2.10 并入）：按行为分组（定时跑/常驻/自启）、下次运行倒计时 + 按它排序（StartCalendarInterval/cron 的 next-fire 纯函数计算）、上次运行时间从日志 mtime 推断、人话名（prettyLabel 去 reverse-DNS 噪音 + 可编辑备注存 meta.schedNotes）、停摆 daemon 红条 + 行内重启、今天还会跑摘要条。
 - v2.9.0：定时任务面板（launchd/crontab 可视化 + kickstart/load/unload）+ 详情 peek 三连 + 更新徽标语义修复。v2.8.0 成熟度大版见 docs/release/v2.8.0.md。
 - 测试 88 个（StoreFSTests 57 + AppModelTests 8 + SchedTests 23），smoke 群全部可跑。
 
