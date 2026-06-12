@@ -841,13 +841,23 @@ final class AppModel {
         guard !schedLoading else { return }
         schedLoading = true
         let engine = sched
+        let notes = fs.loadMeta().schedNotes ?? [:]
         Task.detached { [weak self] in
-            let tasks = engine.scan()
+            let tasks = engine.scan(notes: notes)
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 self.schedTasks = tasks
                 self.schedLoading = false
             }
+        }
+    }
+
+    /// 保存任务人话备注（空串 = 清除），立即回写内存镜像
+    func schedSaveNote(_ task: SchedTask, note: String) {
+        let trimmed = note.trimmingCharacters(in: .whitespaces)
+        fs.saveSchedNote(task.label, note: trimmed)
+        if let i = schedTasks.firstIndex(where: { $0.id == task.id }) {
+            schedTasks[i].note = trimmed.isEmpty ? nil : trimmed
         }
     }
 
@@ -863,33 +873,35 @@ final class AppModel {
     }
 
     func schedKickstart(_ task: SchedTask) {
+        let restart = task.behavior == .daemon
         guard schedConfirm(
-            title: "立刻运行 \(task.label)？",
-            info: "等价于 launchctl kickstart -k——不等下次调度时间，现在就跑一遍。任务输出看它自己的日志。",
-            button: "跑一次"
+            title: restart ? "重启 \(task.displayName)？" : "立刻运行 \(task.displayName)？",
+            info: "等价于 launchctl kickstart -k——\(restart ? "杀掉旧进程重新拉起。" : "不等下次调度时间，现在就跑一遍。")任务输出看它自己的日志。",
+            button: restart ? "重启" : "跑一次"
         ) else { return }
-        schedRun(task, doneToast: "已触发 \(task.label)") { try $0.kickstart($1) }
+        schedRun(task, doneToast: "已触发 \(task.displayName)") { try $0.kickstart($1) }
     }
 
     func schedSetLoaded(_ task: SchedTask, to on: Bool) {
         guard schedConfirm(
-            title: on ? "启用 \(task.label)？" : "停用 \(task.label)？",
+            title: on ? "启用 \(task.displayName)？" : "停用 \(task.displayName)？",
             info: on ? "launchctl load——按 plist 里的调度恢复运行。"
                      : "launchctl unload——不再按时执行，plist 文件原样保留，随时可重新启用。",
             button: on ? "启用" : "停用"
         ) else { return }
-        schedRun(task, doneToast: on ? "已启用 \(task.label)" : "已停用 \(task.label)") { try $0.setLoaded($1, to: on) }
+        schedRun(task, doneToast: on ? "已启用 \(task.displayName)" : "已停用 \(task.displayName)") { try $0.setLoaded($1, to: on) }
     }
 
     private func schedRun(_ task: SchedTask, doneToast: String, _ op: @escaping (SchedEngine, SchedTask) throws -> Void) {
         guard !schedBusy.contains(task.id) else { return }
         schedBusy.insert(task.id)
         let engine = sched
+        let notes = fs.loadMeta().schedNotes ?? [:]
         Task.detached { [weak self] in
             let result = Result { try op(engine, task) }
             // launchctl 状态变化（尤其 kickstart 的退出码）要一拍后才稳定
             try? await Task.sleep(for: .milliseconds(600))
-            let tasks = engine.scan()
+            let tasks = engine.scan(notes: notes)
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 self.schedBusy.remove(task.id)

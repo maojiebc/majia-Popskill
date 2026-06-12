@@ -29,8 +29,8 @@ swift-app/Sources/Popskill/
 ├── FixPopover.swift    行内修复弹层（锚定单元格）
 ├── DetailPeek.swift    详情 peek（PATCH-01：点能力名称，380 宽，与修复弹层互斥）
 ├── Sheets.swift        添加（URL→安装计划）+ 设置
-├── Sched.swift         定时任务引擎（v2.9：launchd plist/crontab 只读解析 + launchctl 操作）
-├── SchedSheet.swift    定时任务弹层（◷ / ⌘J；写操作 NSAlert 确认）
+├── Sched.swift         定时任务引擎（v2.9 引入 v2.10 重做：plist/cron 解析 + next-fire 计算 + 日志 mtime 推上次运行 + launchctl 操作）
+├── SchedSheet.swift    定时任务弹层（◷ / ⌘J；行为分组/倒计时排序/人话备注；写操作 NSAlert 确认）
 └── Fixtures.swift      原型样例数据（POPSKILL_FAKE_DATA=1）
 Tests/PopskillTests/StoreFSTests.swift   引擎测试 + RealEnvSmoke 只读冒烟
 Tests/PopskillTests/AppModelTests.swift  纯逻辑测试（修复推荐矩阵/键盘状态机）
@@ -80,7 +80,7 @@ POPSKILL_AUTOCONFIRM=1          # 跳过确认弹窗（配合 E2E）
 swift build --package-path swift-app
 scripts/test.sh        # 封装了 DEVELOPER_DIR=/Applications/Xcode.app（CLT 没有 XCTest）
 scripts/ci-local.sh    # 全链本地 CI：语法/构建/测试/启动冒烟/bundle 冒烟/截图/发布工件
-# 基线：80 个测试（StoreFSTests + AppModelTests + SchedTests）+ 真实环境只读冒烟 POPSKILL_REAL_SMOKE=1
+# 基线：88 个测试（StoreFSTests + AppModelTests + SchedTests）+ 真实环境只读冒烟 POPSKILL_REAL_SMOKE=1
 ```
 
 ## 凭证 / 路径（设了一次终生有效）
@@ -134,9 +134,9 @@ scripts/release.sh
 
 ## 当前状态（2026-06-12）
 
-- 线上 **v2.9.0**：定时任务面板（launchd/crontab 可视化 + kickstart/load/unload）+ 详情 peek 三连（嵌套 metadata 版本号/可点击源链接/SKILL.md 直开）+ 更新徽标语义修复（亮徽标不短路、确认一致自动熄灭）。
-- v2.8.0 成熟度大版（41 条审计修复，五大簇：引擎数据安全/反馈链诚实化/平台惯例/可见可控/基建）已发，详见 docs/release/v2.8.0.md。
-- 测试 80 个（StoreFSTests 57 + AppModelTests 8 + SchedTests 15），smoke 群全部可跑。
+- 线上 **v2.9.0**；main 上已落 **v2.10 定时任务人性化重做**（未发版）：按行为分组（定时跑/常驻/自启）、下次运行倒计时 + 按它排序（StartCalendarInterval/cron 的 next-fire 纯函数计算）、上次运行时间从日志 mtime 推断、人话名（prettyLabel 去 reverse-DNS 噪音 + 可编辑备注存 meta.schedNotes）、停摆 daemon 红条 + 行内重启、今天还会跑摘要条。
+- v2.9.0：定时任务面板（launchd/crontab 可视化 + kickstart/load/unload）+ 详情 peek 三连 + 更新徽标语义修复。v2.8.0 成熟度大版见 docs/release/v2.8.0.md。
+- 测试 88 个（StoreFSTests 57 + AppModelTests 8 + SchedTests 23），smoke 群全部可跑。
 
 ## 下一步候选
 

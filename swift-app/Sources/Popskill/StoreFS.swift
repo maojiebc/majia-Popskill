@@ -42,6 +42,9 @@ struct StoreMeta: Codable {
     }
     var entries: [String: EntryMeta] = [:]
     var tools: [String: ToolMeta] = [:]
+    // 定时任务人话备注（label → 备注，v2.10）。Optional：旧 meta JSON 没有此 key，
+    // 非 Optional 默认值不参与 Codable 合成解码，会让整个 loadMeta 抛错
+    var schedNotes: [String: String]?
 }
 
 struct SyncInfo: Equatable {
@@ -1071,6 +1074,16 @@ struct StoreFS {
             m.latest = latest
             m.changed = latest == nil ? nil : changed
             meta.entries[entryName] = m
+        }
+    }
+
+    /// 定时任务人话备注（v2.10）。note 传 nil/空串 = 清除
+    func saveSchedNote(_ label: String, note: String?) {
+        mutateMeta { meta in
+            var notes = meta.schedNotes ?? [:]
+            let trimmed = note?.trimmingCharacters(in: .whitespaces)
+            notes[label] = (trimmed?.isEmpty ?? true) ? nil : trimmed
+            meta.schedNotes = notes
         }
     }
 

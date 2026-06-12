@@ -1,28 +1,49 @@
 import AppKit
 import SwiftUI
 
-// 定时任务弹层（v2.9）—— launchd 用户级任务 + crontab 的可视化。
-// 只读解析为主；写操作（跑一次 / 停用 / 启用）全部走 AppModel 的确认弹窗。
+// 定时任务弹层（v2.9 引入，v2.10 人性化重做）。
+// 视角翻转：分组按行为（定时跑/常驻/自启）不按 launchd/cron；每行主信息是
+// 「下次什么时候跑」倒计时（按它排序）和「上次结果」；reverse-DNS label 换成
+// 人话名 + 可编辑备注。只读解析为主；写操作全部走 AppModel 的确认弹窗。
 
 struct SchedSheet: View {
     @Environment(AppModel.self) private var model
+    @State private var editingId: String?
+    @State private var noteDraft = ""
+    @State private var hoverId: String?
+    @FocusState private var noteFocus: Bool
 
-    private var launchdTasks: [SchedTask] {
-        model.schedTasks.filter { $0.kind == .launchd && (model.schedShowVendor || !$0.vendor) }
+    private var visible: [SchedTask] {
+        model.schedTasks.filter { model.schedShowVendor || !$0.vendor }
     }
-    private var cronTasks: [SchedTask] { model.schedTasks.filter { $0.kind == .cron } }
-    private var vendorCount: Int { model.schedTasks.filter { $0.kind == .launchd && $0.vendor }.count }
+    private var timed: [SchedTask] {
+        visible.filter { $0.behavior == .timed }
+            .sorted { ($0.nextFire ?? .distantFuture, $0.label) < ($1.nextFire ?? .distantFuture, $1.label) }
+    }
+    private var daemons: [SchedTask] { visible.filter { $0.behavior == .daemon } }
+    private var loginItems: [SchedTask] { visible.filter { $0.behavior == .loginItem || $0.behavior == .manual } }
+    private var vendorCount: Int { model.schedTasks.filter(\.vendor).count }
 
     var body: some View {
         SheetShell(width: 660, onDismiss: { model.sheet = nil }) {
             VStack(spacing: 0) {
                 head
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 22) {
-                        launchdSection
-                        cronSection
+                    VStack(alignment: .leading, spacing: 20) {
+                        todayStrip
+                        if !timed.isEmpty { section("按时间跑（\(timed.count)）· 按下次运行排序", timed) }
+                        if !daemons.isEmpty { section("常驻后台（\(daemons.count)）", daemons) }
+                        if !loginItems.isEmpty { section("登录自启（\(loginItems.count)）", loginItems) }
+                        if visible.isEmpty {
+                            Text(model.schedLoading ? "扫描中…" : "没有可显示的任务")
+                                .font(.ui(11.5)).foregroundStyle(Ink.tertiary).padding(.vertical, 10)
+                        }
+                        if !timed.filter({ $0.kind == .cron }).isEmpty {
+                            Text("cron 条目在终端用 crontab -e 管理，这里只看不动。")
+                                .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+                        }
                     }
-                    .padding(EdgeInsets(top: 16, leading: 20, bottom: 16, trailing: 20))
+                    .padding(EdgeInsets(top: 14, leading: 20, bottom: 16, trailing: 20))
                 }
                 .frame(maxHeight: 560)
                 foot
@@ -34,7 +55,7 @@ struct SchedSheet: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("定时任务").font(.ui(15.5, .bold)).foregroundStyle(Ink.ink)
-                Text("launchd 用户级任务与 crontab — 谁在跑、什么时候跑、上次结果如何。")
+                Text("谁在跑、下次什么时候跑、上次结果如何。点名字旁的 ✎ 加人话备注。")
                     .font(.ui(11.5)).foregroundStyle(Ink.secondary)
             }
             Spacer()
@@ -53,34 +74,36 @@ struct SchedSheet: View {
         .overlay(alignment: .bottom) { Ink.hairline.frame(height: 1) }
     }
 
-    // ── launchd ──────────────────────────────────────────
-
-    private var launchdSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionLabel(text: "LAUNCHD · ~/Library/LaunchAgents（\(launchdTasks.count)）")
-            if launchdTasks.isEmpty {
-                Text(model.schedLoading ? "扫描中…" : "没有用户级 launchd 任务")
-                    .font(.ui(11.5)).foregroundStyle(Ink.tertiary).padding(.vertical, 10)
+    /// 今天还会跑什么——打开面板第一眼的答案
+    @ViewBuilder
+    private var todayStrip: some View {
+        let cal = Calendar.current
+        let today = timed.filter { $0.nextFire.map { cal.isDateInToday($0) } ?? false }
+        if !today.isEmpty {
+            HStack(spacing: 6) {
+                Text("◷").font(.ui(11)).foregroundStyle(Ink.amberText)
+                Text("今天还会跑 \(today.count) 个：" + today.prefix(3).map {
+                    "\(shortTime($0.nextFire!)) \($0.displayName)"
+                }.joined(separator: " · ") + (today.count > 3 ? " …" : ""))
+                    .font(.ui(11)).foregroundStyle(Ink.amberText)
+                    .lineLimit(1).truncationMode(.tail)
             }
-            VStack(spacing: 6) {
-                ForEach(launchdTasks) { t in row(t) }
-            }
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 6).fill(Ink.amberBadgeBg.opacity(0.5)))
         }
     }
 
-    private var cronSection: some View {
+    private func shortTime(_ d: Date) -> String {
+        let c = Calendar.current
+        return String(format: "%02d:%02d", c.component(.hour, from: d), c.component(.minute, from: d))
+    }
+
+    private func section(_ title: String, _ tasks: [SchedTask]) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            SectionLabel(text: "CRONTAB（\(cronTasks.count)）")
-            if cronTasks.isEmpty {
-                Text(model.schedLoading ? "扫描中…" : "crontab 为空")
-                    .font(.ui(11.5)).foregroundStyle(Ink.tertiary).padding(.vertical, 10)
-            }
+            SectionLabel(text: title)
             VStack(spacing: 6) {
-                ForEach(cronTasks) { t in row(t) }
-            }
-            if !cronTasks.isEmpty {
-                Text("cron 条目在终端用 crontab -e 管理，这里只看不动。")
-                    .font(.ui(10.5)).foregroundStyle(Ink.tertiary).padding(.top, 8)
+                ForEach(tasks) { t in row(t) }
             }
         }
     }
@@ -88,38 +111,123 @@ struct SchedSheet: View {
     // ── 行 ───────────────────────────────────────────────
 
     private func row(_ t: SchedTask) -> some View {
-        SheetRow {
+        HStack(spacing: 10) {
             Circle().fill(dotColor(t)).frame(width: 7, height: 7)
                 .help(dotHelp(t))
             VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 6) {
-                    Text(t.label)
+                if editingId == t.id {
+                    TextField("人话备注，留空恢复默认", text: $noteDraft)
+                        .textFieldStyle(.plain)
                         .font(.ui(12, .semibold)).foregroundStyle(Ink.ink)
-                        .lineLimit(1).truncationMode(.middle)
-                    if let exit = t.lastExit, exit != 0 {
-                        Text("上次退出 \(exit)")
-                            .font(.mono(9.5)).foregroundStyle(Ink.red)
-                            .padding(.horizontal, 5).padding(.vertical, 1)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Ink.red.opacity(0.45), lineWidth: 1))
-                    }
-                    if t.kind == .launchd && !t.loaded {
-                        Text("已停用").font(.ui(9.5)).foregroundStyle(Ink.tertiary)
-                            .padding(.horizontal, 5).padding(.vertical, 1)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Ink.control2, lineWidth: 1))
+                        .focused($noteFocus)
+                        .onSubmit { commitNote(t) }
+                        .onExitCommand { editingId = nil }
+                } else {
+                    HStack(spacing: 5) {
+                        Text(t.displayName)
+                            .font(.ui(12, .semibold)).foregroundStyle(Ink.ink)
+                            .lineLimit(1).truncationMode(.middle)
+                        if t.kind == .cron {
+                            Text("cron").font(.mono(9))
+                                .foregroundStyle(Ink.tertiary)
+                                .padding(.horizontal, 4)
+                                .overlay(RoundedRectangle(cornerRadius: 3).stroke(Ink.control2, lineWidth: 1))
+                        }
+                        if t.kind == .launchd && !t.loaded {
+                            Text("已停用").font(.ui(9.5)).foregroundStyle(Ink.tertiary)
+                                .padding(.horizontal, 5).padding(.vertical, 1)
+                                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Ink.control2, lineWidth: 1))
+                        }
+                        if hoverId == t.id {
+                            Button {
+                                noteDraft = t.note ?? ""
+                                editingId = t.id
+                                noteFocus = true
+                            } label: {
+                                Text("✎").font(.ui(11)).foregroundStyle(Ink.tertiary)
+                            }
+                            .buttonStyle(.plain)
+                            .help("编辑人话备注（存在 Popskill，不动 plist）")
+                        }
                     }
                 }
-                Text(t.command)
-                    .font(.mono(10.5)).foregroundStyle(Ink.tertiary)
+                Text(commandShort(t))
+                    .font(.mono(10)).foregroundStyle(Ink.tertiary)
                     .lineLimit(1).truncationMode(.middle)
             }
             Spacer(minLength: 10)
-            Text(t.schedule)
-                .font(.ui(11, .medium)).foregroundStyle(Ink.secondary)
-                .lineLimit(1)
-                .layoutPriority(1)
+            rightInfo(t)
             actions(t)
         }
+        .padding(.horizontal, 10).padding(.vertical, 8)
+        .background(RoundedRectangle(cornerRadius: 7).fill(.white))
+        .overlay(RoundedRectangle(cornerRadius: 7).stroke(t.stalled ? Ink.red.opacity(0.4) : Ink.hairline, lineWidth: 1))
         .opacity(t.kind == .launchd && !t.loaded ? 0.62 : 1)
+        .onHover { hoverId = $0 ? t.id : (hoverId == t.id ? nil : hoverId) }
+    }
+
+    /// 右侧主信息：定时任务 = 下次倒计时；daemon = 活着/停摆；自启 = 状态
+    @ViewBuilder
+    private func rightInfo(_ t: SchedTask) -> some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            switch t.behavior {
+            case .timed:
+                if let next = t.nextFire, t.loaded {
+                    Text(SchedEngine.humanNext(next))
+                        .font(.ui(11.5, .semibold)).foregroundStyle(Ink.blue)
+                } else {
+                    Text(t.loaded ? t.schedule : "不会再跑")
+                        .font(.ui(11.5, .medium)).foregroundStyle(Ink.secondary)
+                }
+                Text(subLine(t)).font(.ui(10)).foregroundStyle(Ink.tertiary)
+            case .daemon:
+                if t.stalled {
+                    Text("已停摆").font(.ui(11.5, .semibold)).foregroundStyle(Ink.red)
+                    Text("上次退出码 \(t.lastExit ?? -1)").font(.ui(10)).foregroundStyle(Ink.red.opacity(0.8))
+                } else if t.pid != nil {
+                    Text("运行中").font(.ui(11.5, .semibold)).foregroundStyle(Ink.greenText)
+                    Text("PID \(t.pid!)").font(.mono(9.5)).foregroundStyle(Ink.tertiary)
+                } else {
+                    Text("已停用").font(.ui(11.5, .medium)).foregroundStyle(Ink.tertiary)
+                    Text("常驻 daemon").font(.ui(10)).foregroundStyle(Ink.tertiary)
+                }
+            case .loginItem, .manual:
+                Text(t.pid != nil ? "运行中" : (t.loaded ? "已就绪" : "已停用"))
+                    .font(.ui(11.5, .medium))
+                    .foregroundStyle(t.pid != nil ? Ink.greenText : Ink.secondary)
+                Text(t.behavior == .manual ? "未配置调度" : "登录自启").font(.ui(10)).foregroundStyle(Ink.tertiary)
+            }
+        }
+        .lineLimit(1)
+        .layoutPriority(1)
+    }
+
+    /// 定时行副行："每天 05:00 · 上次 今天 05:00 ✓"
+    private func subLine(_ t: SchedTask) -> String {
+        var parts = [t.schedule]
+        if let last = t.lastRun {
+            let mark = (t.lastExit ?? 0) == 0 ? "✓" : "✗ 码 \(t.lastExit!)"
+            parts.append("上次 \(SchedEngine.humanLast(last)) \(mark)")
+        } else if let exit = t.lastExit, exit != 0 {
+            parts.append("上次退出码 \(exit)")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private func commandShort(_ t: SchedTask) -> String {
+        // 副行展示脚本本体的 basename，整行命令太长没人读。
+        // 跳过解释器、flag、env 赋值和引号碎片（zsh -lc 'export HOME="…"; python3 x.py' 这种）；
+        // 优先认有脚本扩展名的 token，找不到再退回第一个干净路径。
+        let interpreters = ["/bin/bash", "/bin/zsh", "/bin/sh", "/usr/bin/env", "/usr/bin/python3"]
+        let parts = t.command.split(separator: " ").map(String.init)
+            .filter { $0.contains("/") && !$0.hasPrefix("-") && !$0.contains("=") && !$0.contains("\"") && !$0.contains("'") && !interpreters.contains($0) }
+        let exts = ["sh", "py", "mjs", "js", "rb", "pl", "swift"]
+        let script = parts.first { exts.contains(URL(fileURLWithPath: $0).pathExtension) } ?? parts.first
+        if let script {
+            let name = URL(fileURLWithPath: script).lastPathComponent
+            if !name.isEmpty { return name }
+        }
+        return t.command
     }
 
     @ViewBuilder
@@ -132,25 +240,38 @@ struct SchedSheet: View {
             if t.canOperate {
                 if busy {
                     ProgressView().controlSize(.small).frame(width: 22, height: 22)
-                } else {
-                    if t.loaded {
-                        HoverAction(symbol: "▶", danger: false, help: "立刻跑一次（launchctl kickstart）") { model.schedKickstart(t) }
-                        HoverAction(symbol: "⏸", danger: true, help: "停用（launchctl unload，不删文件）") { model.schedSetLoaded(t, to: false) }
-                    } else {
-                        HoverAction(symbol: "⏻", danger: false, help: "启用（launchctl load）") { model.schedSetLoaded(t, to: true) }
+                } else if t.stalled {
+                    Button { model.schedKickstart(t) } label: {
+                        Text("重启")
+                            .font(.ui(10.5, .semibold)).foregroundStyle(Ink.red)
+                            .padding(.horizontal, 8).frame(height: 22)
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Ink.red.opacity(0.45), lineWidth: 1))
                     }
+                    .buttonStyle(.plain)
+                } else if t.loaded {
+                    HoverAction(symbol: "▶", danger: false,
+                                help: t.behavior == .daemon ? "重启（launchctl kickstart -k）" : "立刻跑一次（launchctl kickstart）") { model.schedKickstart(t) }
+                    HoverAction(symbol: "⏸", danger: true, help: "停用（launchctl unload，不删文件）") { model.schedSetLoaded(t, to: false) }
+                } else {
+                    HoverAction(symbol: "⏻", danger: false, help: "启用（launchctl load）") { model.schedSetLoaded(t, to: true) }
                 }
             }
         }
     }
 
+    private func commitNote(_ t: SchedTask) {
+        model.schedSaveNote(t, note: noteDraft)
+        editingId = nil
+    }
+
     private func dotColor(_ t: SchedTask) -> Color {
-        if t.kind == .cron { return Ink.green }
-        if !t.loaded { return Ink.offDot }
+        if t.stalled { return Ink.red }
+        if t.kind == .launchd && !t.loaded { return Ink.offDot }
         return (t.lastExit ?? 0) == 0 ? Ink.green : Ink.red
     }
 
     private func dotHelp(_ t: SchedTask) -> String {
+        if t.stalled { return "常驻任务在册但没有进程——停摆了" }
         if t.kind == .cron { return "crontab 在册即生效" }
         if !t.loaded { return "未加载（已停用）" }
         return (t.lastExit ?? 0) == 0 ? "已加载，上次运行正常" : "已加载，上次运行失败（退出码 \(t.lastExit ?? -1)）"
