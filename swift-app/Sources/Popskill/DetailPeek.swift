@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 // 详情 peek（PATCH-01）— 点击能力名称弹出，看完即走；深读走「在编辑器中打开」。
@@ -108,11 +109,12 @@ struct DetailPeekView: View {
             }
             .padding(.top, 10)
             if let url = target.entry.sourceUrl {
-                Text("↗ \(url)")
-                    .font(.mono(10.5))
-                    .foregroundStyle(Ink.secondary)
-                    .lineLimit(1).truncationMode(.tail)
-                    .padding(.top, 8)
+                PeekLink(text: "↗ \(url)", font: .mono(10.5), base: Ink.secondary) {
+                    if let u = URL(string: url.hasPrefix("http") ? url : "https://\(url)") {
+                        NSWorkspace.shared.open(u)
+                    }
+                }
+                .padding(.top, 8)
             }
         }
         .padding(EdgeInsets(top: 11, leading: 14, bottom: 11, trailing: 14))
@@ -133,7 +135,7 @@ struct DetailPeekView: View {
         .lineLimit(1)
     }
 
-    // 3. 底部：编辑器按钮 + 提示
+    // 3. 底部：编辑器按钮 + 文档直开
     private var foot: some View {
         HStack {
             Button {
@@ -150,12 +152,46 @@ struct DetailPeekView: View {
             }
             .buttonStyle(.plain)
             Spacer()
-            Text("完整文档在 SKILL.md")
-                .font(.ui(10.5))
-                .foregroundStyle(Color(hex: 0xB3AE9E))
+            if let doc = docURL {
+                PeekLink(text: "↗ 打开 \(doc.lastPathComponent)", font: .ui(10.5), base: Color(hex: 0xB3AE9E)) {
+                    NSWorkspace.shared.open(doc)
+                    model.peekTarget = nil
+                }
+            }
         }
         .padding(EdgeInsets(top: 9, leading: 14, bottom: 9, trailing: 14))
         .background(Ink.window)
         .overlay(alignment: .top) { Ink.hairline2.frame(height: 1) }
+    }
+
+    /// 完整文档文件：CLI 是 README.md，其余 SKILL.md；不存在就不给入口
+    private var docURL: URL? {
+        let name = target.cap.linkKind == .cli ? "README.md" : "SKILL.md"
+        let u = target.cap.dirURL.appendingPathComponent(name)
+        return FileManager.default.fileExists(atPath: u.path) ? u : nil
+    }
+}
+
+/// peek 内的文字链接：hover 变交互蓝 + 手型光标，点击执行动作
+private struct PeekLink: View {
+    let text: String
+    let font: Font
+    let base: Color
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Text(text)
+                .font(font)
+                .foregroundStyle(hovered ? Ink.blue : base)
+                .underline(hovered)
+                .lineLimit(1).truncationMode(.tail)
+        }
+        .buttonStyle(.plain)
+        .onHover { h in
+            hovered = h
+            if h { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
     }
 }

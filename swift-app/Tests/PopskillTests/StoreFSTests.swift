@@ -124,6 +124,88 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(front["author"], "majia")
     }
 
+    func testFrontmatterNestedMetadata() throws {
+        // Agent Skills 标准格式：version/author 嵌在 metadata: 下（majia-guanyuan 实例）
+        let dir = try makeSkill("nested")
+        try """
+        ---
+        name: nested
+        license: MIT
+        metadata:
+          version: "3.0.5"
+          author: "超级马甲 / maojiebc"
+          openclaw:
+            emoji: "📊"
+            os:
+              - macos
+        ---
+        正文
+        """.write(to: dir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let front = fs.frontmatter(dir.appendingPathComponent("SKILL.md"))
+        XCTAssertEqual(front["version"], "3.0.5", "metadata 直接子级的 version 要能读到")
+        XCTAssertEqual(front["author"], "超级马甲 / maojiebc")
+        XCTAssertEqual(front["license"], "MIT", "顶层 key 不受嵌套块影响")
+        XCTAssertNil(front["emoji"], "更深层（openclaw:）不收，避免误拾")
+    }
+
+    func testCheckUpdateClearsStaleLatest() throws {
+        // 用户在终端手动把 store 同步到了上游：完整比对确认一致后，
+        // 上次检查残留的 latest 徽标必须熄灭（HEAD 短路路径不受影响——
+        // latest 非 nil 时不短路，见 checkUpdate）
+        let upstream = sandbox.appendingPathComponent("up-fresh")
+        let upSkill = upstream.appendingPathComponent("skills/fresh")
+        try fm.createDirectory(at: upSkill, withIntermediateDirectories: true)
+        try "---\nname: fresh\nversion: 2.0.0\n---\n已同步内容\n".write(
+            to: upSkill.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        try fm.copyItem(at: upSkill, to: env.storeRoot.appendingPathComponent("skills/fresh"))
+        fs.saveLatest("fresh", latest: "新版", changed: ["fresh"])   // 上次检查的残留
+
+        let cap = Capability(id: "fresh", name: "fresh", type: .skill, linkKind: .skill, desc: "",
+                             version: "2.0.0", author: nil, tokens: 0,
+                             dirURL: env.storeRoot.appendingPathComponent("skills/fresh"))
+        let entry = Entry(id: "fresh", cap: cap, children: nil, bundleKind: nil,
+                          sourceUrl: upstream.path, latest: "新版")
+
+        XCTAssertNil(try fs.checkUpdate(entry), "内容一致应返回 nil")
+        XCTAssertNil(fs.loadMeta().entries["fresh"]?.latest, "确认一致后残留徽标要熄灭")
+        XCTAssertNil(fs.loadMeta().entries["fresh"]?.changed)
+    }
+
+    func testCheckUpdateKeepsLatestWhenStillChanged() throws {
+        // 上游仍有差异：latest 维持（重新解析出上游版本号）
+        let upstream = sandbox.appendingPathComponent("up-diff")
+        let upSkill = upstream.appendingPathComponent("skills/diffy")
+        try fm.createDirectory(at: upSkill, withIntermediateDirectories: true)
+        try "---\nname: diffy\nversion: 3.1.0\n---\n上游新内容\n".write(
+            to: upSkill.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        _ = try makeSkill("diffy", version: "3.0.5")
+
+        let cap = Capability(id: "diffy", name: "diffy", type: .skill, linkKind: .skill, desc: "",
+                             version: "3.0.5", author: nil, tokens: 0,
+                             dirURL: env.storeRoot.appendingPathComponent("skills/diffy"))
+        let entry = Entry(id: "diffy", cap: cap, children: nil, bundleKind: nil,
+                          sourceUrl: upstream.path, latest: "新版")
+
+        let check = try XCTUnwrap(try fs.checkUpdate(entry), "有差异应返回 UpdateCheck")
+        XCTAssertEqual(check.latest, "3.1.0", "应解析出上游版本号而非笼统的「新版」")
+    }
+
+    func testFrontmatterTopLevelWinsOverMetadata() throws {
+        let dir = try makeSkill("nested2")
+        try """
+        ---
+        name: nested2
+        metadata:
+          version: "9.9.9"
+          type: agent
+        version: "1.0.0"
+        ---
+        """.write(to: dir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let front = fs.frontmatter(dir.appendingPathComponent("SKILL.md"))
+        XCTAssertEqual(front["version"], "1.0.0", "顶层与 metadata 同名时顶层优先")
+        XCTAssertEqual(front["type"], "agent", "metadata 只补顶层缺失的 key")
+    }
+
     // ── 链接状态 ──────────────────────────────────────────
 
     func testLinkStatusOn() throws {

@@ -981,9 +981,12 @@ struct StoreFS {
         // 一次 ls-remote 替代几十 MB 下载，13 个源的启动检查从分钟级降到秒级。
         // 本地不变性必须一起验（localDigest，纯磁盘 IO）：目标用户天天在终端动
         // ~/.agents，只比 HEAD 会让本地改坏的技能永远检不出来。
+        // 亮着更新徽标（latest 非 nil）的也不短路：短路会把上次的「新版」结论钉死，
+        // 走完整比对才能重新解析出上游版本号、或在上游回退后熄灭徽标。
         // ls-remote 失败（断网等）不吞：落到下面的完整 resolve，让错误如实抛出
         if SourceKind.of(url) == .github,
            let m = loadMeta().entries[entry.name],
+           m.latest == nil,
            let last = m.lastHead, !last.isEmpty,
            m.localDigest == localDigest(entry),
            let head = remoteHead(url), head == last {
@@ -1004,7 +1007,12 @@ struct StoreFS {
         }
         let upstreamNew = upstreamOnlySkills(staging: resolved.stagingDir, knownNames: Set(members.map(\.name)))
         if let sha = resolved.headSha { saveCheckpoint(entry.name, head: sha, localDigest: localDigest(entry)) }
-        guard !changed.isEmpty else { return nil }
+        guard !changed.isEmpty else {
+            // 完整比对确认与上游一致（如用户在终端手动同步过）：熄灭残留的更新徽标。
+            // 只有这条路径能清——HEAD 短路的 nil 是「没变化」不是「已一致」
+            if loadMeta().entries[entry.name]?.latest != nil { saveLatest(entry.name, latest: nil) }
+            return nil
+        }
         let latest: String
         if changed.count == 1 && members.count == 1 {
             latest = (changedVersion != nil && changedVersion != members[0].version) ? changedVersion! : "新版"
@@ -1127,20 +1135,37 @@ struct StoreFS {
 
     // ── 解析辅助 ──────────────────────────────────────────
 
-    /// SKILL.md YAML frontmatter 的扁平 key: value（支持 | / > 多行块标量，取首段文本）
+    /// SKILL.md YAML frontmatter 的扁平 key: value（支持 | / > 多行块标量，取首段文本）。
+    /// Agent Skills 标准把 version/author/homepage 嵌在 `metadata:` 下——其**直接子级**
+    /// 一并收入（顶层同名优先，更深层如 openclaw: 不收），嵌套写法的版本号才不会丢。
     func frontmatter(_ url: URL) -> [String: String] {
         guard let text = try? String(contentsOf: url, encoding: .utf8),
               text.hasPrefix("---") else { return [:] }
         var out: [String: String] = [:]
         let lines = Array(text.split(separator: "\n", omittingEmptySubsequences: false).dropFirst())
         var i = 0
+        var metaIndent: Int?   // 非 nil = 在 metadata: 块内；0 = 等首个子行定缩进宽度
         while i < lines.count {
             let line = lines[i]
             i += 1
             if line.hasPrefix("---") { break }
-            guard let colon = line.firstIndex(of: ":"), !line.hasPrefix(" "), !line.hasPrefix("\t") else { continue }
+            if line.hasPrefix(" ") || line.hasPrefix("\t") {
+                guard metaIndent != nil, !line.hasPrefix("\t"),
+                      let colon = line.firstIndex(of: ":") else { continue }
+                let indent = line.prefix(while: { $0 == " " }).count
+                if metaIndent == 0 { metaIndent = indent }
+                guard indent == metaIndent else { continue }   // 更深层（openclaw: 等）不收
+                let key = String(line[..<colon]).trimmingCharacters(in: .whitespaces)
+                var val = String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
+                if val.hasPrefix("\"") && val.hasSuffix("\"") && val.count >= 2 { val = String(val.dropFirst().dropLast()) }
+                if !key.isEmpty && !val.isEmpty && out[key] == nil { out[key] = val }
+                continue
+            }
+            metaIndent = nil
+            guard let colon = line.firstIndex(of: ":") else { continue }
             let key = String(line[..<colon]).trimmingCharacters(in: .whitespaces)
             var val = String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
+            if key == "metadata" && val.isEmpty { metaIndent = 0; continue }
             if ["|", "|-", ">", ">-"].contains(val) {
                 // 块标量：收集后续缩进行，拼成一段（够展示用即可）
                 var parts: [String] = []

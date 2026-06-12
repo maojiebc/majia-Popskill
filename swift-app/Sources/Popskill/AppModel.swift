@@ -515,35 +515,37 @@ final class AppModel {
         let fsCopy = fs
         Task { [weak self] in
             var found: [StoreFS.UpdateCheck] = []
+            var fresh: [String] = []   // 检查成功且确认无更新的 entryId（用于熄灭残留徽标）
             var failed = 0
             // 失败和「确实最新」必须是两个态——曾用 try? 把断网/源被删压成 nil，
             // 然后对用户谎报「全部源已是最新」
-            await withTaskGroup(of: Result<StoreFS.UpdateCheck?, Error>.self) { group in
+            await withTaskGroup(of: (String, Result<StoreFS.UpdateCheck?, Error>).self) { group in
                 var pending = candidates.makeIterator()
                 var running = 0
                 func enqueue() {
                     while running < 4, let e = pending.next() {
                         running += 1
                         group.addTask {
-                            do { return .success(try fsCopy.checkUpdate(e)) }
+                            do { return (e.id, .success(try fsCopy.checkUpdate(e))) }
                             catch {
                                 plog.error("检查更新失败 \(e.name, privacy: .public): \(error.localizedDescription, privacy: .public)")
-                                return .failure(error)
+                                return (e.id, .failure(error))
                             }
                         }
                     }
                 }
                 enqueue()
-                for await result in group {
+                for await (id, result) in group {
                     running -= 1
                     switch result {
-                    case .success(let check): if let check { found.append(check) }
+                    case .success(let check): if let check { found.append(check) } else { fresh.append(id) }
                     case .failure: failed += 1
                     }
                     enqueue()
                 }
             }
             let failedCount = failed
+            let freshIds = fresh
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 self.checkingUpdates = false
@@ -552,6 +554,14 @@ final class AppModel {
                         self.entries[i].latest = check.latest
                         self.entries[i].changedMembers = check.changedMembers
                         self.fs.saveLatest(self.entries[i].name, latest: check.latest, changed: check.changedMembers)
+                    }
+                }
+                // 确认一致的熄灭残留徽标（如终端手动同步后；meta 由 checkUpdate 清，这里同步内存镜像）。
+                // 检查失败的不在 freshIds 里——失败 ≠ 最新
+                for id in freshIds {
+                    if let i = self.entries.firstIndex(where: { $0.id == id }), self.entries[i].latest != nil {
+                        self.entries[i].latest = nil
+                        self.entries[i].changedMembers = nil
                     }
                 }
                 let autoTargets = auto ? self.entries.filter { $0.hasUpdate && $0.autoUpdate } : []
