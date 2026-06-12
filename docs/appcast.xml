@@ -8,6 +8,27 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.11.0</title>
+      <pubDate>Fri, 12 Jun 2026 16:27:58 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>Popskill v2.11.0 — 定时任务人性化重做 + 卡片信息密度</h2>
+        <h2>定时任务面板重做</h2>
+        <p>v2.9 首版面板的主角是 plist 字段（reverse-DNS 标识符 + 完整命令行），看懂要靠脑补。这版把主角换成人关心的三件事：这是干嘛的、下次什么时候跑、上次跑成没。</p>
+        <p><b>分组按行为</b>：按时间跑 / 常驻后台 / 登录自启——launchd 还是 crontab 降级成名字旁的小标签。 <b>下次运行是主信息</b>：「17 分钟后 · 23:41」蓝色倒计时，组内按它排序；StartCalendarInterval 与 cron 五字段（含 `*/n`、范围、列表、dom/dow OR 语义）精确计算。 <b>上次结果带时间</b>：从日志文件修改时间推断，「上次 今天 05:00 ✓」；失败显示退出码。 <b>人话名</b>：reverse-DNS 标识符自动美化，hover ✎ 可加自定义备注（存 Popskill 自己的 meta，不动 plist）。 <b>停摆检测</b>：常驻 daemon 在册但进程没了 → 红条 + 上次退出码 + 行内「重启」。 顶部「今天还会跑 N 个」一句话摘要。</p>
+        <h2>激活状态 pill 压缩</h2>
+        <p>卡片右侧的工具 pill 不再整列撑满：常态只留「圆点 + 工具名」，自适应内容宽、整列右对齐——省出来的宽度全部还给左侧的名称和描述。 状态语义不丢：圆点配色四态不变，hover 提示带具体状态；<b>占位 / 断链警示态仍显示文字</b>，问题不会被藏起来。</p>
+        <p>测试 80 → 88（next-fire 各形态 / 0=7 周日 / cron OR 语义 / 人话时间 / 归组 / 美化名 / 停摆 / 备注往返）。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.11.0/Popskill-2.11.0.dmg"
+        sparkle:version="274"
+        sparkle:shortVersionString="2.11.0"
+        sparkle:edSignature="m7FjbItaBvuR9uO6ExwNrO16UOQ49KDKBvzx+V/oURkvl+gHhRHVbJf/1PNlyewr2OedJNLUY5uqMGxi+F0IAw=="
+        length="2609036"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.9.0</title>
       <pubDate>Fri, 12 Jun 2026 08:49:12 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
