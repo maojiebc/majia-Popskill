@@ -48,7 +48,7 @@ struct MainView: View {
             HStack(spacing: 8) {
                 searchPill
                 Button { model.sheet = .add } label: {
-                    Text("+ 添加")
+                    Text(L("+ 添加"))
                         .font(.ui(12.5, .semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 14)
@@ -68,7 +68,7 @@ struct MainView: View {
         let active = model.tools
             .map { "\($0.name.split(separator: " ").first ?? "") \(s.activeByTool[$0.id] ?? 0)" }
             .joined(separator: " / ")
-        return "\(s.bundles) 套装 · \(s.standalone) 独立能力 · \(active) 已激活"
+        return L("\(s.bundles) 套装 · \(s.standalone) 独立能力 · \(active) 已激活")
     }
 
     private var searchPill: some View {
@@ -77,7 +77,7 @@ struct MainView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(searchFocus ? Ink.blue : Ink.tertiary)
-            TextField("搜索名称 / 描述 / 作者…", text: $model.query)
+            TextField(L("搜索名称 / 描述 / 作者…"), text: $model.query)
                 .textFieldStyle(.plain)
                 .font(.ui(12))
                 .foregroundStyle(Ink.ink)
@@ -115,7 +115,7 @@ struct MainView: View {
             if !model.issues.isEmpty {
                 HStack(spacing: 6) {
                     Text("✕").font(.mono(12))
-                    Text("\(model.issues.count) 个链接问题")
+                    Text(L("\(model.issues.count) 个链接问题"))
                 }
                 .font(.ui(12, .semibold))
                 .foregroundStyle(Ink.red)
@@ -126,18 +126,18 @@ struct MainView: View {
             if !model.updates.isEmpty {
                 HStack(spacing: 6) {
                     Text("↑").font(.mono(12))
-                    Text("\(model.updates.count) 个源可更新")
+                    Text(L("\(model.updates.count) 个源可更新"))
                 }
                 .font(.ui(12, .semibold))
                 .foregroundStyle(Ink.amberText)
             }
-            Text("点击 ✕ / ◐ / ↑ 可逐项处理")
+            Text(L("点击 ✕ / ◐ / ↑ 可逐项处理"))
                 .font(.ui(11.5))
                 .foregroundStyle(Color(hex: 0x8A8268))
             Spacer()
             if !model.issues.isEmpty {
                 Button { model.fixAll() } label: {
-                    Text("全部修复 (\(model.issues.count))")
+                    Text(L("全部修复 (\(model.issues.count))"))
                         .font(.ui(11.5, .semibold)).foregroundStyle(.white)
                         .padding(.horizontal, 11).padding(.vertical, 4)
                         .background(RoundedRectangle(cornerRadius: 5).fill(Ink.ink))
@@ -146,7 +146,7 @@ struct MainView: View {
             }
             if !model.updates.isEmpty {
                 Button { model.updateAll() } label: {
-                    Text("全部更新 (\(model.updates.count))")
+                    Text(L("全部更新 (\(model.updates.count))"))
                         .font(.ui(11.5, .semibold)).foregroundStyle(Color(hex: 0x5A4A14))
                         .padding(.horizontal, 11).padding(.vertical, 4)
                         .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color(hex: 0xCDB878), lineWidth: 1))
@@ -163,11 +163,11 @@ struct MainView: View {
 
     private var chipRow: some View {
         HStack(spacing: 6) {
-            chip(nil, "全部")
+            chip(nil, L("全部"))
             ForEach(CapType.allCases) { t in chip(t, t.rawValue) }
             Spacer()
             let filtering = !model.query.trimmingCharacters(in: .whitespaces).isEmpty || model.typeFilter != nil
-            Text(filtering ? "\(capCount) 项匹配" : "↑↓ 行 · ←→ 列 · 空格 切换")
+            Text(filtering ? L("\(capCount) 项匹配") : L("↑↓ 行 · ←→ 列 · 空格 切换"))
                 .font(.ui(11.5, filtering ? .semibold : .regular))
                 .foregroundStyle(filtering ? Ink.blue : Color(hex: 0x888888))
         }
@@ -260,7 +260,7 @@ struct MainView: View {
                 ScrollView {
                     if list.isEmpty {
                         VStack(spacing: 4) {
-                            Text("无匹配结果").font(.ui(13, .semibold)).foregroundStyle(Ink.secondary2)
+                            Text(L("无匹配结果")).font(.ui(13, .semibold)).foregroundStyle(Ink.secondary2)
                             noMatchHint
                         }
                         .frame(maxWidth: .infinity)
@@ -300,10 +300,10 @@ struct MainView: View {
     @ViewBuilder
     private var noMatchHint: some View {
         if q.isEmpty, let tf = model.typeFilter {
-            Text("没有 \(tf.rawValue.uppercased()) 类型的能力。点 + 添加，或切回「全部」。")
+            Text(L("没有 \(tf.rawValue.uppercased()) 类型的能力。点 + 添加，或切回「全部」。"))
                 .font(.ui(12)).foregroundStyle(Ink.tertiary)
         } else {
-            (Text("没有能力匹配 “") + Text(model.query).font(.mono(12)).foregroundStyle(Ink.ink) + Text("”。试试别的关键词，或 + 添加。"))
+            (Text(L("没有能力匹配 “")) + Text(model.query).font(.mono(12)).foregroundStyle(Ink.ink) + Text(L("”。试试别的关键词，或 + 添加。")))
                 .font(.ui(12)).foregroundStyle(Ink.tertiary)
         }
     }
@@ -387,15 +387,15 @@ struct BundleCompactCard: View {
                         .foregroundStyle(Ink.ink)
                         .lineLimit(1)
                     TypeTag(type: .bundle)
-                    Text("\(entry.children?.count ?? 0) 项")
+                    Text(L("\(entry.children?.count ?? 0) 项"))
                         .font(.ui(11))
                         .foregroundStyle(Ink.secondary)
                         .fixedSize()
                     Spacer(minLength: 0)
                     if hovered {
-                        HoverAction(symbol: "↗", danger: false, help: "在编辑器中打开") { model.openInEditor(entry.cap.dirURL) }
+                        HoverAction(symbol: "↗", danger: false, help: L("在编辑器中打开")) { model.openInEditor(entry.cap.dirURL) }
                         if !entry.isManagedExternally {
-                            HoverAction(symbol: "✕", danger: true, help: "移除套装（含全部子项）") { model.removeEntry(entry) }
+                            HoverAction(symbol: "✕", danger: true, help: L("移除套装（含全部子项）")) { model.removeEntry(entry) }
                         }
                     }
                 }
@@ -444,10 +444,10 @@ struct BundleCompactCard: View {
         .contentShape(Rectangle())
         .onTapGesture { model.expanded.insert(entry.id) }
         .onHover { hovered = $0 }
-        .help("点击展开套装")
+        .help(L("点击展开套装"))
         // hover 才入树的 ↗/✕ 对 VoiceOver 不存在——动作挂在卡片上兜底
-        .accessibilityAction(named: "在编辑器中打开") { model.openInEditor(entry.cap.dirURL) }
-        .accessibilityAction(named: "移除套装") { if !entry.isManagedExternally { model.removeEntry(entry) } }
+        .accessibilityAction(named: L("在编辑器中打开")) { model.openInEditor(entry.cap.dirURL) }
+        .accessibilityAction(named: L("移除套装")) { if !entry.isManagedExternally { model.removeEntry(entry) } }
         .id(entry.id)
     }
 }
@@ -457,9 +457,9 @@ struct UpdatingDot: View {
     var body: some View {
         HStack(spacing: 4) {
             ProgressView().controlSize(.mini)
-            Text("更新中…").font(.ui(10, .medium)).foregroundStyle(Ink.amberText)
+            Text(L("更新中…")).font(.ui(10, .medium)).foregroundStyle(Ink.amberText)
         }
-        .accessibilityLabel("更新中")
+        .accessibilityLabel(L("更新中"))
     }
 }
 
@@ -488,9 +488,9 @@ struct CapCard: View {
                     TypeTag(type: cap.type)
                     Spacer(minLength: 0)
                     if hovered {
-                        HoverAction(symbol: "↗", danger: false, help: "在编辑器中打开") { model.openInEditor(cap.dirURL) }
+                        HoverAction(symbol: "↗", danger: false, help: L("在编辑器中打开")) { model.openInEditor(cap.dirURL) }
                         if fromBundle == nil {
-                            HoverAction(symbol: "✕", danger: true, help: "移除") { model.removeEntry(entry) }
+                            HoverAction(symbol: "✕", danger: true, help: L("移除")) { model.removeEntry(entry) }
                         }
                     }
                 }
@@ -519,8 +519,8 @@ struct CapCard: View {
         .shadow(color: .black.opacity(0.03), radius: 1, y: 1)
         .onHover { hovered = $0 }
         .animation(.easeOut(duration: 1.2), value: flashing)
-        .accessibilityAction(named: "在编辑器中打开") { model.openInEditor(cap.dirURL) }
-        .accessibilityAction(named: "移除") { if fromBundle == nil { model.removeEntry(entry) } }
+        .accessibilityAction(named: L("在编辑器中打开")) { model.openInEditor(cap.dirURL) }
+        .accessibilityAction(named: L("移除")) { if fromBundle == nil { model.removeEntry(entry) } }
         .id(cap.id)
     }
 
@@ -595,8 +595,9 @@ struct BundleCard: View {
     private var headFocused: Bool { model.kbFocusId == entry.id }
 
     private var bundleUpdateHelp: String {
-        guard let changed = entry.changedMembers, !changed.isEmpty else { return "更新此套装" }
-        return "有新版：\(changed.sorted().joined(separator: "、"))——点击全部更新"
+        guard let changed = entry.changedMembers, !changed.isEmpty else { return L("更新此套装") }
+        let members = changed.sorted().joined(separator: L("、"))
+        return L("有新版：\(members)——点击全部更新")
     }
 
     private var header: some View {
@@ -619,9 +620,9 @@ struct BundleCard: View {
                             .padding(.horizontal, 6).padding(.vertical, 2)
                             .background(RoundedRectangle(cornerRadius: 3).fill(.white))
                             .overlay(RoundedRectangle(cornerRadius: 3).stroke(Ink.control2, lineWidth: 1))
-                            .help("Claude Code Marketplace 插件——只读展示，操作用 /plugin")
+                            .help(L("Claude Code Marketplace 插件——只读展示，操作用 /plugin"))
                     }
-                    Text("\(entry.children?.count ?? 0) 项")
+                    Text(L("\(entry.children?.count ?? 0) 项"))
                         .font(.ui(11.5))
                         .foregroundStyle(Ink.secondary)
                 }
@@ -663,9 +664,9 @@ struct BundleCard: View {
             .frame(width: 104)
             HStack(spacing: 2) {
                 if hovered {
-                    HoverAction(symbol: "↗", danger: false, help: "在编辑器中打开") { model.openInEditor(entry.cap.dirURL) }
+                    HoverAction(symbol: "↗", danger: false, help: L("在编辑器中打开")) { model.openInEditor(entry.cap.dirURL) }
                     if !entry.isManagedExternally {
-                        HoverAction(symbol: "✕", danger: true, help: "移除套装（含全部子项）") { model.removeEntry(entry) }
+                        HoverAction(symbol: "✕", danger: true, help: L("移除套装（含全部子项）")) { model.removeEntry(entry) }
                     }
                 }
             }
@@ -694,7 +695,7 @@ struct BundleCard: View {
                         Text(String(t.name.split(separator: " ").first ?? "").uppercased())
                             .frame(width: 52)
                     }
-                    Text("版本").frame(width: 96, alignment: .trailing)
+                    Text(L("版本")).frame(width: 96, alignment: .trailing)
                     Color.clear.frame(width: 46)
                 }
                 .font(.ui(9, .bold)).kerning(0.7)
@@ -750,7 +751,7 @@ struct BundleCard: View {
             .frame(width: 96, alignment: .trailing)
             HStack {
                 if hoverChild == c.id {
-                    HoverAction(symbol: "↗", danger: false, help: "在编辑器中打开") { model.openInEditor(c.dirURL) }
+                    HoverAction(symbol: "↗", danger: false, help: L("在编辑器中打开")) { model.openInEditor(c.dirURL) }
                 }
             }
             .frame(width: 46, alignment: .trailing)
@@ -761,7 +762,7 @@ struct BundleCard: View {
             if cf { model.kbFocusFrame = frame }
         }
         .onHover { hoverChild = $0 ? c.id : (hoverChild == c.id ? nil : hoverChild) }
-        .accessibilityAction(named: "在编辑器中打开") { model.openInEditor(c.dirURL) }
+        .accessibilityAction(named: L("在编辑器中打开")) { model.openInEditor(c.dirURL) }
         .id(c.id)
     }
 
@@ -783,15 +784,15 @@ struct EmptyPane: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Text("\(abbrev(model.fs.env.storeRoot.path)) — 空")
+            Text(L("\(abbrev(model.fs.env.storeRoot.path)) — 空"))
                 .font(.mono(13))
                 .foregroundStyle(Ink.tertiary)
                 .padding(.bottom, 14)
-            Text("还没有任何能力")
+            Text(L("还没有任何能力"))
                 .font(.ui(18, .bold))
                 .foregroundStyle(Ink.ink)
                 .padding(.bottom, 6)
-            Text("粘贴一个 GitHub 仓库或本地路径，\n安装一次，挂载到所有 AI 工具。")
+            Text(L("粘贴一个 GitHub 仓库或本地路径，\n安装一次，挂载到所有 AI 工具。"))
                 .font(.ui(12.5))
                 .foregroundStyle(Ink.secondary2)
                 .multilineTextAlignment(.center)
@@ -799,7 +800,7 @@ struct EmptyPane: View {
                 .padding(.bottom, 18)
             HStack(spacing: 8) {
                 Button { model.sheet = .add } label: {
-                    Text("+ 粘贴 URL 添加")
+                    Text(L("+ 粘贴 URL 添加"))
                         .font(.ui(12.5, .semibold)).foregroundStyle(.white)
                         .padding(.horizontal, 14).frame(height: 30)
                         .background(RoundedRectangle(cornerRadius: 7).fill(Ink.ink))
@@ -808,7 +809,7 @@ struct EmptyPane: View {
                 Button {
                     model.scanLocalForOnboarding()
                 } label: {
-                    Text("扫描本地目录")
+                    Text(L("扫描本地目录"))
                         .font(.ui(12.5, .semibold)).foregroundStyle(Color(hex: 0x444444))
                         .padding(.horizontal, 14).frame(height: 30)
                         .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
@@ -886,6 +887,6 @@ struct PeekableName: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
-        .help("查看详情")
+        .help(L("查看详情"))
     }
 }

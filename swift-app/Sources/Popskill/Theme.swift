@@ -91,10 +91,10 @@ extension LinkStatus {
     var pillGlyph: String { self == .off ? "○" : glyph }
     var stateLabel: String {
         switch self {
-        case .on: "已激活"
-        case .off: "未链接"
-        case .stub: "占位"
-        case .broken: "断链"
+        case .on: L("已激活")
+        case .off: L("未链接")
+        case .stub: L("占位")
+        case .broken: L("断链")
         }
     }
     // PATCH-02 色语义：激活 = 绿（与同步指示统一），电光蓝收窄为纯交互色（聚焦/链接/焦点环）

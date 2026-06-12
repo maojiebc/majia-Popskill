@@ -2,7 +2,605 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key> · 上游另有 %lld 个未安装技能</key>
+	<string> · 上游另有 %lld 个未安装技能</string>
+	<key> 等 %lld 个时间点</key>
+	<string> 等 %lld 个时间点</string>
+	<key>%@ — 空</key>
+	<string>%@ — 空</string>
+	<key>%@ 不是 popskill 管理的 symlink，已跳过</key>
+	<string>%@ 不是 popskill 管理的 symlink，已跳过</string>
+	<key>%@ 正在更新中，稍候再操作</key>
+	<string>%@ 正在更新中，稍候再操作</string>
+	<key>%@ 等</key>
+	<string>%@ 等</string>
+	<key>%@：%@</key>
+	<string>%@：%@</string>
+	<key>%@：%@。点击切换 / 处理</key>
+	<string>%@：%@。点击切换 / 处理</string>
+	<key>%lld symlinks</key>
+	<string>%lld symlinks</string>
+	<key>%lld 个源可更新</key>
+	<string>%lld 个源可更新</string>
+	<key>%lld 个源检查失败（网络或源不可达）</key>
+	<string>%lld 个源检查失败（网络或源不可达）</string>
+	<key>%lld 个链接问题</key>
+	<string>%lld 个链接问题</string>
+	<key>%lld 分钟后</key>
+	<string>%lld 分钟后</string>
+	<key>%lld 占位</key>
+	<string>%lld 占位</string>
+	<key>%lld 天后</key>
+	<string>%lld 天后</string>
+	<key>%lld 套装 · %lld 独立能力 · %@ 已激活</key>
+	<string>%lld 套装 · %lld 独立能力 · %@ 已激活</string>
+	<key>%lld 小时后</key>
+	<string>%lld 小时后</string>
+	<key>%lld 断链</key>
+	<string>%lld 断链</string>
+	<key>%lld 日</key>
+	<string>%lld 日</string>
+	<key>%lld 项</key>
+	<string>%lld 项</string>
+	<key>%lld 项 skill 套装</key>
+	<string>%lld 项 skill 套装</string>
+	<key>%lld 项中 %lld 项已激活</key>
+	<string>%lld 项中 %lld 项已激活</string>
+	<key>%lld 项匹配</key>
+	<string>%lld 项匹配</string>
+	<key>+ 添加</key>
+	<string>+ 添加</string>
+	<key>+ 粘贴 URL 添加</key>
+	<string>+ 粘贴 URL 添加</string>
+	<key>/plugin 管理</key>
+	<string>/plugin 管理</string>
+	<key>App: Popskill v%@
+macOS: %@
+
+&lt;!-- 描述问题。若 app 崩溃过，请附上 ~/Library/Logs/DiagnosticReports 里最新的 Popskill-*.ips 文件 --&gt;
+</key>
+	<string>App: Popskill v%@
+macOS: %@
+
+&lt;!-- 描述问题。若 app 崩溃过，请附上 ~/Library/Logs/DiagnosticReports 里最新的 Popskill-*.ips 文件 --&gt;
+</string>
+	<key>Claude Code Marketplace 插件——只读展示，操作用 /plugin</key>
+	<string>Claude Code Marketplace 插件——只读展示，操作用 /plugin</string>
+	<key>Git · 已同步</key>
+	<string>Git · 已同步</string>
+	<key>Git · 有未提交改动</key>
+	<string>Git · 有未提交改动</string>
+	<key>Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 卸载</key>
+	<string>Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 卸载</string>
+	<key>Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 操作</key>
+	<string>Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 操作</string>
+	<key>Marketplace 插件（%@）· 由 Claude Code 管理，操作用 /plugin</key>
+	<string>Marketplace 插件（%@）· 由 Claude Code 管理，操作用 /plugin</string>
+	<key>PID %lld</key>
+	<string>PID %lld</string>
+	<key>Popskill 帮助</key>
+	<string>Popskill 帮助</string>
+	<key>SKILL.MD · 文档摘要</key>
+	<string>SKILL.MD · 文档摘要</string>
+	<key>Store 与同步</key>
+	<string>Store 与同步</string>
+	<key>cron 任务请在终端手动执行</key>
+	<string>cron 任务请在终端手动执行</string>
+	<key>cron 条目在终端用 crontab -e 管理，这里只看不动。</key>
+	<string>cron 条目在终端用 crontab -e 管理，这里只看不动。</string>
+	<key>crontab 在册即生效</key>
+	<string>crontab 在册即生效</string>
+	<key>git clone 失败：%@</key>
+	<string>git clone 失败：%@</string>
+	<key>launchctl kickstart 退出码 %lld</key>
+	<string>launchctl kickstart 退出码 %lld</string>
+	<key>launchctl load——按 plist 里的调度恢复运行。</key>
+	<string>launchctl load——按 plist 里的调度恢复运行。</string>
+	<key>launchctl unload——不再按时执行，plist 文件原样保留，随时可重新启用。</key>
+	<string>launchctl unload——不再按时执行，plist 文件原样保留，随时可重新启用。</string>
+	<key>launchctl 退出码 %lld</key>
+	<string>launchctl 退出码 %lld</string>
+	<key>npm 源暂不支持——请用 GitHub 仓库或本地路径</key>
+	<string>npm 源暂不支持——请用 GitHub 仓库或本地路径</string>
+	<key>store 中已存在 %@</key>
+	<string>store 中已存在 %@</string>
+	<key>store 为空</key>
+	<string>store 为空</string>
+	<key>store 为空，工具目录里也没有发现技能——点「+ 添加」装第一个</key>
+	<string>store 为空，工具目录里也没有发现技能——点「+ 添加」装第一个</string>
+	<key>store 副本与全部 symlink 已清理</key>
+	<string>store 副本与全部 symlink 已清理</string>
+	<key>store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。</key>
+	<string>store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。</string>
+	<key>store 在设备间同步；symlink 是各机本地状态，不参与同步。</key>
+	<string>store 在设备间同步；symlink 是各机本地状态，不参与同步。</string>
+	<key>”。试试别的关键词，或 + 添加。</key>
+	<string>”。试试别的关键词，或 + 添加。</string>
+	<key>← 返回</key>
+	<string>← 返回</string>
+	<key>↑↓ 行 · ←→ 列 · 空格 切换</key>
+	<string>↑↓ 行 · ←→ 列 · 空格 切换</string>
+	<key>↗ 在编辑器中打开</key>
+	<string>↗ 在编辑器中打开</string>
+	<key>↗ 打开 %@</key>
+	<string>↗ 打开 %@</string>
+	<key>↗ 打开回收站文件夹</key>
+	<string>↗ 打开回收站文件夹</string>
+	<key>✗ 码 %lld</key>
+	<string>✗ 码 %lld</string>
+	<key>、</key>
+	<string>、</string>
+	<key>上次 %@ %@</key>
+	<string>上次 %@ %@</string>
+	<key>上次退出码 %lld</key>
+	<string>上次退出码 %lld</string>
+	<key>上游有新版——点套装头部 ↑ 徽标更新</key>
+	<string>上游有新版——点套装头部 ↑ 徽标更新</string>
+	<key>不会再跑</key>
+	<string>不会再跑</string>
+	<key>不安全的目录名：%@</key>
+	<string>不安全的目录名：%@</string>
+	<key>二进制 CLI，无 SKILL.md。</key>
+	<string>二进制 CLI，无 SKILL.md。</string>
+	<key>人话备注，留空恢复默认</key>
+	<string>人话备注，留空恢复默认</string>
+	<key>仅保存到 store</key>
+	<string>仅保存到 store</string>
+	<key>仅列最近 5 项，其余在文件夹里</key>
+	<string>仅列最近 5 项，其余在文件夹里</string>
+	<key>今天 %@</key>
+	<string>今天 %@</string>
+	<key>今天还会跑 %lld 个：%@</key>
+	<string>今天还会跑 %lld 个：%@</string>
+	<key>从 %@ 拉取新版，重链 symlink</key>
+	<string>从 %@ 拉取新版，重链 symlink</string>
+	<key>从 %@ 重新获取该项</key>
+	<string>从 %@ 重新获取该项</string>
+	<key>从源重新拉取</key>
+	<string>从源重新拉取</string>
+	<key>保持现状</key>
+	<string>保持现状</string>
+	<key>保留本地副本，popskill 不接管</key>
+	<string>保留本地副本，popskill 不接管</string>
+	<key>修复 %@ 失败：%@</key>
+	<string>修复 %@ 失败：%@</string>
+	<key>修复 %lld 个，%lld 个失败</key>
+	<string>修复 %lld 个，%lld 个失败</string>
+	<key>修复 %lld 个，%lld 个失败：%@</key>
+	<string>修复 %lld 个，%lld 个失败：%@</string>
+	<key>停用</key>
+	<string>停用</string>
+	<key>停用 %@？</key>
+	<string>停用 %@？</string>
+	<key>停用（launchctl unload，不删文件）</key>
+	<string>停用（launchctl unload，不删文件）</string>
+	<key>全部</key>
+	<string>全部</string>
+	<key>全部修复 (%lld)</key>
+	<string>全部修复 (%lld)</string>
+	<key>全部更新 (%lld)</key>
+	<string>全部更新 (%lld)</string>
+	<key>全部源已是最新</key>
+	<string>全部源已是最新</string>
+	<key>关</key>
+	<string>关</string>
+	<key>关于</key>
+	<string>关于</string>
+	<key>刷新</key>
+	<string>刷新</string>
+	<key>占位</key>
+	<string>占位</string>
+	<key>占位 (stub)</key>
+	<string>占位 (stub)</string>
+	<key>占位待校验</key>
+	<string>占位待校验</string>
+	<key>原型数据模式不可导入</key>
+	<string>原型数据模式不可导入</string>
+	<key>原型数据模式不检查更新</key>
+	<string>原型数据模式不检查更新</string>
+	<key>原目录移入 store 回收站，换成指向 store 的 symlink</key>
+	<string>原目录移入 store 回收站，换成指向 store 的 symlink</string>
+	<key>发现 %lld 个未托管的技能目录</key>
+	<string>发现 %lld 个未托管的技能目录</string>
+	<key>发现 %lld 个源可更新</key>
+	<string>发现 %lld 个源可更新</string>
+	<key>发现 %lld 个源可更新（另有 %lld 个检查失败）</key>
+	<string>发现 %lld 个源可更新（另有 %lld 个检查失败）</string>
+	<key>发现 %lld 个源可更新；%lld 个源检查失败（网络或源不可达）</key>
+	<string>发现 %lld 个源可更新；%lld 个源检查失败（网络或源不可达）</string>
+	<key>取消</key>
+	<string>取消</string>
+	<key>同步于%@</key>
+	<string>同步于%@</string>
+	<key>同步后端</key>
+	<string>同步后端</string>
+	<key>同源套装 · %lld 项</key>
+	<string>同源套装 · %lld 项</string>
+	<key>后天</key>
+	<string>后天</string>
+	<key>启用</key>
+	<string>启用</string>
+	<key>启用 %@？</key>
+	<string>启用 %@？</string>
+	<key>启用（launchctl load）</key>
+	<string>启用（launchctl load）</string>
+	<key>周一</key>
+	<string>周一</string>
+	<key>周三</key>
+	<string>周三</string>
+	<key>周二</key>
+	<string>周二</string>
+	<key>周五</key>
+	<string>周五</string>
+	<key>周六</key>
+	<string>周六</string>
+	<key>周四</key>
+	<string>周四</string>
+	<key>周日</key>
+	<string>周日</string>
+	<key>命令超时且输出管道无法排空，已放弃：%@</key>
+	<string>命令超时且输出管道无法排空，已放弃：%@</string>
+	<key>命令超时（%lld s）已终止：%@ %@</key>
+	<string>命令超时（%lld s）已终止：%@ %@</string>
+	<key>回收站（%lld）</key>
+	<string>回收站（%lld）</string>
+	<key>在 Claude / Codex 目录里发现现有技能（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。</key>
+	<string>在 Claude / Codex 目录里发现现有技能（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。</string>
+	<key>在编辑器中打开</key>
+	<string>在编辑器中打开</string>
+	<key>套装连同 %lld 个子项的 store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。</key>
+	<string>套装连同 %lld 个子项的 store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。</string>
+	<key>安装 %@ 失败：%@</key>
+	<string>安装 %@ 失败：%@</string>
+	<key>安装并链接 (%lld)</key>
+	<string>安装并链接 (%lld)</string>
+	<key>定时任务</key>
+	<string>定时任务</string>
+	<key>定时任务…</key>
+	<string>定时任务…</string>
+	<key>定时任务（launchd / crontab）</key>
+	<string>定时任务（launchd / crontab）</string>
+	<key>导入 %lld 个</key>
+	<string>导入 %lld 个</string>
+	<key>导入失败：%@</key>
+	<string>导入失败：%@</string>
+	<key>导入未托管目录</key>
+	<string>导入未托管目录</string>
+	<key>将写入</key>
+	<string>将写入</string>
+	<key>工具（挂载目标）</key>
+	<string>工具（挂载目标）</string>
+	<key>已从源重新拉取 %@</key>
+	<string>已从源重新拉取 %@</string>
+	<key>已保存 %@ 到 store</key>
+	<string>已保存 %@ 到 store</string>
+	<key>已修复 %lld 个链接问题</key>
+	<string>已修复 %lld 个链接问题</string>
+	<key>已修复 %lld 个，跳过 %lld 个（正在更新中）</key>
+	<string>已修复 %lld 个，跳过 %lld 个（正在更新中）</string>
+	<key>已停摆</key>
+	<string>已停摆</string>
+	<key>已停用</key>
+	<string>已停用</string>
+	<key>已停用 %@</key>
+	<string>已停用 %@</string>
+	<key>已加载，上次运行失败（退出码 %lld）</key>
+	<string>已加载，上次运行失败（退出码 %lld）</string>
+	<key>已加载，上次运行正常</key>
+	<string>已加载，上次运行正常</string>
+	<key>已同步</key>
+	<string>已同步</string>
+	<key>已启用 %@</key>
+	<string>已启用 %@</string>
+	<key>已安装 %@ 并链接到 %lld 个工具</key>
+	<string>已安装 %@ 并链接到 %lld 个工具</string>
+	<key>已导入 %lld 个技能进 store 并建链——这就是你的能力矩阵</key>
+	<string>已导入 %lld 个技能进 store 并建链——这就是你的能力矩阵</string>
+	<key>已导入 %lld 个未托管目录进 store（原目录已入回收站）</key>
+	<string>已导入 %lld 个未托管目录进 store（原目录已入回收站）</string>
+	<key>已就绪</key>
+	<string>已就绪</string>
+	<key>已恢复 %@ 到 store——按需重新链接工具</key>
+	<string>已恢复 %@ 到 store——按需重新链接工具</string>
+	<key>已把 %@ · %@ 换成 store 链接</key>
+	<string>已把 %@ · %@ 换成 store 链接</string>
+	<key>已断开 %@ → %@</key>
+	<string>已断开 %@ → %@</string>
+	<key>已更新 %@ → %@</key>
+	<string>已更新 %@ → %@</string>
+	<key>已更新 %@ 并修复链接</key>
+	<string>已更新 %@ 并修复链接</string>
+	<key>已更新 %@（旧版已入回收站）</key>
+	<string>已更新 %@（旧版已入回收站）</string>
+	<key>已更新 %@：%@（旧版已入回收站）</key>
+	<string>已更新 %@：%@（旧版已入回收站）</string>
+	<key>已添加的源（%lld）</key>
+	<string>已添加的源（%lld）</string>
+	<key>已激活</key>
+	<string>已激活</string>
+	<key>已移除 %@ 在 %@ 侧的副本</key>
+	<string>已移除 %@ 在 %@ 侧的副本</string>
+	<key>已移除 %@ 在 %@ 侧的链接</key>
+	<string>已移除 %@ 在 %@ 侧的链接</string>
+	<key>已触发 %@</key>
+	<string>已触发 %@</string>
+	<key>已重新扫描 store 与工具目录</key>
+	<string>已重新扫描 store 与工具目录</string>
+	<key>已重链 %@ · %@</key>
+	<string>已重链 %@ · %@</string>
+	<key>已链接 %@ → %@</key>
+	<string>已链接 %@ → %@</string>
+	<key>常驻 daemon</key>
+	<string>常驻 daemon</string>
+	<key>常驻任务在册但没有进程——停摆了</key>
+	<string>常驻任务在册但没有进程——停摆了</string>
+	<key>常驻后台（%lld）</key>
+	<string>常驻后台（%lld）</string>
+	<key>开</key>
+	<string>开</string>
+	<key>开关 = 自动更新。移除源会同时卸载它提供的能力与 symlink。</key>
+	<string>开关 = 自动更新。移除源会同时卸载它提供的能力与 symlink。</string>
+	<key>恢复 %@ 失败：%@</key>
+	<string>恢复 %@ 失败：%@</string>
+	<key>恢复到 store</key>
+	<string>恢复到 store</string>
+	<key>打开 GitHub issue，自动带上 app 与 macOS 版本</key>
+	<string>打开 GitHub issue，自动带上 app 与 macOS 版本</string>
+	<key>打开日志</key>
+	<string>打开日志</string>
+	<key>扫描中…</key>
+	<string>扫描中…</string>
+	<key>扫描完成：发现 %lld 项能力</key>
+	<string>扫描完成：发现 %lld 项能力</string>
+	<key>扫描本地目录</key>
+	<string>扫描本地目录</string>
+	<key>把 ~/.claude / ~/.codex 里的真实技能目录收编进 store 并换成 symlink</key>
+	<string>把 ~/.claude / ~/.codex 里的真实技能目录收编进 store 并换成 symlink</string>
+	<key>报告问题…</key>
+	<string>报告问题…</string>
+	<key>挂载到</key>
+	<string>挂载到</string>
+	<key>指回 store 中现存的目录</key>
+	<string>指回 store 中现存的目录</string>
+	<key>按时间跑（%lld）· 按下次运行排序</key>
+	<string>按时间跑（%lld）· 按下次运行排序</string>
+	<key>推荐</key>
+	<string>推荐</string>
+	<key>提供 %@</key>
+	<string>提供 %@</string>
+	<key>提供 %@ 等 %lld 项</key>
+	<string>提供 %@ 等 %lld 项</string>
+	<key>提供 %lld 项</key>
+	<string>提供 %lld 项</string>
+	<key>搜索名称 / 描述 / 作者…</key>
+	<string>搜索名称 / 描述 / 作者…</string>
+	<key>撤掉这条 symlink，其他工具不受影响</key>
+	<string>撤掉这条 symlink，其他工具不受影响</string>
+	<key>改用 store 链接</key>
+	<string>改用 store 链接</string>
+	<key>断开 %@ 失败：%@</key>
+	<string>断开 %@ 失败：%@</string>
+	<key>断链</key>
+	<string>断链</string>
+	<key>新安装默认挂载</key>
+	<string>新安装默认挂载</string>
+	<key>新版</key>
+	<string>新版</string>
+	<key>无匹配结果</key>
+	<string>无匹配结果</string>
+	<key>无法识别 GitHub 仓库：%@</key>
+	<string>无法识别 GitHub 仓库：%@</string>
+	<key>明天</key>
+	<string>明天</string>
+	<key>昨天 %@</key>
+	<string>昨天 %@</string>
+	<key>显示系统/第三方任务（%lld）</key>
+	<string>显示系统/第三方任务（%lld）</string>
+	<key>暂不</key>
+	<string>暂不</string>
+	<key>更新 %@ 失败：%@</key>
+	<string>更新 %@ 失败：%@</string>
+	<key>更新中</key>
+	<string>更新中</string>
+	<key>更新中…</key>
+	<string>更新中…</string>
+	<key>更新到 %@</key>
+	<string>更新到 %@</string>
+	<key>更新到 %@ 并修复</key>
+	<string>更新到 %@ 并修复</string>
+	<key>更新此套装</key>
+	<string>更新此套装</string>
+	<key>有新版：%@——点击全部更新</key>
+	<string>有新版：%@——点击全部更新</string>
+	<key>有未提交改动</key>
+	<string>有未提交改动</string>
+	<key>未加载（已停用）</key>
+	<string>未加载（已停用）</string>
+	<key>未找到 SKILL.md — 该源不是 skill 也不是套装</key>
+	<string>未找到 SKILL.md — 该源不是 skill 也不是套装</string>
+	<key>未连接</key>
+	<string>未连接</string>
+	<key>未连接同步</key>
+	<string>未连接同步</string>
+	<key>未配置</key>
+	<string>未配置</string>
+	<key>未配置调度</key>
+	<string>未配置调度</string>
+	<key>未配置调度（手动）</key>
+	<string>未配置调度（手动）</string>
+	<key>未链接</key>
+	<string>未链接</string>
+	<key>本地副本</key>
+	<string>本地副本</string>
+	<key>来源</key>
+	<string>来源</string>
+	<key>来源 URL</key>
+	<string>来源 URL</string>
+	<key>查找</key>
+	<string>查找</string>
+	<key>查看详情</key>
+	<string>查看详情</string>
+	<key>检查 App 更新…</key>
+	<string>检查 App 更新…</string>
+	<key>检查中…</key>
+	<string>检查中…</string>
+	<key>检查更新</key>
+	<string>检查更新</string>
+	<key>检查更新…</key>
+	<string>检查更新…</string>
+	<key>正在从源重新拉取 %@…</key>
+	<string>正在从源重新拉取 %@…</string>
+	<key>正在更新 %lld 个源…</key>
+	<string>正在更新 %lld 个源…</string>
+	<key>每 %lld 分钟</key>
+	<string>每 %lld 分钟</string>
+	<key>每 %lld 小时</key>
+	<string>每 %lld 小时</string>
+	<key>每 %lld 小时的第 %lld 分</key>
+	<string>每 %lld 小时的第 %lld 分</string>
+	<key>每 %lld 秒</key>
+	<string>每 %lld 秒</string>
+	<key>每周一</key>
+	<string>每周一</string>
+	<key>每周三</key>
+	<string>每周三</string>
+	<key>每周二</key>
+	<string>每周二</string>
+	<key>每周五</key>
+	<string>每周五</string>
+	<key>每周六</key>
+	<string>每周六</string>
+	<key>每周四</key>
+	<string>每周四</string>
+	<key>每周日</key>
+	<string>每周日</string>
+	<key>每天</key>
+	<string>每天</string>
+	<key>每天 %@</key>
+	<string>每天 %@</string>
+	<key>每小时第 %lld 分</key>
+	<string>每小时第 %lld 分</string>
+	<key>每年 %lld 月</key>
+	<string>每年 %lld 月</string>
+	<key>每月 %lld 日</key>
+	<string>每月 %lld 日</string>
+	<key>每月 %lld 日 %@</key>
+	<string>每月 %lld 日 %@</string>
+	<key>没有 %@ 类型的能力。点 + 添加，或切回「全部」。</key>
+	<string>没有 %@ 类型的能力。点 + 添加，或切回「全部」。</string>
+	<key>没有 plist 路径</key>
+	<string>没有 plist 路径</string>
+	<key>没有发现未托管的技能目录</key>
+	<string>没有发现未托管的技能目录</string>
+	<key>没有可显示的任务</key>
+	<string>没有可显示的任务</string>
+	<key>没有可检查的源（需要 GitHub 或本地路径来源）</key>
+	<string>没有可检查的源（需要 GitHub 或本地路径来源）</string>
+	<key>没有能力匹配 “</key>
+	<string>没有能力匹配 “</string>
+	<key>添加能力</key>
+	<string>添加能力</string>
+	<key>源</key>
+	<string>源</string>
+	<key>源、工具与 store — 全部配置都在这一页。</key>
+	<string>源、工具与 store — 全部配置都在这一页。</string>
+	<key>点击 ✕ / ◐ / ↑ 可逐项处理</key>
+	<string>点击 ✕ / ◐ / ↑ 可逐项处理</string>
+	<key>点击切换 / 处理</key>
+	<string>点击切换 / 处理</string>
+	<key>点击切换或处理</key>
+	<string>点击切换或处理</string>
+	<key>点击展开套装</key>
+	<string>点击展开套装</string>
+	<key>版本</key>
+	<string>版本</string>
+	<key>登录自启</key>
+	<string>登录自启</string>
+	<key>登录自启（%lld）</key>
+	<string>登录自启（%lld）</string>
+	<key>目录移入 store 回收站，不建链接</key>
+	<string>目录移入 store 回收站，不建链接</string>
+	<key>移回 store 原目录（%@/）——同名能力已存在时会拒绝</key>
+	<string>移回 store 原目录（%@/）——同名能力已存在时会拒绝</string>
+	<key>移除</key>
+	<string>移除</string>
+	<key>移除 %@ 失败：%@</key>
+	<string>移除 %@ 失败：%@</string>
+	<key>移除 %@？</key>
+	<string>移除 %@？</string>
+	<key>移除套装</key>
+	<string>移除套装</string>
+	<key>移除套装（含全部子项）</key>
+	<string>移除套装（含全部子项）</string>
+	<key>移除该侧副本</key>
+	<string>移除该侧副本</string>
+	<key>移除该侧链接</key>
+	<string>移除该侧链接</string>
+	<key>移除该源（含其能力）</key>
+	<string>移除该源（含其能力）</string>
+	<key>空——移除能力和更新换版时，旧目录会进这里（最多留 %lld 份，先进先出）。</key>
+	<string>空——移除能力和更新换版时，旧目录会进这里（最多留 %lld 份，先进先出）。</string>
+	<key>立刻跑一次（launchctl kickstart）</key>
+	<string>立刻跑一次（launchctl kickstart）</string>
+	<key>立刻运行 %@？</key>
+	<string>立刻运行 %@？</string>
+	<key>立即向更新源询问新版本</key>
+	<string>立即向更新源询问新版本</string>
+	<key>等价于 launchctl kickstart -k——不等下次调度时间，现在就跑一遍。任务输出看它自己的日志。</key>
+	<string>等价于 launchctl kickstart -k——不等下次调度时间，现在就跑一遍。任务输出看它自己的日志。</string>
+	<key>等价于 launchctl kickstart -k——杀掉旧进程重新拉起。任务输出看它自己的日志。</key>
+	<string>等价于 launchctl kickstart -k——杀掉旧进程重新拉起。任务输出看它自己的日志。</string>
+	<key>粘贴 GitHub 仓库 / 本地路径 — 安装一次进 store，再选择挂载到哪些工具。</key>
+	<string>粘贴 GitHub 仓库 / 本地路径 — 安装一次进 store，再选择挂载到哪些工具。</string>
+	<key>粘贴一个 GitHub 仓库或本地路径，
+安装一次，挂载到所有 AI 工具。</key>
+	<string>粘贴一个 GitHub 仓库或本地路径，
+安装一次，挂载到所有 AI 工具。</string>
+	<key>编辑人话备注（存在 Popskill，不动 plist）</key>
+	<string>编辑人话备注（存在 Popskill，不动 plist）</string>
 	<key>能力矩阵</key>
 	<string>能力矩阵</string>
+	<key>自动更新 %lld 个源</key>
+	<string>自动更新 %lld 个源</string>
+	<key>自动检查 App 更新（每天一次）</key>
+	<string>自动检查 App 更新（每天一次）</string>
+	<key>解析 →</key>
+	<string>解析 →</string>
+	<key>解析中…</key>
+	<string>解析中…</string>
+	<key>设置</key>
+	<string>设置</string>
+	<key>设置…</key>
+	<string>设置…</string>
+	<key>该源没有记录 URL，无法更新</key>
+	<string>该源没有记录 URL，无法更新</string>
+	<key>谁在跑、下次什么时候跑、上次结果如何。点名字旁的 ✎ 加人话备注。</key>
+	<string>谁在跑、下次什么时候跑、上次结果如何。点名字旁的 ✎ 加人话备注。</string>
+	<key>跑一次</key>
+	<string>跑一次</string>
+	<key>路径不存在：%@</key>
+	<string>路径不存在：%@</string>
+	<key>运行中</key>
+	<string>运行中</string>
+	<key>还没有任何能力</key>
+	<string>还没有任何能力</string>
+	<key>重启</key>
+	<string>重启</string>
+	<key>重启 %@？</key>
+	<string>重启 %@？</string>
+	<key>重启（launchctl kickstart -k）</key>
+	<string>重启（launchctl kickstart -k）</string>
+	<key>重新拉取 %@ 失败：%@</key>
+	<string>重新拉取 %@ 失败：%@</string>
+	<key>重链到 store 中本地版本</key>
+	<string>重链到 store 中本地版本</string>
+	<key>链接 %@ 失败：%@</key>
+	<string>链接 %@ 失败：%@</string>
+	<key>错误：%@</key>
+	<string>错误：%@</string>
+	<key>，%lld 项占位</key>
+	<string>，%lld 项占位</string>
+	<key>，%lld 项断链</key>
+	<string>，%lld 项断链</string>
 </dict>
 </plist>

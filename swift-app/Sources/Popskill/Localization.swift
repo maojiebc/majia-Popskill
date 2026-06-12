@@ -10,7 +10,7 @@ import Foundation
 // 语言协商做在自己手里：裸二进制（swift build 直跑）没有 main bundle 的
 // 语言声明，Foundation 会无视系统语言直接落到 en——按用户偏好在模块可用
 // 语言里挑一次，之后 L() 永远从选中的 lproj 取词。.app 与裸二进制行为一致。
-private let l10nBundle: Bundle = {
+private let l10n: (lang: String, bundle: Bundle) = {
     let module = Bundle.module
     let prefs = UserDefaults.standard.stringArray(forKey: "AppleLanguages") ?? Locale.preferredLanguages
     let pick = Bundle.preferredLocalizations(from: module.localizations, forPreferences: prefs).first
@@ -18,12 +18,16 @@ private let l10nBundle: Bundle = {
     for cand in [pick, "en"].compactMap({ $0 }) {
         if let path = module.path(forResource: cand, ofType: "lproj"),
            let sub = Bundle(path: path) {
-            return sub
+            return (cand, sub)
         }
     }
-    return module
+    return ("zh-Hans", module)
 }()
 
 func L(_ key: String.LocalizationValue) -> String {
-    String(localized: key, bundle: l10nBundle)
+    String(localized: key, bundle: l10n.bundle)
 }
+
+/// 与界面语言一致的 Locale——相对时间等格式化跟界面语言走，不跟系统区域
+/// （曾硬编码 zh_CN，英文界面会蹦出中文日期）
+let l10nLocale = Locale(identifier: l10n.lang == "zh-Hans" ? "zh_CN" : l10n.lang)

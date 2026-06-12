@@ -89,7 +89,7 @@ struct DetailPeekView: View {
                 .fixedSize(horizontal: false, vertical: true)
             if let readme = target.cap.readme {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("SKILL.MD · 文档摘要")
+                    Text(L("SKILL.MD · 文档摘要"))
                         .font(.ui(9.5, .bold)).kerning(0.7)
                         .foregroundStyle(Color(hex: 0xB3AE9E))
                     Text(readme)
@@ -123,8 +123,8 @@ struct DetailPeekView: View {
 
     private func statRow(_ tool: Tool) -> some View {
         let st = target.cap.status(tool.id)
-        let stateText = st == .broken ? (target.cap.brokenCause[tool.id] ?? "断链")
-            : (st == .stub ? "占位待校验" : st.stateLabel)
+        let stateText = st == .broken ? (target.cap.brokenCause[tool.id] ?? L("断链"))
+            : (st == .stub ? L("占位待校验") : st.stateLabel)
         return HStack(spacing: 6) {
             Text(st.glyph).font(.mono(12))
             Text(String(tool.name.split(separator: " ").first ?? ""))
@@ -142,7 +142,7 @@ struct DetailPeekView: View {
                 model.openInEditor(target.cap.dirURL)
                 model.peekTarget = nil
             } label: {
-                Text("↗ 在编辑器中打开")
+                Text(L("↗ 在编辑器中打开"))
                     .font(.ui(11.5, .semibold))
                     .foregroundStyle(Color(hex: 0x444444))
                     .padding(.horizontal, 11)
@@ -153,7 +153,7 @@ struct DetailPeekView: View {
             .buttonStyle(.plain)
             Spacer()
             if let doc = docURL {
-                PeekLink(text: "↗ 打开 \(doc.lastPathComponent)", font: .ui(10.5), base: Color(hex: 0xB3AE9E)) {
+                PeekLink(text: L("↗ 打开 \(doc.lastPathComponent)"), font: .ui(10.5), base: Color(hex: 0xB3AE9E)) {
                     NSWorkspace.shared.open(doc)
                     model.peekTarget = nil
                 }

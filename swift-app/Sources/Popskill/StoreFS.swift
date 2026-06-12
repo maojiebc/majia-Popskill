@@ -63,11 +63,11 @@ enum StoreError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .alreadyExists(let n): "store 中已存在 \(n)"
-        case .notASymlink(let p): "\(abbrev(p)) 不是 popskill 管理的 symlink，已跳过"
+        case .alreadyExists(let n): L("store 中已存在 \(n)")
+        case .notASymlink(let p): L("\(abbrev(p)) 不是 popskill 管理的 symlink，已跳过")
         case .sourceUnsupported(let m): m
         case .resolveFailed(let m): m
-        case .unsafeName(let n): "不安全的目录名：\(n)"
+        case .unsafeName(let n): L("不安全的目录名：\(n)")
         }
     }
 }
@@ -205,7 +205,7 @@ struct StoreFS {
 
             var head = Capability(
                 id: "plugin:\(key)", name: pluginName, type: .bundle,
-                desc: "Marketplace 插件（\(marketplace)）· 由 Claude Code 管理，操作用 /plugin",
+                desc: L("Marketplace 插件（\(marketplace)）· 由 Claude Code 管理，操作用 /plugin"),
                 version: install["version"] as? String, author: nil,
                 tokens: children.reduce(0) { $0 + $1.tokens },
                 dirURL: installPath
@@ -364,7 +364,7 @@ struct StoreFS {
             let repoName = src.split(separator: "/").dropFirst().joined(separator: "/")   // owner/repo
             var head = Capability(
                 id: "src:\(src)", name: repoName, type: .bundle,
-                desc: "同源套装 · \(members.count) 项", version: nil, author: nil,
+                desc: L("同源套装 · \(members.count) 项"), version: nil, author: nil,
                 tokens: members.reduce(0) { $0 + $1.tokens },
                 dirURL: members[0].dirURL.deletingLastPathComponent()
             )
@@ -427,7 +427,7 @@ struct StoreFS {
         }
         head.tokens = children.reduce(0) { $0 + $1.tokens }
         if head.desc.isEmpty {
-            head.desc = "\(children.count) 项 skill 套装"
+            head.desc = L("\(children.count) 项 skill 套装")
         }
         let m = meta.entries[name]
         let source = m?.sourceUrl.map(StoreFS.normalizeSource) ?? gitRemote(dir).map(StoreFS.normalizeSource)
@@ -478,7 +478,7 @@ struct StoreFS {
     func extractReadme(_ dir: URL, type: CapType) -> String? {
         if type == .cli {
             let para = firstParagraph(of: dir.appendingPathComponent("README.md"), skipFrontmatter: false)
-            return "二进制 CLI，无 SKILL.md。" + (para ?? "")
+            return L("二进制 CLI，无 SKILL.md。") + (para ?? "")
         }
         return firstParagraph(of: dir.appendingPathComponent("SKILL.md"), skipFrontmatter: true)
     }
@@ -521,12 +521,12 @@ struct StoreFS {
         let p = linkPath.path
         guard let attrs = try? fm.attributesOfItem(atPath: p) else { return (.off, nil) }
         if attrs[.type] as? FileAttributeType == .typeSymbolicLink {
-            guard let dest = try? fm.destinationOfSymbolicLink(atPath: p) else { return (.broken, "断链") }
+            guard let dest = try? fm.destinationOfSymbolicLink(atPath: p) else { return (.broken, L("断链")) }
             let resolved = URL(fileURLWithPath: dest, relativeTo: linkPath.deletingLastPathComponent()).standardizedFileURL
             if fm.fileExists(atPath: resolved.path) { return (.on, nil) }
-            return (.broken, "断链")
+            return (.broken, L("断链"))
         }
-        return (.stub, "本地副本")
+        return (.stub, L("本地副本"))
     }
 
     /// 套装子项状态：整套 symlink ⇒ 全部跟随；物化目录 ⇒ 逐子项判定。
@@ -534,10 +534,10 @@ struct StoreFS {
         let p = bundleLink.path
         guard let attrs = try? fm.attributesOfItem(atPath: p) else { return (.off, nil) }
         if attrs[.type] as? FileAttributeType == .typeSymbolicLink {
-            guard let dest = try? fm.destinationOfSymbolicLink(atPath: p) else { return (.broken, "断链") }
+            guard let dest = try? fm.destinationOfSymbolicLink(atPath: p) else { return (.broken, L("断链")) }
             let resolved = URL(fileURLWithPath: dest, relativeTo: bundleLink.deletingLastPathComponent()).standardizedFileURL
             if fm.fileExists(atPath: resolved.appendingPathComponent(childName).path) { return (.on, nil) }
-            return (.broken, "断链")
+            return (.broken, L("断链"))
         }
         // 物化目录：逐子项
         return linkStatus(
@@ -733,10 +733,10 @@ struct StoreFS {
         let kind = SourceKind.of(url)
         switch kind {
         case .npm:
-            throw StoreError.sourceUnsupported("npm 源暂不支持——请用 GitHub 仓库或本地路径")
+            throw StoreError.sourceUnsupported(L("npm 源暂不支持——请用 GitHub 仓库或本地路径"))
         case .local:
             let dir = URL(fileURLWithPath: NSString(string: url).expandingTildeInPath).standardizedFileURL
-            guard fm.fileExists(atPath: dir.path) else { throw StoreError.resolveFailed("路径不存在：\(url)") }
+            guard fm.fileExists(atPath: dir.path) else { throw StoreError.resolveFailed(L("路径不存在：\(url)")) }
             return try resolveDir(dir, url: url, kind: .local)
         case .github:
             let (cloneURL, repoName, norm) = try StoreFS.githubTarget(url)
@@ -747,7 +747,7 @@ struct StoreFS {
             let r = run("/usr/bin/git", ["clone", "--depth", "1", cloneURL, tmp.path], timeout: 300)
             guard r.status == 0 else {
                 discardStagingDir(tmp)
-                throw StoreError.resolveFailed("git clone 失败：\(r.err.prefix(200))")
+                throw StoreError.resolveFailed(L("git clone 失败：\(String(r.err.prefix(200)))"))
             }
             let sha = run("/usr/bin/git", ["-C", tmp.path, "rev-parse", "HEAD"], timeout: 30)
                 .out.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -768,7 +768,7 @@ struct StoreFS {
         let norm = normalizeSource(url)
         let parts = norm.split(separator: "/")
         guard parts.count == 3, parts[0] == "github.com" else {
-            throw StoreError.resolveFailed("无法识别 GitHub 仓库：\(url)")
+            throw StoreError.resolveFailed(L("无法识别 GitHub 仓库：\(url)"))
         }
         return ("https://\(norm).git", String(parts[2]), norm)
     }
@@ -810,7 +810,7 @@ struct StoreFS {
             }
         }
         guard !subs.isEmpty else {
-            throw StoreError.resolveFailed("未找到 SKILL.md — 该源不是 skill 也不是套装")
+            throw StoreError.resolveFailed(L("未找到 SKILL.md — 该源不是 skill 也不是套装"))
         }
         let items = subs.map { sub -> PlanItem in
             let d = base.appendingPathComponent(sub)
@@ -841,7 +841,7 @@ struct StoreFS {
     /// 移除条目：撤全部 symlink（含物化目录）→ store 副本移入回收站
     func removeEntry(_ entry: Entry, tools: [Tool]) throws {
         guard entry.bundleKind != .marketplace else {
-            throw StoreError.sourceUnsupported("Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 卸载")
+            throw StoreError.sourceUnsupported(L("Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 卸载"))
         }
         // 源式套装 = 平铺成员的集合，逐成员按独立条目移除
         if entry.bundleKind == .source {
@@ -1018,9 +1018,9 @@ struct StoreFS {
         }
         let latest: String
         if changed.count == 1 && members.count == 1 {
-            latest = (changedVersion != nil && changedVersion != members[0].version) ? changedVersion! : "新版"
+            latest = (changedVersion != nil && changedVersion != members[0].version) ? changedVersion! : L("新版")
         } else {
-            latest = "\(changed.count) 项"
+            latest = L("\(changed.count) 项")
         }
         return UpdateCheck(entryId: entry.id, latest: latest, changedMembers: changed, upstreamNew: upstreamNew)
     }
@@ -1037,7 +1037,7 @@ struct StoreFS {
     /// symlink 路径不变自动延续。返回 (更新了哪些, 上游新增未装)。
     @discardableResult
     func applyUpdate(_ entry: Entry) throws -> (updated: [String], upstreamNew: [String]) {
-        guard let url = entry.sourceUrl else { throw StoreError.resolveFailed("该源没有记录 URL，无法更新") }
+        guard let url = entry.sourceUrl else { throw StoreError.resolveFailed(L("该源没有记录 URL，无法更新")) }
         let resolved = try resolve(url)
         defer { discardStaging(resolved) }
 
@@ -1245,7 +1245,7 @@ func runProcess(_ bin: String, _ args: [String], timeout: TimeInterval = 120) ->
             if drained.wait(timeout: .now() + 5) == .timedOut {
                 // 病理场景（D 态进程钉死管道）：放弃读取立即返回——
                 // outData/errData 可能仍被后台读线程写入，此后不许再碰
-                return (-1, "", "命令超时且输出管道无法排空，已放弃：\(cmd)")
+                return (-1, "", L("命令超时且输出管道无法排空，已放弃：\(cmd)"))
             }
         }
     }
@@ -1253,7 +1253,7 @@ func runProcess(_ bin: String, _ args: [String], timeout: TimeInterval = 120) ->
     let out = String(data: outData, encoding: .utf8) ?? ""
     let err = String(data: errData, encoding: .utf8) ?? ""
     if timedOut {
-        return (-1, out, "命令超时（\(Int(timeout))s）已终止：\(cmd) \(args.first ?? "")")
+        return (-1, out, L("命令超时（\(Int(timeout)) s）已终止：\(cmd) \(args.first ?? "")"))
     }
     return (p.terminationStatus, out, err)
 }

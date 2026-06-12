@@ -31,7 +31,10 @@ swift-app/Sources/Popskill/
 ├── Sheets.swift        添加（URL→安装计划）+ 设置
 ├── Sched.swift         定时任务引擎（v2.9 引入 v2.10 重做：plist/cron 解析 + next-fire 计算 + 日志 mtime 推上次运行 + launchctl 操作）
 ├── SchedSheet.swift    定时任务弹层（◷ / ⌘J；行为分组/倒计时排序/人话备注；写操作 NSAlert 确认）
+├── Localization.swift  L() 取词 + 显式语言协商 + l10nLocale（v2.12，详见「本地化」节）
+├── Resources/          {zh-Hans,en}.lproj（gen-l10n.sh 从 l10n/ 目录预编译，提交进库）
 └── Fixtures.swift      原型样例数据（POPSKILL_FAKE_DATA=1）
+swift-app/l10n/Localizable.xcstrings     本地化权威源（人/AI 只编辑这一个文件）
 Tests/PopskillTests/StoreFSTests.swift   引擎测试 + RealEnvSmoke 只读冒烟
 Tests/PopskillTests/AppModelTests.swift  纯逻辑测试（修复推荐矩阵/键盘状态机）
 Tests/PopskillTests/SchedTests.swift     定时任务解析测试（plist/cron/launchctl 全 fixture，不碰真系统）
@@ -45,6 +48,7 @@ Tests/PopskillTests/SchedTests.swift     定时任务解析测试（plist/cron/l
 - **LinkStatus 四态**：`on`=symlink 有效 / `off`=未链接 / `stub`=**真实目录占位（本地副本，未托管）** / `broken`=symlink 目标丢失。注意 stub 的真实语义和原型（占位待校验）不同。
 - **套装双形态**：工具侧既可能是「整套一条 symlink」（全部子项 on），也可能是「物化目录 + 逐子项 symlink」。单独关某个子项时 `setBundleChildLink` 自动物化。移除套装时物化目录会被清理。
 - **防呆三条**：`removeLink` 只删 symlink、真实目录一律走 store 回收站（`~/.agents/.trash/`，带时间戳）、store 目录绝不被开关动到。改 StoreFS 必须跑测试。
+- **本地化（v2.12）**：UI 全部用户可见字符串走 `L("中文原文")`（key=中文，插值留在里面，Int→%lld/String→%@，其它类型先转 String）。权威源 `swift-app/l10n/Localizable.xcstrings`（zh-Hans + en 双表），**改完必须跑 `scripts/gen-l10n.sh`** 重新编译 lproj（SPM 5.9 CLI 不编译 xcstrings，预编译产物提交进库）；ci-local 的 `--check` 会抓 catalog↔产物漂移和 L()↔key 双向覆盖（scripts/check-l10n-coverage.py）。语言协商在 Localization.swift 显式做（裸二进制没有 main bundle 语言声明，不自己协商会永远落 en）；不支持的系统语言一律英文。**刻意不本地化**：plog 日志、Fixtures、Catalog 精选目录数据。英文截图：启动参数 `-AppleLanguages "(en)"`（zsh 注意引号防分词）。
 - **来源回填链（v2.1）**：`.popskill.json`（自装）→ `~/.agents/.skill-lock.json`（npx skills 生态，v3 schema，含 skillPath 子路径）→ 目录自带 `.git` remote → frontmatter homepage 正则。`normalizeSource` 统一成 `github.com/owner/repo` 小写。
 - **键盘导航（v2.2/PATCH-02）**：AppModel.kb*（focusId/toolIdx/focusList/focusFrame），MainView syncKbList 按可见顺序回填，PopskillApp NSEvent 监听 ↑↓←→/空格/Esc；激活色=绿 #1a9a4e（蓝只做交互色）。
 - **排序（v2.1.2）**：套装置顶（按名），独立项按 类型(Skill→Agent→MCP→CLI)→名称（`sortEntries`）。
@@ -133,18 +137,17 @@ scripts/release.sh
 15. **容器 .shadow 会传染子视图** — SwiftUI 给带子背景的容器加 .shadow，每个子行各自投影把底色糊灰（v2.3.1 用户实机发现）；浮层/弹层投影前必须 `compositingGroup()`
 16. **发版链禁静默步骤** — v2.5.0 事故：appcast 注入静默 no-op，DMG/Release 都成了、更新源没更，用户看到「最新 2.4.2/正跑 2.5.0」倒挂。appcast 一律走 `scripts/append-appcast.py`（断言：重复版本拒绝/锚点必中/写后校验）；另注意 Pages CDN max-age=600，发版后 10 分钟内手动检查可能命中旧缓存
 
-## 当前状态（2026-06-12）
+## 当前状态（2026-06-13）
 
-- 线上 **v2.11.0**：① 激活 pill 压缩靠右（常态只留圆点+名，stub/broken 警示文字保留——偏离 v2-handoff-patch-02 SPEC 的「pill 显示状态文案」约定，体验修订）；② 定时任务面板人性化重做（v2.10 并入）：按行为分组（定时跑/常驻/自启）、下次运行倒计时 + 按它排序（StartCalendarInterval/cron 的 next-fire 纯函数计算）、上次运行时间从日志 mtime 推断、人话名（prettyLabel 去 reverse-DNS 噪音 + 可编辑备注存 meta.schedNotes）、停摆 daemon 红条 + 行内重启、今天还会跑摘要条。
-- v2.9.0：定时任务面板（launchd/crontab 可视化 + kickstart/load/unload）+ 详情 peek 三连 + 更新徽标语义修复。v2.8.0 成熟度大版见 docs/release/v2.8.0.md。
-- 测试 88 个（StoreFSTests 57 + AppModelTests 8 + SchedTests 23），smoke 群全部可跑。
+- 线上 **v2.12.0「双语」**：UI 全量本地化（简中 + 英文，~295 key 含 30 组单复数），跟随系统语言、不支持的语言落英文。机制/约定见「关键架构事实 → 本地化」节——改 UI 文案的事实标准从此变了：**新增用户可见字符串必须 `L()` + 进 catalog + 跑 gen-l10n.sh**，ci-local 会拦漏网的。
+- v2.11.0：激活 pill 压缩靠右；v2.10/2.9：定时任务面板（launchd/crontab 可视化，行为分组/倒计时/人话备注/停摆红条）；v2.8.0 成熟度大版见 docs/release/v2.8.0.md。
+- 测试 89 个（StoreFSTests 57+1 冒烟 skip + AppModelTests 8 + SchedTests 23），smoke 群全部可跑。
 
 ## 下一步候选
 
-1. **v2.8.0 发布**：合回 main 跑 `scripts/release.sh`（VERSION 已备 2.8.0/272）
-2. **本地化**：String Catalog 全量改造（英文 README 在引流但 app 纯中文，audit 遗留的唯一 L 级项）
-3. **npm 源支持**
-4. **store 目录 FSEvents 实时刷新**（现为 ⌘R + 前台激活自动重扫）
+1. **npm 源支持**
+2. **store 目录 FSEvents 实时刷新**（现为 ⌘R + 前台激活自动重扫）
+3. **精选目录英文化**（Catalog.swift ~80 条中文简介对英文用户仍直出中文——本地化刻意排除项，需要时单独做）
 
 ## 沟通偏好（来自 user memory）
 

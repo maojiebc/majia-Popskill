@@ -79,6 +79,7 @@ The filesystem is the database. No sidecar, no SQLite — your directory tree al
 - **Unmanaged import** — one click adopts stray skill folders from `~/.claude` / `~/.codex` into the store, replaced with symlinks
 - **Keyboard navigation** — `↑↓` row focus, `←→` tool column, `Space` to toggle or repair, `/` search, `Esc` to exit
 - **Curated catalog** — built-in one-line Chinese summaries and type hints for ~80 popular skills; no more raw upstream walls of text on cards
+- **Bilingual UI** — fully localized in English + Simplified Chinese, follows your system language (v2.12)
 
 ---
 

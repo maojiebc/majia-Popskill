@@ -13,8 +13,8 @@ struct FixPopoverView: View {
         let headColor = target.issueKind == .stub ? Ink.amber : Ink.red
         let headSym = target.issueKind == .stub ? "◐" : "✕"
         let headLabel = target.issueKind == .stub
-            ? (target.cap.brokenCause[target.tool.id] ?? "占位 (stub)")
-            : (target.cap.brokenCause[target.tool.id] ?? "断链")
+            ? (target.cap.brokenCause[target.tool.id] ?? L("占位 (stub)"))
+            : (target.cap.brokenCause[target.tool.id] ?? L("断链"))
 
         VStack(alignment: .leading, spacing: 0) {
             // 头部：成因标题 + 来源行
@@ -83,7 +83,7 @@ struct FixOptionRow: View {
                         .font(.ui(12, .semibold))
                         .foregroundStyle(option.rec ? Ink.greenText : Ink.ink)
                     if option.rec {
-                        Text("推荐")
+                        Text(L("推荐"))
                             .font(.ui(9.5, .bold)).kerning(0.5)
                             .foregroundStyle(Ink.greenText)
                             .padding(.horizontal, 5).padding(.vertical, 1)

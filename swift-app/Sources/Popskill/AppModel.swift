@@ -307,11 +307,11 @@ final class AppModel {
 
     func toggle(cap: Capability, entry: Entry, tool: Tool) {
         guard !entry.isManagedExternally else {
-            say("Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 操作")
+            say(L("Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 操作"))
             return
         }
         guard !updatingIds.contains(entry.id) else {
-            say("\(entry.name) 正在更新中，稍候再操作")
+            say(L("\(entry.name) 正在更新中，稍候再操作"))
             return
         }
         let from = cap.status(tool.id)
@@ -331,11 +331,13 @@ final class AppModel {
                 }
                 refresh()
             } catch {
-                sayError("\(to == .on ? "链接" : "断开") \(cap.name) 失败：\(error.localizedDescription)")
+                sayError(to == .on
+                    ? L("链接 \(cap.name) 失败：\(error.localizedDescription)")
+                    : L("断开 \(cap.name) 失败：\(error.localizedDescription)"))
                 return
             }
         }
-        say(to == .on ? "已链接 \(cap.name) → \(tool.name)" : "已断开 \(cap.name) → \(tool.name)")
+        say(to == .on ? L("已链接 \(cap.name) → \(tool.name)") : L("已断开 \(cap.name) → \(tool.name)"))
     }
 
     // ── 修复 ─────────────────────────────────────────────
@@ -344,29 +346,29 @@ final class AppModel {
         var opts: [FixOption] = []
         if t.issueKind == .stub {
             // 真实世界的 stub = 本地副本（真实目录占着链接位）
-            opts.append(FixOption(kind: .adopt, label: "改用 store 链接", desc: "原目录移入 store 回收站，换成指向 store 的 symlink", rec: true,
-                                  toast: "已把 \(t.cap.name) · \(t.tool.name) 换成 store 链接"))
-            opts.append(FixOption(kind: .trashCopy, label: "移除该侧副本", desc: "目录移入 store 回收站，不建链接", rec: false,
-                                  toast: "已移除 \(t.cap.name) 在 \(t.tool.name) 侧的副本"))
-            opts.append(FixOption(kind: .keep, label: "保持现状", desc: "保留本地副本，popskill 不接管", rec: false, toast: ""))
+            opts.append(FixOption(kind: .adopt, label: L("改用 store 链接"), desc: L("原目录移入 store 回收站，换成指向 store 的 symlink"), rec: true,
+                                  toast: L("已把 \(t.cap.name) · \(t.tool.name) 换成 store 链接")))
+            opts.append(FixOption(kind: .trashCopy, label: L("移除该侧副本"), desc: L("目录移入 store 回收站，不建链接"), rec: false,
+                                  toast: L("已移除 \(t.cap.name) 在 \(t.tool.name) 侧的副本")))
+            opts.append(FixOption(kind: .keep, label: L("保持现状"), desc: L("保留本地副本，popskill 不接管"), rec: false, toast: ""))
         } else {
             let storeExists = FileManager.default.fileExists(atPath: t.cap.dirURL.path)
             if t.entry.hasUpdate, let latest = t.entry.latest {
-                opts.append(FixOption(kind: .update, label: "更新到 \(latest) 并修复", desc: "从 \(t.entry.sourceUrl ?? "源") 拉取新版，重链 symlink", rec: true,
-                                      toast: "已更新 \(t.entry.name) 并修复链接"))
+                opts.append(FixOption(kind: .update, label: L("更新到 \(latest) 并修复"), desc: L("从 \(t.entry.sourceUrl ?? L("源")) 拉取新版，重链 symlink"), rec: true,
+                                      toast: L("已更新 \(t.entry.name) 并修复链接")))
             }
             if storeExists {
-                opts.append(FixOption(kind: .relink, label: "重链到 store 中本地版本", desc: "指回 store 中现存的目录", rec: !t.entry.hasUpdate,
-                                      toast: "已重链 \(t.cap.name) · \(t.tool.name)"))
+                opts.append(FixOption(kind: .relink, label: L("重链到 store 中本地版本"), desc: L("指回 store 中现存的目录"), rec: !t.entry.hasUpdate,
+                                      toast: L("已重链 \(t.cap.name) · \(t.tool.name)")))
             }
             if let url = t.entry.sourceUrl, SourceKind.of(url) == .github {
                 // 推荐唯一：有更新推更新，store 健在推重链，都没有才推重拉
-                opts.append(FixOption(kind: .repull, label: "从源重新拉取", desc: "从 \(url) 重新获取该项",
+                opts.append(FixOption(kind: .repull, label: L("从源重新拉取"), desc: L("从 \(url) 重新获取该项"),
                                       rec: !t.entry.hasUpdate && !storeExists,
-                                      toast: "已从源重新拉取 \(t.cap.name)"))
+                                      toast: L("已从源重新拉取 \(t.cap.name)")))
             }
-            opts.append(FixOption(kind: .unlink, label: "移除该侧链接", desc: "撤掉这条 symlink，其他工具不受影响", rec: false,
-                                  toast: "已移除 \(t.cap.name) 在 \(t.tool.name) 侧的链接"))
+            opts.append(FixOption(kind: .unlink, label: L("移除该侧链接"), desc: L("撤掉这条 symlink，其他工具不受影响"), rec: false,
+                                  toast: L("已移除 \(t.cap.name) 在 \(t.tool.name) 侧的链接")))
         }
         return opts
     }
@@ -404,7 +406,7 @@ final class AppModel {
             refresh()
             if !opt.toast.isEmpty { say(opt.toast) }
         } catch {
-            sayError("修复 \(t.cap.name) 失败：\(error.localizedDescription)")
+            sayError(L("修复 \(t.cap.name) 失败：\(error.localizedDescription)"))
         }
     }
 
@@ -414,7 +416,7 @@ final class AppModel {
     private func repull(entry: Entry, primaryToolId: String, url: String, toast toastMsg: String) {
         guard !updatingIds.contains(entry.id) else { return }
         updatingIds.insert(entry.id)
-        say("正在从源重新拉取 \(entry.name)…")
+        say(L("正在从源重新拉取 \(entry.name)…"))
         let fsCopy = fs
         let allTools = tools
         Task { [weak self] in
@@ -444,7 +446,7 @@ final class AppModel {
                     plog.info("repull \(entry.name, privacy: .public) ← \(url, privacy: .public) 完成")
                     if !toastMsg.isEmpty { self.say(toastMsg) }
                 case .failure(let err):
-                    self.sayError("重新拉取 \(entry.name) 失败：\(err.localizedDescription)")
+                    self.sayError(L("重新拉取 \(entry.name) 失败：\(err.localizedDescription)"))
                 }
             }
         }
@@ -502,11 +504,12 @@ final class AppModel {
         // 成功/失败/跳过三态分开——红色错误只留给真出错的
         let failedCount = list.count - fixed - skipped
         if failedCount > 0 {
-            sayError("修复 \(fixed) 个，\(failedCount) 个失败\(firstError.map { "：\($0)" } ?? "")")
+            sayError(firstError.map { L("修复 \(fixed) 个，\(failedCount) 个失败：\($0)") }
+                ?? L("修复 \(fixed) 个，\(failedCount) 个失败"))
         } else if skipped > 0 {
-            say("已修复 \(fixed) 个，跳过 \(skipped) 个（正在更新中）")
+            say(L("已修复 \(fixed) 个，跳过 \(skipped) 个（正在更新中）"))
         } else {
-            say("已修复 \(fixed) 个链接问题")
+            say(L("已修复 \(fixed) 个链接问题"))
         }
     }
 
@@ -514,10 +517,10 @@ final class AppModel {
 
     /// 检查全部可检查的源；auto=true 时对开了自动更新的源直接执行更新
     func checkUpdates(auto: Bool = false) {
-        guard !fake else { say("原型数据模式不检查更新"); return }
+        guard !fake else { say(L("原型数据模式不检查更新")); return }
         guard !checkingUpdates else { return }
         let candidates = entries.filter { $0.sourceUrl != nil && SourceKind.of($0.sourceUrl) != .npm && !$0.isManagedExternally }
-        guard !candidates.isEmpty else { say("没有可检查的源（需要 GitHub 或本地路径来源）"); return }
+        guard !candidates.isEmpty else { say(L("没有可检查的源（需要 GitHub 或本地路径来源）")); return }
         checkingUpdates = true
         let fsCopy = fs
         Task { [weak self] in
@@ -574,17 +577,18 @@ final class AppModel {
                 let autoTargets = auto ? self.entries.filter { $0.hasUpdate && $0.autoUpdate } : []
                 if !autoTargets.isEmpty {
                     for e in autoTargets { self.runUpdate(e.id, quiet: true) }
-                    self.say("自动更新 \(autoTargets.count) 个源")
+                    self.say(L("自动更新 \(autoTargets.count) 个源"))
                 } else if failedCount > 0 {
                     // 启动自动检查的失败不弹 toast 打扰（断网开机最常见），日志已留痕；手动检查必须如实报
                     if !auto {
-                        let head = found.isEmpty ? "" : "发现 \(found.count) 个源可更新；"
-                        self.sayError("\(head)\(failedCount) 个源检查失败（网络或源不可达）")
+                        self.sayError(found.isEmpty
+                            ? L("\(failedCount) 个源检查失败（网络或源不可达）")
+                            : L("发现 \(found.count) 个源可更新；\(failedCount) 个源检查失败（网络或源不可达）"))
                     } else if !found.isEmpty {
-                        self.say("发现 \(found.count) 个源可更新（另有 \(failedCount) 个检查失败）")
+                        self.say(L("发现 \(found.count) 个源可更新（另有 \(failedCount) 个检查失败）"))
                     }
                 } else if !auto || !found.isEmpty {
-                    self.say(found.isEmpty ? "全部源已是最新" : "发现 \(found.count) 个源可更新")
+                    self.say(found.isEmpty ? L("全部源已是最新") : L("发现 \(found.count) 个源可更新"))
                 }
             }
         }
@@ -595,10 +599,10 @@ final class AppModel {
         guard let entry = entries.first(where: { $0.id == entryId }) else { return }
         if fake {
             if let i = entries.firstIndex(where: { $0.id == entryId }) {
-                let latest = entries[i].latest ?? "新版"
+                let latest = entries[i].latest ?? L("新版")
                 entries[i].cap.version = entries[i].latest
                 entries[i].latest = nil
-                say("已更新 \(entry.name) → \(latest)")
+                say(L("已更新 \(entry.name) → \(latest)"))
             }
             return
         }
@@ -618,16 +622,16 @@ final class AppModel {
                     plog.info("更新 \(entry.name, privacy: .public) 完成：\(r.updated.joined(separator: ","), privacy: .public)")
                     self.refresh()
                     if !quiet {
-                        let names = r.updated.count <= 3 ? r.updated.joined(separator: "、")
-                            : r.updated.prefix(3).joined(separator: "、") + " 等"
+                        let names = r.updated.count <= 3 ? r.updated.joined(separator: L("、"))
+                            : L("\(r.updated.prefix(3).joined(separator: L("、"))) 等")
                         var msg = r.updated.count == 1 && !entry.isBundle
-                            ? "已更新 \(entry.name)（旧版已入回收站）"
-                            : "已更新 \(entry.name)：\(names)（旧版已入回收站）"
-                        if !r.upstreamNew.isEmpty { msg += " · 上游另有 \(r.upstreamNew.count) 个未安装技能" }
+                            ? L("已更新 \(entry.name)（旧版已入回收站）")
+                            : L("已更新 \(entry.name)：\(names)（旧版已入回收站）")
+                        if !r.upstreamNew.isEmpty { msg += L(" · 上游另有 \(r.upstreamNew.count) 个未安装技能") }
                         self.say(msg)
                     }
                 case .failure(let err):
-                    self.sayError("更新 \(entry.name) 失败：\(err.localizedDescription)")
+                    self.sayError(L("更新 \(entry.name) 失败：\(err.localizedDescription)"))
                 }
             }
         }
@@ -637,23 +641,23 @@ final class AppModel {
         let targets = updates
         guard !targets.isEmpty else { return }
         for e in targets { runUpdate(e.id, quiet: true) }
-        say("正在更新 \(targets.count) 个源…")
+        say(L("正在更新 \(targets.count) 个源…"))
     }
 
     // ── 未托管目录导入（v2.1）─────────────────────────────
 
     func importUnmanaged() {
-        guard !fake else { say("原型数据模式不可导入"); return }
+        guard !fake else { say(L("原型数据模式不可导入")); return }
         let known = Set(entries.flatMap { $0.allCaps.map(\.name) + [$0.name] })
         let found = fs.scanUnmanaged(tools: tools, knownNames: known)
-        guard !found.isEmpty else { say("没有发现未托管的技能目录"); return }
+        guard !found.isEmpty else { say(L("没有发现未托管的技能目录")); return }
         do {
             let imported = try fs.importUnmanaged(found)
             plog.info("导入未托管目录 \(imported.joined(separator: ","), privacy: .public)")
             refresh()
-            say("已导入 \(imported.count) 个未托管目录进 store（原目录已入回收站）")
+            say(L("已导入 \(imported.count) 个未托管目录进 store（原目录已入回收站）"))
         } catch {
-            sayError("导入失败：\(error.localizedDescription)")
+            sayError(L("导入失败：\(error.localizedDescription)"))
         }
     }
 
@@ -662,30 +666,30 @@ final class AppModel {
     func scanLocalForOnboarding() {
         refresh()
         guard entries.isEmpty else {
-            say("扫描完成：发现 \(stats.total) 项能力")
+            say(L("扫描完成：发现 \(stats.total) 项能力"))
             return
         }
         let found = fs.scanUnmanaged(tools: tools, knownNames: [])
         guard !found.isEmpty else {
-            say("store 为空，工具目录里也没有发现技能——点「+ 添加」装第一个")
+            say(L("store 为空，工具目录里也没有发现技能——点「+ 添加」装第一个"))
             return
         }
         let names = Set(found.map(\.name))
         if ProcessInfo.processInfo.environment["POPSKILL_AUTOCONFIRM"] != "1" {
             let alert = NSAlert()
-            alert.messageText = "发现 \(names.count) 个未托管的技能目录"
-            alert.informativeText = "在 Claude / Codex 目录里发现现有技能（如 \(names.sorted().prefix(3).joined(separator: "、"))…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。"
-            alert.addButton(withTitle: "导入 \(names.count) 个")
-            alert.addButton(withTitle: "暂不")
+            alert.messageText = L("发现 \(names.count) 个未托管的技能目录")
+            alert.informativeText = L("在 Claude / Codex 目录里发现现有技能（如 \(names.sorted().prefix(3).joined(separator: L("、")))…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。")
+            alert.addButton(withTitle: L("导入 \(names.count) 个"))
+            alert.addButton(withTitle: L("暂不"))
             guard alert.runModal() == .alertFirstButtonReturn else { return }
         }
         do {
             let imported = try fs.importUnmanaged(found)
             plog.info("空态收编 \(imported.joined(separator: ","), privacy: .public)")
             refresh()
-            say("已导入 \(imported.count) 个技能进 store 并建链——这就是你的能力矩阵")
+            say(L("已导入 \(imported.count) 个技能进 store 并建链——这就是你的能力矩阵"))
         } catch {
-            sayError("导入失败：\(error.localizedDescription)")
+            sayError(L("导入失败：\(error.localizedDescription)"))
         }
     }
 
@@ -718,32 +722,32 @@ final class AppModel {
                 plog.info("安装 \(src.entryName, privacy: .public) ← \(src.url, privacy: .public)，链 \(linkTools.count) 个工具")
                 refresh()
             } catch {
-                sayError("安装 \(src.entryName) 失败：\(error.localizedDescription)")
+                sayError(L("安装 \(src.entryName) 失败：\(error.localizedDescription)"))
                 return
             }
         }
         sheet = nil
         flash(src.entryName)
-        say(linkTools.isEmpty ? "已保存 \(src.entryName) 到 store" : "已安装 \(src.entryName) 并链接到 \(linkTools.count) 个工具")
+        say(linkTools.isEmpty ? L("已保存 \(src.entryName) 到 store") : L("已安装 \(src.entryName) 并链接到 \(linkTools.count) 个工具"))
     }
 
     func removeEntry(_ entry: Entry) {
         guard !entry.isManagedExternally else {
-            say("Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 卸载")
+            say(L("Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 卸载"))
             return
         }
         guard !updatingIds.contains(entry.id) else {
-            say("\(entry.name) 正在更新中，稍候再操作")
+            say(L("\(entry.name) 正在更新中，稍候再操作"))
             return
         }
         let alert = NSAlert()
-        alert.messageText = "移除 \(entry.name)？"
+        alert.messageText = L("移除 \(entry.name)？")
         alert.informativeText = entry.isBundle
-            ? "套装连同 \(entry.children?.count ?? 0) 个子项的 store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。"
-            : "store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。"
+            ? L("套装连同 \(entry.children?.count ?? 0) 个子项的 store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。")
+            : L("store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。")
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "移除")
-        alert.addButton(withTitle: "取消")
+        alert.addButton(withTitle: L("移除"))
+        alert.addButton(withTitle: L("取消"))
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         if fake {
             entries.removeAll { $0.id == entry.id }
@@ -753,11 +757,11 @@ final class AppModel {
                 plog.info("移除 \(entry.name, privacy: .public)（store 副本入回收站）")
                 refresh()
             } catch {
-                sayError("移除 \(entry.name) 失败：\(error.localizedDescription)")
+                sayError(L("移除 \(entry.name) 失败：\(error.localizedDescription)"))
                 return
             }
         }
-        say("store 副本与全部 symlink 已清理")
+        say(L("store 副本与全部 symlink 已清理"))
     }
 
     // ── 设置 ─────────────────────────────────────────────
@@ -793,9 +797,9 @@ final class AppModel {
             try fs.restoreFromTrash(item)
             plog.info("回收站恢复 \(item.name, privacy: .public)")
             refresh()
-            say("已恢复 \(item.name) 到 store——按需重新链接工具")
+            say(L("已恢复 \(item.name) 到 store——按需重新链接工具"))
         } catch {
-            sayError("恢复 \(item.name) 失败：\(error.localizedDescription)")
+            sayError(L("恢复 \(item.name) 失败：\(error.localizedDescription)"))
         }
     }
 
@@ -812,13 +816,13 @@ final class AppModel {
     func reportIssue() {
         let os = ProcessInfo.processInfo.operatingSystemVersionString
         var comps = URLComponents(string: "https://github.com/maojiebc/majia-Popskill/issues/new")!
-        comps.queryItems = [URLQueryItem(name: "body", value: """
+        comps.queryItems = [URLQueryItem(name: "body", value: L("""
         App: Popskill v\(popskillVersion)
         macOS: \(os)
 
         <!-- 描述问题。若 app 崩溃过，请附上 ~/Library/Logs/DiagnosticReports 里最新的 Popskill-*.ips 文件 -->
 
-        """)]
+        """))]
         if let u = comps.url { NSWorkspace.shared.open(u) }
     }
 
@@ -875,21 +879,22 @@ final class AppModel {
     func schedKickstart(_ task: SchedTask) {
         let restart = task.behavior == .daemon
         guard schedConfirm(
-            title: restart ? "重启 \(task.displayName)？" : "立刻运行 \(task.displayName)？",
-            info: "等价于 launchctl kickstart -k——\(restart ? "杀掉旧进程重新拉起。" : "不等下次调度时间，现在就跑一遍。")任务输出看它自己的日志。",
-            button: restart ? "重启" : "跑一次"
+            title: restart ? L("重启 \(task.displayName)？") : L("立刻运行 \(task.displayName)？"),
+            info: restart ? L("等价于 launchctl kickstart -k——杀掉旧进程重新拉起。任务输出看它自己的日志。")
+                          : L("等价于 launchctl kickstart -k——不等下次调度时间，现在就跑一遍。任务输出看它自己的日志。"),
+            button: restart ? L("重启") : L("跑一次")
         ) else { return }
-        schedRun(task, doneToast: "已触发 \(task.displayName)") { try $0.kickstart($1) }
+        schedRun(task, doneToast: L("已触发 \(task.displayName)")) { try $0.kickstart($1) }
     }
 
     func schedSetLoaded(_ task: SchedTask, to on: Bool) {
         guard schedConfirm(
-            title: on ? "启用 \(task.displayName)？" : "停用 \(task.displayName)？",
-            info: on ? "launchctl load——按 plist 里的调度恢复运行。"
-                     : "launchctl unload——不再按时执行，plist 文件原样保留，随时可重新启用。",
-            button: on ? "启用" : "停用"
+            title: on ? L("启用 \(task.displayName)？") : L("停用 \(task.displayName)？"),
+            info: on ? L("launchctl load——按 plist 里的调度恢复运行。")
+                     : L("launchctl unload——不再按时执行，plist 文件原样保留，随时可重新启用。"),
+            button: on ? L("启用") : L("停用")
         ) else { return }
-        schedRun(task, doneToast: on ? "已启用 \(task.displayName)" : "已停用 \(task.displayName)") { try $0.setLoaded($1, to: on) }
+        schedRun(task, doneToast: on ? L("已启用 \(task.displayName)") : L("已停用 \(task.displayName)")) { try $0.setLoaded($1, to: on) }
     }
 
     private func schedRun(_ task: SchedTask, doneToast: String, _ op: @escaping (SchedEngine, SchedTask) throws -> Void) {
@@ -920,7 +925,7 @@ final class AppModel {
         alert.messageText = title
         alert.informativeText = info
         alert.addButton(withTitle: button)
-        alert.addButton(withTitle: "取消")
+        alert.addButton(withTitle: L("取消"))
         return alert.runModal() == .alertFirstButtonReturn
     }
 

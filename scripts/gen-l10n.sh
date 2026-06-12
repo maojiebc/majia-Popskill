@@ -27,14 +27,19 @@ if [[ "${1:-}" == "--check" ]]; then
   "${XCRUN[@]}" xcstringstool compile "$CATALOG" --output-directory "$TMP"
   for lproj in "$TMP"/*.lproj; do
     name="$(basename "$lproj")"
-    cmp -s "$lproj/Localizable.strings" "$OUT_DIR/$name/Localizable.strings" \
-      || die "本地化产物漂移：$name 与 catalog 不一致——跑 scripts/gen-l10n.sh 重新生成"
+    for f in "$lproj"/*; do
+      base="$(basename "$f")"
+      cmp -s "$f" "$OUT_DIR/$name/$base" \
+        || die "本地化产物漂移：$name/$base 与 catalog 不一致——跑 scripts/gen-l10n.sh 重新生成"
+    done
   done
   # 反向：产物里不许有 catalog 没有的语言
   for lproj in "$OUT_DIR"/*.lproj; do
     name="$(basename "$lproj")"
     [[ -d "$TMP/$name" ]] || die "产物有多余语言 $name（catalog 里没有）"
   done
+  # 源码 L() ↔ catalog key 双向覆盖
+  python3 "$ROOT_DIR/scripts/check-l10n-coverage.py"
   echo "l10n ok — catalog 与产物一致"
   exit 0
 fi

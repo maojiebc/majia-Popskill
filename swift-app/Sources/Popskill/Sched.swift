@@ -169,16 +169,16 @@ struct SchedEngine {
             let items = calendarItems(cal)
             if !items.isEmpty {
                 let parts = items.prefix(3).map(describeCalendar)
-                let suffix = items.count > 3 ? " 等 \(items.count) 个时间点" : ""
+                let suffix = items.count > 3 ? L(" 等 \(items.count) 个时间点") : ""
                 return parts.joined(separator: " / ") + suffix
             }
         }
         if let sec = dict["StartInterval"] as? Int, sec > 0 { return describeInterval(sec) }
         if let keep = dict["KeepAlive"] {
-            if (keep as? Bool) == true || keep is [String: Any] { return "常驻 daemon" }
+            if (keep as? Bool) == true || keep is [String: Any] { return L("常驻 daemon") }
         }
-        if (dict["RunAtLoad"] as? Bool) == true { return "登录自启" }
-        return "未配置调度（手动）"
+        if (dict["RunAtLoad"] as? Bool) == true { return L("登录自启") }
+        return L("未配置调度（手动）")
     }
 
     private static func calendarItems(_ cal: Any) -> [[String: Int]] {
@@ -187,25 +187,29 @@ struct SchedEngine {
         return []
     }
 
+    /// 整词取词（"每周一" 而非 "每周"+"一"），翻译才有完整语序；launchd: 0 和 7 都是周日
+    static let weeklyWords = [L("每周日"), L("每周一"), L("每周二"), L("每周三"),
+                              L("每周四"), L("每周五"), L("每周六"), L("每周日")]
+
     static func describeCalendar(_ c: [String: Int]) -> String {
-        let weekdays = ["日", "一", "二", "三", "四", "五", "六", "日"]   // launchd: 0 和 7 都是周日
         var when = ""
-        if let m = c["Month"] { when += "每年 \(m) 月" }
-        if let d = c["Day"] { when += when.isEmpty ? "每月 \(d) 日" : " \(d) 日" }
-        if let w = c["Weekday"], w >= 0, w <= 7 { when += "每周\(weekdays[w])" }
-        if when.isEmpty { when = c["Hour"] != nil ? "每天" : "" }
+        if let m = c["Month"] { when += L("每年 \(m) 月") }
+        if let d = c["Day"] { when += when.isEmpty ? L("每月 \(d) 日") : " " + L("\(d) 日") }
+        if let w = c["Weekday"], w >= 0, w <= 7 { when += weeklyWords[w] }
+        if when.isEmpty { when = c["Hour"] != nil ? L("每天") : "" }
         if let h = c["Hour"] {
             when += String(format: " %02d:%02d", h, c["Minute"] ?? 0)
         } else if let min = c["Minute"] {
-            when += when.isEmpty ? "每小时第 \(min) 分" : " 每小时第 \(min) 分"
+            let part = L("每小时第 \(min) 分")
+            when += when.isEmpty ? part : " " + part
         }
         return when.trimmingCharacters(in: .whitespaces)
     }
 
     static func describeInterval(_ sec: Int) -> String {
-        if sec % 3600 == 0 { return "每 \(sec / 3600) 小时" }
-        if sec % 60 == 0 { return "每 \(sec / 60) 分钟" }
-        return "每 \(sec) 秒"
+        if sec % 3600 == 0 { return L("每 \(sec / 3600) 小时") }
+        if sec % 60 == 0 { return L("每 \(sec / 60) 分钟") }
+        return L("每 \(sec) 秒")
     }
 
     // ── 下次触发计算（纯函数，注入 now） ────────────────────
@@ -292,6 +296,9 @@ struct SchedEngine {
 
     // ── 人话时间格式化（注入 now，UI 与测试共用） ─────────────
 
+    /// 单日历日名（humanNext 用，"周一 10:17"），launchd weekly 全词另存 weeklyWords
+    static let weekdayWords = [L("周日"), L("周一"), L("周二"), L("周三"), L("周四"), L("周五"), L("周六")]
+
     /// 下次触发 → "32 分钟后 · 23:41" / "7 小时后 · 明天 05:00" / "周一 10:17"
     static func humanNext(_ date: Date, now: Date = Date()) -> String {
         let sec = date.timeIntervalSince(now)
@@ -299,16 +306,16 @@ struct SchedEngine {
         let hm = String(format: "%02d:%02d", cal.component(.hour, from: date), cal.component(.minute, from: date))
         let dayWord: String
         if cal.isDate(date, inSameDayAs: now) { dayWord = "" }
-        else if let tm = cal.date(byAdding: .day, value: 1, to: now), cal.isDate(date, inSameDayAs: tm) { dayWord = "明天 " }
-        else if let at = cal.date(byAdding: .day, value: 2, to: now), cal.isDate(date, inSameDayAs: at) { dayWord = "后天 " }
+        else if let tm = cal.date(byAdding: .day, value: 1, to: now), cal.isDate(date, inSameDayAs: tm) { dayWord = L("明天") + " " }
+        else if let at = cal.date(byAdding: .day, value: 2, to: now), cal.isDate(date, inSameDayAs: at) { dayWord = L("后天") + " " }
         else {
-            let wd = ["日", "一", "二", "三", "四", "五", "六"][cal.component(.weekday, from: date) - 1]
-            dayWord = sec < 7 * 86400 ? "周\(wd) " : "\(cal.component(.month, from: date))/\(cal.component(.day, from: date)) "
+            let wd = weekdayWords[cal.component(.weekday, from: date) - 1]
+            dayWord = sec < 7 * 86400 ? wd + " " : "\(cal.component(.month, from: date))/\(cal.component(.day, from: date)) "
         }
         let rel: String
-        if sec < 90 * 60 { rel = "\(max(1, Int(sec / 60))) 分钟后" }
-        else if sec < 48 * 3600 { rel = "\(Int(sec / 3600)) 小时后" }
-        else { rel = "\(Int(sec / 86400)) 天后" }
+        if sec < 90 * 60 { rel = L("\(max(1, Int(sec / 60))) 分钟后") }
+        else if sec < 48 * 3600 { rel = L("\(Int(sec / 3600)) 小时后") }
+        else { rel = L("\(Int(sec / 86400)) 天后") }
         return "\(rel) · \(dayWord)\(hm)"
     }
 
@@ -316,8 +323,8 @@ struct SchedEngine {
     static func humanLast(_ date: Date, now: Date = Date()) -> String {
         var cal = Calendar(identifier: .gregorian); cal.timeZone = .current
         let hm = String(format: "%02d:%02d", cal.component(.hour, from: date), cal.component(.minute, from: date))
-        if cal.isDate(date, inSameDayAs: now) { return "今天 \(hm)" }
-        if let yd = cal.date(byAdding: .day, value: -1, to: now), cal.isDate(date, inSameDayAs: yd) { return "昨天 \(hm)" }
+        if cal.isDate(date, inSameDayAs: now) { return L("今天 \(hm)") }
+        if let yd = cal.date(byAdding: .day, value: -1, to: now), cal.isDate(date, inSameDayAs: yd) { return L("昨天 \(hm)") }
         return "\(cal.component(.month, from: date))/\(cal.component(.day, from: date)) \(hm)"
     }
 
@@ -361,24 +368,23 @@ struct SchedEngine {
     static func describeCron(_ f: [String]) -> String {
         guard f.count == 5 else { return f.joined(separator: " ") }
         let (min, hour, dom, mon, dow) = (f[0], f[1], f[2], f[3], f[4])
-        let weekdays = ["日", "一", "二", "三", "四", "五", "六", "日"]
         func t(_ h: String, _ m: String) -> String? {
             guard let hi = Int(h), let mi = Int(m) else { return nil }
             return String(format: "%02d:%02d", hi, mi)
         }
         if dom == "*", mon == "*" {
             if dow == "*" {
-                if let time = t(hour, min) { return "每天 \(time)" }
+                if let time = t(hour, min) { return L("每天 \(time)") }
                 if hour.hasPrefix("*/"), let step = Int(hour.dropFirst(2)), let mi = Int(min) {
-                    return "每 \(step) 小时的第 \(mi) 分"
+                    return L("每 \(step) 小时的第 \(mi) 分")
                 }
-                if hour == "*", let mi = Int(min) { return "每小时第 \(mi) 分" }
-                if hour == "*", min.hasPrefix("*/"), let step = Int(min.dropFirst(2)) { return "每 \(step) 分钟" }
+                if hour == "*", let mi = Int(min) { return L("每小时第 \(mi) 分") }
+                if hour == "*", min.hasPrefix("*/"), let step = Int(min.dropFirst(2)) { return L("每 \(step) 分钟") }
             } else if let w = Int(dow), w >= 0, w <= 7, let time = t(hour, min) {
-                return "每周\(weekdays[w]) \(time)"
+                return weeklyWords[w] + " " + time   // cron 周日 0/7 等价
             }
         }
-        if mon == "*", dow == "*", let d = Int(dom), let time = t(hour, min) { return "每月 \(d) 日 \(time)" }
+        if mon == "*", dow == "*", let d = Int(dom), let time = t(hour, min) { return L("每月 \(d) 日 \(time)") }
         return f.joined(separator: " ")
     }
 
@@ -390,14 +396,14 @@ struct SchedEngine {
     }
 
     func kickstart(_ task: SchedTask) throws {
-        guard task.kind == .launchd else { throw SchedError.failed("cron 任务请在终端手动执行") }
+        guard task.kind == .launchd else { throw SchedError.failed(L("cron 任务请在终端手动执行")) }
         let r = runProcess("/bin/launchctl", ["kickstart", "-k", "gui/\(getuid())/\(task.label)"], timeout: 30)
-        guard r.status == 0 else { throw SchedError.failed(r.err.isEmpty ? "launchctl kickstart 退出码 \(r.status)" : r.err) }
+        guard r.status == 0 else { throw SchedError.failed(r.err.isEmpty ? L("launchctl kickstart 退出码 \(Int(r.status))") : r.err) }
     }
 
     func setLoaded(_ task: SchedTask, to on: Bool) throws {
-        guard let plist = task.plistURL else { throw SchedError.failed("没有 plist 路径") }
+        guard let plist = task.plistURL else { throw SchedError.failed(L("没有 plist 路径")) }
         let r = runProcess("/bin/launchctl", [on ? "load" : "unload", plist.path], timeout: 30)
-        guard r.status == 0 else { throw SchedError.failed(r.err.isEmpty ? "launchctl 退出码 \(r.status)" : r.err) }
+        guard r.status == 0 else { throw SchedError.failed(r.err.isEmpty ? L("launchctl 退出码 \(Int(r.status))") : r.err) }
     }
 }

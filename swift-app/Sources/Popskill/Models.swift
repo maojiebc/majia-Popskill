@@ -152,7 +152,7 @@ func deriveIssues(_ entries: [Entry], tools: [Tool]) -> [Issue] {
             for t in tools where c.status(t.id) == .broken {
                 out.append(Issue(
                     capId: c.id, capName: c.name, toolId: t.id, toolName: t.name,
-                    kind: .broken, cause: c.brokenCause[t.id] ?? "断链",
+                    kind: .broken, cause: c.brokenCause[t.id] ?? L("断链"),
                     entryId: e.id, entryName: e.name,
                     sourceUrl: e.sourceUrl, latest: e.hasUpdate ? e.latest : nil
                 ))

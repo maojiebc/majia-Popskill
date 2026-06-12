@@ -2,7 +2,545 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>%@ — 空</key>
+	<string>%@ — empty</string>
+	<key>%@ 不是 popskill 管理的 symlink，已跳过</key>
+	<string>%@ is not a popskill-managed symlink — skipped</string>
+	<key>%@ 正在更新中，稍候再操作</key>
+	<string>%@ is updating — try again in a moment</string>
+	<key>%@ 等</key>
+	<string>%@ and more</string>
+	<key>%@：%@</key>
+	<string>%@: %@</string>
+	<key>%@：%@。点击切换 / 处理</key>
+	<string>%@: %@. Click to toggle / fix</string>
+	<key>%lld 套装 · %lld 独立能力 · %@ 已激活</key>
+	<string>%lld bundles · %lld standalone · %@ active</string>
+	<key>%lld 断链</key>
+	<string>%lld broken</string>
+	<key>%lld 日</key>
+	<string>day %lld</string>
+	<key>%lld 项中 %lld 项已激活</key>
+	<string>%2$lld of %1$lld active</string>
+	<key>+ 添加</key>
+	<string>+ Add</string>
+	<key>+ 粘贴 URL 添加</key>
+	<string>+ Add from URL</string>
+	<key>/plugin 管理</key>
+	<string>Managed by /plugin</string>
+	<key>App: Popskill v%@
+macOS: %@
+
+&lt;!-- 描述问题。若 app 崩溃过，请附上 ~/Library/Logs/DiagnosticReports 里最新的 Popskill-*.ips 文件 --&gt;
+</key>
+	<string>App: Popskill v%1$@
+macOS: %2$@
+
+&lt;!-- Describe the issue. If the app has crashed, please attach the latest Popskill-*.ips file from ~/Library/Logs/DiagnosticReports --&gt;
+</string>
+	<key>Claude Code Marketplace 插件——只读展示，操作用 /plugin</key>
+	<string>Claude Code Marketplace plugin — read-only here; manage with /plugin</string>
+	<key>Git · 已同步</key>
+	<string>Git · synced</string>
+	<key>Git · 有未提交改动</key>
+	<string>Git · uncommitted changes</string>
+	<key>Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 卸载</key>
+	<string>Marketplace plugins are managed by Claude Code — uninstall with /plugin inside Claude Code</string>
+	<key>Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 操作</key>
+	<string>Marketplace plugins are managed by Claude Code — use /plugin inside Claude Code</string>
+	<key>Marketplace 插件（%@）· 由 Claude Code 管理，操作用 /plugin</key>
+	<string>Marketplace plugin (%@) · Managed by Claude Code — use /plugin</string>
+	<key>PID %lld</key>
+	<string>PID %lld</string>
+	<key>Popskill 帮助</key>
+	<string>Popskill Help</string>
+	<key>SKILL.MD · 文档摘要</key>
+	<string>SKILL.MD · DOC EXCERPT</string>
+	<key>Store 与同步</key>
+	<string>Store &amp; Sync</string>
+	<key>cron 任务请在终端手动执行</key>
+	<string>Run cron jobs manually in a terminal</string>
+	<key>cron 条目在终端用 crontab -e 管理，这里只看不动。</key>
+	<string>cron entries are managed with crontab -e in a terminal; read-only here.</string>
+	<key>crontab 在册即生效</key>
+	<string>Listed in crontab = active</string>
+	<key>git clone 失败：%@</key>
+	<string>git clone failed: %@</string>
+	<key>launchctl kickstart 退出码 %lld</key>
+	<string>launchctl kickstart exited with code %lld</string>
+	<key>launchctl load——按 plist 里的调度恢复运行。</key>
+	<string>launchctl load — resumes runs on the schedule in the plist.</string>
+	<key>launchctl unload——不再按时执行，plist 文件原样保留，随时可重新启用。</key>
+	<string>launchctl unload — stops scheduled runs; the plist file stays untouched and can be re-enabled anytime.</string>
+	<key>launchctl 退出码 %lld</key>
+	<string>launchctl exited with code %lld</string>
+	<key>npm 源暂不支持——请用 GitHub 仓库或本地路径</key>
+	<string>npm sources are not supported yet — use a GitHub repo or a local path</string>
+	<key>store 中已存在 %@</key>
+	<string>%@ already exists in the store</string>
+	<key>store 为空</key>
+	<string>Store is empty</string>
+	<key>store 为空，工具目录里也没有发现技能——点「+ 添加」装第一个</key>
+	<string>The store is empty and no skills were found in the tool directories — click “+ Add” to install your first one</string>
+	<key>store 副本与全部 symlink 已清理</key>
+	<string>Store copy and all symlinks cleaned up</string>
+	<key>store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。</key>
+	<string>The store copy and all symlinks will be cleaned up (the store copy goes to the trash and can be restored).</string>
+	<key>store 在设备间同步；symlink 是各机本地状态，不参与同步。</key>
+	<string>The store syncs across devices; symlinks are per-machine state and never sync.</string>
+	<key>”。试试别的关键词，或 + 添加。</key>
+	<string>”. Try another keyword, or + Add.</string>
+	<key>← 返回</key>
+	<string>← Back</string>
+	<key>↑↓ 行 · ←→ 列 · 空格 切换</key>
+	<string>↑↓ rows · ←→ cols · Space toggles</string>
+	<key>↗ 在编辑器中打开</key>
+	<string>↗ Open in editor</string>
+	<key>↗ 打开 %@</key>
+	<string>↗ Open %@</string>
+	<key>↗ 打开回收站文件夹</key>
+	<string>↗ Open trash folder</string>
+	<key>✗ 码 %lld</key>
+	<string>✗ code %lld</string>
+	<key>、</key>
+	<string>, </string>
+	<key>上次 %@ %@</key>
+	<string>Last %1$@ %2$@</string>
+	<key>上次退出码 %lld</key>
+	<string>Last exit code %lld</string>
+	<key>上游有新版——点套装头部 ↑ 徽标更新</key>
+	<string>New version upstream — click the ↑ badge on the bundle header to update</string>
+	<key>不会再跑</key>
+	<string>Won't run again</string>
+	<key>不安全的目录名：%@</key>
+	<string>Unsafe directory name: %@</string>
+	<key>二进制 CLI，无 SKILL.md。</key>
+	<string>Binary CLI — no SKILL.md. </string>
+	<key>人话备注，留空恢复默认</key>
+	<string>Friendly note; leave empty to reset</string>
+	<key>仅保存到 store</key>
+	<string>Save to store only</string>
+	<key>仅列最近 5 项，其余在文件夹里</key>
+	<string>Showing the latest 5; the rest are in the folder</string>
+	<key>今天 %@</key>
+	<string>today %@</string>
+	<key>从 %@ 拉取新版，重链 symlink</key>
+	<string>Pulls the new version from %@ and relinks the symlink</string>
+	<key>从 %@ 重新获取该项</key>
+	<string>Fetches this item again from %@</string>
+	<key>从源重新拉取</key>
+	<string>Re-pull from source</string>
+	<key>保持现状</key>
+	<string>Keep as is</string>
+	<key>保留本地副本，popskill 不接管</key>
+	<string>Keeps the local copy; popskill stays hands-off</string>
+	<key>修复 %@ 失败：%@</key>
+	<string>Failed to repair %1$@: %2$@</string>
+	<key>修复 %lld 个，%lld 个失败</key>
+	<string>Repaired %1$lld, %2$lld failed</string>
+	<key>修复 %lld 个，%lld 个失败：%@</key>
+	<string>Repaired %1$lld, %2$lld failed: %3$@</string>
+	<key>停用</key>
+	<string>Disable</string>
+	<key>停用 %@？</key>
+	<string>Disable %@?</string>
+	<key>停用（launchctl unload，不删文件）</key>
+	<string>Disable (launchctl unload; file kept)</string>
+	<key>全部</key>
+	<string>All</string>
+	<key>全部修复 (%lld)</key>
+	<string>Fix all (%lld)</string>
+	<key>全部更新 (%lld)</key>
+	<string>Update all (%lld)</string>
+	<key>全部源已是最新</key>
+	<string>All sources are up to date</string>
+	<key>关</key>
+	<string>Off</string>
+	<key>关于</key>
+	<string>About</string>
+	<key>刷新</key>
+	<string>Refresh</string>
+	<key>占位</key>
+	<string>Stub</string>
+	<key>占位 (stub)</key>
+	<string>Stub</string>
+	<key>占位待校验</key>
+	<string>Stub (unverified)</string>
+	<key>原型数据模式不可导入</key>
+	<string>Import is unavailable in fixture-data mode</string>
+	<key>原型数据模式不检查更新</key>
+	<string>Update checks are off in fixture-data mode</string>
+	<key>原目录移入 store 回收站，换成指向 store 的 symlink</key>
+	<string>Moves the original directory to the store trash and replaces it with a symlink into the store</string>
+	<key>发现 %lld 个源可更新（另有 %lld 个检查失败）</key>
+	<string>%1$lld sources have updates (%2$lld more failed the check)</string>
+	<key>发现 %lld 个源可更新；%lld 个源检查失败（网络或源不可达）</key>
+	<string>%1$lld sources have updates; %2$lld failed the check (network or source unreachable)</string>
+	<key>取消</key>
+	<string>Cancel</string>
+	<key>同步于%@</key>
+	<string>Synced %@</string>
+	<key>同步后端</key>
+	<string>Sync backend</string>
+	<key>后天</key>
+	<string>day after tomorrow</string>
+	<key>启用</key>
+	<string>Enable</string>
+	<key>启用 %@？</key>
+	<string>Enable %@?</string>
+	<key>启用（launchctl load）</key>
+	<string>Enable (launchctl load)</string>
+	<key>周一</key>
+	<string>Mon</string>
+	<key>周三</key>
+	<string>Wed</string>
+	<key>周二</key>
+	<string>Tue</string>
+	<key>周五</key>
+	<string>Fri</string>
+	<key>周六</key>
+	<string>Sat</string>
+	<key>周四</key>
+	<string>Thu</string>
+	<key>周日</key>
+	<string>Sun</string>
+	<key>命令超时且输出管道无法排空，已放弃：%@</key>
+	<string>Command timed out and output pipes could not be drained — giving up: %@</string>
+	<key>命令超时（%lld s）已终止：%@ %@</key>
+	<string>Command timed out (%lld s), terminated: %@ %@</string>
+	<key>回收站（%lld）</key>
+	<string>Trash (%lld)</string>
+	<key>在 Claude / Codex 目录里发现现有技能（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。</key>
+	<string>Found existing skills in the Claude / Codex directories (e.g. %@…). Import them into the store for unified management and replace each in place with a symlink? Originals go to the store trash and can be restored.</string>
+	<key>在编辑器中打开</key>
+	<string>Open in Editor</string>
+	<key>安装 %@ 失败：%@</key>
+	<string>Failed to install %1$@: %2$@</string>
+	<key>安装并链接 (%lld)</key>
+	<string>Install &amp; Link (%lld)</string>
+	<key>定时任务</key>
+	<string>Scheduled Tasks</string>
+	<key>定时任务…</key>
+	<string>Scheduled Tasks…</string>
+	<key>定时任务（launchd / crontab）</key>
+	<string>Scheduled tasks (launchd / crontab)</string>
+	<key>导入 %lld 个</key>
+	<string>Import %lld</string>
+	<key>导入失败：%@</key>
+	<string>Import failed: %@</string>
+	<key>导入未托管目录</key>
+	<string>Import unmanaged dirs</string>
+	<key>将写入</key>
+	<string>Will write</string>
+	<key>工具（挂载目标）</key>
+	<string>Tools (link targets)</string>
+	<key>已从源重新拉取 %@</key>
+	<string>Re-pulled %@ from its source</string>
+	<key>已保存 %@ 到 store</key>
+	<string>Saved %@ to the store</string>
+	<key>已修复 %lld 个，跳过 %lld 个（正在更新中）</key>
+	<string>Repaired %1$lld, skipped %2$lld (currently updating)</string>
+	<key>已停摆</key>
+	<string>Stalled</string>
+	<key>已停用</key>
+	<string>Disabled</string>
+	<key>已停用 %@</key>
+	<string>Disabled %@</string>
+	<key>已加载，上次运行失败（退出码 %lld）</key>
+	<string>Loaded; last run failed (exit code %lld)</string>
+	<key>已加载，上次运行正常</key>
+	<string>Loaded; last run succeeded</string>
+	<key>已同步</key>
+	<string>Synced</string>
+	<key>已启用 %@</key>
+	<string>Enabled %@</string>
+	<key>已就绪</key>
+	<string>Ready</string>
+	<key>已恢复 %@ 到 store——按需重新链接工具</key>
+	<string>Restored %@ to the store — relink tools as needed</string>
+	<key>已把 %@ · %@ 换成 store 链接</key>
+	<string>Replaced %1$@ · %2$@ with a store link</string>
+	<key>已断开 %@ → %@</key>
+	<string>Unlinked %1$@ → %2$@</string>
+	<key>已更新 %@ → %@</key>
+	<string>Updated %1$@ → %2$@</string>
+	<key>已更新 %@ 并修复链接</key>
+	<string>Updated %@ and repaired the link</string>
+	<key>已更新 %@（旧版已入回收站）</key>
+	<string>Updated %@ (old version moved to the trash)</string>
+	<key>已更新 %@：%@（旧版已入回收站）</key>
+	<string>Updated %1$@: %2$@ (old versions moved to the trash)</string>
+	<key>已添加的源（%lld）</key>
+	<string>Sources (%lld)</string>
+	<key>已激活</key>
+	<string>Active</string>
+	<key>已移除 %@ 在 %@ 侧的副本</key>
+	<string>Removed the copy of %1$@ on the %2$@ side</string>
+	<key>已移除 %@ 在 %@ 侧的链接</key>
+	<string>Removed the link of %1$@ on the %2$@ side</string>
+	<key>已触发 %@</key>
+	<string>Triggered %@</string>
+	<key>已重新扫描 store 与工具目录</key>
+	<string>Rescanned store and tool directories</string>
+	<key>已重链 %@ · %@</key>
+	<string>Relinked %1$@ · %2$@</string>
+	<key>已链接 %@ → %@</key>
+	<string>Linked %1$@ → %2$@</string>
+	<key>常驻 daemon</key>
+	<string>Resident daemon</string>
+	<key>常驻任务在册但没有进程——停摆了</key>
+	<string>Daemon is registered but has no process — stalled</string>
+	<key>常驻后台（%lld）</key>
+	<string>Background daemons (%lld)</string>
+	<key>开</key>
+	<string>On</string>
+	<key>开关 = 自动更新。移除源会同时卸载它提供的能力与 symlink。</key>
+	<string>Switch = auto-update. Removing a source also uninstalls its capabilities and symlinks.</string>
+	<key>恢复 %@ 失败：%@</key>
+	<string>Failed to restore %1$@: %2$@</string>
+	<key>恢复到 store</key>
+	<string>Restore to store</string>
+	<key>打开 GitHub issue，自动带上 app 与 macOS 版本</key>
+	<string>Open a GitHub issue with app and macOS versions pre-filled</string>
+	<key>打开日志</key>
+	<string>Open log</string>
+	<key>扫描中…</key>
+	<string>Scanning…</string>
+	<key>扫描本地目录</key>
+	<string>Scan Local Folders</string>
+	<key>把 ~/.claude / ~/.codex 里的真实技能目录收编进 store 并换成 symlink</key>
+	<string>Adopt real skill directories in ~/.claude / ~/.codex into the store and replace them with symlinks</string>
+	<key>报告问题…</key>
+	<string>Report Issue…</string>
+	<key>挂载到</key>
+	<string>Link to</string>
+	<key>指回 store 中现存的目录</key>
+	<string>Points back to the directory that still exists in the store</string>
+	<key>按时间跑（%lld）· 按下次运行排序</key>
+	<string>Scheduled (%lld) · sorted by next run</string>
+	<key>推荐</key>
+	<string>Recommended</string>
+	<key>提供 %@</key>
+	<string>Provides %@</string>
+	<key>提供 %@ 等 %lld 项</key>
+	<string>Provides %2$lld items incl. %1$@</string>
+	<key>搜索名称 / 描述 / 作者…</key>
+	<string>Search name / description / author…</string>
+	<key>撤掉这条 symlink，其他工具不受影响</key>
+	<string>Removes this symlink; other tools are unaffected</string>
+	<key>改用 store 链接</key>
+	<string>Switch to a store link</string>
+	<key>断开 %@ 失败：%@</key>
+	<string>Failed to unlink %1$@: %2$@</string>
+	<key>断链</key>
+	<string>Broken link</string>
+	<key>新安装默认挂载</key>
+	<string>Default for new installs</string>
+	<key>新版</key>
+	<string>new version</string>
+	<key>无匹配结果</key>
+	<string>No matches</string>
+	<key>无法识别 GitHub 仓库：%@</key>
+	<string>Unrecognized GitHub repository: %@</string>
+	<key>明天</key>
+	<string>tomorrow</string>
+	<key>昨天 %@</key>
+	<string>yesterday %@</string>
+	<key>显示系统/第三方任务（%lld）</key>
+	<string>Show system/third-party tasks (%lld)</string>
+	<key>暂不</key>
+	<string>Not now</string>
+	<key>更新 %@ 失败：%@</key>
+	<string>Failed to update %1$@: %2$@</string>
+	<key>更新中</key>
+	<string>Updating</string>
+	<key>更新中…</key>
+	<string>Updating…</string>
+	<key>更新到 %@</key>
+	<string>Update to %@</string>
+	<key>更新到 %@ 并修复</key>
+	<string>Update to %@ and repair</string>
+	<key>更新此套装</key>
+	<string>Update this bundle</string>
+	<key>有新版：%@——点击全部更新</key>
+	<string>New versions: %@ — click to update all</string>
+	<key>有未提交改动</key>
+	<string>Uncommitted changes</string>
+	<key>未加载（已停用）</key>
+	<string>Not loaded (disabled)</string>
+	<key>未找到 SKILL.md — 该源不是 skill 也不是套装</key>
+	<string>No SKILL.md found — this source is neither a skill nor a bundle</string>
+	<key>未连接</key>
+	<string>Not connected</string>
+	<key>未连接同步</key>
+	<string>Sync not connected</string>
+	<key>未配置</key>
+	<string>Not set up</string>
+	<key>未配置调度</key>
+	<string>No schedule</string>
+	<key>未配置调度（手动）</key>
+	<string>No schedule (manual)</string>
+	<key>未链接</key>
+	<string>Not linked</string>
+	<key>本地副本</key>
+	<string>Local copy</string>
+	<key>来源</key>
+	<string>Source</string>
+	<key>来源 URL</key>
+	<string>Source URL</string>
+	<key>查找</key>
+	<string>Find</string>
+	<key>查看详情</key>
+	<string>View details</string>
+	<key>检查 App 更新…</key>
+	<string>Check for App Updates…</string>
+	<key>检查中…</key>
+	<string>Checking…</string>
+	<key>检查更新</key>
+	<string>Check Updates</string>
+	<key>检查更新…</key>
+	<string>Check for Updates…</string>
+	<key>正在从源重新拉取 %@…</key>
+	<string>Re-pulling %@ from its source…</string>
+	<key>每 %lld 小时的第 %lld 分</key>
+	<string>Every %1$lld hours at minute %2$lld</string>
+	<key>每周一</key>
+	<string>Every Monday</string>
+	<key>每周三</key>
+	<string>Every Wednesday</string>
+	<key>每周二</key>
+	<string>Every Tuesday</string>
+	<key>每周五</key>
+	<string>Every Friday</string>
+	<key>每周六</key>
+	<string>Every Saturday</string>
+	<key>每周四</key>
+	<string>Every Thursday</string>
+	<key>每周日</key>
+	<string>Every Sunday</string>
+	<key>每天</key>
+	<string>Every day</string>
+	<key>每天 %@</key>
+	<string>Every day at %@</string>
+	<key>每小时第 %lld 分</key>
+	<string>Hourly at minute %lld</string>
+	<key>每年 %lld 月</key>
+	<string>Every year, month %lld</string>
+	<key>每月 %lld 日</key>
+	<string>Monthly on day %lld</string>
+	<key>每月 %lld 日 %@</key>
+	<string>Monthly on day %1$lld at %2$@</string>
+	<key>没有 %@ 类型的能力。点 + 添加，或切回「全部」。</key>
+	<string>No %@ capabilities. Click + Add, or switch back to “All”.</string>
+	<key>没有 plist 路径</key>
+	<string>No plist path</string>
+	<key>没有发现未托管的技能目录</key>
+	<string>No unmanaged skill directories found</string>
+	<key>没有可显示的任务</key>
+	<string>No tasks to show</string>
+	<key>没有可检查的源（需要 GitHub 或本地路径来源）</key>
+	<string>No checkable sources (a GitHub or local-path source is required)</string>
+	<key>没有能力匹配 “</key>
+	<string>No capabilities match “</string>
+	<key>添加能力</key>
+	<string>Add Capability</string>
+	<key>源</key>
+	<string>the source</string>
+	<key>源、工具与 store — 全部配置都在这一页。</key>
+	<string>Sources, tools, and the store — every setting on this one page.</string>
+	<key>点击 ✕ / ◐ / ↑ 可逐项处理</key>
+	<string>Click ✕ / ◐ / ↑ to handle items one by one</string>
+	<key>点击切换 / 处理</key>
+	<string>Click to toggle / fix</string>
+	<key>点击切换或处理</key>
+	<string>Click to toggle or fix</string>
+	<key>点击展开套装</key>
+	<string>Click to expand bundle</string>
+	<key>版本</key>
+	<string>Version</string>
+	<key>登录自启</key>
+	<string>Launches at login</string>
+	<key>登录自启（%lld）</key>
+	<string>Login items (%lld)</string>
+	<key>目录移入 store 回收站，不建链接</key>
+	<string>Moves the directory to the store trash without creating a link</string>
+	<key>移回 store 原目录（%@/）——同名能力已存在时会拒绝</key>
+	<string>Move back to its store directory (%@/) — refused if a same-named capability exists</string>
+	<key>移除</key>
+	<string>Remove</string>
+	<key>移除 %@ 失败：%@</key>
+	<string>Failed to remove %1$@: %2$@</string>
+	<key>移除 %@？</key>
+	<string>Remove %@?</string>
+	<key>移除套装</key>
+	<string>Remove bundle</string>
+	<key>移除套装（含全部子项）</key>
+	<string>Remove bundle (and all children)</string>
+	<key>移除该侧副本</key>
+	<string>Remove this side's copy</string>
+	<key>移除该侧链接</key>
+	<string>Remove this side's link</string>
+	<key>移除该源（含其能力）</key>
+	<string>Remove this source and its capabilities</string>
+	<key>空——移除能力和更新换版时，旧目录会进这里（最多留 %lld 份，先进先出）。</key>
+	<string>Empty — old directories land here when capabilities are removed or updated (keeps up to %lld, first in first out).</string>
+	<key>立刻跑一次（launchctl kickstart）</key>
+	<string>Run once now (launchctl kickstart)</string>
+	<key>立刻运行 %@？</key>
+	<string>Run %@ now?</string>
+	<key>立即向更新源询问新版本</key>
+	<string>Ask the update feed for a new version now</string>
+	<key>等价于 launchctl kickstart -k——不等下次调度时间，现在就跑一遍。任务输出看它自己的日志。</key>
+	<string>Equivalent to launchctl kickstart -k — runs it once right now without waiting for the next scheduled time. Check the task's own log for output.</string>
+	<key>等价于 launchctl kickstart -k——杀掉旧进程重新拉起。任务输出看它自己的日志。</key>
+	<string>Equivalent to launchctl kickstart -k — kills the old process and relaunches it. Check the task's own log for output.</string>
+	<key>粘贴 GitHub 仓库 / 本地路径 — 安装一次进 store，再选择挂载到哪些工具。</key>
+	<string>Paste a GitHub repo or local path — install once into the store, then pick which tools to link.</string>
+	<key>粘贴一个 GitHub 仓库或本地路径，
+安装一次，挂载到所有 AI 工具。</key>
+	<string>Paste a GitHub repo or a local path.
+Install once, mount to all your AI tools.</string>
+	<key>编辑人话备注（存在 Popskill，不动 plist）</key>
+	<string>Edit friendly note (stored in Popskill; plist untouched)</string>
 	<key>能力矩阵</key>
 	<string>Capability Matrix</string>
+	<key>自动检查 App 更新（每天一次）</key>
+	<string>Automatically check for app updates (daily)</string>
+	<key>解析 →</key>
+	<string>Resolve →</string>
+	<key>解析中…</key>
+	<string>Resolving…</string>
+	<key>设置</key>
+	<string>Settings</string>
+	<key>设置…</key>
+	<string>Settings…</string>
+	<key>该源没有记录 URL，无法更新</key>
+	<string>No source URL on record — cannot update</string>
+	<key>谁在跑、下次什么时候跑、上次结果如何。点名字旁的 ✎ 加人话备注。</key>
+	<string>What runs, when it runs next, and how the last run went. Click ✎ by a name to add a friendly note.</string>
+	<key>跑一次</key>
+	<string>Run once</string>
+	<key>路径不存在：%@</key>
+	<string>Path not found: %@</string>
+	<key>运行中</key>
+	<string>Running</string>
+	<key>还没有任何能力</key>
+	<string>No capabilities yet</string>
+	<key>重启</key>
+	<string>Restart</string>
+	<key>重启 %@？</key>
+	<string>Restart %@?</string>
+	<key>重启（launchctl kickstart -k）</key>
+	<string>Restart (launchctl kickstart -k)</string>
+	<key>重新拉取 %@ 失败：%@</key>
+	<string>Failed to re-pull %1$@: %2$@</string>
+	<key>重链到 store 中本地版本</key>
+	<string>Relink to the local version in the store</string>
+	<key>链接 %@ 失败：%@</key>
+	<string>Failed to link %1$@: %2$@</string>
+	<key>错误：%@</key>
+	<string>Error: %@</string>
+	<key>，%lld 项断链</key>
+	<string>, %lld broken</string>
 </dict>
 </plist>

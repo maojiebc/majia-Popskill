@@ -45,7 +45,7 @@ struct Titlebar: View {
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Ink.control2, lineWidth: 1))
             }
             .buttonStyle(.plain)
-            .help("定时任务（launchd / crontab）")
+            .help(L("定时任务（launchd / crontab）"))
             Button { model.sheet = .settings } label: {
                 Text("⚙")
                     .font(.ui(11))
@@ -55,7 +55,7 @@ struct Titlebar: View {
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Ink.control2, lineWidth: 1))
             }
             .buttonStyle(.plain)
-            .help("设置")
+            .help(L("设置"))
         }
         .padding(.horizontal, 14)
         .frame(height: 38)
@@ -66,7 +66,7 @@ struct Titlebar: View {
     @ViewBuilder
     private var syncChip: some View {
         let connected = model.syncInfo.isGitRepo && !model.isEmpty
-        let label = !connected ? "未连接" : (model.syncInfo.clean ? "已同步" : "有未提交改动")
+        let label = !connected ? L("未连接") : (model.syncInfo.clean ? L("已同步") : L("有未提交改动"))
         let dotColor: Color = !connected ? Ink.offDot : (model.syncInfo.clean ? Ink.green : Ink.amber)
         let textColor: Color = !connected ? Ink.tertiary : (model.syncInfo.clean ? Color(hex: 0x5A7A5F) : Ink.amberText)
         HStack(spacing: 6) {
@@ -90,26 +90,26 @@ struct StatusBar: View {
             Text(abbrev(model.fs.env.storeRoot.path)).font(.mono(11)).foregroundStyle(Ink.monoDim)
             if model.isEmpty {
                 dot
-                Text("store 为空")
+                Text(L("store 为空"))
             } else {
                 Button { model.openStore() } label: {
-                    Text("↗ 在编辑器中打开").font(.ui(11, .medium)).foregroundStyle(Ink.blue)
+                    Text(L("↗ 在编辑器中打开")).font(.ui(11, .medium)).foregroundStyle(Ink.blue)
                 }
                 .buttonStyle(.plain)
                 dot
-                Text("\(model.stats.symlinks) symlinks").font(.mono(11)).foregroundStyle(Ink.monoDim)
+                Text(L("\(model.stats.symlinks) symlinks")).font(.mono(11)).foregroundStyle(Ink.monoDim)
                 dot
-                Text("\(model.stats.broken) 断链")
+                Text(L("\(model.stats.broken) 断链"))
                     .foregroundStyle(model.stats.broken > 0 ? Ink.red : Ink.secondary)
                     .fontWeight(model.stats.broken > 0 ? .semibold : .regular)
                 Text("/").foregroundStyle(Ink.offDot)
-                Text("\(model.stats.stubs) 占位")
+                Text(L("\(model.stats.stubs) 占位"))
             }
             Spacer()
             if model.isEmpty || !model.syncInfo.isGitRepo {
                 HStack(spacing: 6) {
                     Circle().fill(Ink.offDot).frame(width: 6, height: 6)
-                    Text("未连接同步")
+                    Text(L("未连接同步"))
                 }
                 .foregroundStyle(Ink.tertiary)
             } else {
@@ -136,11 +136,11 @@ struct StatusBar: View {
     }
 
     private var syncLabel: String {
-        guard let d = model.syncInfo.lastSync else { return "已同步" }
+        guard let d = model.syncInfo.lastSync else { return L("已同步") }
         let f = RelativeDateTimeFormatter()
-        f.locale = Locale(identifier: "zh_CN")
+        f.locale = l10nLocale
         f.unitsStyle = .short
-        return "同步于" + f.localizedString(for: d, relativeTo: Date())
+        return L("同步于\(f.localizedString(for: d, relativeTo: Date()))")
     }
 }
 
@@ -181,9 +181,9 @@ struct StatusCell: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
-        .help("点击切换 / 处理")
-        .accessibilityLabel("\(a11y.map { "\($0)：" } ?? "")\(status.stateLabel)")
-        .accessibilityHint("点击切换或处理")
+        .help(L("点击切换 / 处理"))
+        .accessibilityLabel(a11y.map { L("\($0)：\(status.stateLabel)") } ?? status.stateLabel)
+        .accessibilityHint(L("点击切换或处理"))
     }
 }
 
@@ -218,9 +218,9 @@ struct TogglePill: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
-        .help("\(label)：\(status.stateLabel)。点击切换 / 处理")
-        .accessibilityLabel("\(label)：\(status.stateLabel)")
-        .accessibilityHint("点击切换或处理")
+        .help(L("\(label)：\(status.stateLabel)。点击切换 / 处理"))
+        .accessibilityLabel(L("\(label)：\(status.stateLabel)"))
+        .accessibilityHint(L("点击切换或处理"))
     }
 }
 
@@ -247,7 +247,11 @@ struct FractionCell: View {
             .clipShape(RoundedRectangle(cornerRadius: 1))
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(agg.total) 项中 \(agg.on) 项已激活\(agg.broken > 0 ? "，\(agg.broken) 项断链" : "")\(agg.stub > 0 ? "，\(agg.stub) 项占位" : "")")
+        .accessibilityLabel(
+            L("\(agg.total) 项中 \(agg.on) 项已激活")
+                + (agg.broken > 0 ? L("，\(agg.broken) 项断链") : "")
+                + (agg.stub > 0 ? L("，\(agg.stub) 项占位") : "")
+        )
     }
 
     @ViewBuilder
@@ -275,8 +279,8 @@ struct UpdateBadge: View {
                 .overlay(RoundedRectangle(cornerRadius: 3).stroke(Ink.amberBadgeBorder, lineWidth: 1))
         }
         .buttonStyle(.plain)
-        .help(help ?? "更新到 \(latest)")
-        .accessibilityLabel(help ?? "更新到 \(latest)")
+        .help(help ?? L("更新到 \(latest)"))
+        .accessibilityLabel(help ?? L("更新到 \(latest)"))
     }
 }
 
@@ -289,7 +293,7 @@ struct MemberUpdateDot: View {
             .padding(.horizontal, 3)
             .background(RoundedRectangle(cornerRadius: 3).fill(Ink.amberBadgeBg))
             .overlay(RoundedRectangle(cornerRadius: 3).stroke(Ink.amberBadgeBorder, lineWidth: 1))
-            .help("上游有新版——点套装头部 ↑ 徽标更新")
+            .help(L("上游有新版——点套装头部 ↑ 徽标更新"))
     }
 }
 
@@ -329,7 +333,7 @@ struct ToastView: View {
             .padding(.horizontal, 16).padding(.vertical, 8)
             .background(RoundedRectangle(cornerRadius: 7).fill(isError ? Ink.red : Ink.ink))
             .shadow(color: .black.opacity(0.25), radius: 12, y: 8)
-            .accessibilityLabel(isError ? "错误：\(msg)" : msg)
+            .accessibilityLabel(isError ? L("错误：\(msg)") : msg)
     }
 }
 

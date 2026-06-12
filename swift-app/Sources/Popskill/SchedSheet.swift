@@ -31,15 +31,15 @@ struct SchedSheet: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         todayStrip
-                        if !timed.isEmpty { section("按时间跑（\(timed.count)）· 按下次运行排序", timed) }
-                        if !daemons.isEmpty { section("常驻后台（\(daemons.count)）", daemons) }
-                        if !loginItems.isEmpty { section("登录自启（\(loginItems.count)）", loginItems) }
+                        if !timed.isEmpty { section(L("按时间跑（\(timed.count)）· 按下次运行排序"), timed) }
+                        if !daemons.isEmpty { section(L("常驻后台（\(daemons.count)）"), daemons) }
+                        if !loginItems.isEmpty { section(L("登录自启（\(loginItems.count)）"), loginItems) }
                         if visible.isEmpty {
-                            Text(model.schedLoading ? "扫描中…" : "没有可显示的任务")
+                            Text(model.schedLoading ? L("扫描中…") : L("没有可显示的任务"))
                                 .font(.ui(11.5)).foregroundStyle(Ink.tertiary).padding(.vertical, 10)
                         }
                         if !timed.filter({ $0.kind == .cron }).isEmpty {
-                            Text("cron 条目在终端用 crontab -e 管理，这里只看不动。")
+                            Text(L("cron 条目在终端用 crontab -e 管理，这里只看不动。"))
                                 .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
                         }
                     }
@@ -54,8 +54,8 @@ struct SchedSheet: View {
     private var head: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("定时任务").font(.ui(15.5, .bold)).foregroundStyle(Ink.ink)
-                Text("谁在跑、下次什么时候跑、上次结果如何。点名字旁的 ✎ 加人话备注。")
+                Text(L("定时任务")).font(.ui(15.5, .bold)).foregroundStyle(Ink.ink)
+                Text(L("谁在跑、下次什么时候跑、上次结果如何。点名字旁的 ✎ 加人话备注。"))
                     .font(.ui(11.5)).foregroundStyle(Ink.secondary)
             }
             Spacer()
@@ -80,11 +80,13 @@ struct SchedSheet: View {
         let cal = Calendar.current
         let today = timed.filter { $0.nextFire.map { cal.isDateInToday($0) } ?? false }
         if !today.isEmpty {
+            // 名单是数据（时刻 + 任务名），只有前缀句要本地化
+            let list = today.prefix(3).map {
+                "\(shortTime($0.nextFire!)) \($0.displayName)"
+            }.joined(separator: " · ") + (today.count > 3 ? " …" : "")
             HStack(spacing: 6) {
                 Text("◷").font(.ui(11)).foregroundStyle(Ink.amberText)
-                Text("今天还会跑 \(today.count) 个：" + today.prefix(3).map {
-                    "\(shortTime($0.nextFire!)) \($0.displayName)"
-                }.joined(separator: " · ") + (today.count > 3 ? " …" : ""))
+                Text(L("今天还会跑 \(today.count) 个：\(list)"))
                     .font(.ui(11)).foregroundStyle(Ink.amberText)
                     .lineLimit(1).truncationMode(.tail)
             }
@@ -116,7 +118,7 @@ struct SchedSheet: View {
                 .help(dotHelp(t))
             VStack(alignment: .leading, spacing: 1) {
                 if editingId == t.id {
-                    TextField("人话备注，留空恢复默认", text: $noteDraft)
+                    TextField(L("人话备注，留空恢复默认"), text: $noteDraft)
                         .textFieldStyle(.plain)
                         .font(.ui(12, .semibold)).foregroundStyle(Ink.ink)
                         .focused($noteFocus)
@@ -134,7 +136,7 @@ struct SchedSheet: View {
                                 .overlay(RoundedRectangle(cornerRadius: 3).stroke(Ink.control2, lineWidth: 1))
                         }
                         if t.kind == .launchd && !t.loaded {
-                            Text("已停用").font(.ui(9.5)).foregroundStyle(Ink.tertiary)
+                            Text(L("已停用")).font(.ui(9.5)).foregroundStyle(Ink.tertiary)
                                 .padding(.horizontal, 5).padding(.vertical, 1)
                                 .overlay(RoundedRectangle(cornerRadius: 4).stroke(Ink.control2, lineWidth: 1))
                         }
@@ -147,7 +149,7 @@ struct SchedSheet: View {
                                 Text("✎").font(.ui(11)).foregroundStyle(Ink.tertiary)
                             }
                             .buttonStyle(.plain)
-                            .help("编辑人话备注（存在 Popskill，不动 plist）")
+                            .help(L("编辑人话备注（存在 Popskill，不动 plist）"))
                         }
                     }
                 }
@@ -176,26 +178,26 @@ struct SchedSheet: View {
                     Text(SchedEngine.humanNext(next))
                         .font(.ui(11.5, .semibold)).foregroundStyle(Ink.blue)
                 } else {
-                    Text(t.loaded ? t.schedule : "不会再跑")
+                    Text(t.loaded ? t.schedule : L("不会再跑"))
                         .font(.ui(11.5, .medium)).foregroundStyle(Ink.secondary)
                 }
                 Text(subLine(t)).font(.ui(10)).foregroundStyle(Ink.tertiary)
             case .daemon:
                 if t.stalled {
-                    Text("已停摆").font(.ui(11.5, .semibold)).foregroundStyle(Ink.red)
-                    Text("上次退出码 \(t.lastExit ?? -1)").font(.ui(10)).foregroundStyle(Ink.red.opacity(0.8))
+                    Text(L("已停摆")).font(.ui(11.5, .semibold)).foregroundStyle(Ink.red)
+                    Text(L("上次退出码 \(t.lastExit ?? -1)")).font(.ui(10)).foregroundStyle(Ink.red.opacity(0.8))
                 } else if t.pid != nil {
-                    Text("运行中").font(.ui(11.5, .semibold)).foregroundStyle(Ink.greenText)
-                    Text("PID \(t.pid!)").font(.mono(9.5)).foregroundStyle(Ink.tertiary)
+                    Text(L("运行中")).font(.ui(11.5, .semibold)).foregroundStyle(Ink.greenText)
+                    Text(L("PID \(t.pid!)")).font(.mono(9.5)).foregroundStyle(Ink.tertiary)
                 } else {
-                    Text("已停用").font(.ui(11.5, .medium)).foregroundStyle(Ink.tertiary)
-                    Text("常驻 daemon").font(.ui(10)).foregroundStyle(Ink.tertiary)
+                    Text(L("已停用")).font(.ui(11.5, .medium)).foregroundStyle(Ink.tertiary)
+                    Text(L("常驻 daemon")).font(.ui(10)).foregroundStyle(Ink.tertiary)
                 }
             case .loginItem, .manual:
-                Text(t.pid != nil ? "运行中" : (t.loaded ? "已就绪" : "已停用"))
+                Text(t.pid != nil ? L("运行中") : (t.loaded ? L("已就绪") : L("已停用")))
                     .font(.ui(11.5, .medium))
                     .foregroundStyle(t.pid != nil ? Ink.greenText : Ink.secondary)
-                Text(t.behavior == .manual ? "未配置调度" : "登录自启").font(.ui(10)).foregroundStyle(Ink.tertiary)
+                Text(t.behavior == .manual ? L("未配置调度") : L("登录自启")).font(.ui(10)).foregroundStyle(Ink.tertiary)
             }
         }
         .lineLimit(1)
@@ -206,10 +208,10 @@ struct SchedSheet: View {
     private func subLine(_ t: SchedTask) -> String {
         var parts = [t.schedule]
         if let last = t.lastRun {
-            let mark = (t.lastExit ?? 0) == 0 ? "✓" : "✗ 码 \(t.lastExit!)"
-            parts.append("上次 \(SchedEngine.humanLast(last)) \(mark)")
+            let mark = (t.lastExit ?? 0) == 0 ? "✓" : L("✗ 码 \(t.lastExit!)")
+            parts.append(L("上次 \(SchedEngine.humanLast(last)) \(mark)"))
         } else if let exit = t.lastExit, exit != 0 {
-            parts.append("上次退出码 \(exit)")
+            parts.append(L("上次退出码 \(exit)"))
         }
         return parts.joined(separator: " · ")
     }
@@ -235,14 +237,14 @@ struct SchedSheet: View {
         let busy = model.schedBusy.contains(t.id)
         HStack(spacing: 2) {
             if t.logPath != nil {
-                HoverAction(symbol: "≡", danger: false, help: "打开日志") { model.schedOpenLog(t) }
+                HoverAction(symbol: "≡", danger: false, help: L("打开日志")) { model.schedOpenLog(t) }
             }
             if t.canOperate {
                 if busy {
                     ProgressView().controlSize(.small).frame(width: 22, height: 22)
                 } else if t.stalled {
                     Button { model.schedKickstart(t) } label: {
-                        Text("重启")
+                        Text(L("重启"))
                             .font(.ui(10.5, .semibold)).foregroundStyle(Ink.red)
                             .padding(.horizontal, 8).frame(height: 22)
                             .overlay(RoundedRectangle(cornerRadius: 5).stroke(Ink.red.opacity(0.45), lineWidth: 1))
@@ -250,10 +252,10 @@ struct SchedSheet: View {
                     .buttonStyle(.plain)
                 } else if t.loaded {
                     HoverAction(symbol: "▶", danger: false,
-                                help: t.behavior == .daemon ? "重启（launchctl kickstart -k）" : "立刻跑一次（launchctl kickstart）") { model.schedKickstart(t) }
-                    HoverAction(symbol: "⏸", danger: true, help: "停用（launchctl unload，不删文件）") { model.schedSetLoaded(t, to: false) }
+                                help: t.behavior == .daemon ? L("重启（launchctl kickstart -k）") : L("立刻跑一次（launchctl kickstart）")) { model.schedKickstart(t) }
+                    HoverAction(symbol: "⏸", danger: true, help: L("停用（launchctl unload，不删文件）")) { model.schedSetLoaded(t, to: false) }
                 } else {
-                    HoverAction(symbol: "⏻", danger: false, help: "启用（launchctl load）") { model.schedSetLoaded(t, to: true) }
+                    HoverAction(symbol: "⏻", danger: false, help: L("启用（launchctl load）")) { model.schedSetLoaded(t, to: true) }
                 }
             }
         }
@@ -271,10 +273,10 @@ struct SchedSheet: View {
     }
 
     private func dotHelp(_ t: SchedTask) -> String {
-        if t.stalled { return "常驻任务在册但没有进程——停摆了" }
-        if t.kind == .cron { return "crontab 在册即生效" }
-        if !t.loaded { return "未加载（已停用）" }
-        return (t.lastExit ?? 0) == 0 ? "已加载，上次运行正常" : "已加载，上次运行失败（退出码 \(t.lastExit ?? -1)）"
+        if t.stalled { return L("常驻任务在册但没有进程——停摆了") }
+        if t.kind == .cron { return L("crontab 在册即生效") }
+        if !t.loaded { return L("未加载（已停用）") }
+        return (t.lastExit ?? 0) == 0 ? L("已加载，上次运行正常") : L("已加载，上次运行失败（退出码 \(t.lastExit ?? -1)）")
     }
 
     // ── 底栏 ─────────────────────────────────────────────
@@ -284,13 +286,13 @@ struct SchedSheet: View {
             if vendorCount > 0 {
                 HStack(spacing: 6) {
                     PsSwitch(on: model.schedShowVendor) { model.schedShowVendor.toggle() }
-                    Text("显示系统/第三方任务（\(vendorCount)）")
+                    Text(L("显示系统/第三方任务（\(vendorCount)）"))
                         .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
                 }
             }
             Spacer()
             Button { model.reloadSched() } label: {
-                Text(model.schedLoading ? "扫描中…" : "刷新")
+                Text(model.schedLoading ? L("扫描中…") : L("刷新"))
                     .font(.ui(11, .semibold)).foregroundStyle(Color(hex: 0x444444))
                     .padding(.horizontal, 10).frame(height: 24)
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Ink.control2, lineWidth: 1))

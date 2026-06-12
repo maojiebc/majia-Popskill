@@ -66,35 +66,35 @@ struct PopskillApp: App {
         .defaultSize(width: 1280, height: 820)
         .commands {
             CommandGroup(after: .appInfo) {
-                Button("检查更新…") { updaterController.checkForUpdates(nil) }
+                Button(L("检查更新…")) { updaterController.checkForUpdates(nil) }
             }
             // 标准 ⌘, ——设置一直在标题栏 ⚙ 里，但 mac 用户的手指头先去按 ⌘,
             // 添加弹层开着时不抢（已解析的安装计划不能被静默销毁）
             CommandGroup(replacing: .appSettings) {
-                Button("设置…") { if model.sheet == nil { model.sheet = .settings } }
+                Button(L("设置…")) { if model.sheet == nil { model.sheet = .settings } }
                     .keyboardShortcut(",", modifiers: .command)
-                Button("定时任务…") { if model.sheet == nil { model.sheet = .sched; model.reloadSched() } }
+                Button(L("定时任务…")) { if model.sheet == nil { model.sheet = .sched; model.reloadSched() } }
                     .keyboardShortcut("j", modifiers: .command)
             }
             CommandGroup(replacing: .help) {
-                Button("Popskill 帮助") {
+                Button(L("Popskill 帮助")) {
                     NSWorkspace.shared.open(URL(string: "https://github.com/maojiebc/majia-Popskill#readme")!)
                 }
             }
             // CLI 用户在终端动了 ~/.agents 后需要一条不重启的回家路。
             // 修复弹层/peek 先关——它们持有的快照在重扫后就过期了
             CommandGroup(after: .toolbar) {
-                Button("刷新") {
+                Button(L("刷新")) {
                     model.fixTarget = nil
                     model.peekTarget = nil
                     model.refresh()
-                    model.say("已重新扫描 store 与工具目录")
+                    model.say(L("已重新扫描 store 与工具目录"))
                 }
                 .keyboardShortcut("r", modifiers: .command)
             }
             // 弹层开着时不偷焦点给背后的搜索框
             CommandGroup(after: .textEditing) {
-                Button("查找") { if model.sheet == nil { model.searchFocused = true } }
+                Button(L("查找")) { if model.sheet == nil { model.searchFocused = true } }
                     .keyboardShortcut("f", modifiers: .command)
             }
         }
