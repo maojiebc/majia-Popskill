@@ -36,6 +36,16 @@ struct Titlebar: View {
             }
             Spacer()
             syncChip
+            Button { model.sheet = .sched; model.reloadSched() } label: {
+                Text("◷")
+                    .font(.ui(11))
+                    .foregroundStyle(Color(hex: 0x666666))
+                    .padding(.horizontal, 8).padding(.vertical, 2)
+                    .background(RoundedRectangle(cornerRadius: 4).fill(.white))
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Ink.control2, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .help("定时任务（launchd / crontab）")
             Button { model.sheet = .settings } label: {
                 Text("⚙")
                     .font(.ui(11))

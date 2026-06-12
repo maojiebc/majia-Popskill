@@ -39,7 +39,7 @@ struct FixOption: Identifiable {
     let toast: String
 }
 
-enum SheetKind { case add, settings }
+enum SheetKind { case add, settings, sched }
 
 /// 键盘导航焦点项（PATCH-02）：与可见顺序一致的扁平序列
 struct KbItem: Equatable, Identifiable {
@@ -72,6 +72,12 @@ final class AppModel {
     var searchFocused = false
     var checkingUpdates = false
     var updatingIds: Set<String> = []
+
+    // 定时任务面板（v2.9）
+    var schedTasks: [SchedTask] = []
+    var schedShowVendor = false
+    var schedLoading = false
+    var schedBusy: Set<String> = []
 
     // 键盘导航（PATCH-02）
     var kbFocusId: String?
@@ -108,6 +114,7 @@ final class AppModel {
         switch pe["POPSKILL_SHEET"] {
         case "add": sheet = .add
         case "settings": sheet = .settings
+        case "sched": sheet = .sched; reloadSched()
         default: break
         }
         // PATCH-02：套装默认全折叠（首屏密度），不再自动展开第一个
@@ -823,6 +830,86 @@ final class AppModel {
 
     func openStore() {
         NSWorkspace.shared.activateFileViewerSelecting([fs.env.storeRoot])
+    }
+
+    // ── 定时任务面板（v2.9）────────────────────────────────
+    // 只读解析 launchd/crontab；写操作仅 launchctl kickstart/unload/load，全部先确认。
+
+    private let sched = SchedEngine()
+
+    func reloadSched() {
+        guard !schedLoading else { return }
+        schedLoading = true
+        let engine = sched
+        Task.detached { [weak self] in
+            let tasks = engine.scan()
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.schedTasks = tasks
+                self.schedLoading = false
+            }
+        }
+    }
+
+    func schedOpenLog(_ task: SchedTask) {
+        guard let path = task.logPath else { return }
+        let url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+        if FileManager.default.fileExists(atPath: url.path) {
+            NSWorkspace.shared.open(url)
+        } else {
+            // 日志可能按天滚动（update-skills-YYYYMMDD.log）：plist 写的固定名不在时开所在目录
+            NSWorkspace.shared.activateFileViewerSelecting([url.deletingLastPathComponent()])
+        }
+    }
+
+    func schedKickstart(_ task: SchedTask) {
+        guard schedConfirm(
+            title: "立刻运行 \(task.label)？",
+            info: "等价于 launchctl kickstart -k——不等下次调度时间，现在就跑一遍。任务输出看它自己的日志。",
+            button: "跑一次"
+        ) else { return }
+        schedRun(task, doneToast: "已触发 \(task.label)") { try $0.kickstart($1) }
+    }
+
+    func schedSetLoaded(_ task: SchedTask, to on: Bool) {
+        guard schedConfirm(
+            title: on ? "启用 \(task.label)？" : "停用 \(task.label)？",
+            info: on ? "launchctl load——按 plist 里的调度恢复运行。"
+                     : "launchctl unload——不再按时执行，plist 文件原样保留，随时可重新启用。",
+            button: on ? "启用" : "停用"
+        ) else { return }
+        schedRun(task, doneToast: on ? "已启用 \(task.label)" : "已停用 \(task.label)") { try $0.setLoaded($1, to: on) }
+    }
+
+    private func schedRun(_ task: SchedTask, doneToast: String, _ op: @escaping (SchedEngine, SchedTask) throws -> Void) {
+        guard !schedBusy.contains(task.id) else { return }
+        schedBusy.insert(task.id)
+        let engine = sched
+        Task.detached { [weak self] in
+            let result = Result { try op(engine, task) }
+            // launchctl 状态变化（尤其 kickstart 的退出码）要一拍后才稳定
+            try? await Task.sleep(for: .milliseconds(600))
+            let tasks = engine.scan()
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.schedBusy.remove(task.id)
+                self.schedTasks = tasks
+                switch result {
+                case .success: self.say(doneToast)
+                case .failure(let e): self.sayError(e.localizedDescription)
+                }
+            }
+        }
+    }
+
+    private func schedConfirm(title: String, info: String, button: String) -> Bool {
+        if ProcessInfo.processInfo.environment["POPSKILL_AUTOCONFIRM"] == "1" { return true }
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = info
+        alert.addButton(withTitle: button)
+        alert.addButton(withTitle: "取消")
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     // ── fake 模式的内存变更（原型语义）─────────────────────

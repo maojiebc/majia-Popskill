@@ -73,6 +73,8 @@ struct PopskillApp: App {
             CommandGroup(replacing: .appSettings) {
                 Button("设置…") { if model.sheet == nil { model.sheet = .settings } }
                     .keyboardShortcut(",", modifiers: .command)
+                Button("定时任务…") { if model.sheet == nil { model.sheet = .sched; model.reloadSched() } }
+                    .keyboardShortcut("j", modifiers: .command)
             }
             CommandGroup(replacing: .help) {
                 Button("Popskill 帮助") {
@@ -144,6 +146,8 @@ struct RootView: View {
                     AddSheet().transition(.opacity)
                 } else if model.sheet == .settings {
                     SettingsSheet().transition(.opacity)
+                } else if model.sheet == .sched {
+                    SchedSheet().transition(.opacity)
                 }
 
                 // toast：底部居中

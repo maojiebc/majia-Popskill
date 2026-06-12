@@ -1201,40 +1201,46 @@ struct StoreFS {
 
     @discardableResult
     func run(_ bin: String, _ args: [String], timeout: TimeInterval = 120) -> (status: Int32, out: String, err: String) {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: bin)
-        p.arguments = args
-        let outPipe = Pipe(), errPipe = Pipe()
-        p.standardOutput = outPipe
-        p.standardError = errPipe
-        do { try p.run() } catch { return (-1, "", "\(error)") }
-        // 两路管道必须并发排空——顺序 readDataToEndOfFile 会在 stderr 写满 64KB 缓冲时与子进程互相卡死
-        var outData = Data(), errData = Data()
-        let drained = DispatchGroup()
-        DispatchQueue.global().async(group: drained) { outData = outPipe.fileHandleForReading.readDataToEndOfFile() }
-        DispatchQueue.global().async(group: drained) { errData = errPipe.fileHandleForReading.readDataToEndOfFile() }
-        // watchdog：git 遇到网络黑洞可以永远不退出，不能让调用线程跟着无限期挂住
-        let timedOut = drained.wait(timeout: .now() + timeout) == .timedOut
-        let cmd = URL(fileURLWithPath: bin).lastPathComponent
-        if timedOut {
-            p.terminate()   // Foundation 按进程组发 TERM
+        runProcess(bin, args, timeout: timeout)
+    }
+}
+
+/// 子进程封装（StoreFS / SchedEngine 共用）：并发排空双管道 + 超时 watchdog + 组 KILL
+@discardableResult
+func runProcess(_ bin: String, _ args: [String], timeout: TimeInterval = 120) -> (status: Int32, out: String, err: String) {
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: bin)
+    p.arguments = args
+    let outPipe = Pipe(), errPipe = Pipe()
+    p.standardOutput = outPipe
+    p.standardError = errPipe
+    do { try p.run() } catch { return (-1, "", "\(error)") }
+    // 两路管道必须并发排空——顺序 readDataToEndOfFile 会在 stderr 写满 64KB 缓冲时与子进程互相卡死
+    var outData = Data(), errData = Data()
+    let drained = DispatchGroup()
+    DispatchQueue.global().async(group: drained) { outData = outPipe.fileHandleForReading.readDataToEndOfFile() }
+    DispatchQueue.global().async(group: drained) { errData = errPipe.fileHandleForReading.readDataToEndOfFile() }
+    // watchdog：git 遇到网络黑洞可以永远不退出，不能让调用线程跟着无限期挂住
+    let timedOut = drained.wait(timeout: .now() + timeout) == .timedOut
+    let cmd = URL(fileURLWithPath: bin).lastPathComponent
+    if timedOut {
+        p.terminate()   // Foundation 按进程组发 TERM
+        if drained.wait(timeout: .now() + 5) == .timedOut {
+            // 组 KILL（不看 p.isRunning：TERM 可能已杀掉 git 本体，
+            // 但孙进程——hook/credential helper——还握着管道写端）
+            kill(-p.processIdentifier, SIGKILL)
             if drained.wait(timeout: .now() + 5) == .timedOut {
-                // 组 KILL（不看 p.isRunning：TERM 可能已杀掉 git 本体，
-                // 但孙进程——hook/credential helper——还握着管道写端）
-                kill(-p.processIdentifier, SIGKILL)
-                if drained.wait(timeout: .now() + 5) == .timedOut {
-                    // 病理场景（D 态进程钉死管道）：放弃读取立即返回——
-                    // outData/errData 可能仍被后台读线程写入，此后不许再碰
-                    return (-1, "", "命令超时且输出管道无法排空，已放弃：\(cmd)")
-                }
+                // 病理场景（D 态进程钉死管道）：放弃读取立即返回——
+                // outData/errData 可能仍被后台读线程写入，此后不许再碰
+                return (-1, "", "命令超时且输出管道无法排空，已放弃：\(cmd)")
             }
         }
-        p.waitUntilExit()
-        let out = String(data: outData, encoding: .utf8) ?? ""
-        let err = String(data: errData, encoding: .utf8) ?? ""
-        if timedOut {
-            return (-1, out, "命令超时（\(Int(timeout))s）已终止：\(cmd) \(args.first ?? "")")
-        }
-        return (p.terminationStatus, out, err)
     }
+    p.waitUntilExit()
+    let out = String(data: outData, encoding: .utf8) ?? ""
+    let err = String(data: errData, encoding: .utf8) ?? ""
+    if timedOut {
+        return (-1, out, "命令超时（\(Int(timeout))s）已终止：\(cmd) \(args.first ?? "")")
+    }
+    return (p.terminationStatus, out, err)
 }
