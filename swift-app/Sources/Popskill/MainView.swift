@@ -37,7 +37,7 @@ struct MainView: View {
     private var hero: some View {
         HStack(alignment: .top, spacing: 20) {
             VStack(alignment: .leading, spacing: 5) {
-                Text("能力矩阵")
+                Text(L("能力矩阵"))
                     .font(.ui(25, .bold))
                     .foregroundStyle(Ink.ink)
                 Text(heroSub)

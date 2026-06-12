@@ -34,6 +34,9 @@ for script in "$ROOT_DIR"/scripts/*.sh; do
   bash -n "$script"
 done
 
+echo "==> Local CI: l10n catalog drift"
+"$ROOT_DIR/scripts/gen-l10n.sh" --check
+
 echo "==> Local CI: build and tests"
 "$ROOT_DIR/scripts/dev-build.sh"
 
