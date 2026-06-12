@@ -8,6 +8,29 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.9.0</title>
+      <pubDate>Fri, 12 Jun 2026 08:49:12 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>Popskill v2.9.0 — 定时任务面板</h2>
+        <p>缘起：majia-guanyuan 被本机 launchd 任务用旧缓存回滚（2026-06-12 事故），排查时发现「本机有哪些定时任务、什么时候跑、上次结果如何」只能靠 launchctl/crontab 命令，没有可视化入口。这版把它做进 Popskill。</p>
+        <h2>定时任务面板（◷ / ⌘J）</h2>
+        <p><b>launchd 用户级任务</b>：解析 `~/Library/LaunchAgents/*.plist` 的 Label / ProgramArguments / 调度配置，翻译成人话——StartCalendarInterval（&quot;每天 06:00&quot; / &quot;每周一 10:17&quot; / 多时间点）、StartInterval（&quot;每 2 小时&quot;）、KeepAlive（&quot;常驻 daemon&quot;）、RunAtLoad（&quot;登录自启&quot;）。 <b>crontab 条目</b>：`crontab -l` 全部条目同屏展示，5 字段翻译（&quot;每 6 小时的第 17 分&quot;），命令与日志重定向自动拆分；只看不动，管理仍走 `crontab -e`。 <b>状态与上次结果</b>：与 `launchctl list` 比对——绿点 = 已加载且上次退出 0，红点 + 「上次退出 N」徽章 = 上次失败，灰点 = 已停用。 <b>操作</b>（全部先弹确认）：立刻跑一次（`launchctl kickstart -k`）、停用 / 启用（`unload` / `load`，plist 文件原样保留）；有 StandardOutPath 的任务一键打开日志（日志按天滚动不在时打开所在目录）。 <b>降噪</b>：com.apple / Google / Clash 等系统与第三方任务默认隐藏，底栏开关一键展开。 边界：plist 内容只读，绝不改写；写操作仅上述三个 launchctl 动作。</p>
+        <h2>详情 peek 三连</h2>
+        <p><b>版本号回来了</b>：frontmatter 解析支持 Agent Skills 标准的嵌套 `metadata:` 写法（version/author 不再丢失）；同一修复让更新徽标显示具体上游版本号（&quot;↑ 3.1.0&quot;）而非笼统的「新版」。 <b>来源链接可点击</b>：hover 变蓝 + 手型，点击直达 GitHub。 <b>SKILL.md 直开</b>：底部提示文字升级为按钮，点击用系统默认编辑器打开（CLI 能力对应 README.md）。</p>
+        <h2>更新徽标语义修复</h2>
+        <p>亮着更新徽标的源不再走 HEAD 短路——完整比对才能重新解析上游版本号、或在上游回退后熄灭徽标。 完整比对确认与上游一致（如在终端手动同步过）时自动熄灭残留徽标；检查失败仍与「确实最新」分立，不误清。</p>
+        <p>测试 62 → 80（嵌套 frontmatter / 徽标熄灭与保持 / plist 与 cron 解析全 fixture 化，不碰真系统）。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.9.0/Popskill-2.9.0.dmg"
+        sparkle:version="273"
+        sparkle:shortVersionString="2.9.0"
+        sparkle:edSignature="dWLlJFgG161E+7cAJzqaY4bb6PhGOiLVePavGNXd/2f2hKfV/2hA5IMurF9yVpI/FEFHIPCQK/3gY5jsrm06BQ=="
+        length="2551725"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.8.0</title>
       <pubDate>Thu, 11 Jun 2026 14:30:28 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
