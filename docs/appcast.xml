@@ -8,6 +8,28 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.12.0</title>
+      <pubDate>Fri, 12 Jun 2026 17:26:01 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.12.0 — 界面双语：简体中文 + English</h2>
+        <p>Popskill 现在会说英文了。界面跟随系统语言自动切换：简体中文用户看到的和过去一字不差，英文（及其它语言）用户看到完整的英文界面——从英文 README 下载的朋友不再对着满屏中文猜按钮。</p>
+        <h2>本地化</h2>
+        <p>全部界面文案完成本地化：主屏、健康横幅、添加/设置/定时任务弹层、修复弹层、详情 peek、菜单栏、确认弹窗、toast 与错误信息（约 295 条，含 30 组英文单复数变形）。相对时间等日期格式也跟随界面语言，英文界面不再蹦出中文日期。系统语言不受支持时统一显示英文。</p>
+        <p>在「系统设置 → 通用 → 语言与地区 → 应用程序」里可以单独为 Popskill 指定语言。</p>
+        <h2>工程</h2>
+        <p>本地化权威源为单一 String Catalog（`swift-app/l10n/Localizable.xcstrings`），预编译进资源包；本地 CI 新增双向覆盖校验——代码里每条文案必须在目录中有词条，目录里每个词条必须被代码引用，漏一条都过不了检查。</p>
+        <p>刻意保持中文的部分：内置精选目录的 skill 简介（内容数据）、开发者日志。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.12.0/Popskill-2.12.0.dmg"
+        sparkle:version="275"
+        sparkle:shortVersionString="2.12.0"
+        sparkle:edSignature="0a2J7sBfxFQopqKT9rbQRjsYX9I26gfyzA4V2LKBxoxxXJW6pCJISZLVBk1yRhcBT8w0xJBELmIhiWIM3D+SBQ=="
+        length="2512473"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.11.0</title>
       <pubDate>Fri, 12 Jun 2026 16:27:58 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
