@@ -80,6 +80,7 @@ The filesystem is the database. No sidecar, no SQLite — your directory tree al
 - **Keyboard navigation** — `↑↓` row focus, `←→` tool column, `Space` to toggle or repair, `/` search, `Esc` to exit
 - **Curated catalog** — built-in one-line Chinese summaries and type hints for ~80 popular skills; no more raw upstream walls of text on cards
 - **Bilingual UI** — fully localized in English + Simplified Chinese, follows your system language (v2.12)
+- **Card / table dual view** — same data, switch between the card matrix and a dense ledger table from the top-right toggle (v2.13)
 
 ---
 

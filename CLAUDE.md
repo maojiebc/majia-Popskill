@@ -137,17 +137,19 @@ scripts/release.sh
 15. **容器 .shadow 会传染子视图** — SwiftUI 给带子背景的容器加 .shadow，每个子行各自投影把底色糊灰（v2.3.1 用户实机发现）；浮层/弹层投影前必须 `compositingGroup()`
 16. **发版链禁静默步骤** — v2.5.0 事故：appcast 注入静默 no-op，DMG/Release 都成了、更新源没更，用户看到「最新 2.4.2/正跑 2.5.0」倒挂。appcast 一律走 `scripts/append-appcast.py`（断言：重复版本拒绝/锚点必中/写后校验）；另注意 Pages CDN max-age=600，发版后 10 分钟内手动检查可能命中旧缓存
 
-## 当前状态（2026-06-13）
+## 当前状态（2026-06-16）
 
-- 线上 **v2.12.0「双语」**：UI 全量本地化（简中 + 英文，~295 key 含 30 组单复数），跟随系统语言、不支持的语言落英文。机制/约定见「关键架构事实 → 本地化」节——改 UI 文案的事实标准从此变了：**新增用户可见字符串必须 `L()` + 进 catalog + 跑 gen-l10n.sh**，ci-local 会拦漏网的。
-- v2.11.0：激活 pill 压缩靠右；v2.10/2.9：定时任务面板（launchd/crontab 可视化，行为分组/倒计时/人话备注/停摆红条）；v2.8.0 成熟度大版见 docs/release/v2.8.0.md。
-- 测试 89 个（StoreFSTests 57+1 冒烟 skip + AppModelTests 8 + SchedTests 23），smoke 群全部可跑。
+- 线上 **v2.13.0「设计稿 uplift」**：按 claude.ai/design 交接稿账本版最终态补齐三块（皮肤不变）——① 顶部类型统计条（Skill/Agent/MCP/CLI/Bundle 计数 + 各工具 已激活/未挂载 拆分，`Stats.byType`/`inactiveByTool` 派生，glyph ◈◉▣⌨▦）② 断链整卡红（任一工具 broken ⇒ 整卡红边 #e3a8a8 + 淡红底 #fdf4f4 + 红头像 + `BrokenBadge`）③ 卡片/表格双视图（`ViewMode`，过滤行右端分段切换；表格 8 列 + 套装可展开表头行 + `FractionCell` 分数 + 子项 │ 缩进 + `StatusCell` 状态符号矩阵，复用现成组件，两视图共享 `kbFocusList`）。设计稿原包不入库；调试钩子新增 `POPSKILL_VIEW=list`。
+- v2.12.0「双语」：UI 全量本地化（简中 + 英文）——**新增用户可见字符串必须 `L()` + 进 catalog + 跑 gen-l10n.sh**，ci-local 会拦漏网的（见「关键架构事实 → 本地化」节）。
+- v2.11/2.10/2.9：激活 pill 压缩靠右、定时任务面板（launchd/crontab）；v2.8.0 成熟度大版见 docs/release/v2.8.0.md。
+- 测试 90 个（StoreFSTests 58+1 冒烟 skip + AppModelTests 8 + SchedTests 23），smoke 群全部可跑。
 
-## 下一步候选
+## 下一步候选（设计稿里刻意没做的）
 
-1. **npm 源支持**
-2. **store 目录 FSEvents 实时刷新**（现为 ⌘R + 前台激活自动重扫）
-3. **精选目录英文化**（Catalog.swift ~80 条中文简介对英文用户仍直出中文——本地化刻意排除项，需要时单独做）
+1. **白卡 SaaS 皮肤**（设计 chat 里「保留观望」的另一版方向，账本皮肤的替代选项；做的话是全局换色大改，单独立项）
+2. **npm 源支持**
+3. **store 目录 FSEvents 实时刷新**（现为 ⌘R + 前台激活自动重扫）
+4. **精选目录英文化**（Catalog.swift ~80 条中文简介对英文用户仍直出中文——本地化刻意排除项）
 
 ## 沟通偏好（来自 user memory）
 
