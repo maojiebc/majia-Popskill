@@ -447,7 +447,7 @@ struct SettingsSheet: View {
                     .buttonStyle(.plain)
                     .help(L("把 ~/.claude / ~/.codex 里的真实技能目录收编进 store 并换成 symlink"))
                     Button { model.openStore() } label: {
-                        Text(L("↗ 在编辑器中打开"))
+                        Text(L("↗ 在访达中显示"))
                             .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
                             .padding(.horizontal, 8).frame(height: 24)
                             .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))

@@ -74,7 +74,7 @@ The filesystem is the database. No sidecar, no SQLite — your directory tree al
 - **Capability matrix** — every skill in one ledger: one row per capability, Claude / Codex status pills, one click to mount or unmount
 - **Source bundles** — skills from the same upstream repo auto-group into one card (e.g. 22 baoyu skills, 26 lark skills); disk stays flat, symlinks untouched
 - **Content-hash updates** — no semver required: per-member SHA-256 against upstream; one clone checks a whole monorepo, only changed members get replaced, and you're told about upstream skills you haven't installed yet
-- **Backup before update** — replaced versions go to a recycle bin (20 kept), restorable anytime
+- **Backup before update** — replaced versions go to a recycle bin (200 kept), restorable anytime
 - **Inline repair** — broken links and unmanaged local copies fixed in place; destructive operations only ever touch symlinks, real directories go to the recycle bin
 - **Unmanaged import** — one click adopts stray skill folders from `~/.claude` / `~/.codex` into the store, replaced with symlinks
 - **Keyboard navigation** — `↑↓` row focus, `←→` tool column, `Space` to toggle or repair, `/` search, `Esc` to exit
@@ -86,9 +86,10 @@ The filesystem is the database. No sidecar, no SQLite — your directory tree al
 
 ## Quickstart
 
-1. Install and launch — if you already use `~/.agents/skills/` (the `npx skills` ecosystem convention), the matrix fills with your existing skills immediately
-2. Starting fresh? Hit **+ Add** and paste a GitHub repo, e.g. `github.com/anthropics/skills`
-3. Click the Claude / Codex pill on a card to mount; click ✕ or ◐ to repair; flip on auto-update in Settings
+1. Download the DMG, drag into Applications, and open. **On first launch** macOS may warn “from the internet / unidentified developer” — it’s signed + notarized, so right-click the icon and choose **Open** (first time only)
+2. Launch — if you already use `~/.agents/skills/` (the `npx skills` ecosystem convention), the matrix fills with your existing skills immediately
+3. Starting fresh? Hit **+ Add** and paste a GitHub repo, e.g. `github.com/anthropics/skills` (**installing GitHub-sourced skills needs git** — if it’s missing you’ll be prompted to run `xcode-select --install`)
+4. Click the Claude / Codex pill on a card to mount; click ✕ or ◐ to repair; right-click a card for “Remove / Reveal in Finder”; flip on auto-update in Settings
 
 ---
 
@@ -116,7 +117,7 @@ No. 100% local, no analytics, no telemetry. The only network calls: `git clone` 
 Skills live in `~/.agents/` (your data, not Popskill's); the app's own metadata is a single `~/.agents/.popskill.json`. Uninstall = drag Popskill.app to Trash; your skills and symlinks stay intact.
 
 **Q: Will it touch my files?**
-Three hard safety rules: only symlinks are ever deleted; real directories always go to the recycle bin (`~/.agents/.trash/`, 20 kept); store directories are never touched by toggles. 40 engine unit tests enforce these.
+Three hard safety rules: only symlinks are ever deleted; real directories always go to the recycle bin (`~/.agents/.trash/`, 200 kept); store directories are never touched by toggles. 40 engine unit tests enforce these.
 
 **Q: Tools beyond Claude Code / Codex?**
 The tool list is dynamic in the architecture, but this version deliberately ships with just these two (my actual daily need). Tools that natively scan `~/.agents/skills/` (like opencode) work with zero configuration.

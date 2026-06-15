@@ -10,6 +10,8 @@
 	<string>%@ — 空</string>
 	<key>%@ 不是 popskill 管理的 symlink，已跳过</key>
 	<string>%@ 不是 popskill 管理的 symlink，已跳过</string>
+	<key>%@ 似乎还没安装</key>
+	<string>%@ 似乎还没安装</string>
 	<key>%@ 正在更新中，稍候再操作</key>
 	<string>%@ 正在更新中，稍候再操作</string>
 	<key>%@ 等</key>
@@ -78,6 +80,10 @@ macOS: %@
 	<string>Marketplace 插件（%@）· 由 Claude Code 管理，操作用 /plugin</string>
 	<key>PID %lld</key>
 	<string>PID %lld</string>
+	<key>Popskill 帮你把一份 AI 技能装一次，同时挂给 Claude Code 和 Codex 等工具。
+粘贴一个 GitHub 仓库或本地文件夹，就能开始。</key>
+	<string>Popskill 帮你把一份 AI 技能装一次，同时挂给 Claude Code 和 Codex 等工具。
+粘贴一个 GitHub 仓库或本地文件夹，就能开始。</string>
 	<key>Popskill 帮助</key>
 	<string>Popskill 帮助</string>
 	<key>SKILL.MD · 文档摘要</key>
@@ -90,8 +96,6 @@ macOS: %@
 	<string>cron 条目在终端用 crontab -e 管理，这里只看不动。</string>
 	<key>crontab 在册即生效</key>
 	<string>crontab 在册即生效</string>
-	<key>git clone 失败：%@</key>
-	<string>git clone 失败：%@</string>
 	<key>launchctl kickstart 退出码 %lld</key>
 	<string>launchctl kickstart 退出码 %lld</string>
 	<key>launchctl load——按 plist 里的调度恢复运行。</key>
@@ -118,10 +122,8 @@ macOS: %@
 	<string>”。试试别的关键词，或 + 添加。</string>
 	<key>← 返回</key>
 	<string>← 返回</string>
-	<key>↑↓ 行 · ←→ 列 · 空格 切换</key>
-	<string>↑↓ 行 · ←→ 列 · 空格 切换</string>
-	<key>↗ 在编辑器中打开</key>
-	<string>↗ 在编辑器中打开</string>
+	<key>↗ 在访达中显示</key>
+	<string>↗ 在访达中显示</string>
 	<key>↗ 打开 %@</key>
 	<string>↗ 打开 %@</string>
 	<key>↗ 打开回收站文件夹</key>
@@ -152,6 +154,8 @@ macOS: %@
 	<string>今天 %@</string>
 	<key>今天还会跑 %lld 个：%@</key>
 	<string>今天还会跑 %lld 个：%@</string>
+	<key>仍然挂载</key>
+	<string>仍然挂载</string>
 	<key>从 %@ 拉取新版，重链 symlink</key>
 	<string>从 %@ 拉取新版，重链 symlink</string>
 	<key>从 %@ 重新获取该项</key>
@@ -218,6 +222,10 @@ macOS: %@
 	<string>同步于%@</string>
 	<key>同步后端</key>
 	<string>同步后端</string>
+	<key>同步未开启</key>
+	<string>同步未开启</string>
+	<key>同步未开启（可选）</key>
+	<string>同步未开启（可选）</string>
 	<key>同源套装 · %lld 项</key>
 	<string>同源套装 · %lld 项</string>
 	<key>名称</key>
@@ -250,10 +258,12 @@ macOS: %@
 	<string>命令超时（%lld s）已终止：%@ %@</string>
 	<key>回收站（%lld）</key>
 	<string>回收站（%lld）</string>
+	<key>图例</key>
+	<string>图例</string>
 	<key>在 Claude / Codex 目录里发现现有技能（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。</key>
 	<string>在 Claude / Codex 目录里发现现有技能（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。</string>
-	<key>在编辑器中打开</key>
-	<string>在编辑器中打开</string>
+	<key>在访达中显示</key>
+	<string>在访达中显示</string>
 	<key>套装连同 %lld 个子项的 store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。</key>
 	<string>套装连同 %lld 个子项的 store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。</string>
 	<key>安装 %@ 失败：%@</key>
@@ -360,10 +370,18 @@ macOS: %@
 	<string>扫描完成：发现 %lld 项能力</string>
 	<key>扫描本地目录</key>
 	<string>扫描本地目录</string>
+	<key>找不到这个仓库——检查地址是否写对、是否为公开仓库。</key>
+	<string>找不到这个仓库——检查地址是否写对、是否为公开仓库。</string>
+	<key>找出你已经手动放进 Claude / Codex 的技能，收编进 Popskill 统一管理（动手前会先让你确认）</key>
+	<string>找出你已经手动放进 Claude / Codex 的技能，收编进 Popskill 统一管理（动手前会先让你确认）</string>
+	<key>把 store（~/.agents）做成 git 仓库即可在多台 Mac 间同步——这是可选项，不影响本机使用。</key>
+	<string>把 store（~/.agents）做成 git 仓库即可在多台 Mac 间同步——这是可选项，不影响本机使用。</string>
 	<key>把 ~/.claude / ~/.codex 里的真实技能目录收编进 store 并换成 symlink</key>
 	<string>把 ~/.claude / ~/.codex 里的真实技能目录收编进 store 并换成 symlink</string>
 	<key>报告问题…</key>
 	<string>报告问题…</string>
+	<key>挂载会在 %@ 创建目录。如果你还没用这个工具，可以先不挂。确定要创建并挂载吗？</key>
+	<string>挂载会在 %@ 创建目录。如果你还没用这个工具，可以先不挂。确定要创建并挂载吗？</string>
 	<key>挂载到</key>
 	<string>挂载到</string>
 	<key>指回 store 中现存的目录</key>
@@ -422,14 +440,14 @@ macOS: %@
 	<string>有未提交改动</string>
 	<key>未加载（已停用）</key>
 	<string>未加载（已停用）</string>
+	<key>未安装</key>
+	<string>未安装</string>
 	<key>未找到 SKILL.md — 该源不是 skill 也不是套装</key>
 	<string>未找到 SKILL.md — 该源不是 skill 也不是套装</string>
 	<key>未挂载</key>
 	<string>未挂载</string>
-	<key>未连接</key>
-	<string>未连接</string>
-	<key>未连接同步</key>
-	<string>未连接同步</string>
+	<key>未检测到 git（macOS 命令行工具）。请在「终端」运行 xcode-select --install 装好后重试。</key>
+	<string>未检测到 git（macOS 命令行工具）。请在「终端」运行 xcode-select --install 装好后重试。</string>
 	<key>未配置</key>
 	<string>未配置</string>
 	<key>未配置调度</key>
@@ -562,10 +580,8 @@ macOS: %@
 	<string>类型</string>
 	<key>粘贴 GitHub 仓库 / 本地路径 — 安装一次进 store，再选择挂载到哪些工具。</key>
 	<string>粘贴 GitHub 仓库 / 本地路径 — 安装一次进 store，再选择挂载到哪些工具。</string>
-	<key>粘贴一个 GitHub 仓库或本地路径，
-安装一次，挂载到所有 AI 工具。</key>
-	<string>粘贴一个 GitHub 仓库或本地路径，
-安装一次，挂载到所有 AI 工具。</string>
+	<key>粘贴一个 GitHub 仓库或本地文件夹，安装进 store 并挂载到所选工具</key>
+	<string>粘贴一个 GitHub 仓库或本地文件夹，安装进 store 并挂载到所选工具</string>
 	<key>编辑人话备注（存在 Popskill，不动 plist）</key>
 	<string>编辑人话备注（存在 Popskill，不动 plist）</string>
 	<key>能力矩阵</key>
@@ -574,6 +590,10 @@ macOS: %@
 	<string>自动更新 %lld 个源</string>
 	<key>自动检查 App 更新（每天一次）</key>
 	<string>自动检查 App 更新（每天一次）</string>
+	<key>获取仓库失败——请检查地址与网络后重试。</key>
+	<string>获取仓库失败——请检查地址与网络后重试。</string>
+	<key>获取仓库失败：%@</key>
+	<string>获取仓库失败：%@</string>
 	<key>表格视图</key>
 	<string>表格视图</string>
 	<key>解析 →</key>
@@ -596,6 +616,10 @@ macOS: %@
 	<string>运行中</string>
 	<key>还没有任何能力</key>
 	<string>还没有任何能力</string>
+	<key>这个仓库需要登录（可能是私有仓库）——Popskill 暂时只支持公开仓库。</key>
+	<string>这个仓库需要登录（可能是私有仓库）——Popskill 暂时只支持公开仓库。</string>
+	<key>连不上网络，没法获取这个仓库——检查网络后重试。</key>
+	<string>连不上网络，没法获取这个仓库——检查网络后重试。</string>
 	<key>重启</key>
 	<string>重启</string>
 	<key>重启 %@？</key>

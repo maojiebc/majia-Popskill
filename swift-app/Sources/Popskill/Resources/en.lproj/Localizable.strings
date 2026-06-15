@@ -6,6 +6,8 @@
 	<string>%@ — empty</string>
 	<key>%@ 不是 popskill 管理的 symlink，已跳过</key>
 	<string>%@ is not a popskill-managed symlink — skipped</string>
+	<key>%@ 似乎还没安装</key>
+	<string>%@ doesn’t seem to be installed</string>
 	<key>%@ 正在更新中，稍候再操作</key>
 	<string>%@ is updating — try again in a moment</string>
 	<key>%@ 等</key>
@@ -16,8 +18,6 @@
 	<string>%@: %@. Click to toggle / fix</string>
 	<key>%lld 套装 · %lld 独立能力 · %@ 已激活</key>
 	<string>%lld bundles · %lld standalone · %@ active</string>
-	<key>%lld 断链</key>
-	<string>%lld broken</string>
 	<key>%lld 日</key>
 	<string>day %lld</string>
 	<key>%lld 项中 %lld 项已激活</key>
@@ -52,6 +52,10 @@ macOS: %2$@
 	<string>Marketplace plugin (%@) · Managed by Claude Code — use /plugin</string>
 	<key>PID %lld</key>
 	<string>PID %lld</string>
+	<key>Popskill 帮你把一份 AI 技能装一次，同时挂给 Claude Code 和 Codex 等工具。
+粘贴一个 GitHub 仓库或本地文件夹，就能开始。</key>
+	<string>Popskill installs an AI skill once and links it to tools like Claude Code and Codex at the same time.
+Paste a GitHub repo or a local folder to get started.</string>
 	<key>Popskill 帮助</key>
 	<string>Popskill Help</string>
 	<key>SKILL.MD · 文档摘要</key>
@@ -64,8 +68,6 @@ macOS: %2$@
 	<string>cron entries are managed with crontab -e in a terminal; read-only here.</string>
 	<key>crontab 在册即生效</key>
 	<string>Listed in crontab = active</string>
-	<key>git clone 失败：%@</key>
-	<string>git clone failed: %@</string>
 	<key>launchctl kickstart 退出码 %lld</key>
 	<string>launchctl kickstart exited with code %lld</string>
 	<key>launchctl load——按 plist 里的调度恢复运行。</key>
@@ -92,10 +94,8 @@ macOS: %2$@
 	<string>”. Try another keyword, or + Add.</string>
 	<key>← 返回</key>
 	<string>← Back</string>
-	<key>↑↓ 行 · ←→ 列 · 空格 切换</key>
-	<string>↑↓ rows · ←→ cols · Space toggles</string>
-	<key>↗ 在编辑器中打开</key>
-	<string>↗ Open in editor</string>
+	<key>↗ 在访达中显示</key>
+	<string>↗ Reveal in Finder</string>
 	<key>↗ 打开 %@</key>
 	<string>↗ Open %@</string>
 	<key>↗ 打开回收站文件夹</key>
@@ -105,7 +105,7 @@ macOS: %2$@
 	<key>、</key>
 	<string>, </string>
 	<key>上次 %@ %@</key>
-	<string>Last %1$@ %2$@</string>
+	<string>Last run %1$@ %2$@</string>
 	<key>上次退出码 %lld</key>
 	<string>Last exit code %lld</string>
 	<key>上游有新版——点套装头部 ↑ 徽标更新</key>
@@ -124,6 +124,8 @@ macOS: %2$@
 	<string>Showing the latest 5; the rest are in the folder</string>
 	<key>今天 %@</key>
 	<string>today %@</string>
+	<key>仍然挂载</key>
+	<string>Link anyway</string>
 	<key>从 %@ 拉取新版，重链 symlink</key>
 	<string>Pulls the new version from %@ and relinks the symlink</string>
 	<key>从 %@ 重新获取该项</key>
@@ -186,6 +188,10 @@ macOS: %2$@
 	<string>Synced %@</string>
 	<key>同步后端</key>
 	<string>Sync backend</string>
+	<key>同步未开启</key>
+	<string>Sync off</string>
+	<key>同步未开启（可选）</key>
+	<string>Sync off (optional)</string>
 	<key>名称</key>
 	<string>Name</string>
 	<key>后天</key>
@@ -216,10 +222,12 @@ macOS: %2$@
 	<string>Command timed out (%lld s), terminated: %@ %@</string>
 	<key>回收站（%lld）</key>
 	<string>Trash (%lld)</string>
+	<key>图例</key>
+	<string>Legend</string>
 	<key>在 Claude / Codex 目录里发现现有技能（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。</key>
 	<string>Found existing skills in the Claude / Codex directories (e.g. %@…). Import them into the store for unified management and replace each in place with a symlink? Originals go to the store trash and can be restored.</string>
-	<key>在编辑器中打开</key>
-	<string>Open in Editor</string>
+	<key>在访达中显示</key>
+	<string>Reveal in Finder</string>
 	<key>安装 %@ 失败：%@</key>
 	<string>Failed to install %1$@: %2$@</string>
 	<key>安装并链接 (%lld)</key>
@@ -314,10 +322,18 @@ macOS: %2$@
 	<string>Scanning…</string>
 	<key>扫描本地目录</key>
 	<string>Scan Local Folders</string>
+	<key>找不到这个仓库——检查地址是否写对、是否为公开仓库。</key>
+	<string>Repository not found — check the address and that it’s public.</string>
+	<key>找出你已经手动放进 Claude / Codex 的技能，收编进 Popskill 统一管理（动手前会先让你确认）</key>
+	<string>Find skills you put into Claude / Codex by hand and bring them under Popskill (you’ll be asked to confirm first)</string>
+	<key>把 store（~/.agents）做成 git 仓库即可在多台 Mac 间同步——这是可选项，不影响本机使用。</key>
+	<string>Make the store (~/.agents) a git repo to sync across Macs — this is optional and doesn’t affect local use.</string>
 	<key>把 ~/.claude / ~/.codex 里的真实技能目录收编进 store 并换成 symlink</key>
 	<string>Adopt real skill directories in ~/.claude / ~/.codex into the store and replace them with symlinks</string>
 	<key>报告问题…</key>
 	<string>Report Issue…</string>
+	<key>挂载会在 %@ 创建目录。如果你还没用这个工具，可以先不挂。确定要创建并挂载吗？</key>
+	<string>Linking will create a directory at %@. If you don’t use this tool yet, you can skip it. Create and link anyway?</string>
 	<key>挂载到</key>
 	<string>Link to</string>
 	<key>指回 store 中现存的目录</key>
@@ -374,14 +390,14 @@ macOS: %2$@
 	<string>Uncommitted changes</string>
 	<key>未加载（已停用）</key>
 	<string>Not loaded (disabled)</string>
+	<key>未安装</key>
+	<string>Not installed</string>
 	<key>未找到 SKILL.md — 该源不是 skill 也不是套装</key>
 	<string>No SKILL.md found — this source is neither a skill nor a bundle</string>
 	<key>未挂载</key>
 	<string>Inactive</string>
-	<key>未连接</key>
-	<string>Not connected</string>
-	<key>未连接同步</key>
-	<string>Sync not connected</string>
+	<key>未检测到 git（macOS 命令行工具）。请在「终端」运行 xcode-select --install 装好后重试。</key>
+	<string>git (macOS command line tools) wasn’t found. Run xcode-select --install in Terminal, then try again.</string>
 	<key>未配置</key>
 	<string>Not set up</string>
 	<key>未配置调度</key>
@@ -506,16 +522,18 @@ macOS: %2$@
 	<string>Type</string>
 	<key>粘贴 GitHub 仓库 / 本地路径 — 安装一次进 store，再选择挂载到哪些工具。</key>
 	<string>Paste a GitHub repo or local path — install once into the store, then pick which tools to link.</string>
-	<key>粘贴一个 GitHub 仓库或本地路径，
-安装一次，挂载到所有 AI 工具。</key>
-	<string>Paste a GitHub repo or a local path.
-Install once, mount to all your AI tools.</string>
+	<key>粘贴一个 GitHub 仓库或本地文件夹，安装进 store 并挂载到所选工具</key>
+	<string>Paste a GitHub repo or local folder to install into the store and link to the tools you pick</string>
 	<key>编辑人话备注（存在 Popskill，不动 plist）</key>
 	<string>Edit friendly note (stored in Popskill; plist untouched)</string>
 	<key>能力矩阵</key>
 	<string>Capability Matrix</string>
 	<key>自动检查 App 更新（每天一次）</key>
 	<string>Automatically check for app updates (daily)</string>
+	<key>获取仓库失败——请检查地址与网络后重试。</key>
+	<string>Couldn’t fetch the repository — check the address and your network, then retry.</string>
+	<key>获取仓库失败：%@</key>
+	<string>Couldn’t fetch the repository: %@</string>
 	<key>表格视图</key>
 	<string>Table view</string>
 	<key>解析 →</key>
@@ -538,6 +556,10 @@ Install once, mount to all your AI tools.</string>
 	<string>Running</string>
 	<key>还没有任何能力</key>
 	<string>No capabilities yet</string>
+	<key>这个仓库需要登录（可能是私有仓库）——Popskill 暂时只支持公开仓库。</key>
+	<string>This repository needs sign-in (it may be private) — Popskill supports public repositories only for now.</string>
+	<key>连不上网络，没法获取这个仓库——检查网络后重试。</key>
+	<string>Can’t reach the network to fetch this repository — check your connection and retry.</string>
 	<key>重启</key>
 	<string>Restart</string>
 	<key>重启 %@？</key>

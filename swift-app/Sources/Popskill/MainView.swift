@@ -128,19 +128,27 @@ struct MainView: View {
     private func toolCell(_ t: Tool, on: Int, off: Int, last: Bool) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             statKey(nil, t.name)
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    Text("\(on)").font(.ui(20, .bold)).foregroundStyle(Ink.green).monospacedDigit()
-                    Text(L("已激活")).font(.ui(10, .semibold)).foregroundStyle(Ink.statOnLabel)
+            if t.connected {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    HStack(alignment: .firstTextBaseline, spacing: 3) {
+                        Text("\(on)").font(.ui(20, .bold)).foregroundStyle(Ink.green).monospacedDigit()
+                        Text(L("已激活")).font(.ui(10, .semibold)).foregroundStyle(Ink.statOnLabel)
+                    }
+                    HStack(alignment: .firstTextBaseline, spacing: 3) {
+                        // 未挂载是有意义的统计数（不是装饰），用 secondary2 过 AA（曾用 offGlyph 仅 2.55:1）
+                        Text("\(off)").font(.ui(14, .semibold)).foregroundStyle(Ink.secondary2).monospacedDigit()
+                        Text(L("未挂载")).font(.ui(10)).foregroundStyle(Ink.secondary2)
+                    }
                 }
-                HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    Text("\(off)").font(.ui(13, .semibold)).foregroundStyle(Ink.offGlyph).monospacedDigit()
-                    Text(L("未挂载")).font(.ui(10)).foregroundStyle(Ink.offGlyph)
-                }
+            } else {
+                // 没装这个工具：不显示会让人误以为「装了」的数字，直接标未安装
+                Text(L("未安装")).font(.ui(13, .semibold)).foregroundStyle(Ink.tertiary)
+                    .frame(height: 24, alignment: .center)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 14).padding(.vertical, 9)
+        .opacity(t.connected ? 1 : 0.6)
         .overlay(alignment: .trailing) { cellDivider(!last) }
     }
 
@@ -301,14 +309,30 @@ struct MainView: View {
             ForEach(CapType.allCases) { t in chip(t, t.rawValue) }
             Spacer()
             let filtering = !model.query.trimmingCharacters(in: .whitespaces).isEmpty || model.typeFilter != nil
-            Text(filtering ? L("\(capCount) 项匹配")
-                 : (model.viewMode == .list ? L("表格视图") : L("↑↓ 行 · ←→ 列 · 空格 切换")))
-                .font(.ui(11.5, filtering ? .semibold : .regular))
-                .foregroundStyle(filtering ? Ink.blue : Color(hex: 0x888888))
+            if filtering {
+                Text(L("\(capCount) 项匹配"))
+                    .font(.ui(11.5, .semibold)).foregroundStyle(Ink.blue)
+            } else {
+                statusLegend   // 常驻图例，两视图都显示——● —— ◐ ✕ 不再是密码表
+            }
             viewToggle
         }
         .padding(.horizontal, 28).padding(.vertical, 10)
         .overlay(alignment: .bottom) { Ink.hairline.frame(height: 1) }
+    }
+
+    /// 状态符号图例：普通用户一眼看懂矩阵里的 ● — ◐ ✕ 是什么
+    private var statusLegend: some View {
+        HStack(spacing: 10) {
+            ForEach([LinkStatus.on, .off, .stub, .broken], id: \.self) { st in
+                HStack(spacing: 3) {
+                    Text(st.glyph).font(.mono(11, st == .off ? .regular : .bold)).foregroundStyle(st.color)
+                    Text(st.stateLabel).font(.ui(11)).foregroundStyle(Ink.tertiary)
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(L("图例") + "：" + [LinkStatus.on, .off, .stub, .broken].map { $0.stateLabel }.joined(separator: "、"))
     }
 
     /// 卡片 / 表格 双视图分段切换（v2.13，过滤行右端）
@@ -461,7 +485,7 @@ struct MainView: View {
     @ViewBuilder
     private var noMatchHint: some View {
         if q.isEmpty, let tf = model.typeFilter {
-            Text(L("没有 \(tf.rawValue.uppercased()) 类型的能力。点 + 添加，或切回「全部」。"))
+            Text(L("没有 \(tf.rawValue) 类型的能力。点 + 添加，或切回「全部」。"))
                 .font(.ui(12)).foregroundStyle(Ink.tertiary)
         } else {
             (Text(L("没有能力匹配 “")) + Text(model.query).font(.mono(12)).foregroundStyle(Ink.ink) + Text(L("”。试试别的关键词，或 + 添加。")))
@@ -554,7 +578,7 @@ struct BundleCompactCard: View {
                         .fixedSize()
                     Spacer(minLength: 0)
                     if hovered {
-                        HoverAction(symbol: "↗", danger: false, help: L("在编辑器中打开")) { model.openInEditor(entry.cap.dirURL) }
+                        HoverAction(symbol: "↗", danger: false, help: L("在访达中显示")) { model.openInEditor(entry.cap.dirURL) }
                         if !entry.isManagedExternally {
                             HoverAction(symbol: "✕", danger: true, help: L("移除套装（含全部子项）")) { model.removeEntry(entry) }
                         }
@@ -606,8 +630,9 @@ struct BundleCompactCard: View {
         .onTapGesture { model.expanded.insert(entry.id) }
         .onHover { hovered = $0 }
         .help(L("点击展开套装"))
+        .contextMenu { bundleContextMenu(entry, model: model) }
         // hover 才入树的 ↗/✕ 对 VoiceOver 不存在——动作挂在卡片上兜底
-        .accessibilityAction(named: L("在编辑器中打开")) { model.openInEditor(entry.cap.dirURL) }
+        .accessibilityAction(named: L("在访达中显示")) { model.openInEditor(entry.cap.dirURL) }
         .accessibilityAction(named: L("移除套装")) { if !entry.isManagedExternally { model.removeEntry(entry) } }
         .id(entry.id)
     }
@@ -650,7 +675,7 @@ struct CapCard: View {
                     if broken { BrokenBadge(cause: brokenCause) }
                     Spacer(minLength: 0)
                     if hovered {
-                        HoverAction(symbol: "↗", danger: false, help: L("在编辑器中打开")) { model.openInEditor(cap.dirURL) }
+                        HoverAction(symbol: "↗", danger: false, help: L("在访达中显示")) { model.openInEditor(cap.dirURL) }
                         if fromBundle == nil {
                             HoverAction(symbol: "✕", danger: true, help: L("移除")) { model.removeEntry(entry) }
                         }
@@ -670,6 +695,8 @@ struct CapCard: View {
                         cellTap(tool: t)
                     }
                     .kbCellRing(focused && model.kbToolIdx == i)
+                    .opacity(t.connected ? 1 : 0.5)   // 没装的工具淡显，点了会先确认
+                    .help(t.connected ? "" : L("\(t.name) 似乎还没安装"))
                 }
             }
             .frame(minWidth: 64, alignment: .trailing)
@@ -681,7 +708,8 @@ struct CapCard: View {
         .shadow(color: .black.opacity(0.03), radius: 1, y: 1)
         .onHover { hovered = $0 }
         .animation(.easeOut(duration: 1.2), value: flashing)
-        .accessibilityAction(named: L("在编辑器中打开")) { model.openInEditor(cap.dirURL) }
+        .contextMenu { capContextMenu(cap, entry, fromBundle: fromBundle, model: model) }
+        .accessibilityAction(named: L("在访达中显示")) { model.openInEditor(cap.dirURL) }
         .accessibilityAction(named: L("移除")) { if fromBundle == nil { model.removeEntry(entry) } }
         .id(cap.id)
     }
@@ -828,7 +856,7 @@ struct BundleCard: View {
             .frame(width: 104)
             HStack(spacing: 2) {
                 if hovered {
-                    HoverAction(symbol: "↗", danger: false, help: L("在编辑器中打开")) { model.openInEditor(entry.cap.dirURL) }
+                    HoverAction(symbol: "↗", danger: false, help: L("在访达中显示")) { model.openInEditor(entry.cap.dirURL) }
                     if !entry.isManagedExternally {
                         HoverAction(symbol: "✕", danger: true, help: L("移除套装（含全部子项）")) { model.removeEntry(entry) }
                     }
@@ -845,6 +873,7 @@ struct BundleCard: View {
             if model.expanded.contains(entry.id) { model.expanded.remove(entry.id) }
             else { model.expanded.insert(entry.id) }
         }
+        .contextMenu { bundleContextMenu(entry, model: model) }
     }
 
     private func childList(_ kids: [Capability]) -> some View {
@@ -915,7 +944,7 @@ struct BundleCard: View {
             .frame(width: 96, alignment: .trailing)
             HStack {
                 if hoverChild == c.id {
-                    HoverAction(symbol: "↗", danger: false, help: L("在编辑器中打开")) { model.openInEditor(c.dirURL) }
+                    HoverAction(symbol: "↗", danger: false, help: L("在访达中显示")) { model.openInEditor(c.dirURL) }
                 }
             }
             .frame(width: 46, alignment: .trailing)
@@ -926,7 +955,7 @@ struct BundleCard: View {
             if cf { model.kbFocusFrame = frame }
         }
         .onHover { hoverChild = $0 ? c.id : (hoverChild == c.id ? nil : hoverChild) }
-        .accessibilityAction(named: L("在编辑器中打开")) { model.openInEditor(c.dirURL) }
+        .accessibilityAction(named: L("在访达中显示")) { model.openInEditor(c.dirURL) }
         .id(c.id)
     }
 
@@ -956,7 +985,8 @@ struct EmptyPane: View {
                 .font(.ui(18, .bold))
                 .foregroundStyle(Ink.ink)
                 .padding(.bottom, 6)
-            Text(L("粘贴一个 GitHub 仓库或本地路径，\n安装一次，挂载到所有 AI 工具。"))
+            // 给完全没用过的人讲清这东西是干嘛的——别假设他懂 skill/挂载/symlink
+            Text(L("Popskill 帮你把一份 AI 技能装一次，同时挂给 Claude Code 和 Codex 等工具。\n粘贴一个 GitHub 仓库或本地文件夹，就能开始。"))
                 .font(.ui(12.5))
                 .foregroundStyle(Ink.secondary2)
                 .multilineTextAlignment(.center)
@@ -970,6 +1000,7 @@ struct EmptyPane: View {
                         .background(RoundedRectangle(cornerRadius: 7).fill(Ink.ink))
                 }
                 .buttonStyle(.plain)
+                .help(L("粘贴一个 GitHub 仓库或本地文件夹，安装进 store 并挂载到所选工具"))
                 Button {
                     model.scanLocalForOnboarding()
                 } label: {
@@ -979,6 +1010,7 @@ struct EmptyPane: View {
                         .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+                .help(L("找出你已经手动放进 Claude / Codex 的技能，收编进 Popskill 统一管理（动手前会先让你确认）"))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1118,7 +1150,7 @@ struct TableCapRow: View {
                 if broken { BrokenBadge(cause: brokenCause) }
                 Spacer(minLength: 6)
                 if hovered {
-                    HoverAction(symbol: "↗", danger: false, help: L("在编辑器中打开")) { model.openInEditor(cap.dirURL) }
+                    HoverAction(symbol: "↗", danger: false, help: L("在访达中显示")) { model.openInEditor(cap.dirURL) }
                     if fromBundle == nil {
                         HoverAction(symbol: "✕", danger: true, help: L("移除")) { model.removeEntry(entry) }
                     }
@@ -1140,6 +1172,7 @@ struct TableCapRow: View {
                                 .frame(width: 30, height: 26)
                         }
                     }
+                    .opacity(t.connected ? 1 : 0.5)
                     .frame(width: TableCols.tool)
             }
             Text(cap.version.map { "v\($0)" } ?? "—")
@@ -1154,6 +1187,7 @@ struct TableCapRow: View {
         .overlay(alignment: .bottom) { Ink.tableHairline.frame(height: 1) }
         .kbRowFocus(focused, radius: 4, model: model)
         .onHover { hovered = $0 }
+        .contextMenu { capContextMenu(cap, entry, fromBundle: fromBundle, model: model) }
         .accessibilityElement(children: .contain)
         .id(cap.id)
     }
@@ -1201,7 +1235,7 @@ struct TableBundleRow: View {
                 Text(L("\(entry.children?.count ?? 0) 项")).font(.ui(11)).foregroundStyle(Ink.secondary).fixedSize()
                 Spacer(minLength: 6)
                 if hovered {
-                    HoverAction(symbol: "↗", danger: false, help: L("在编辑器中打开")) { model.openInEditor(entry.cap.dirURL) }
+                    HoverAction(symbol: "↗", danger: false, help: L("在访达中显示")) { model.openInEditor(entry.cap.dirURL) }
                     if !entry.isManagedExternally {
                         HoverAction(symbol: "✕", danger: true, help: L("移除套装（含全部子项）")) { model.removeEntry(entry) }
                     }
@@ -1233,6 +1267,30 @@ struct TableBundleRow: View {
             if model.expanded.contains(entry.id) { model.expanded.remove(entry.id) }
             else { model.expanded.insert(entry.id) }
         }
+        .contextMenu { bundleContextMenu(entry, model: model) }
         .id(entry.id)
+    }
+}
+
+// ── 右键菜单（v2.13.1）：核心动作不再只藏在 hover 里，符合 mac 肌肉记忆 ──
+
+@MainActor @ViewBuilder
+func capContextMenu(_ cap: Capability, _ entry: Entry, fromBundle: String?, model: AppModel) -> some View {
+    Button(L("查看详情")) {
+        model.openPeek(cap: cap, entry: entry, anchor: currentClickPoint(), flip: shouldFlip(threshold: 0.52))
+    }
+    Button(L("在访达中显示")) { model.openInEditor(cap.dirURL) }
+    if fromBundle == nil, !entry.isManagedExternally {
+        Divider()
+        Button(L("移除"), role: .destructive) { model.removeEntry(entry) }
+    }
+}
+
+@MainActor @ViewBuilder
+func bundleContextMenu(_ entry: Entry, model: AppModel) -> some View {
+    Button(L("在访达中显示")) { model.openInEditor(entry.cap.dirURL) }
+    if !entry.isManagedExternally {
+        Divider()
+        Button(L("移除套装（含全部子项）"), role: .destructive) { model.removeEntry(entry) }
     }
 }

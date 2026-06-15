@@ -412,6 +412,43 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(cli?.cap.readme, "二进制 CLI，无 SKILL.md。高性能工具。")
     }
 
+    // ── v2.13 体检修复 ───────────────────────────────────
+
+    func testInstallRollbackOnCopyFailure() throws {
+        // 源里有不可读文件 → install 的 copyItem 必败；曾留半个 dest 目录、重试报「已存在」卡死
+        let src = sandbox.appendingPathComponent("frag-src")
+        try fm.createDirectory(at: src, withIntermediateDirectories: true)
+        try "---\nname: frag-src\n---\n".write(to: src.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let locked = src.appendingPathComponent("locked.md")
+        try "x".write(to: locked, atomically: true, encoding: .utf8)
+        try fm.setAttributes([.posixPermissions: 0o000], ofItemAtPath: locked.path)
+        defer { try? fm.setAttributes([.posixPermissions: 0o644], ofItemAtPath: locked.path) }
+
+        let resolved = try fs.resolve(src.path)
+        XCTAssertThrowsError(try fs.install(resolved, linkTools: []))
+        let dest = env.storeRoot.appendingPathComponent("skills/frag-src")
+        XCTAssertFalse(fm.fileExists(atPath: dest.path), "失败后不能留半个目录")
+    }
+
+    func testTrashSameNameSameSecondNoCollision() throws {
+        // 同名条目同一秒内二次入站：曾撞名抛错；现在补后缀，两份都活、操作不失败
+        let a = sandbox.appendingPathComponent("dup"); try fm.createDirectory(at: a, withIntermediateDirectories: true)
+        try fs.moveToTrash(a)
+        let b = env.storeRoot.appendingPathComponent("skills/dup"); try fm.createDirectory(at: b, withIntermediateDirectories: true)
+        XCTAssertNoThrow(try fs.moveToTrash(b))
+        XCTAssertEqual(trashNames().filter { $0.hasPrefix("dup-") }.count, 2, "同秒两次入站都应保留")
+    }
+
+    func testHumanGitErrorMapping() {
+        XCTAssertTrue(StoreFS.humanGitError(cloneURL: "x", stderr: "fatal: could not resolve host: github.com").contains(L("连不上网络，没法获取这个仓库——检查网络后重试。")))
+        XCTAssertTrue(StoreFS.humanGitError(cloneURL: "x", stderr: "fatal: Authentication failed").contains(L("这个仓库需要登录（可能是私有仓库）——Popskill 暂时只支持公开仓库。")))
+        XCTAssertTrue(StoreFS.humanGitError(cloneURL: "x", stderr: "fatal: repository not found").contains(L("找不到这个仓库——检查地址是否写对、是否为公开仓库。")))
+        // stderr 全空也绝不返回冒号后空白
+        let blank = StoreFS.humanGitError(cloneURL: "x", stderr: "   \n ")
+        XCTAssertFalse(blank.hasSuffix("："))
+        XCTAssertFalse(blank.isEmpty)
+    }
+
     // ── 更新机制（v2.1：内容哈希）────────────────────────
 
     func testDirHashStableAndSensitive() throws {

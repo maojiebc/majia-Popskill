@@ -89,6 +89,22 @@
         }
       }
     },
+    "%@ 似乎还没安装": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ doesn’t seem to be installed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 似乎还没安装"
+          }
+        }
+      }
+    },
     "%@ 正在更新中，稍候再操作": {
       "localizations": {
         "en": {
@@ -396,9 +412,21 @@
     "%lld 断链": {
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld broken"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld broken"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld broken"
+                }
+              }
+            }
           }
         },
         "zh-Hans": {
@@ -701,6 +729,22 @@
         }
       }
     },
+    "Popskill 帮你把一份 AI 技能装一次，同时挂给 Claude Code 和 Codex 等工具。\n粘贴一个 GitHub 仓库或本地文件夹，就能开始。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Popskill installs an AI skill once and links it to tools like Claude Code and Codex at the same time.\nPaste a GitHub repo or a local folder to get started."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Popskill 帮你把一份 AI 技能装一次，同时挂给 Claude Code 和 Codex 等工具。\n粘贴一个 GitHub 仓库或本地文件夹，就能开始。"
+          }
+        }
+      }
+    },
     "Popskill 帮助": {
       "localizations": {
         "en": {
@@ -793,22 +837,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "crontab 在册即生效"
-          }
-        }
-      }
-    },
-    "git clone 失败：%@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "git clone failed: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "git clone 失败：%@"
           }
         }
       }
@@ -1021,34 +1049,18 @@
         }
       }
     },
-    "↑↓ 行 · ←→ 列 · 空格 切换": {
+    "↗ 在访达中显示": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "↑↓ rows · ←→ cols · Space toggles"
+            "value": "↗ Reveal in Finder"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "↑↓ 行 · ←→ 列 · 空格 切换"
-          }
-        }
-      }
-    },
-    "↗ 在编辑器中打开": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "↗ Open in editor"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "↗ 在编辑器中打开"
+            "value": "↗ 在访达中显示"
           }
         }
       }
@@ -1122,7 +1134,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Last %1$@ %2$@"
+            "value": "Last run %1$@ %2$@"
           }
         },
         "zh-Hans": {
@@ -1301,6 +1313,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "今天还会跑 %lld 个：%@"
+          }
+        }
+      }
+    },
+    "仍然挂载": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link anyway"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仍然挂载"
           }
         }
       }
@@ -1857,6 +1885,38 @@
         }
       }
     },
+    "同步未开启": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync off"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同步未开启"
+          }
+        }
+      }
+    },
+    "同步未开启（可选）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync off (optional)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同步未开启（可选）"
+          }
+        }
+      }
+    },
     "同源套装 · %lld 项": {
       "localizations": {
         "en": {
@@ -2125,6 +2185,22 @@
         }
       }
     },
+    "图例": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legend"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图例"
+          }
+        }
+      }
+    },
     "在 Claude / Codex 目录里发现现有技能（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。": {
       "localizations": {
         "en": {
@@ -2141,18 +2217,18 @@
         }
       }
     },
-    "在编辑器中打开": {
+    "在访达中显示": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open in Editor"
+            "value": "Reveal in Finder"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在编辑器中打开"
+            "value": "在访达中显示"
           }
         }
       }
@@ -3077,6 +3153,54 @@
         }
       }
     },
+    "找不到这个仓库——检查地址是否写对、是否为公开仓库。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repository not found — check the address and that it’s public."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到这个仓库——检查地址是否写对、是否为公开仓库。"
+          }
+        }
+      }
+    },
+    "找出你已经手动放进 Claude / Codex 的技能，收编进 Popskill 统一管理（动手前会先让你确认）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find skills you put into Claude / Codex by hand and bring them under Popskill (you’ll be asked to confirm first)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找出你已经手动放进 Claude / Codex 的技能，收编进 Popskill 统一管理（动手前会先让你确认）"
+          }
+        }
+      }
+    },
+    "把 store（~/.agents）做成 git 仓库即可在多台 Mac 间同步——这是可选项，不影响本机使用。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make the store (~/.agents) a git repo to sync across Macs — this is optional and doesn’t affect local use."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把 store（~/.agents）做成 git 仓库即可在多台 Mac 间同步——这是可选项，不影响本机使用。"
+          }
+        }
+      }
+    },
     "把 ~/.claude / ~/.codex 里的真实技能目录收编进 store 并换成 symlink": {
       "localizations": {
         "en": {
@@ -3105,6 +3229,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "报告问题…"
+          }
+        }
+      }
+    },
+    "挂载会在 %@ 创建目录。如果你还没用这个工具，可以先不挂。确定要创建并挂载吗？": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linking will create a directory at %@. If you don’t use this tool yet, you can skip it. Create and link anyway?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "挂载会在 %@ 创建目录。如果你还没用这个工具，可以先不挂。确定要创建并挂载吗？"
           }
         }
       }
@@ -3585,6 +3725,22 @@
         }
       }
     },
+    "未安装": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not installed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未安装"
+          }
+        }
+      }
+    },
     "未找到 SKILL.md — 该源不是 skill 也不是套装": {
       "localizations": {
         "en": {
@@ -3617,34 +3773,18 @@
         }
       }
     },
-    "未连接": {
+    "未检测到 git（macOS 命令行工具）。请在「终端」运行 xcode-select --install 装好后重试。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Not connected"
+            "value": "git (macOS command line tools) wasn’t found. Run xcode-select --install in Terminal, then try again."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "未连接"
-          }
-        }
-      }
-    },
-    "未连接同步": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sync not connected"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未连接同步"
+            "value": "未检测到 git（macOS 命令行工具）。请在「终端」运行 xcode-select --install 装好后重试。"
           }
         }
       }
@@ -4753,18 +4893,18 @@
         }
       }
     },
-    "粘贴一个 GitHub 仓库或本地路径，\n安装一次，挂载到所有 AI 工具。": {
+    "粘贴一个 GitHub 仓库或本地文件夹，安装进 store 并挂载到所选工具": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste a GitHub repo or a local path.\nInstall once, mount to all your AI tools."
+            "value": "Paste a GitHub repo or local folder to install into the store and link to the tools you pick"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "粘贴一个 GitHub 仓库或本地路径，\n安装一次，挂载到所有 AI 工具。"
+            "value": "粘贴一个 GitHub 仓库或本地文件夹，安装进 store 并挂载到所选工具"
           }
         }
       }
@@ -4841,6 +4981,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "自动检查 App 更新（每天一次）"
+          }
+        }
+      }
+    },
+    "获取仓库失败——请检查地址与网络后重试。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t fetch the repository — check the address and your network, then retry."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "获取仓库失败——请检查地址与网络后重试。"
+          }
+        }
+      }
+    },
+    "获取仓库失败：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t fetch the repository: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "获取仓库失败：%@"
           }
         }
       }
@@ -5017,6 +5189,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "还没有任何能力"
+          }
+        }
+      }
+    },
+    "这个仓库需要登录（可能是私有仓库）——Popskill 暂时只支持公开仓库。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This repository needs sign-in (it may be private) — Popskill supports public repositories only for now."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这个仓库需要登录（可能是私有仓库）——Popskill 暂时只支持公开仓库。"
+          }
+        }
+      }
+    },
+    "连不上网络，没法获取这个仓库——检查网络后重试。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can’t reach the network to fetch this repository — check your connection and retry."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连不上网络，没法获取这个仓库——检查网络后重试。"
           }
         }
       }

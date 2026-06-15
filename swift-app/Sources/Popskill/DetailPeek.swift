@@ -142,7 +142,7 @@ struct DetailPeekView: View {
                 model.openInEditor(target.cap.dirURL)
                 model.peekTarget = nil
             } label: {
-                Text(L("↗ 在编辑器中打开"))
+                Text(L("↗ 在访达中显示"))
                     .font(.ui(11.5, .semibold))
                     .foregroundStyle(Color(hex: 0x444444))
                     .padding(.horizontal, 11)

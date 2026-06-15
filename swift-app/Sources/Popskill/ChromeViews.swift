@@ -66,7 +66,9 @@ struct Titlebar: View {
     @ViewBuilder
     private var syncChip: some View {
         let connected = model.syncInfo.isGitRepo && !model.isEmpty
-        let label = !connected ? L("未连接") : (model.syncInfo.clean ? L("已同步") : L("有未提交改动"))
+        // 新用户的 ~/.agents 默认就不是 git 仓库——别用「未连接」吓人，
+        // 跨设备同步本就是可选项，措辞改中性 + tooltip 说清
+        let label = !connected ? L("同步未开启") : (model.syncInfo.clean ? L("已同步") : L("有未提交改动"))
         let dotColor: Color = !connected ? Ink.offDot : (model.syncInfo.clean ? Ink.green : Ink.amber)
         let textColor: Color = !connected ? Ink.tertiary : (model.syncInfo.clean ? Color(hex: 0x5A7A5F) : Ink.amberText)
         HStack(spacing: 6) {
@@ -77,6 +79,7 @@ struct Titlebar: View {
         .padding(.leading, 8).padding(.trailing, 9).padding(.vertical, 2)
         .background(Capsule().fill(connected && model.syncInfo.clean ? Ink.greenBg : Ink.window))
         .overlay(Capsule().stroke(connected && model.syncInfo.clean ? Color(hex: 0xCFE0D2) : Color(hex: 0xE2DFD3), lineWidth: 1))
+        .help(connected ? "" : L("把 store（~/.agents）做成 git 仓库即可在多台 Mac 间同步——这是可选项，不影响本机使用。"))
     }
 }
 
@@ -93,7 +96,7 @@ struct StatusBar: View {
                 Text(L("store 为空"))
             } else {
                 Button { model.openStore() } label: {
-                    Text(L("↗ 在编辑器中打开")).font(.ui(11, .medium)).foregroundStyle(Ink.blue)
+                    Text(L("↗ 在访达中显示")).font(.ui(11, .medium)).foregroundStyle(Ink.blue)
                 }
                 .buttonStyle(.plain)
                 dot
@@ -109,9 +112,10 @@ struct StatusBar: View {
             if model.isEmpty || !model.syncInfo.isGitRepo {
                 HStack(spacing: 6) {
                     Circle().fill(Ink.offDot).frame(width: 6, height: 6)
-                    Text(L("未连接同步"))
+                    Text(L("同步未开启（可选）"))
                 }
                 .foregroundStyle(Ink.tertiary)
+                .help(L("把 store（~/.agents）做成 git 仓库即可在多台 Mac 间同步——这是可选项，不影响本机使用。"))
             } else {
                 HStack(spacing: 6) {
                     Circle().fill(Ink.green).frame(width: 6, height: 6)

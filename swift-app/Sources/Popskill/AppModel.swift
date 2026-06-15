@@ -318,6 +318,16 @@ final class AppModel {
         }
         let from = cap.status(tool.id)
         guard from == .on || from == .off else { return }   // stub/broken 走修复弹层
+        // 工具没装（~/.claude / ~/.codex 不存在）时挂载会凭空建出该目录——
+        // 只用 Claude 的人点了界面里照样可点的 Codex 格，电脑就多个 ~/.codex。先确认。
+        if from == .off, !fake, !tool.connected {
+            let alert = NSAlert()
+            alert.messageText = L("\(tool.name) 似乎还没安装")
+            alert.informativeText = L("挂载会在 \(tool.rootDisplay) 创建目录。如果你还没用这个工具，可以先不挂。确定要创建并挂载吗？")
+            alert.addButton(withTitle: L("仍然挂载"))
+            alert.addButton(withTitle: L("取消"))
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+        }
         let to: LinkStatus = from == .on ? .off : .on
         if fake {
             mutateFake(capId: cap.id, toolId: tool.id, to: to)
@@ -653,6 +663,9 @@ final class AppModel {
         let known = Set(entries.flatMap { $0.allCaps.map(\.name) + [$0.name] })
         let found = fs.scanUnmanaged(tools: tools, knownNames: known)
         guard !found.isEmpty else { say(L("没有发现未托管的技能目录")); return }
+        // 批量搬运是破坏性操作（原目录移进回收站），必须先让用户看清清单再确认——
+        // 不能像过去那样点一下就静默把人家手装的技能都搬走
+        guard confirmImport(Set(found.map(\.name))) else { return }
         do {
             let imported = try fs.importUnmanaged(found)
             plog.info("导入未托管目录 \(imported.joined(separator: ","), privacy: .public)")
@@ -661,6 +674,17 @@ final class AppModel {
         } catch {
             sayError(L("导入失败：\(error.localizedDescription)"))
         }
+    }
+
+    /// 收编确认弹窗（onboarding 与设置页导入共用）：列清单 + 说清后果，POPSKILL_AUTOCONFIRM=1 跳过（E2E）
+    private func confirmImport(_ names: Set<String>) -> Bool {
+        if ProcessInfo.processInfo.environment["POPSKILL_AUTOCONFIRM"] == "1" { return true }
+        let alert = NSAlert()
+        alert.messageText = L("发现 \(names.count) 个未托管的技能目录")
+        alert.informativeText = L("在 Claude / Codex 目录里发现现有技能（如 \(names.sorted().prefix(3).joined(separator: L("、")))…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。")
+        alert.addButton(withTitle: L("导入 \(names.count) 个"))
+        alert.addButton(withTitle: L("暂不"))
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     /// 空态「扫描本地目录」= 新用户引导（v2.4.1）：
@@ -676,15 +700,7 @@ final class AppModel {
             say(L("store 为空，工具目录里也没有发现技能——点「+ 添加」装第一个"))
             return
         }
-        let names = Set(found.map(\.name))
-        if ProcessInfo.processInfo.environment["POPSKILL_AUTOCONFIRM"] != "1" {
-            let alert = NSAlert()
-            alert.messageText = L("发现 \(names.count) 个未托管的技能目录")
-            alert.informativeText = L("在 Claude / Codex 目录里发现现有技能（如 \(names.sorted().prefix(3).joined(separator: L("、")))…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。")
-            alert.addButton(withTitle: L("导入 \(names.count) 个"))
-            alert.addButton(withTitle: L("暂不"))
-            guard alert.runModal() == .alertFirstButtonReturn else { return }
-        }
+        guard confirmImport(Set(found.map(\.name))) else { return }
         do {
             let imported = try fs.importUnmanaged(found)
             plog.info("空态收编 \(imported.joined(separator: ","), privacy: .public)")

@@ -582,7 +582,12 @@ struct StoreFS {
         let bucketURL = trashURL.appendingPathComponent(bucket)
         try fm.createDirectory(at: bucketURL, withIntermediateDirectories: true)
         let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
-        let dest = bucketURL.appendingPathComponent("\(url.lastPathComponent)-\(stamp)")
+        // 时间戳只到秒：同名条目同一秒内二次入站会撞名抛错（移除套装多成员、快速连点）。
+        // 撞了就补一个短后缀，保证操作不失败、戳前缀仍可排序
+        var dest = bucketURL.appendingPathComponent("\(url.lastPathComponent)-\(stamp)")
+        if fm.fileExists(atPath: dest.path) {
+            dest = bucketURL.appendingPathComponent("\(url.lastPathComponent)-\(stamp)-\(UUID().uuidString.prefix(4))")
+        }
         try fm.moveItem(at: url, to: dest)
         pruneTrash()
         return dest
@@ -739,6 +744,7 @@ struct StoreFS {
             guard fm.fileExists(atPath: dir.path) else { throw StoreError.resolveFailed(L("路径不存在：\(url)")) }
             return try resolveDir(dir, url: url, kind: .local)
         case .github:
+            try StoreFS.ensureGit()   // 新 Mac 没装 CLT 时,给人话引导而不是裸 git 系统弹窗
             let (cloneURL, repoName, norm) = try StoreFS.githubTarget(url)
             let stageRoot = fm.temporaryDirectory.appendingPathComponent("popskill-stage-\(UUID().uuidString.prefix(8))")
             // clone 目标目录名 = 仓库名——它会一路成为 store 目录名和 symlink 名
@@ -747,7 +753,7 @@ struct StoreFS {
             let r = run("/usr/bin/git", ["clone", "--depth", "1", cloneURL, tmp.path], timeout: 300)
             guard r.status == 0 else {
                 discardStagingDir(tmp)
-                throw StoreError.resolveFailed(L("git clone 失败：\(String(r.err.prefix(200)))"))
+                throw StoreError.resolveFailed(StoreFS.humanGitError(cloneURL: cloneURL, stderr: r.err))
             }
             let sha = run("/usr/bin/git", ["-C", tmp.path, "rev-parse", "HEAD"], timeout: 30)
                 .out.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -761,6 +767,40 @@ struct StoreFS {
                 throw error
             }
         }
+    }
+
+    /// 安装 GitHub 源依赖系统 git。没装命令行工具(CLT)的新 Mac 上，`/usr/bin/git` 是
+    /// xcode-select 垫片，直接调用会弹系统「需要安装开发者工具」框 + 一句英文报错——
+    /// 普通用户看不懂。这里先静默探测，给一句能照做的人话。
+    static func ensureGit() throws {
+        let probe = Process()
+        probe.executableURL = URL(fileURLWithPath: "/usr/bin/xcode-select")
+        probe.arguments = ["-p"]   // 已装 CLT/Xcode 才返回 0，不会触发安装弹窗
+        probe.standardOutput = Pipe(); probe.standardError = Pipe()
+        do { try probe.run(); probe.waitUntilExit() } catch {
+            throw StoreError.sourceUnsupported(L("未检测到 git（macOS 命令行工具）。请在「终端」运行 xcode-select --install 装好后重试。"))
+        }
+        if probe.terminationStatus != 0 {
+            throw StoreError.sourceUnsupported(L("未检测到 git（macOS 命令行工具）。请在「终端」运行 xcode-select --install 装好后重试。"))
+        }
+    }
+
+    /// 把 git 的英文 stderr 翻成普通用户能懂的话；认不出再退回原文（绝不出现冒号后空白）。
+    static func humanGitError(cloneURL: String, stderr: String) -> String {
+        let e = stderr.lowercased()
+        if e.contains("could not resolve host") || e.contains("could not resolve") || e.contains("timed out") || e.contains("network is unreachable") {
+            return L("连不上网络，没法获取这个仓库——检查网络后重试。")
+        }
+        if e.contains("authentication") || e.contains("could not read username") || e.contains("terminal prompts disabled") || e.contains("permission denied") {
+            return L("这个仓库需要登录（可能是私有仓库）——Popskill 暂时只支持公开仓库。")
+        }
+        if e.contains("repository not found") || e.contains("not found") || e.contains("does not exist") {
+            return L("找不到这个仓库——检查地址是否写对、是否为公开仓库。")
+        }
+        let trimmed = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty
+            ? L("获取仓库失败——请检查地址与网络后重试。")
+            : L("获取仓库失败：\(String(trimmed.prefix(200)))")
     }
 
     /// github 源 → (clone URL, 仓库名, 规范化源)。深路径/简写/大小写都收敛到 owner/repo。
@@ -828,7 +868,10 @@ struct StoreFS {
         let dest = env.storeRoot.appendingPathComponent(CapType.skill.dirName).appendingPathComponent(name)
         guard !fm.fileExists(atPath: dest.path) else { throw StoreError.alreadyExists(src.entryName) }
         try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try fm.copyItem(at: src.stagingDir, to: dest)
+        // copy 中途失败（磁盘满等）会留半个目录，重试又撞「已存在」卡死——失败即清残留再抛
+        //（applyUpdate 已对同一风险做了原子处理，这里曾漏）
+        do { try fm.copyItem(at: src.stagingDir, to: dest) }
+        catch { try? fm.removeItem(at: dest); throw error }
         discardStaging(src)
         for t in linkTools {
             try createLink(at: toolLinkPath(t, kind: src.isBundle ? .bundle : .skill, name: src.entryName), to: dest)
