@@ -15,6 +15,7 @@ required=(
   "peek.png"
   "fix.png"
   "add.png"
+  "table.png"
 )
 
 # 防再次漂移：README 引用的每张图都必须在 required 清单里
