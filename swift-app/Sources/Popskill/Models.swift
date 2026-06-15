@@ -54,6 +54,14 @@ struct Capability: Identifiable, Equatable {
     func status(_ toolId: String) -> LinkStatus { links[toolId] ?? .off }
     /// symlink 路径计算永远用这个，不用展示类型（guancli 显示为 CLI 但链接仍在 skills/）
     var layoutKind: CapType { linkKind ?? type }
+
+    /// 任一工具侧断链 ⇒ 整卡/整行红（卡片与表格共用一份，别再各写一份）
+    func isBroken(_ tools: [Tool]) -> Bool { tools.contains { status($0.id) == .broken } }
+    /// 断链徽标取首个断链工具的成因（两侧都断且成因不同时，明细在详情 peek 里逐工具可见）
+    func firstBrokenCause(_ tools: [Tool]) -> String {
+        guard let t = tools.first(where: { status($0.id) == .broken }) else { return L("断链") }
+        return brokenCause[t.id] ?? L("断链")
+    }
 }
 
 /// 套装的两种形态（v2.1）：

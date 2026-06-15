@@ -687,12 +687,8 @@ struct CapCard: View {
     }
 
     private var focused: Bool { model.kbFocusId == cap.id }
-    /// 任一工具侧断链 ⇒ 整卡红（设计稿 cardBroken）
-    private var broken: Bool { model.tools.contains { cap.status($0.id) == .broken } }
-    private var brokenCause: String {
-        guard let t = model.tools.first(where: { cap.status($0.id) == .broken }) else { return L("断链") }
-        return cap.brokenCause[t.id] ?? L("断链")
-    }
+    private var broken: Bool { cap.isBroken(model.tools) }
+    private var brokenCause: String { cap.firstBrokenCause(model.tools) }
 
     private func pillLabel(_ t: Tool) -> String {
         String(t.name.split(separator: " ").first ?? "")
@@ -1107,11 +1103,8 @@ struct TableCapRow: View {
     @State private var hovered = false
 
     private var focused: Bool { model.kbFocusId == cap.id }
-    private var broken: Bool { model.tools.contains { cap.status($0.id) == .broken } }
-    private var brokenCause: String {
-        guard let t = model.tools.first(where: { cap.status($0.id) == .broken }) else { return L("断链") }
-        return cap.brokenCause[t.id] ?? L("断链")
-    }
+    private var broken: Bool { cap.isBroken(model.tools) }
+    private var brokenCause: String { cap.firstBrokenCause(model.tools) }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -1138,9 +1131,16 @@ struct TableCapRow: View {
             .frame(width: TableCols.type, alignment: .leading)
             author.frame(width: TableCols.author, alignment: .leading)
             ForEach(Array(model.tools.enumerated()), id: \.element.id) { i, t in
+                // 焦点环贴住 28×24 状态格本体，再 frame 到列宽居中——
+                // 别套在 60pt 列上(会被 Capsule 拉成横椭圆)
                 StatusCell(status: cap.status(t.id), a11y: "\(cap.name) · \(toolShort(t))") { cellTap(t) }
+                    .overlay {
+                        if focused && model.kbToolIdx == i {
+                            RoundedRectangle(cornerRadius: 5).stroke(Ink.blue.opacity(0.40), lineWidth: 2)
+                                .frame(width: 30, height: 26)
+                        }
+                    }
                     .frame(width: TableCols.tool)
-                    .kbCellRing(focused && model.kbToolIdx == i)
             }
             Text(cap.version.map { "v\($0)" } ?? "—")
                 .font(.mono(11)).foregroundStyle(Ink.tertiary)
