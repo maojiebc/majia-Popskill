@@ -139,10 +139,10 @@ scripts/release.sh
 
 ## 当前状态（2026-06-16）
 
-- 线上 **v2.13.0「设计稿 uplift」**：按 claude.ai/design 交接稿账本版最终态补齐三块（皮肤不变）——① 顶部类型统计条（Skill/Agent/MCP/CLI/Bundle 计数 + 各工具 已激活/未挂载 拆分，`Stats.byType`/`inactiveByTool` 派生，glyph ◈◉▣⌨▦）② 断链整卡红（任一工具 broken ⇒ 整卡红边 #e3a8a8 + 淡红底 #fdf4f4 + 红头像 + `BrokenBadge`）③ 卡片/表格双视图（`ViewMode`，过滤行右端分段切换；表格 8 列 + 套装可展开表头行 + `FractionCell` 分数 + 子项 │ 缩进 + `StatusCell` 状态符号矩阵，复用现成组件，两视图共享 `kbFocusList`）。设计稿原包不入库；调试钩子新增 `POPSKILL_VIEW=list`。
+- 线上 **v2.13.0「设计稿 uplift + 新手体检」**：按 claude.ai/design 交接稿账本版最终态补齐三块（皮肤不变）——① 顶部类型统计条（`Stats.byType`/`inactiveByTool` 派生，glyph ◈◉▣⌨▦；未安装工具显示「未安装」）② 断链整卡红（任一工具 broken ⇒ 整卡红边 + 淡红底 + `BrokenBadge`）③ 卡片/表格双视图（`ViewMode`，过滤行右端分段切换 + 状态图例；表格 8 列 + 套装可展开表头行 + `FractionCell` + 子项 │ 缩进 + `StatusCell` 状态符号矩阵，复用现成组件，两视图共享 `kbFocusList`）。调试钩子新增 `POPSKILL_VIEW=list`。**外加 8 角色团队体检（34 确认）修的 6 拦路石**：github 解析前 `ensureGit` 预检 + `humanGitError` 人话错误；未安装工具挂载前 NSAlert 确认（不再静默建 ~/.codex）；导入未托管加确认弹窗（`confirmImport` 共用）；卡片/表格右键 `contextMenu`；统计条未挂载对比度提到 AA；install copyItem 失败回滚、moveToTrash 同秒补后缀。设计稿原包不入库；完整报告见 /tmp（一次性）。
 - v2.12.0「双语」：UI 全量本地化（简中 + 英文）——**新增用户可见字符串必须 `L()` + 进 catalog + 跑 gen-l10n.sh**，ci-local 会拦漏网的（见「关键架构事实 → 本地化」节）。
 - v2.11/2.10/2.9：激活 pill 压缩靠右、定时任务面板（launchd/crontab）；v2.8.0 成熟度大版见 docs/release/v2.8.0.md。
-- 测试 90 个（StoreFSTests 58+1 冒烟 skip + AppModelTests 8 + SchedTests 23），smoke 群全部可跑。
+- 测试 93 个（StoreFSTests 61+1 冒烟 skip + AppModelTests 8 + SchedTests 23），smoke 群全部可跑。
 
 ## 下一步候选（设计稿里刻意没做的）
 

@@ -65,6 +65,12 @@ The filesystem is the database. No sidecar, no SQLite — your directory tree al
 <td><b>Inline repair</b> — broken links / local copies handled in place; recommended option highlighted</td>
 <td><b>Install plan</b> — paste a URL, see exactly what will be written (ln -s preview) before installing</td>
 </tr>
+<tr>
+<td colspan="2"><img src="docs/screenshots/table.png" alt="Ledger table view — expandable bundles, status glyph matrix"></td>
+</tr>
+<tr>
+<td colspan="2"><b>Card / table dual view</b> — switch from the top-right: cards for texture, the ledger table for density (expandable bundles, status glyph matrix, coverage fractions)</td>
+</tr>
 </table>
 
 ---
