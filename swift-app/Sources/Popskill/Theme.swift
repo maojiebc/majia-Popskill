@@ -36,6 +36,12 @@ enum Ink {
     static let amberBadgeBg = Color(hex: 0xF6ECC8)
     static let amberBadgeBorder = Color(hex: 0xE0CB84)
     static let red = Color(hex: 0xC01818)
+    // 断链整卡（v2.13，设计稿 cardBroken/brokenBadge）
+    static let brokenCardBg = Color(hex: 0xFDF4F4)
+    static let brokenCardBorder = Color(hex: 0xE3A8A8)
+    static let brokenBadgeBg = Color(hex: 0xFBEAEA)
+    static let brokenBadgeBorder = Color(hex: 0xE8B4B4)
+    static let brokenDesc = Color(hex: 0xA34440)     // 暗红描述（在 #FDF4F4 底过 AA）
     static let green = Color(hex: 0x1A9A4E)           // 同步点
     static let greenText = Color(hex: 0x1A6B35)       // 推荐方案文字
     static let greenBg = Color(hex: 0xF3F8F4)
@@ -49,6 +55,12 @@ enum Ink {
     static let highlight = Color(hex: 0xFDE68A)       // 搜索命中
     static let flashBg = Color(hex: 0xEEF4FF)         // 新装高亮
     static let monoDim = Color(hex: 0x5E5A4E)         // 状态栏等宽
+    // 顶部统计条（v2.13）
+    static let statGlyph = Color(hex: 0xB3AE9E)       // 类型 glyph（装饰）
+    static let statOnLabel = Color(hex: 0x5E7A64)     // 「已激活」小标签（设计 #7C9A82 加深过 AA）
+    static let tableHeadBg = Color(hex: 0xFAF9F5)     // 表格表头
+    static let tableRowAlt = Color(hex: 0xFCFBF6)     // 表格套装子行
+    static let tableHairline = Color(hex: 0xF1EFE8)   // 表格行分隔
 }
 
 extension Font {

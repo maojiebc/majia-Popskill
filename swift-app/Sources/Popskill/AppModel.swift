@@ -66,6 +66,7 @@ final class AppModel {
     var flashId: String?
     var query = ""
     var typeFilter: CapType?         // nil = 全部
+    var viewMode: ViewMode = .grid   // 卡片矩阵 / 账本表格（v2.13）
     var expanded: Set<String> = []
     var fixTarget: FixTarget?
     var peekTarget: PeekTarget?

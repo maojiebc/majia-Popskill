@@ -163,6 +163,24 @@ struct TypeTag: View {
     }
 }
 
+// ── 断链徽标（v2.13）：✕ + 成因，整卡红的标识 ──────────────
+
+struct BrokenBadge: View {
+    let cause: String
+
+    var body: some View {
+        Text("✕ \(cause)")
+            .font(.ui(9.5, .bold))
+            .kerning(0.5)
+            .foregroundStyle(Ink.red)
+            .padding(.horizontal, 6).padding(.vertical, 1)
+            .background(RoundedRectangle(cornerRadius: 3).fill(Ink.brokenBadgeBg))
+            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Ink.brokenBadgeBorder, lineWidth: 1))
+            .fixedSize()
+            .accessibilityLabel(L("断链") + "：" + cause)
+    }
+}
+
 // ── 状态单元格（28×24 命中区，子项清单用）────────────────
 
 struct StatusCell: View {

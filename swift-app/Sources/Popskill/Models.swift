@@ -102,6 +102,8 @@ enum SourceKind: String {
 struct Stats: Equatable {
     var bundles = 0, standalone = 0, total = 0
     var activeByTool: [String: Int] = [:]
+    var inactiveByTool: [String: Int] = [:]   // total - active（off/stub/broken 都算「未挂载」）
+    var byType: [CapType: Int] = [:]          // 顶部统计条：摊平后各类型计数；.bundle = 套装数
     var stubs = 0, broken = 0, symlinks = 0
 }
 
@@ -130,8 +132,15 @@ func deriveStats(_ entries: [Entry], tools: [Tool]) -> Stats {
     s.standalone = entries.count - s.bundles
     s.total = caps.count
     for t in tools {
-        s.activeByTool[t.id] = caps.filter { $0.status(t.id) == .on }.count
+        let on = caps.filter { $0.status(t.id) == .on }.count
+        s.activeByTool[t.id] = on
+        s.inactiveByTool[t.id] = caps.count - on
     }
+    // 类型计数：摊平后的 cap 按展示类型分桶（Skill/Agent/MCP/CLI）；Bundle 单计套装数
+    for c in caps where c.type != .bundle {
+        s.byType[c.type, default: 0] += 1
+    }
+    s.byType[.bundle] = s.bundles
     for c in caps {
         for (_, st) in c.links {
             switch st {

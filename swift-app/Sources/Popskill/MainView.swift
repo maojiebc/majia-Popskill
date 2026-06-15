@@ -15,6 +15,9 @@ enum DisplayItem: Identifiable {
     }
 }
 
+/// 主区视图形态（v2.13）：卡片矩阵 / 账本表格——同一份数据、共享键盘导航
+enum ViewMode: String { case grid, list }
+
 struct MainView: View {
     @Environment(AppModel.self) private var model
     @FocusState private var searchFocus: Bool
@@ -22,9 +25,10 @@ struct MainView: View {
     var body: some View {
         VStack(spacing: 0) {
             hero
+            statStrip
             if !model.issues.isEmpty || !model.updates.isEmpty { banner }
             chipRow
-            grid
+            content
         }
         .background(Ink.window)
         .onChange(of: model.searchFocused) { _, want in
@@ -69,6 +73,85 @@ struct MainView: View {
             .map { "\($0.name.split(separator: " ").first ?? "") \(s.activeByTool[$0.id] ?? 0)" }
             .joined(separator: " / ")
         return L("\(s.bundles) 套装 · \(s.standalone) 独立能力 · \(active) 已激活")
+    }
+
+    // ── 顶部统计条（v2.13）：5 类型计数 + 各工具 已激活/未挂载 拆分 ──
+
+    private static let typeGlyph: [CapType: String] = [
+        .skill: "◈", .agent: "◉", .mcp: "▣", .cli: "⌨", .bundle: "▦",
+    ]
+
+    private var statStrip: some View {
+        let s = model.stats
+        return HStack(spacing: 0) {
+            ForEach(CapType.allCases) { t in
+                typeCell(t, s.byType[t] ?? 0)
+            }
+            ForEach(Array(model.tools.enumerated()), id: \.element.id) { i, t in
+                toolCell(t, on: s.activeByTool[t.id] ?? 0, off: s.inactiveByTool[t.id] ?? 0,
+                         last: i == model.tools.count - 1)
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)   // 只取内容高度，别让内部边框把条撑高
+        .frame(maxWidth: .infinity)
+        .background(RoundedRectangle(cornerRadius: 9).fill(Ink.card))
+        .overlay(RoundedRectangle(cornerRadius: 9).stroke(Ink.hairline, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 9))
+        .padding(EdgeInsets(top: 12, leading: 28, bottom: 2, trailing: 28))
+        .accessibilityElement(children: .combine)
+    }
+
+    /// cell 右侧 1px 分隔（border-right，overlay 不占布局、不撑高）
+    private func cellDivider(_ show: Bool) -> some View {
+        Rectangle().fill(Ink.hairline2).frame(width: 1).opacity(show ? 1 : 0)
+    }
+
+    private func statKey(_ glyph: String?, _ label: String) -> some View {
+        HStack(spacing: 4) {
+            if let glyph { Text(glyph).font(.ui(11)).foregroundStyle(Ink.statGlyph) }
+            Text(label.uppercased())
+                .font(.ui(9, .bold)).tracking(0.6)
+                .foregroundStyle(Ink.tertiary).lineLimit(1)
+        }
+    }
+
+    private func typeCell(_ t: CapType, _ n: Int) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            statKey(Self.typeGlyph[t], t.rawValue)
+            Text("\(n)").font(.ui(20, .bold)).foregroundStyle(Ink.ink).monospacedDigit()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14).padding(.vertical, 9)
+        .overlay(alignment: .trailing) { cellDivider(true) }
+    }
+
+    private func toolCell(_ t: Tool, on: Int, off: Int, last: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            statKey(nil, t.name)
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    Text("\(on)").font(.ui(20, .bold)).foregroundStyle(Ink.green).monospacedDigit()
+                    Text(L("已激活")).font(.ui(10, .semibold)).foregroundStyle(Ink.statOnLabel)
+                }
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    Text("\(off)").font(.ui(13, .semibold)).foregroundStyle(Ink.offGlyph).monospacedDigit()
+                    Text(L("未挂载")).font(.ui(10)).foregroundStyle(Ink.offGlyph)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14).padding(.vertical, 9)
+        .overlay(alignment: .trailing) { cellDivider(!last) }
+    }
+
+    // ── 主区：卡片矩阵 / 账本表格 ──
+
+    @ViewBuilder
+    private var content: some View {
+        switch model.viewMode {
+        case .grid: grid
+        case .list: grid   // TODO(UI-3): listView
+        }
     }
 
     private var searchPill: some View {
@@ -478,14 +561,15 @@ struct CapCard: View {
         HStack(alignment: .top, spacing: 12) {
             Text(String(cap.name.prefix(1)).uppercased())
                 .font(.ui(15, .bold))
-                .foregroundStyle(Ink.monoDim)
+                .foregroundStyle(broken ? Ink.red : Ink.monoDim)
                 .frame(width: 38, height: 38)
-                .background(RoundedRectangle(cornerRadius: 9).fill(Ink.chrome))
-                .overlay(RoundedRectangle(cornerRadius: 9).stroke(Ink.hairline, lineWidth: 1))
+                .background(RoundedRectangle(cornerRadius: 9).fill(broken ? Ink.brokenBadgeBg : Ink.chrome))
+                .overlay(RoundedRectangle(cornerRadius: 9).stroke(broken ? Ink.brokenBadgeBorder : Ink.hairline, lineWidth: 1))
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
-                    PeekableName(cap: cap, entry: entry, font: .ui(13.5, .bold), color: Ink.ink, query: query)
+                    PeekableName(cap: cap, entry: entry, font: .ui(13.5, .bold), color: broken ? Ink.red : Ink.ink, query: query)
                     TypeTag(type: cap.type)
+                    if broken { BrokenBadge(cause: brokenCause) }
                     Spacer(minLength: 0)
                     if hovered {
                         HoverAction(symbol: "↗", danger: false, help: L("在编辑器中打开")) { model.openInEditor(cap.dirURL) }
@@ -497,7 +581,7 @@ struct CapCard: View {
                 .frame(height: 22)
                 Text(highlight(cap.desc.isEmpty ? "—" : cap.desc, query))
                     .font(.ui(11.5))
-                    .foregroundStyle(Ink.secondary)
+                    .foregroundStyle(broken ? Ink.brokenDesc : Ink.secondary)
                     .lineLimit(2)
                 metaRow
             }
@@ -513,8 +597,8 @@ struct CapCard: View {
             .frame(minWidth: 64, alignment: .trailing)
         }
         .padding(EdgeInsets(top: 13, leading: 15, bottom: 13, trailing: 15))
-        .background(RoundedRectangle(cornerRadius: 10).fill(flashing ? Ink.flashBg : Ink.card))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(focused || flashing ? Ink.blue : Ink.hairline, lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: 10).fill(flashing ? Ink.flashBg : (broken ? Ink.brokenCardBg : Ink.card)))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(focused || flashing ? Ink.blue : (broken ? Ink.brokenCardBorder : Ink.hairline), lineWidth: 1))
         .kbRowFocus(focused, radius: 10, model: model)
         .shadow(color: .black.opacity(0.03), radius: 1, y: 1)
         .onHover { hovered = $0 }
@@ -525,6 +609,12 @@ struct CapCard: View {
     }
 
     private var focused: Bool { model.kbFocusId == cap.id }
+    /// 任一工具侧断链 ⇒ 整卡红（设计稿 cardBroken）
+    private var broken: Bool { model.tools.contains { cap.status($0.id) == .broken } }
+    private var brokenCause: String {
+        guard let t = model.tools.first(where: { cap.status($0.id) == .broken }) else { return L("断链") }
+        return cap.brokenCause[t.id] ?? L("断链")
+    }
 
     private func pillLabel(_ t: Tool) -> String {
         String(t.name.split(separator: " ").first ?? "")
