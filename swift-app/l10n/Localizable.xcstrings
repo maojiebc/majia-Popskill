@@ -1353,6 +1353,22 @@
         }
       }
     },
+    "作者": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Author"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作者"
+          }
+        }
+      }
+    },
     "保持现状": {
       "localizations": {
         "en": {
@@ -1641,6 +1657,22 @@
         }
       }
     },
+    "卡片视图": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Card view"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片视图"
+          }
+        }
+      }
+    },
     "原型数据模式不可导入": {
       "localizations": {
         "en": {
@@ -1849,6 +1881,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "同源套装 · %lld 项"
+          }
+        }
+      }
+    },
+    "名称": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名称"
           }
         }
       }
@@ -3553,6 +3601,22 @@
         }
       }
     },
+    "未挂载": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inactive"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未挂载"
+          }
+        }
+      }
+    },
     "未连接": {
       "localizations": {
         "en": {
@@ -4657,6 +4721,22 @@
         }
       }
     },
+    "类型": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "类型"
+          }
+        }
+      }
+    },
     "粘贴 GitHub 仓库 / 本地路径 — 安装一次进 store，再选择挂载到哪些工具。": {
       "localizations": {
         "en": {
@@ -4761,6 +4841,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "自动检查 App 更新（每天一次）"
+          }
+        }
+      }
+    },
+    "表格视图": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Table view"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表格视图"
           }
         }
       }

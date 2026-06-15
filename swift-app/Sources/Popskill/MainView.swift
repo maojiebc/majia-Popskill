@@ -150,7 +150,58 @@ struct MainView: View {
     private var content: some View {
         switch model.viewMode {
         case .grid: grid
-        case .list: grid   // TODO(UI-3): listView
+        case .list: listView
+        }
+    }
+
+    // ── 账本表格视图（v2.13）：与卡片同数据、同过滤、同键盘焦点 ──
+
+    private var listView: some View {
+        let list = items
+        return VStack(spacing: 0) {
+            if list.isEmpty {
+                VStack(spacing: 4) {
+                    Text(L("无匹配结果")).font(.ui(13, .semibold)).foregroundStyle(Ink.secondary2)
+                    noMatchHint
+                }
+                .frame(maxWidth: .infinity).padding(.vertical, 64)
+            } else {
+                VStack(spacing: 0) {
+                    TableHeader(tools: model.tools)
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                ForEach(list) { tableRow($0) }
+                            }
+                        }
+                        .onChange(of: model.kbFocusId) { _, id in
+                            if let id { withAnimation(.easeOut(duration: 0.1)) { proxy.scrollTo(id) } }
+                        }
+                    }
+                }
+                .background(RoundedRectangle(cornerRadius: 10).fill(Ink.card))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Ink.hairline, lineWidth: 1))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(EdgeInsets(top: 6, leading: 28, bottom: 24, trailing: 28))
+            }
+        }
+        .background(Ink.window)
+        .onAppear { syncKbList(list) }
+        .onChange(of: kbIds(list)) { _, _ in syncKbList(items) }
+    }
+
+    @ViewBuilder
+    private func tableRow(_ item: DisplayItem) -> some View {
+        switch item {
+        case .bundle(let e, let kids):
+            TableBundleRow(entry: e, open: kids != nil, query: q)
+            if let kids {
+                ForEach(kids) { c in
+                    TableCapRow(cap: c, entry: e, fromBundle: e.name, child: true, query: q)
+                }
+            }
+        case .cap(let c, let e, let from):
+            TableCapRow(cap: c, entry: e, fromBundle: from, child: false, query: q)
         }
     }
 
@@ -250,12 +301,39 @@ struct MainView: View {
             ForEach(CapType.allCases) { t in chip(t, t.rawValue) }
             Spacer()
             let filtering = !model.query.trimmingCharacters(in: .whitespaces).isEmpty || model.typeFilter != nil
-            Text(filtering ? L("\(capCount) 项匹配") : L("↑↓ 行 · ←→ 列 · 空格 切换"))
+            Text(filtering ? L("\(capCount) 项匹配")
+                 : (model.viewMode == .list ? L("表格视图") : L("↑↓ 行 · ←→ 列 · 空格 切换")))
                 .font(.ui(11.5, filtering ? .semibold : .regular))
                 .foregroundStyle(filtering ? Ink.blue : Color(hex: 0x888888))
+            viewToggle
         }
         .padding(.horizontal, 28).padding(.vertical, 10)
         .overlay(alignment: .bottom) { Ink.hairline.frame(height: 1) }
+    }
+
+    /// 卡片 / 表格 双视图分段切换（v2.13，过滤行右端）
+    private var viewToggle: some View {
+        HStack(spacing: 0) {
+            toggleBtn(.grid, "square.grid.2x2", L("卡片视图"))
+            toggleBtn(.list, "line.3.horizontal", L("表格视图"))
+        }
+        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Ink.control2, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .padding(.leading, 4)
+    }
+
+    private func toggleBtn(_ mode: ViewMode, _ symbol: String, _ label: String) -> some View {
+        let active = model.viewMode == mode
+        return Button { model.viewMode = mode } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(active ? .white : Ink.tertiary)
+                .frame(width: 28, height: 24)
+                .background(active ? Ink.ink : Ink.card)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(active ? [.isButton, .isSelected] : .isButton)
     }
 
     private func chip(_ t: CapType?, _ label: String) -> some View {
@@ -978,5 +1056,183 @@ struct PeekableName: View {
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
         .help(L("查看详情"))
+    }
+}
+
+// ── 账本表格视图组件（v2.13）──────────────────────────────
+
+/// 表格列宽（名称列弹性，其余固定）——表头与各行必须用同一套，列才对齐
+enum TableCols {
+    static let type: CGFloat = 64
+    static let author: CGFloat = 104
+    static let tool: CGFloat = 60
+    static let version: CGFloat = 84
+    static let tokens: CGFloat = 74
+}
+
+/// 工具列短名（"Claude Code" → "Claude"）
+private func toolShort(_ t: Tool) -> String { String(t.name.split(separator: " ").first ?? "") }
+/// 表格用紧凑 token（"220.5k"，不带 " tokens"）
+private func tokenK(_ n: Int) -> String { n > 0 ? String(format: "%.1fk", Double(n) / 1000) : "—" }
+
+struct TableHeader: View {
+    let tools: [Tool]
+    var body: some View {
+        HStack(spacing: 0) {
+            th(L("名称")).frame(maxWidth: .infinity, alignment: .leading)
+            th(L("类型")).frame(width: TableCols.type, alignment: .leading)
+            th(L("作者")).frame(width: TableCols.author, alignment: .leading)
+            ForEach(tools) { t in th(toolShort(t)).frame(width: TableCols.tool) }
+            th(L("版本")).frame(width: TableCols.version, alignment: .trailing)
+            th("Tokens").frame(width: TableCols.tokens, alignment: .trailing)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 9)
+        .background(Ink.tableHeadBg)
+        .overlay(alignment: .bottom) { Ink.hairline.frame(height: 1) }
+    }
+    private func th(_ s: String) -> some View {
+        Text(s.uppercased()).font(.ui(9.5, .bold)).tracking(0.5)
+            .foregroundStyle(Ink.tertiary).lineLimit(1)
+    }
+}
+
+/// 独立能力 / 套装子项 的表格行
+struct TableCapRow: View {
+    @Environment(AppModel.self) private var model
+    let cap: Capability
+    let entry: Entry
+    let fromBundle: String?
+    let child: Bool
+    let query: String
+    @State private var hovered = false
+
+    private var focused: Bool { model.kbFocusId == cap.id }
+    private var broken: Bool { model.tools.contains { cap.status($0.id) == .broken } }
+    private var brokenCause: String {
+        guard let t = model.tools.first(where: { cap.status($0.id) == .broken }) else { return L("断链") }
+        return cap.brokenCause[t.id] ?? L("断链")
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            HStack(spacing: 6) {
+                if child {
+                    Text("│").font(.mono(11)).foregroundStyle(Ink.offDot).padding(.leading, 6)
+                }
+                PeekableName(cap: cap, entry: entry,
+                             font: .ui(child ? 12 : 12.5, child ? .medium : .semibold),
+                             color: broken ? Ink.red : (child ? Ink.secondary2 : Ink.ink), query: query)
+                if broken { BrokenBadge(cause: brokenCause) }
+                Spacer(minLength: 6)
+                if hovered {
+                    HoverAction(symbol: "↗", danger: false, help: L("在编辑器中打开")) { model.openInEditor(cap.dirURL) }
+                    if fromBundle == nil {
+                        HoverAction(symbol: "✕", danger: true, help: L("移除")) { model.removeEntry(entry) }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Group {
+                if child { Color.clear } else { TypeTag(type: cap.type) }
+            }
+            .frame(width: TableCols.type, alignment: .leading)
+            author.frame(width: TableCols.author, alignment: .leading)
+            ForEach(Array(model.tools.enumerated()), id: \.element.id) { i, t in
+                StatusCell(status: cap.status(t.id), a11y: "\(cap.name) · \(toolShort(t))") { cellTap(t) }
+                    .frame(width: TableCols.tool)
+                    .kbCellRing(focused && model.kbToolIdx == i)
+            }
+            Text(cap.version.map { "v\($0)" } ?? "—")
+                .font(.mono(11)).foregroundStyle(Ink.tertiary)
+                .frame(width: TableCols.version, alignment: .trailing)
+            Text(tokenK(cap.tokens))
+                .font(.mono(11)).foregroundStyle(Ink.tertiary).monospacedDigit()
+                .frame(width: TableCols.tokens, alignment: .trailing)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 7)
+        .background(rowBg)
+        .overlay(alignment: .bottom) { Ink.tableHairline.frame(height: 1) }
+        .kbRowFocus(focused, radius: 4, model: model)
+        .onHover { hovered = $0 }
+        .accessibilityElement(children: .contain)
+        .id(cap.id)
+    }
+
+    @ViewBuilder private var author: some View {
+        if let a = cap.author {
+            Text(highlight(a, query)).font(.ui(11)).foregroundStyle(Ink.tertiary).lineLimit(1)
+        } else {
+            Text("—").font(.ui(11)).foregroundStyle(Ink.tertiary)
+        }
+    }
+
+    private var rowBg: Color {
+        if focused { return Ink.blue.opacity(0.07) }
+        if broken { return Ink.brokenCardBg }
+        return child ? Ink.tableRowAlt : Ink.card
+    }
+
+    private func cellTap(_ tool: Tool) {
+        let st = cap.status(tool.id)
+        if st == .on || st == .off {
+            model.toggle(cap: cap, entry: entry, tool: tool)
+        } else {
+            model.openFix(FixTarget(issueKind: st, cap: cap, entry: entry, tool: tool,
+                                    anchor: currentClickPoint(), flip: shouldFlip()))
+        }
+    }
+}
+
+/// 套装表头行（可展开）：分数聚合 + 披露三角
+struct TableBundleRow: View {
+    @Environment(AppModel.self) private var model
+    let entry: Entry
+    let open: Bool
+    let query: String
+    @State private var hovered = false
+
+    private var focused: Bool { model.kbFocusId == entry.id }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Text(open ? "▼" : "▶").font(.mono(9)).foregroundStyle(Color(hex: 0x444444)).frame(width: 16)
+                Text(highlight(entry.name, query)).font(.ui(12.5, .semibold)).foregroundStyle(Ink.ink).lineLimit(1)
+                Text(L("\(entry.children?.count ?? 0) 项")).font(.ui(11)).foregroundStyle(Ink.secondary).fixedSize()
+                Spacer(minLength: 6)
+                if hovered {
+                    HoverAction(symbol: "↗", danger: false, help: L("在编辑器中打开")) { model.openInEditor(entry.cap.dirURL) }
+                    if !entry.isManagedExternally {
+                        HoverAction(symbol: "✕", danger: true, help: L("移除套装（含全部子项）")) { model.removeEntry(entry) }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            TypeTag(type: .bundle).frame(width: TableCols.type, alignment: .leading)
+            Text(entry.cap.author ?? "—").font(.ui(11)).foregroundStyle(Ink.tertiary).lineLimit(1)
+                .frame(width: TableCols.author, alignment: .leading)
+            ForEach(model.tools) { t in
+                FractionCell(agg: aggregate(entry.children ?? [], toolId: t.id))
+                    .frame(width: TableCols.tool)
+            }
+            Text(entry.cap.version.map { "v\($0)" } ?? "—")
+                .font(.mono(11)).foregroundStyle(Ink.tertiary)
+                .frame(width: TableCols.version, alignment: .trailing)
+            Text(tokenK(entry.cap.tokens))
+                .font(.mono(11)).foregroundStyle(Ink.tertiary).monospacedDigit()
+                .frame(width: TableCols.tokens, alignment: .trailing)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 7)
+        .background(focused ? Ink.blue.opacity(0.07) : Ink.bundleHead)
+        .overlay(alignment: .bottom) { Ink.tableHairline.frame(height: 1) }
+        .kbRowFocus(focused, radius: 4, model: model)
+        .onHover { hovered = $0 }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard query.isEmpty else { return }
+            if model.expanded.contains(entry.id) { model.expanded.remove(entry.id) }
+            else { model.expanded.insert(entry.id) }
+        }
+        .id(entry.id)
     }
 }

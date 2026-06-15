@@ -158,6 +158,8 @@ macOS: %@
 	<string>从 %@ 重新获取该项</string>
 	<key>从源重新拉取</key>
 	<string>从源重新拉取</string>
+	<key>作者</key>
+	<string>作者</string>
 	<key>保持现状</key>
 	<string>保持现状</string>
 	<key>保留本地副本，popskill 不接管</key>
@@ -194,6 +196,8 @@ macOS: %@
 	<string>占位 (stub)</string>
 	<key>占位待校验</key>
 	<string>占位待校验</string>
+	<key>卡片视图</key>
+	<string>卡片视图</string>
 	<key>原型数据模式不可导入</key>
 	<string>原型数据模式不可导入</string>
 	<key>原型数据模式不检查更新</key>
@@ -216,6 +220,8 @@ macOS: %@
 	<string>同步后端</string>
 	<key>同源套装 · %lld 项</key>
 	<string>同源套装 · %lld 项</string>
+	<key>名称</key>
+	<string>名称</string>
 	<key>后天</key>
 	<string>后天</string>
 	<key>启用</key>
@@ -418,6 +424,8 @@ macOS: %@
 	<string>未加载（已停用）</string>
 	<key>未找到 SKILL.md — 该源不是 skill 也不是套装</key>
 	<string>未找到 SKILL.md — 该源不是 skill 也不是套装</string>
+	<key>未挂载</key>
+	<string>未挂载</string>
 	<key>未连接</key>
 	<string>未连接</string>
 	<key>未连接同步</key>
@@ -550,6 +558,8 @@ macOS: %@
 	<string>等价于 launchctl kickstart -k——不等下次调度时间，现在就跑一遍。任务输出看它自己的日志。</string>
 	<key>等价于 launchctl kickstart -k——杀掉旧进程重新拉起。任务输出看它自己的日志。</key>
 	<string>等价于 launchctl kickstart -k——杀掉旧进程重新拉起。任务输出看它自己的日志。</string>
+	<key>类型</key>
+	<string>类型</string>
 	<key>粘贴 GitHub 仓库 / 本地路径 — 安装一次进 store，再选择挂载到哪些工具。</key>
 	<string>粘贴 GitHub 仓库 / 本地路径 — 安装一次进 store，再选择挂载到哪些工具。</string>
 	<key>粘贴一个 GitHub 仓库或本地路径，
@@ -564,6 +574,8 @@ macOS: %@
 	<string>自动更新 %lld 个源</string>
 	<key>自动检查 App 更新（每天一次）</key>
 	<string>自动检查 App 更新（每天一次）</string>
+	<key>表格视图</key>
+	<string>表格视图</string>
 	<key>解析 →</key>
 	<string>解析 →</string>
 	<key>解析中…</key>

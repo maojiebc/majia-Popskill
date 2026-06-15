@@ -954,4 +954,28 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(issues[0].capName, "bar")
         XCTAssertEqual(issues[0].toolId, "claude")
     }
+
+    func testStatsByTypeAndInactive() throws {
+        // 顶部统计条派生（v2.13）：类型计数走摊平后的 cap，Bundle = 套装数
+        try makeSkill("solo-skill")                                  // 独立 skill
+        try makeBundle("kit", children: ["a", "b", "c"])             // 套装 + 3 子 skill
+        let agentsDir = env.storeRoot.appendingPathComponent("agents")
+        try fm.createDirectory(at: agentsDir, withIntermediateDirectories: true)
+        let ag = try makeSkill("my-agent", in: agentsDir)            // 1 个 agent
+        try fm.createSymbolicLink(at: claudeLink("solo-skill"),
+                                  withDestinationURL: env.storeRoot.appendingPathComponent("skills/solo-skill"))
+
+        let entries = scan()
+        let s = deriveStats(entries, tools: tools)
+        XCTAssertEqual(s.byType[.skill], 4, "solo + 套装 3 子项都是 skill")
+        XCTAssertEqual(s.byType[.agent], 1)
+        XCTAssertEqual(s.byType[.bundle], 1, "Bundle 计套装数，不是子项数")
+        XCTAssertEqual(s.byType[.mcp] ?? 0, 0)
+        // 激活/未挂载拆分：只 solo-skill 在 claude 侧 on，其余未挂载
+        XCTAssertEqual(s.activeByTool["claude"], 1)
+        XCTAssertEqual(s.inactiveByTool["claude"], s.total - 1)
+        XCTAssertEqual(s.activeByTool["codex"], 0)
+        XCTAssertEqual(s.inactiveByTool["codex"], s.total)
+        _ = ag
+    }
 }

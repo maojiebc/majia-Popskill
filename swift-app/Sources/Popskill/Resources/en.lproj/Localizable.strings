@@ -130,6 +130,8 @@ macOS: %2$@
 	<string>Fetches this item again from %@</string>
 	<key>从源重新拉取</key>
 	<string>Re-pull from source</string>
+	<key>作者</key>
+	<string>Author</string>
 	<key>保持现状</key>
 	<string>Keep as is</string>
 	<key>保留本地副本，popskill 不接管</key>
@@ -166,6 +168,8 @@ macOS: %2$@
 	<string>Stub</string>
 	<key>占位待校验</key>
 	<string>Stub (unverified)</string>
+	<key>卡片视图</key>
+	<string>Card view</string>
 	<key>原型数据模式不可导入</key>
 	<string>Import is unavailable in fixture-data mode</string>
 	<key>原型数据模式不检查更新</key>
@@ -182,6 +186,8 @@ macOS: %2$@
 	<string>Synced %@</string>
 	<key>同步后端</key>
 	<string>Sync backend</string>
+	<key>名称</key>
+	<string>Name</string>
 	<key>后天</key>
 	<string>day after tomorrow</string>
 	<key>启用</key>
@@ -370,6 +376,8 @@ macOS: %2$@
 	<string>Not loaded (disabled)</string>
 	<key>未找到 SKILL.md — 该源不是 skill 也不是套装</key>
 	<string>No SKILL.md found — this source is neither a skill nor a bundle</string>
+	<key>未挂载</key>
+	<string>Inactive</string>
 	<key>未连接</key>
 	<string>Not connected</string>
 	<key>未连接同步</key>
@@ -494,6 +502,8 @@ macOS: %2$@
 	<string>Equivalent to launchctl kickstart -k — runs it once right now without waiting for the next scheduled time. Check the task's own log for output.</string>
 	<key>等价于 launchctl kickstart -k——杀掉旧进程重新拉起。任务输出看它自己的日志。</key>
 	<string>Equivalent to launchctl kickstart -k — kills the old process and relaunches it. Check the task's own log for output.</string>
+	<key>类型</key>
+	<string>Type</string>
 	<key>粘贴 GitHub 仓库 / 本地路径 — 安装一次进 store，再选择挂载到哪些工具。</key>
 	<string>Paste a GitHub repo or local path — install once into the store, then pick which tools to link.</string>
 	<key>粘贴一个 GitHub 仓库或本地路径，
@@ -506,6 +516,8 @@ Install once, mount to all your AI tools.</string>
 	<string>Capability Matrix</string>
 	<key>自动检查 App 更新（每天一次）</key>
 	<string>Automatically check for app updates (daily)</string>
+	<key>表格视图</key>
+	<string>Table view</string>
 	<key>解析 →</key>
 	<string>Resolve →</string>
 	<key>解析中…</key>

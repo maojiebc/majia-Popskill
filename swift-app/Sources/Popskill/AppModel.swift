@@ -112,6 +112,7 @@ final class AppModel {
             refresh()
         }
         if pe["POPSKILL_EMPTY"] == "1" { entries = [] }
+        if pe["POPSKILL_VIEW"] == "list" { viewMode = .list }   // 截图/E2E：直开表格视图
         switch pe["POPSKILL_SHEET"] {
         case "add": sheet = .add
         case "settings": sheet = .settings
