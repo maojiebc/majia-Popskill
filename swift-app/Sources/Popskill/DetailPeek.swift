@@ -110,9 +110,7 @@ struct DetailPeekView: View {
             .padding(.top, 10)
             if let url = target.entry.sourceUrl {
                 PeekLink(text: "↗ \(url)", font: .mono(10.5), base: Ink.secondary) {
-                    if let u = URL(string: url.hasPrefix("http") ? url : "https://\(url)") {
-                        NSWorkspace.shared.open(u)
-                    }
+                    model.openSourceLink(url)
                 }
                 .padding(.top, 8)
             }

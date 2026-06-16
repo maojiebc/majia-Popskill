@@ -829,6 +829,22 @@ final class AppModel {
         NSWorkspace.shared.open(t)
     }
 
+    /// 打开来源链接——按类型规范成真网址，别再把 `npm:@x/y` 直接拼成
+    /// `https://npm:@x/y` 这种畸形 URL 点了跳不动（用户实测发现）。
+    func openSourceLink(_ raw: String) {
+        let url = raw.trimmingCharacters(in: .whitespaces)
+        if SourceKind.of(url) == .local {
+            // 本地源：在访达里定位目录，而不是当网址打开
+            let dir = URL(fileURLWithPath: NSString(string: url).expandingTildeInPath)
+            if FileManager.default.fileExists(atPath: dir.path) {
+                NSWorkspace.shared.activateFileViewerSelecting([dir])
+            }
+            return
+        }
+        if let web = StoreFS.sourceWebURL(url) { NSWorkspace.shared.open(web) }
+        else { say(L("无法打开来源链接：\(url)")) }
+    }
+
     // ── 反馈渠道（v2.8：崩了/错了至少有条路找到作者）───────
 
     func reportIssue() {

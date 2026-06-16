@@ -803,6 +803,22 @@ struct StoreFS {
             : L("获取仓库失败：\(String(trimmed.prefix(200)))")
     }
 
+    /// 来源 → 可在浏览器打开的网址（github 页 / npm 包页）。本地源返回 nil（调用方走访达）。
+    /// 别把 `npm:@x/y` 拼成 `https://npm:@x/y` 这种点了跳不动的畸形 URL。
+    static func sourceWebURL(_ raw: String) -> URL? {
+        let s = raw.trimmingCharacters(in: .whitespaces)
+        switch SourceKind.of(s) {
+        case .github:
+            return URL(string: "https://\(normalizeSource(s))")   // → github.com/owner/repo
+        case .npm:
+            let pkg = String(s.dropFirst(4)).trimmingCharacters(in: .whitespaces)  // 去掉 "npm:"
+            guard !pkg.isEmpty else { return nil }
+            return URL(string: "https://www.npmjs.com/package/\(pkg)")
+        case .local:
+            return nil
+        }
+    }
+
     /// github 源 → (clone URL, 仓库名, 规范化源)。深路径/简写/大小写都收敛到 owner/repo。
     static func githubTarget(_ url: String) throws -> (cloneURL: String, repoName: String, norm: String) {
         let norm = normalizeSource(url)

@@ -412,6 +412,8 @@ macOS: %@
 	<string>新版</string>
 	<key>无匹配结果</key>
 	<string>无匹配结果</string>
+	<key>无法打开来源链接：%@</key>
+	<string>无法打开来源链接：%@</string>
 	<key>无法识别 GitHub 仓库：%@</key>
 	<string>无法识别 GitHub 仓库：%@</string>
 	<key>明天</key>

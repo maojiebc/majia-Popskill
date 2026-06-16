@@ -362,6 +362,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>new version</string>
 	<key>无匹配结果</key>
 	<string>No matches</string>
+	<key>无法打开来源链接：%@</key>
+	<string>Can’t open source link: %@</string>
 	<key>无法识别 GitHub 仓库：%@</key>
 	<string>Unrecognized GitHub repository: %@</string>
 	<key>明天</key>

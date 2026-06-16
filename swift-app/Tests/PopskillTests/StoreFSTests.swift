@@ -449,6 +449,22 @@ final class StoreFSTests: XCTestCase {
         XCTAssertFalse(blank.isEmpty)
     }
 
+    func testSourceWebURLMapping() {
+        // npm:@scope/pkg → npm 包页（曾把 npm:@x/y 拼成 https://npm:@x/y 点了跳不动）
+        XCTAssertEqual(StoreFS.sourceWebURL("npm:@guandata/guanskill")?.absoluteString,
+                       "https://www.npmjs.com/package/@guandata/guanskill")
+        XCTAssertEqual(StoreFS.sourceWebURL("npm:typescript")?.absoluteString,
+                       "https://www.npmjs.com/package/typescript")
+        // github 各形态都收敛到 github.com/owner/repo
+        XCTAssertEqual(StoreFS.sourceWebURL("github.com/dotey/skills")?.absoluteString,
+                       "https://github.com/dotey/skills")
+        XCTAssertEqual(StoreFS.sourceWebURL("https://github.com/Foo/Bar.git")?.absoluteString,
+                       "https://github.com/foo/bar")
+        // 本地源不给网址（调用方走访达）
+        XCTAssertNil(StoreFS.sourceWebURL("~/work/my-skills/x"))
+        XCTAssertNil(StoreFS.sourceWebURL("npm:"))   // 空包名不崩
+    }
+
     // ── 更新机制（v2.1：内容哈希）────────────────────────
 
     func testDirHashStableAndSensitive() throws {
