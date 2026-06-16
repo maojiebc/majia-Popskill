@@ -136,12 +136,14 @@ scripts/release.sh
 14. **状态栏版本号读 Bundle** — `popskillVersion` 从 CFBundleShortVersionString 读，裸二进制才退常量；发版只 bump 常量会漏
 15. **容器 .shadow 会传染子视图** — SwiftUI 给带子背景的容器加 .shadow，每个子行各自投影把底色糊灰（v2.3.1 用户实机发现）；浮层/弹层投影前必须 `compositingGroup()`
 16. **发版链禁静默步骤** — v2.5.0 事故：appcast 注入静默 no-op，DMG/Release 都成了、更新源没更，用户看到「最新 2.4.2/正跑 2.5.0」倒挂。appcast 一律走 `scripts/append-appcast.py`（断言：重复版本拒绝/锚点必中/写后校验）；另注意 Pages CDN max-age=600，发版后 10 分钟内手动检查可能命中旧缓存
+17. **`Bundle.module` 在打包 .app 里会崩** — v2.13.0 事故：SPM 生成的 `Bundle.module` 访问器写死去「.app 顶层」和「**打包机的 .build 绝对路径**」找资源 bundle，资源实际在 `Contents/Resources/`，对不上即 `fatalError`，**别人电脑一开就崩**；dev 与本机 smoke 因那条绝对路径恰存在而全程掩盖。教训：①本地化资源查找**自己写**（多候选位置 + 找不到退回 `.main` 绝不 crash，见 Localization.swift `resourceBundle`），不用 `Bundle.module`；②**发版前必须冷启打包的 .app**（不能只跑 dev binary）——`smoke-bundle.sh` 已加固：冷启前把 `.build/*release*/Popskill_Popskill.bundle` 移开，逼 .app 只用自己 `Contents/Resources` 副本，复现干净机器
 
 ## 当前状态（2026-06-16）
 
 - 线上 **v2.13.0「设计稿 uplift + 新手体检」**：按 claude.ai/design 交接稿账本版最终态补齐三块（皮肤不变）——① 顶部类型统计条（`Stats.byType`/`inactiveByTool` 派生，glyph ◈◉▣⌨▦；未安装工具显示「未安装」）② 断链整卡红（任一工具 broken ⇒ 整卡红边 + 淡红底 + `BrokenBadge`）③ 卡片/表格双视图（`ViewMode`，过滤行右端分段切换 + 状态图例；表格 8 列 + 套装可展开表头行 + `FractionCell` + 子项 │ 缩进 + `StatusCell` 状态符号矩阵，复用现成组件，两视图共享 `kbFocusList`）。调试钩子新增 `POPSKILL_VIEW=list`。**外加 8 角色团队体检（34 确认）修的 6 拦路石**：github 解析前 `ensureGit` 预检 + `humanGitError` 人话错误；未安装工具挂载前 NSAlert 确认（不再静默建 ~/.codex）；导入未托管加确认弹窗（`confirmImport` 共用）；卡片/表格右键 `contextMenu`；统计条未挂载对比度提到 AA；install copyItem 失败回滚、moveToTrash 同秒补后缀。设计稿原包不入库；完整报告见 /tmp（一次性）。
 - v2.12.0「双语」：UI 全量本地化（简中 + 英文）——**新增用户可见字符串必须 `L()` + 进 catalog + 跑 gen-l10n.sh**，ci-local 会拦漏网的（见「关键架构事实 → 本地化」节）。
 - v2.11/2.10/2.9：激活 pill 压缩靠右、定时任务面板（launchd/crontab）；v2.8.0 成熟度大版见 docs/release/v2.8.0.md。
+- **v2.13.1 紧急修复**：v2.12 起 `Bundle.module` 在打包 .app 里找不到本地化资源 → 启动即崩（别人机器全中招，dev/本机被 .build 绝对路径掩盖）；改为 Localization.swift 自己多候选找资源 + 找不到退回 .main 绝不崩；smoke-bundle 加固冷启复现（见坑 #17）。
 - 测试 93 个（StoreFSTests 61+1 冒烟 skip + AppModelTests 8 + SchedTests 23），smoke 群全部可跑。
 
 ## 下一步候选（设计稿里刻意没做的）

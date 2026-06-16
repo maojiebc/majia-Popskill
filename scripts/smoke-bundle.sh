@@ -15,11 +15,28 @@ running_app_pids() {
   pgrep -f "/build/Popskill.app/Contents/MacOS/Popskill" 2> /dev/null || true
 }
 
+# v2.13.1 起：冷启前把 .build 里的 release 资源 bundle 移开，逼打包的 .app 只能用
+# 自己 Contents/Resources 的副本——精确复现「别人干净机器」的环境。否则像 v2.13.0
+# 那样，Bundle.module 的 .build 绝对路径兜底会在本机掩盖「.app 内找不到资源」的崩溃。
+HIDDEN_BUNDLES=()
+hide_build_bundles() {
+  while IFS= read -r b; do
+    [[ -n "$b" ]] || continue
+    mv "$b" "$b.smoke-hidden" && HIDDEN_BUNDLES+=("$b")
+  done < <(find "$ROOT_DIR/swift-app/.build" -name "Popskill_Popskill.bundle" -path "*release*" -maxdepth 4 2> /dev/null || true)
+}
+restore_build_bundles() {
+  for b in "${HIDDEN_BUNDLES[@]:-}"; do
+    [[ -n "$b" && -d "$b.smoke-hidden" ]] && mv "$b.smoke-hidden" "$b"
+  done
+}
+
 cleanup() {
   if [[ -n "$APP_PID" ]] && kill -0 "$APP_PID" 2> /dev/null; then
     kill "$APP_PID" 2> /dev/null || true
     wait "$APP_PID" 2> /dev/null || true
   fi
+  restore_build_bundles
   rm -f "$WINDOW_CHECKER"
 }
 trap cleanup EXIT
@@ -92,6 +109,7 @@ let hasMainWindow = windows.contains { window in
 exit(hasMainWindow ? 0 : 1)
 SWIFT
 
+hide_build_bundles   # 复现干净机器：.app 不能靠 .build 绝对路径找资源
 open -n "$APP_DIR"
 
 for _ in {1..50}; do
