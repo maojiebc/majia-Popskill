@@ -8,6 +8,25 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.13.2</title>
+      <pubDate>Tue, 16 Jun 2026 12:39:13 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.13.2 — 修复：来源链接点不动</h2>
+        <p>详情面板里的来源链接，点 npm 来源（如 `npm:@guandata/guanskill`）跳不到任何地方——之前会把它拼成 `https://npm:@guandata/guanskill` 这种浏览器打不开的畸形地址。</p>
+        <p>现在按来源类型规范成真网址：</p>
+        <p><b>npm 来源</b> → 跳到 npm 包页（`npmjs.com/package/...`） <b>GitHub 来源</b> → 跳到仓库页 <b>本地来源</b> → 在访达里定位目录</p>
+        <p>感谢用户实测反馈。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.13.2/Popskill-2.13.2.dmg"
+        sparkle:version="278"
+        sparkle:shortVersionString="2.13.2"
+        sparkle:edSignature="lJF/jO+We1Z5LvvBNOFNjDy0wDnbZ2u9+o7NW6Zc8wMMXgkhy7qKrlZSpXAuOgM81tXJkVzXZdk+QftEyj+pDw=="
+        length="2638370"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.13.1</title>
       <pubDate>Tue, 16 Jun 2026 02:28:37 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
