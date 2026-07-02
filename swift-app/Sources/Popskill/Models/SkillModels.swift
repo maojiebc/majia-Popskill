@@ -115,6 +115,56 @@ enum TargetAppRegistry {
     }
 }
 
+struct ToolConnection: Identifiable, Equatable {
+    let definition: TargetAppDefinition
+    let agentTarget: AgentTarget?
+    let skillRootPath: String
+    let detected: Bool
+
+    var id: String { app.rawValue }
+    var app: TargetApp { definition.app }
+    var displayName: String { definition.displayName }
+
+    var cliSummary: String? {
+        let commands = definition.cliCommands
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return commands.isEmpty ? nil : commands.joined(separator: ", ")
+    }
+
+    var detectionSummary: String {
+        if let cliSummary {
+            return cliSummary
+        }
+        return definition.detectPath
+    }
+
+    static func all(
+        homeDirectory: URL = popskillUserHomeDirectoryURL(),
+        agentTargets: [AgentTarget],
+        pathExists: (String) -> Bool = { FileManager.default.fileExists(atPath: $0) }
+    ) -> [ToolConnection] {
+        TargetAppRegistry.all.map { definition in
+            let target = agentTargets.first { $0.linkedApp == definition.app }
+            let skillRootPath = homeDirectory
+                .appendingPathComponent(definition.skillDirectory, isDirectory: true)
+                .standardizedFileURL
+                .path
+            let detectPath = homeDirectory
+                .appendingPathComponent(definition.detectPath, isDirectory: true)
+                .standardizedFileURL
+                .path
+            let detected = target?.detected == true || pathExists(detectPath) || pathExists(skillRootPath)
+            return ToolConnection(
+                definition: definition,
+                agentTarget: target,
+                skillRootPath: skillRootPath,
+                detected: detected
+            )
+        }
+    }
+}
+
 struct Skill: Identifiable, Codable, Equatable {
     let id: String
     let name: String
@@ -169,7 +219,7 @@ struct Skill: Identifiable, Codable, Equatable {
     }
 
     var localStoreURL: URL {
-        URL(fileURLWithPath: NSHomeDirectory())
+        popskillUserHomeDirectoryURL()
             .appendingPathComponent(".cc-switch")
             .appendingPathComponent("skills")
             .appendingPathComponent(directory)
@@ -723,6 +773,30 @@ struct CapabilityPackage: Identifiable, Codable, Equatable {
         )
     }
 
+    var localBundleDirectoryName: String? {
+        guard source.kind == "local-bundle" else { return nil }
+        let packagePrefix = "pkg:local/"
+        if id.hasPrefix(packagePrefix) {
+            let slug = String(id.dropFirst(packagePrefix.count))
+            if !slug.isEmpty { return slug }
+        }
+        let locationPrefix = "local:"
+        if source.location.hasPrefix(locationPrefix) {
+            let slug = String(source.location.dropFirst(locationPrefix.count))
+            if !slug.isEmpty { return slug }
+        }
+        return nil
+    }
+
+    var localBundleStoreURL: URL? {
+        localBundleDirectoryName.map {
+            popskillUserHomeDirectoryURL()
+                .appendingPathComponent(".cc-switch", isDirectory: true)
+                .appendingPathComponent("packages", isDirectory: true)
+                .appendingPathComponent($0, isDirectory: true)
+        }
+    }
+
     var missingComponentCount: Int {
         components.all.filter { !$0.installed }.count
     }
@@ -1027,6 +1101,20 @@ struct CatalogSkill: Identifiable, Codable, Equatable {
             fallbackExplicitURL: nil,
             repoOwner: repoOwner,
             repoName: repoName
+        )
+    }
+
+    func replacingInstalled(_ installed: Bool) -> CatalogSkill {
+        CatalogSkill(
+            key: key,
+            name: name,
+            description: description,
+            directory: directory,
+            readmeUrl: readmeUrl,
+            installed: installed,
+            repoOwner: repoOwner,
+            repoName: repoName,
+            repoBranch: repoBranch
         )
     }
 }

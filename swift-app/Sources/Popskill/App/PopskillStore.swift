@@ -191,6 +191,7 @@ final class PopskillStore {
     var syncInFlight: Bool = false
     var lastSyncResult: SyncResult?
     var lastAutoSyncAttemptAt: Date?
+    var lastDiagnosticsExportURL: URL?
     var isLoading: Bool = false
     var errorMessage: String?
 
@@ -313,6 +314,7 @@ final class PopskillStore {
         async let skillsTask = client.list()
         async let sourcesTask = client.listRepositories()
         async let agentsTask = client.listAgents()
+        async let agentTargetsTask = loadAgentTargetsBestEffort()
         async let packagesTask = loadPackagesBestEffort()
         async let stubsTask = loadStubsBestEffort()
 
@@ -321,6 +323,7 @@ final class PopskillStore {
             self.skills = try await skillsTask
             self.sources = try await sourcesTask
             self.localAgents = try await agentsTask
+            self.agentTargets = await agentTargetsTask
             self.packages = await packagesTask
             self.stubs = await stubsTask
             self.lastBootstrapAt = now
@@ -345,6 +348,22 @@ final class PopskillStore {
             return try await client.listStubs()
         } catch {
             return []
+        }
+    }
+
+    private func loadAgentTargetsBestEffort() async -> [AgentTarget] {
+        do {
+            return TargetAgentRegistry.sort(try await client.listAgentTargets())
+        } catch {
+            return []
+        }
+    }
+
+    func refreshAgentTargets() async {
+        do {
+            agentTargets = TargetAgentRegistry.sort(try await client.listAgentTargets())
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -406,6 +425,7 @@ final class PopskillStore {
         async let skillsTask = client.list()
         async let sourcesTask = client.listRepositories()
         async let agentsTask = client.listAgents()
+        async let agentTargetsTask = loadAgentTargetsBestEffort()
         async let packagesTask = loadPackagesBestEffort()
         async let stubsTask = loadStubsBestEffort()
 
@@ -413,6 +433,7 @@ final class PopskillStore {
             skills = try await skillsTask
             sources = try await sourcesTask
             localAgents = try await agentsTask
+            agentTargets = await agentTargetsTask
             packages = await packagesTask
             stubs = await stubsTask
             lastSourcesRefreshAt = Date()
@@ -1000,6 +1021,10 @@ final class PopskillStore {
             + localAgents.map(MatrixCapability.fromAgent)
     }
 
+    var toolConnections: [ToolConnection] {
+        ToolConnection.all(agentTargets: agentTargets)
+    }
+
     var compositePackages: [CapabilityPackage] {
         packages.filter { $0.type == .composite }
     }
@@ -1221,8 +1246,211 @@ final class PopskillStore {
         return .normal
     }
 
+    func diagnosticsReport(referenceDate: Date = Date()) -> DiagnosticsReport {
+        DiagnosticsReport(
+            generatedAt: Int(referenceDate.timeIntervalSince1970),
+            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
+            counts: DiagnosticsCounts(
+                skills: skills.count,
+                packages: packages.count,
+                localAgents: localAgents.count,
+                sources: sources.count,
+                enabledSources: sources.filter(\.enabled).count,
+                pendingUpdates: updates.count,
+                stubs: stubs.count
+            ),
+            sync: DiagnosticsSyncSnapshot(
+                provider: lastSyncProvider,
+                autoSyncEnabled: autoSyncEnabled,
+                lastSyncAt: lastSyncAt.map { Int($0.timeIntervalSince1970) },
+                lastResult: lastSyncResult.map(DiagnosticsSyncResult.init)
+            ),
+            toolConnections: toolConnections.map(DiagnosticsToolConnection.init),
+            linkHealth: linkHealth.map(DiagnosticsLinkHealth.init),
+            usage: DiagnosticsUsageSnapshot(
+                trackingEnabled: quotaTrackingEnabled,
+                scanInFlight: usageScanInFlight,
+                totalTokens: usageSummary?.totalTokens,
+                attributedSkillCount: usageSummary?.thirtyDaySkillStats.count,
+                lastError: usageScanError
+            )
+        )
+    }
+
+    func diagnosticsReportJSON(referenceDate: Date = Date()) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(diagnosticsReport(referenceDate: referenceDate))
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    @discardableResult
+    func exportDiagnosticsReport(to directoryURL: URL? = nil, referenceDate: Date = Date()) throws -> URL {
+        let directory = directoryURL ?? popskillUserHomeDirectoryURL().appendingPathComponent("Downloads", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let fileURL = directory.appendingPathComponent(Self.diagnosticsFilename(for: referenceDate))
+        try diagnosticsReportJSON(referenceDate: referenceDate).write(to: fileURL, atomically: true, encoding: .utf8)
+        lastDiagnosticsExportURL = fileURL
+        return fileURL
+    }
+
+    private static func diagnosticsFilename(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return "popskill-diagnostics-\(formatter.string(from: date)).json"
+    }
+
     private static func makeUpdateSkillIDs(from updates: [SkillUpdateInfo]) -> Set<String> {
         Set(updates.flatMap(\.normalizedIdentifierCandidates))
+    }
+}
+
+struct DiagnosticsReport: Codable, Equatable {
+    let schemaVersion: Int
+    let generatedAt: Int
+    let appVersion: String?
+    let counts: DiagnosticsCounts
+    let sync: DiagnosticsSyncSnapshot
+    let toolConnections: [DiagnosticsToolConnection]
+    let linkHealth: DiagnosticsLinkHealth?
+    let usage: DiagnosticsUsageSnapshot
+
+    init(
+        schemaVersion: Int = 1,
+        generatedAt: Int,
+        appVersion: String?,
+        counts: DiagnosticsCounts,
+        sync: DiagnosticsSyncSnapshot,
+        toolConnections: [DiagnosticsToolConnection],
+        linkHealth: DiagnosticsLinkHealth?,
+        usage: DiagnosticsUsageSnapshot
+    ) {
+        self.schemaVersion = schemaVersion
+        self.generatedAt = generatedAt
+        self.appVersion = appVersion
+        self.counts = counts
+        self.sync = sync
+        self.toolConnections = toolConnections
+        self.linkHealth = linkHealth
+        self.usage = usage
+    }
+}
+
+struct DiagnosticsCounts: Codable, Equatable {
+    let skills: Int
+    let packages: Int
+    let localAgents: Int
+    let sources: Int
+    let enabledSources: Int
+    let pendingUpdates: Int
+    let stubs: Int
+}
+
+struct DiagnosticsSyncSnapshot: Codable, Equatable {
+    let provider: String
+    let autoSyncEnabled: Bool
+    let lastSyncAt: Int?
+    let lastResult: DiagnosticsSyncResult?
+}
+
+struct DiagnosticsSyncResult: Codable, Equatable {
+    let provider: String
+    let action: String
+    let ok: Bool?
+    let implemented: Bool?
+    let message: String?
+
+    init(_ result: SyncResult) {
+        provider = result.provider
+        action = result.action
+        ok = result.ok
+        implemented = result.implemented
+        message = result.message
+    }
+}
+
+struct DiagnosticsToolConnection: Codable, Equatable {
+    let app: String
+    let displayName: String
+    let detected: Bool
+    let quickToggle: Bool
+    let skillRootPath: String
+    let agentTarget: String?
+
+    init(_ connection: ToolConnection) {
+        app = connection.app.rawValue
+        displayName = connection.displayName
+        detected = connection.detected
+        quickToggle = connection.definition.quickToggle
+        skillRootPath = DiagnosticsPathRedactor.redact(connection.skillRootPath)
+        agentTarget = connection.agentTarget?.id
+    }
+}
+
+struct DiagnosticsLinkHealth: Codable, Equatable {
+    let summary: LinkHealthSummary
+    let rows: [DiagnosticsLinkHealthRow]
+
+    init(_ report: LinkHealthReport) {
+        summary = report.summary
+        rows = report.rows.map(DiagnosticsLinkHealthRow.init)
+    }
+}
+
+struct DiagnosticsLinkHealthRow: Codable, Equatable {
+    let skillId: String
+    let skillName: String
+    let ssotPath: String?
+    let appLinks: [String: DiagnosticsAppLink]
+
+    init(_ row: LinkHealthRow) {
+        skillId = row.skillId
+        skillName = row.skillName
+        if let path = row.deployment?.ssotPath {
+            ssotPath = DiagnosticsPathRedactor.redact(path)
+        } else {
+            ssotPath = nil
+        }
+        appLinks = Dictionary(uniqueKeysWithValues: (row.deployment?.appLinks ?? [:]).map { app, link in
+            (app, DiagnosticsAppLink(link))
+        })
+    }
+}
+
+struct DiagnosticsAppLink: Codable, Equatable {
+    let path: String
+    let status: String
+
+    init(_ link: AppLinkStatus) {
+        path = DiagnosticsPathRedactor.redact(link.path)
+        status = link.status
+    }
+}
+
+struct DiagnosticsUsageSnapshot: Codable, Equatable {
+    let trackingEnabled: Bool
+    let scanInFlight: Bool
+    let totalTokens: Int64?
+    let attributedSkillCount: Int?
+    let lastError: String?
+}
+
+enum DiagnosticsPathRedactor {
+    static func redact(_ path: String, homeDirectory: URL = popskillUserHomeDirectoryURL()) -> String {
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return trimmed }
+
+        let homePath = homeDirectory.standardizedFileURL.path
+        if trimmed == homePath {
+            return "~"
+        }
+        if trimmed.hasPrefix(homePath + "/") {
+            return "~/" + trimmed.dropFirst(homePath.count + 1)
+        }
+        return (trimmed as NSString).abbreviatingWithTildeInPath
     }
 }
 

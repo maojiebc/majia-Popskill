@@ -80,6 +80,12 @@ popskill/
 - **矩阵状态格是可点击的 `●—◐✕` 字形**（`LedgerStatusGlyph`），不是 `AppToggle` 开关；类型彩标 `LedgerTypeTag`、套装覆盖 `LedgerCoverageBar`、底部 `LedgerStatusBar` 都在 `Views/LedgerComponents.swift`。
 - **后端缺口（UI 搭好但没接 sidecar）**：Sources 注册表在线浏览、Fix 修复执行、Settings 安装/配额、Inspector 的 tab 切换 —— 都是结构占位。
 
+### v1.1.x 当前迭代（2026-07-02）
+- **Settings 已从 mock 转成实况控制台**：Connect tab 使用 `ToolConnection` 合并 `TargetAppRegistry`、`agent-targets` 和本机路径 fallback，显示 Claude / Codex / Gemini / OpenCode / Hermes 的 Detected / Missing；Install / Quota 偏好写入 `UserDefaults`。
+- **同步按钮已走真实 Store action**：Settings Sync tab 调 `store.runSync(...)`，会更新 `lastSyncResult`、`lastSyncAt`，并在 pull 成功后刷新核心 inventory。
+- **About 诊断导出已落地**：`store.exportDiagnosticsReport()` 写 `~/Downloads/popskill-diagnostics-*.json`，导出 skills/packages/sources/sync/tool connections/link health/usage 状态，并把 home 路径脱敏成 `~`。
+- **本轮测试基线**：Swift 全量测试已增至 **173/173**，在 `/tmp/popskill-swift-app-test` 无 Git 临时目录通过；原仓库目录里的 SwiftPM 会被内部 `git status -s` 偶发拖慢。
+
 ## Release Pipeline（重复一次背下来）
 
 ```bash
@@ -135,10 +141,12 @@ gh release create v1.0.X "$POPSKILL_DMG_PATH" --title "Popskill v1.0.X" --notes-
 8. **notarytool keychain profile 会被清掉** — 大概率是锁屏 / macOS 升级 / 重启时被某个 helper 进程清掉。每次发版前必先跑 `xcrun notarytool history --keychain-profile popskill-notarize`,失败就 store-credentials 重存。Developer ID cert 和 Sparkle 私钥不受影响,只是 notary 凭证。
 9. **同名分支 push -u 直接复用** — PR #2 / PR #3 都用了 `agent-optimize-popskill-20260517` 分支名,合并完没删,下次推同名分支 git 会附加 commit 而不是新建。Codex / 其他外部 agent 似乎默认复用这个名字,正常合并就行,不必非要 unique。
 10. **GitHub Pages 会被禁用 → Sparkle 自动更新静默失效** — v1.1.0 发版时发现 Pages 是 **disabled**（`gh api repos/maojiebc/majia-Popskill/pages` 返回 404）,而 app 的 `SUFeedURL` 指向 `maojiebc.github.io/.../appcast.xml`,等于自动更新一直是哑的(之前 v1.0.x 用户只能手动下)。**每次发版后必 `curl -sI https://maojiebc.github.io/majia-Popskill/appcast.xml` 确认非 404 且含新版 enclosure**。Pages 没开就重新启用:`echo '{"source":{"branch":"main","path":"/docs"}}' | gh api -X POST repos/maojiebc/majia-Popskill/pages --input -`,等 1-2 min build 完再验。
+11. **工作区 Git 扫描偶发卡顿** — `git status --short` / 全仓 `git diff` 有时会卡在 SwiftPM/Sparkle framework symlink 或工作区扫描上。验证 Swift 时可先 `rsync -a --exclude '.build' swift-app/ /tmp/popskill-swift-app-test/`，再 `swift test --package-path /tmp/popskill-swift-app-test`；提交前用显式文件路径 `git add <files...>`，不要依赖 `git add -A`。
 
 ## 测试基线
 
-- `swift test --package-path swift-app` = **150/150** (v1.1.0)
+- `swift test --package-path /tmp/popskill-swift-app-test` = **173/173**（2026-07-02；原仓库 Git 扫描偶发拖慢时使用临时目录）
+- `swift test --package-path swift-app` = **150/150** (v1.1.0 发布时)
 - `cargo test --manifest-path skill-cli/Cargo.toml` = 47/47 (Rust sidecar v1.1.0 未动)
 - `scripts/ci-local.sh` = 全绿（含 native/bundled/screenshot/release artifact smoke）
 - 实测机：majia 自己 Mac，61 capability / 71 active toggle / 13 GitHub sources
@@ -153,12 +161,13 @@ gh release create v1.0.X "$POPSKILL_DMG_PATH" --title "Popskill v1.0.X" --notes-
 
 下次发其他 Mac app 直接 invoke 这个 skill。
 
-## 当前状态（2026-06-07）
+## 当前状态（2026-07-02）
 
 - **v1.1.0 是 Latest**（2026-06-07 发布）—— 紧凑账本全屏重设计,signed+notarized DMG + GitHub Release + appcast 上线。main 干净。
 - 重设计 commit `bc06f1f`,发布物料 `91b97a6`,截图刷新 `592bc8b`（hero=矩阵,grid=Inspector/新建/组装/设置）
 - **GitHub Pages 发版时发现是 disabled,已重新启用（main /docs）** —— Sparkle 自动更新从这版起才真的通（见已知坑 #10）
-- 测试 150/150;README 已刷到 1.1.0 + 新 UI 截图
+- 当前迭代分支：`codex/continue-popskill-prototype`。最近推进：Sources/Matrix bulk 流、Settings 真实工具连接、sync action 结果反馈、About 匿名诊断 JSON 导出。
+- 测试 173/173（临时目录 SwiftPM 全量）；README 已刷到 1.1.0 + 新 UI 截图
 
 ## 下一步候选（v1.1.x 范围）
 
@@ -168,7 +177,7 @@ gh release create v1.0.X "$POPSKILL_DMG_PATH" --title "Popskill v1.0.X" --notes-
 2. **SSOT 路径迁移 .cc-switch/skills → .agents/skills** — sidecar 要做平滑迁移逻辑（rsync + symlink），Swift 端只要改 ssotPath 字符串
 3. **WebDAV sync 真接** — sidecar 复用 cc-switch 已有 webdav 命令；Settings 去 SOON 标签
 4. **AgentShield 安全扫描复接** — sidecar `security-scan` 命令已存在，Swift 端要做 UI（应该是矩阵行旁的 badge + 详情）
-5. **给 v1.1.0 的 UI 占位接真后端** — Sources 注册表在线浏览 / Fix 修复执行 / Settings 安装·配额 / Inspector tab 切换,都搭了 UI 没接 sidecar,逐个接
+5. **给 v1.1.0 的 UI 占位接真后端** — Sources 注册表在线浏览 / Inspector tab 切换仍待接；Fix 修复、Settings 同步/安装/配额/诊断已开始有真实闭环，继续补完剩余按钮
 
 ## 常用命令速查
 
@@ -207,4 +216,4 @@ python3 ~/.claude/skills/majia-ota-app/scripts/audit-mac-app-release.py .
 
 ---
 
-最后更新：2026-06-07，v1.1.0 发布后（紧凑账本重设计 + Pages 重新启用 + 自截验证流程）
+最后更新：2026-07-02，v1.1.x 迭代中（Settings 实况化 + 匿名诊断导出 + 173 tests）

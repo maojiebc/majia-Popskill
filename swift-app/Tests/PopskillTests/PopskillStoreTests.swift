@@ -1000,6 +1000,69 @@ struct PopskillStoreTests {
         #expect(store.errorMessage?.contains("already exists") == true)
     }
 
+    @Test
+    func diagnosticsExportWritesAnonymizedReportJSON() throws {
+        let store = PopskillStore()
+        store.skills = [
+            skillFixture(
+                id: "demo-skill",
+                apps: SkillApps(claude: true, codex: false, gemini: false, opencode: false, hermes: false)
+            )
+        ]
+        store.sources = [
+            SkillRepository(owner: "owner", name: "repo", branch: "main", enabled: true)
+        ]
+        store.agentTargets = [
+            AgentTarget(
+                id: "claude-code",
+                name: "Claude Code",
+                scope: "user",
+                format: "markdown-agent",
+                paths: ["/Users/example/.claude/agents"],
+                detected: true,
+                source: "agency-agents",
+                note: nil
+            )
+        ]
+        store.linkHealth = LinkHealthReport(
+            summary: LinkHealthSummary(ok: 1, broken: 1, inactive: 0),
+            rows: [
+                LinkHealthRow(
+                    skillId: "demo-skill",
+                    skillName: "Demo Skill",
+                    deployment: SkillDeployment(
+                        strategy: "symlink",
+                        ssotPath: NSHomeDirectory() + "/.cc-switch/skills/demo-skill",
+                        appLinks: [
+                            "claude": AppLinkStatus(
+                                path: NSHomeDirectory() + "/.claude/skills/demo-skill",
+                                status: "ok"
+                            )
+                        ]
+                    )
+                )
+            ]
+        )
+        let outputDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PopskillDiagnostics-\(UUID().uuidString)", isDirectory: true)
+
+        let url = try store.exportDiagnosticsReport(
+            to: outputDirectory,
+            referenceDate: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+        let json = try String(contentsOf: url, encoding: .utf8)
+        let report = try JSONDecoder().decode(DiagnosticsReport.self, from: Data(json.utf8))
+
+        #expect(url.lastPathComponent == "popskill-diagnostics-20270115-080000.json")
+        #expect(store.lastDiagnosticsExportURL == url)
+        #expect(report.schemaVersion == 1)
+        #expect(report.counts.skills == 1)
+        #expect(report.counts.enabledSources == 1)
+        #expect(report.toolConnections.first(where: { $0.app == "claude" })?.skillRootPath == "~/.claude/skills")
+        #expect(report.linkHealth?.rows.first?.ssotPath == "~/.cc-switch/skills/demo-skill")
+        #expect(!json.contains(NSHomeDirectory()))
+    }
+
     private func fakeClient(stubbedAt: Int) throws -> SkillCLIClient {
         try fakeClient(script: """
         #!/bin/sh

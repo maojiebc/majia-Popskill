@@ -423,6 +423,55 @@ struct SkillModelsTests {
     }
 
     @Test
+    func localBundlePackageExposesManifestStoreURL() {
+        let package = CapabilityPackage(
+            id: "pkg:local/my-toolkit",
+            type: .composite,
+            name: "my-toolkit",
+            vendor: "Local",
+            summary: "Local bundle.",
+            source: PackageSource(
+                kind: "local-bundle",
+                location: "local:my-toolkit",
+                updateStrategy: "local",
+                repoOwner: nil,
+                repoName: nil,
+                repoBranch: "0.1.0",
+                readmeUrl: nil
+            ),
+            components: PackageComponents(cli: [], skills: [], mcp: [], agents: []),
+            configSchema: [],
+            installed: true,
+            lifecycle: nil
+        )
+        let nonLocal = CapabilityPackage(
+            id: "pkg:remote",
+            type: .composite,
+            name: "Remote",
+            vendor: nil,
+            summary: "Remote package.",
+            source: PackageSource(
+                kind: "github",
+                location: "github.com/example/remote",
+                updateStrategy: "manual",
+                repoOwner: "example",
+                repoName: "remote",
+                repoBranch: "main",
+                readmeUrl: nil
+            ),
+            components: PackageComponents(cli: [], skills: [], mcp: [], agents: []),
+            configSchema: [],
+            installed: false,
+            lifecycle: nil
+        )
+
+        #expect(package.localBundleDirectoryName == "my-toolkit")
+        #expect(package.localBundleStoreURL?.path.hasSuffix("/.cc-switch/packages/my-toolkit") == true)
+        #expect(nonLocal.localBundleDirectoryName == nil)
+        #expect(nonLocal.localBundleStoreURL == nil)
+    }
+
+    @Test
     func targetAppRegistryCoversCurrentSkillTargets() {
         #expect(TargetAppRegistry.all.map(\.app) == TargetApp.supported)
         #expect(TargetApp.quickToggleSupported == [.claude, .codex, .gemini])
@@ -431,6 +480,41 @@ struct SkillModelsTests {
         #expect(TargetApp.codex.definition.skillDirectory == ".codex/skills")
         #expect(TargetApp.hermes.definition.quickToggle == false)
         #expect(TargetApp.opencode.definition.detectPath == ".config/opencode")
+    }
+
+    @Test
+    func toolConnectionsMergeAgentTargetDetectionWithSkillRootFallbacks() throws {
+        let home = URL(fileURLWithPath: "/Users/example", isDirectory: true)
+        let geminiTarget = AgentTarget(
+            id: "gemini-cli",
+            name: "Gemini CLI",
+            scope: "user",
+            format: "extension",
+            paths: ["/Users/example/.gemini/extensions/agency-agents"],
+            detected: true,
+            source: "agency-agents",
+            note: nil
+        )
+
+        let connections = ToolConnection.all(
+            homeDirectory: home,
+            agentTargets: [geminiTarget],
+            pathExists: { path in
+                path == "/Users/example/.codex"
+            }
+        )
+
+        let claude = try #require(connections.first { $0.app == .claude })
+        let codex = try #require(connections.first { $0.app == .codex })
+        let gemini = try #require(connections.first { $0.app == .gemini })
+
+        #expect(claude.detected == false)
+        #expect(codex.detected == true)
+        #expect(codex.skillRootPath == "/Users/example/.codex/skills")
+        #expect(codex.agentTarget == nil)
+        #expect(gemini.detected == true)
+        #expect(gemini.agentTarget?.id == "gemini-cli")
+        #expect(gemini.cliSummary == "gemini")
     }
 
     @Test

@@ -2,8 +2,8 @@ import SwiftUI
 
 /// 设置 — tabbed ledger settings (连接 / 同步 / 源 / 安装 / 配额 / 关于).
 /// Real wiring: 同步 drives the actual `SyncProvider` + push/pull; 源 · 已添加的源
-/// lists the real `store.sources`; storage paths + version are real. Tool
-/// connections / install defaults / quota follow the prototype structure.
+/// lists the real `store.sources`; install defaults / quota preferences persist
+/// through `PopskillStore`.
 @MainActor
 struct SettingsView: View {
     @Bindable var store: PopskillStore
@@ -11,9 +11,9 @@ struct SettingsView: View {
 
     @State private var tab: SettingsTab = .connect
     @State private var syncProvider: SyncProvider = .git
-    @State private var pendingSync = false
     @State private var pendingMutation: Set<String> = []
     @State private var pendingRemoval: SkillRepository?
+    @State private var exportingDiagnostics = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -93,30 +93,91 @@ struct SettingsView: View {
 
     private var connectTab: some View {
         section("settings.tool.title") {
-            toolCard(mark: "C", markColor: Color(hex: 0xC8643C), name: "Claude Code", meta: "~/.claude · v1.8.0", root: "~/.claude/")
-            toolCard(mark: "Cx", markColor: Color(hex: 0x111111), name: "Codex CLI", meta: "~/.codex · v0.42.1", root: "~/.codex/")
-            dashedRow("settings.tool.add", "settings.tool.addDesc")
+            VStack(spacing: 10) {
+                ForEach(store.toolConnections) { connection in
+                    toolCard(connection)
+                }
+                dashedRow("settings.tool.add", "settings.tool.addDesc")
+            }
+            .task {
+                if store.agentTargets.isEmpty {
+                    await store.refreshAgentTargets()
+                }
+            }
         }
     }
 
-    private func toolCard(mark: String, markColor: Color, name: String, meta: String, root: String) -> some View {
+    private func toolCard(_ connection: ToolConnection) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 11) {
-                Text(mark).font(.system(size: 13, weight: .bold, design: .monospaced)).foregroundStyle(.white)
-                    .frame(width: 30, height: 30).background(markColor, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                Text(toolMark(for: connection.app))
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(toolMarkColor(for: connection.app), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(name).font(.system(size: 13.5, weight: .semibold)).foregroundStyle(Color.popLabel)
-                    Text(meta).font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.popSecondaryLabel)
+                    Text(connection.displayName).font(.system(size: 13.5, weight: .semibold)).foregroundStyle(Color.popLabel)
+                    Text(toolMeta(connection)).font(.system(size: 11, design: .monospaced)).foregroundStyle(Color.popSecondaryLabel)
                 }
                 Spacer()
-                connectedBadge
+                connectionBadge(detected: connection.detected)
             }
             .padding(.horizontal, 16).padding(.top, 13).padding(.bottom, 12)
-            row("settings.tool.root", "settings.tool.rootDesc") { pathField(root) }
-            row("settings.tool.default", "settings.tool.defaultDesc", last: true) { Toggle("", isOn: .constant(true)).labelsHidden().toggleStyle(.switch).controlSize(.mini) }
+            row("settings.tool.root", "settings.tool.rootDesc") { pathField((connection.skillRootPath as NSString).abbreviatingWithTildeInPath) }
+            row("settings.tool.default", "settings.tool.defaultDesc", last: true) { defaultToolControl(connection) }
         }
         .background(Color.white, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.popSeparator, lineWidth: 1))
+    }
+
+    private func toolMeta(_ connection: ToolConnection) -> String {
+        let state = localization.string(connection.detected ? "Detected" : "Missing")
+        let summary = connection.detectionSummary.trimmingCharacters(in: .whitespacesAndNewlines)
+        return summary.isEmpty ? state : "\(state) · \(summary)"
+    }
+
+    private func toolMark(for app: TargetApp) -> String {
+        switch app {
+        case .claude: "C"
+        case .codex: "Cx"
+        case .gemini: "G"
+        case .opencode: "Oc"
+        case .hermes: "H"
+        }
+    }
+
+    private func toolMarkColor(for app: TargetApp) -> Color {
+        switch app {
+        case .claude: Color(hex: 0xC8643C)
+        case .codex: Color(hex: 0x111111)
+        case .gemini: Color(hex: 0x1F4ED8)
+        case .opencode: Color(hex: 0x4F46E5)
+        case .hermes: Color(hex: 0x7C3AED)
+        }
+    }
+
+    @ViewBuilder
+    private func defaultToolControl(_ connection: ToolConnection) -> some View {
+        switch connection.app {
+        case .claude:
+            Toggle("", isOn: $store.defaultInstallClaude)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .disabled(!connection.detected)
+        case .codex:
+            Toggle("", isOn: $store.defaultInstallCodex)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .disabled(!connection.detected)
+        default:
+            badge(localization.string("settings.install.manual"), ok: connection.definition.quickToggle)
+        }
+    }
+
+    private func connectionBadge(detected: Bool) -> some View {
+        badge(localization.string(detected ? "Detected" : "Missing"), ok: detected)
     }
 
     // MARK: 同步
@@ -131,17 +192,32 @@ struct SettingsView: View {
                         selection: localization.string(syncProvider.titleKey)
                     ) { picked in
                         if let p = SyncProvider.allCases.first(where: { localization.string($0.titleKey) == picked }) {
-                            syncProvider = p; store.lastSyncProvider = p.rawValue
+                            syncProvider = p
+                            store.lastSyncProvider = p.rawValue
+                            if !p.actionable { store.autoSyncEnabled = false }
                         }
                     }
                 }
-                row("settings.sync.auto", "settings.sync.autoDesc") { Toggle("", isOn: .constant(true)).labelsHidden().toggleStyle(.switch).controlSize(.mini) }
-                row("settings.sync.actions", "settings.sync.actionsDesc", last: true) {
+                row("settings.sync.auto", "settings.sync.autoDesc") {
+                    Toggle("", isOn: Binding(
+                        get: { store.autoSyncEnabled && syncProvider.actionable },
+                        set: { store.autoSyncEnabled = $0 && syncProvider.actionable }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                    .disabled(!syncProvider.actionable)
+                }
+                row("settings.sync.actions", "settings.sync.actionsDesc", last: store.lastSyncResult == nil) {
                     HStack(spacing: 6) {
                         syncActionButton("settings.sync.push", .push, primary: true)
                         syncActionButton("settings.sync.pull", .pull, primary: false)
-                        if pendingSync { ProgressView().controlSize(.small) }
+                        syncActionButton("settings.sync.status", .status, primary: false)
+                        if store.syncInFlight { ProgressView().controlSize(.small) }
                     }
+                }
+                if let result = store.lastSyncResult {
+                    syncResultRow(result, last: true)
                 }
             }
             .modifier(CardChrome())
@@ -155,7 +231,70 @@ struct SettingsView: View {
                 .padding(.horizontal, 11).padding(.vertical, 5)
                 .background(primary ? Color.popLabel : Color.clear, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(primary ? Color.popLabel : Color.popControlStroke, lineWidth: 1))
-        }.buttonStyle(.plain).disabled(pendingSync || !syncProvider.actionable)
+        }.buttonStyle(.plain).disabled(store.syncInFlight || !syncProvider.actionable)
+    }
+
+    private func syncResultRow(_ result: SyncResult, last: Bool) -> some View {
+        let summary = syncSummary(for: result)
+        return row(
+            syncResultTitle(for: summary.state),
+            summary.message,
+            rawTitle: true,
+            rawDesc: true,
+            last: last
+        ) {
+            syncResultBadge(summary.state)
+        }
+    }
+
+    private func syncSummary(for result: SyncResult) -> SyncResultSummary {
+        let provider = SyncProvider(rawValue: result.provider) ?? syncProvider
+        return result.summary(
+            successMessage: localization.string(
+                "settings.sync.done",
+                localizedActionName(result.action),
+                localization.string(provider.titleKey)
+            ),
+            emptyMessage: localization.string("settings.sync.noDetails")
+        )
+    }
+
+    private func localizedActionName(_ rawAction: String) -> String {
+        switch rawAction {
+        case SyncAction.push.rawValue: return localization.string("settings.sync.push")
+        case SyncAction.pull.rawValue: return localization.string("settings.sync.pull")
+        case SyncAction.status.rawValue: return localization.string("settings.sync.status")
+        default: return rawAction
+        }
+    }
+
+    private func syncResultTitle(for state: SyncResultSummary.State) -> String {
+        switch state {
+        case .success: return localization.string("settings.sync.result.success")
+        case .failure: return localization.string("settings.sync.result.failure")
+        case .unavailable: return localization.string("settings.sync.result.unavailable")
+        case .unknown: return localization.string("settings.sync.result.unknown")
+        }
+    }
+
+    private func syncResultBadge(_ state: SyncResultSummary.State) -> some View {
+        let ok: Bool
+        let text: String
+        switch state {
+        case .success:
+            ok = true
+            text = localization.string("common.enabled")
+        case .failure:
+            ok = false
+            text = localization.string("settings.sync.result.failure")
+        case .unavailable:
+            ok = false
+            text = localization.string("settings.sync.result.unavailable")
+        case .unknown:
+            ok = false
+            text = localization.string("settings.sync.result.unknown")
+        }
+        return badge(text, ok: ok)
     }
 
     // MARK: 源
@@ -195,7 +334,7 @@ struct SettingsView: View {
             }
             Spacer(minLength: 8)
             badge(localization.string(badgeKey), ok: ok)
-            Toggle("", isOn: .constant(true)).labelsHidden().toggleStyle(.switch).controlSize(.mini)
+            registryStatusIcon(ok: ok)
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
         .overlay(alignment: .bottom) { if !last { Rectangle().fill(Color.popRowDivider).frame(height: 1) } }
@@ -229,14 +368,33 @@ struct SettingsView: View {
             VStack(spacing: 0) {
                 row("settings.install.target", "settings.install.targetDesc") {
                     HStack(spacing: 14) {
-                        HStack(spacing: 7) { Toggle("", isOn: .constant(true)).labelsHidden().toggleStyle(.switch).controlSize(.mini); Text(verbatim: "Claude").font(.system(size: 12.5)) }
-                        HStack(spacing: 7) { Toggle("", isOn: .constant(true)).labelsHidden().toggleStyle(.switch).controlSize(.mini); Text(verbatim: "Codex").font(.system(size: 12.5)) }
+                        HStack(spacing: 7) {
+                            Toggle("", isOn: $store.defaultInstallClaude)
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                                .controlSize(.mini)
+                            Text(verbatim: "Claude").font(.system(size: 12.5))
+                        }
+                        HStack(spacing: 7) {
+                            Toggle("", isOn: $store.defaultInstallCodex)
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                                .controlSize(.mini)
+                            Text(verbatim: "Codex").font(.system(size: 12.5))
+                        }
                     }
                 }
                 row("settings.install.verify", "settings.install.verifyDesc") {
-                    LedgerSegmented(options: [.init(label: localization.string("settings.install.strict")), .init(label: localization.string("settings.install.warn")), .init(label: localization.string("settings.install.off"))], selection: localization.string("settings.install.strict")) { _ in }
+                    LedgerSegmented(
+                        options: InstallVerificationMode.allCases.map { .init(label: localization.string($0.titleKey)) },
+                        selection: localization.string(store.installVerificationMode.titleKey)
+                    ) { picked in
+                        if let mode = InstallVerificationMode.allCases.first(where: { localization.string($0.titleKey) == picked }) {
+                            store.installVerificationMode = mode
+                        }
+                    }
                 }
-                row("settings.install.autoUpdate", "settings.install.autoUpdateDesc", last: true) { selectChip("settings.install.weekly") }
+                row("settings.install.autoUpdate", "settings.install.autoUpdateDesc", last: true) { autoUpdateMenu }
             }
             .modifier(CardChrome())
         }
@@ -246,16 +404,21 @@ struct SettingsView: View {
         section("settings.quota.title") {
             VStack(spacing: 0) {
                 row("settings.quota.budget", "settings.quota.budgetDesc") {
-                    HStack(spacing: 6) {
-                        Text(verbatim: "2,000,000").font(.system(size: 13, weight: .semibold, design: .monospaced)).foregroundStyle(Color.popLabel)
-                        Text(verbatim: "tokens").font(.system(size: 11)).foregroundStyle(Color.popTertiaryLabel)
-                    }
-                    .padding(.horizontal, 11).padding(.vertical, 6)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Color.popControlStroke, lineWidth: 1))
+                    quotaBudgetMenu
+                        .disabled(!store.quotaTrackingEnabled)
+                        .opacity(store.quotaTrackingEnabled ? 1 : 0.5)
                 }
-                row("settings.quota.threshold", "settings.quota.thresholdDesc") { selectChip("settings.quota.80") }
-                row("settings.quota.track", "settings.quota.trackDesc", last: true) { Toggle("", isOn: .constant(true)).labelsHidden().toggleStyle(.switch).controlSize(.mini) }
+                row("settings.quota.threshold", "settings.quota.thresholdDesc") {
+                    quotaThresholdMenu
+                        .disabled(!store.quotaTrackingEnabled)
+                        .opacity(store.quotaTrackingEnabled ? 1 : 0.5)
+                }
+                row("settings.quota.track", "settings.quota.trackDesc", last: true) {
+                    Toggle("", isOn: $store.quotaTrackingEnabled)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.mini)
+                }
             }
             .modifier(CardChrome())
         }
@@ -268,7 +431,22 @@ struct SettingsView: View {
                 row("settings.about.reonboard", "settings.about.reonboardDesc") {
                     Button { store.onboardingOpen = true } label: { selectChipLabel(localization.string("settings.onboarding.openButton")) }.buttonStyle(.plain)
                 }
-                row("settings.about.diagnostics", "settings.about.diagnosticsDesc", last: true) { selectChip("settings.about.export") }
+                row(
+                    "settings.about.diagnostics",
+                    diagnosticsDescription,
+                    rawDesc: store.lastDiagnosticsExportURL != nil,
+                    last: true
+                ) {
+                    Button { exportDiagnostics() } label: {
+                        if exportingDiagnostics {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            selectChipLabel(localization.string("settings.about.export"))
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(exportingDiagnostics)
+                }
             }
             .modifier(CardChrome())
         }
@@ -276,6 +454,13 @@ struct SettingsView: View {
 
     private var appVersion: String {
         (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String).map { "popskill v\($0)" } ?? "popskill"
+    }
+
+    private var diagnosticsDescription: String {
+        guard let url = store.lastDiagnosticsExportURL else {
+            return localization.string("settings.about.diagnosticsDesc")
+        }
+        return localization.string("settings.about.diagnosticsExported", (url.path as NSString).abbreviatingWithTildeInPath)
     }
 
     // MARK: Reusable bits
@@ -316,6 +501,56 @@ struct SettingsView: View {
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 3])).foregroundStyle(Color.popControlStroke))
     }
 
+    private func defaultToolToggle(name: String) -> some View {
+        let binding: Binding<Bool> = name == "Codex CLI" ? $store.defaultInstallCodex : $store.defaultInstallClaude
+        return Toggle("", isOn: binding)
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+    }
+
+    private var autoUpdateMenu: some View {
+        Menu {
+            ForEach(InstallAutoUpdatePolicy.allCases) { policy in
+                Button { store.installAutoUpdatePolicy = policy } label: {
+                    optionLabel(localization.string(policy.titleKey), selected: policy == store.installAutoUpdatePolicy)
+                }
+            }
+        } label: {
+            selectChipLabel(localization.string(store.installAutoUpdatePolicy.titleKey))
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+    }
+
+    private var quotaBudgetMenu: some View {
+        Menu {
+            ForEach(QuotaBudgetOption.allCases) { option in
+                Button { store.quotaMonthlyTokenBudget = option.rawValue } label: {
+                    optionLabel(quotaBudgetLabel(option.rawValue), selected: option.rawValue == store.quotaMonthlyTokenBudget)
+                }
+            }
+        } label: {
+            selectChipLabel(quotaBudgetLabel(store.quotaMonthlyTokenBudget))
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+    }
+
+    private var quotaThresholdMenu: some View {
+        Menu {
+            ForEach(QuotaWarningThresholdOption.allCases) { option in
+                Button { store.quotaWarningThresholdPercent = option.rawValue } label: {
+                    optionLabel("\(option.rawValue)%", selected: option.rawValue == store.quotaWarningThresholdPercent)
+                }
+            }
+        } label: {
+            selectChipLabel("\(store.quotaWarningThresholdPercent)%")
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+    }
+
     private func pathField(_ value: String) -> some View {
         HStack(spacing: 0) {
             Text(value).font(.system(size: 11.5, design: .monospaced)).foregroundStyle(Color.popLabel).lineLimit(1).truncationMode(.middle)
@@ -340,9 +575,31 @@ struct SettingsView: View {
         .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Color.popControlStroke, lineWidth: 1))
     }
 
+    private func optionLabel(_ text: String, selected: Bool) -> some View {
+        HStack {
+            Text(text)
+            if selected {
+                Spacer()
+                Image(systemName: "checkmark")
+            }
+        }
+    }
+
+    private func quotaBudgetLabel(_ value: Int) -> String {
+        let formatted = Self.decimalFormatter.string(from: NSNumber(value: value)) ?? "\(value)"
+        return "\(formatted) tokens"
+    }
+
     private func sourceMark(_ mark: String, _ bg: Color) -> some View {
         Text(mark).font(.system(size: 10, weight: .heavy, design: .monospaced)).foregroundStyle(.white)
             .frame(width: 30, height: 30).background(bg, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+    }
+
+    private func registryStatusIcon(ok: Bool) -> some View {
+        Image(systemName: ok ? "checkmark.circle.fill" : "minus.circle")
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(ok ? Color.popStatusOK : Color.popTertiaryLabel)
+            .frame(width: 22, height: 22)
     }
 
     private var connectedBadge: some View { badge(localization.string("settings.connected"), ok: true) }
@@ -356,18 +613,25 @@ struct SettingsView: View {
         .overlay(Capsule().strokeBorder(ok ? Color(hex: 0xCFE0D2) : Color(hex: 0xE2DFD3), lineWidth: 1))
     }
 
-    private var ssotPath: String { "~/.popskill/store/" }
+    private var ssotPath: String {
+        let path = popskillUserHomeDirectoryURL()
+            .appendingPathComponent(".cc-switch", isDirectory: true)
+            .appendingPathComponent("skills", isDirectory: true)
+            .path
+        return (path as NSString).abbreviatingWithTildeInPath
+    }
+
+    private static let decimalFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = ","
+        return formatter
+    }()
 
     // MARK: Actions
 
     @MainActor private func runSync(_ action: SyncAction) async {
-        guard !pendingSync, syncProvider.actionable else { return }
-        pendingSync = true
-        defer { pendingSync = false }
-        do {
-            let result = try await store.client.sync(action: action.rawValue, provider: syncProvider.rawValue)
-            if result.ok == true && action != .status { store.lastSyncAt = Date() }
-        } catch { store.errorMessage = error.localizedDescription }
+        await store.runSync(action, provider: syncProvider)
     }
 
     @MainActor private func setEnabled(_ repo: SkillRepository, enabled: Bool) async {
@@ -387,6 +651,17 @@ struct SettingsView: View {
             let result = try await store.client.removeRepository(owner: repo.owner, name: repo.name)
             store.sources.removeAll { $0.owner == result.owner && $0.name == result.name }
         } catch { store.errorMessage = error.localizedDescription }
+    }
+
+    @MainActor private func exportDiagnostics() {
+        guard !exportingDiagnostics else { return }
+        exportingDiagnostics = true
+        defer { exportingDiagnostics = false }
+        do {
+            _ = try store.exportDiagnosticsReport()
+        } catch {
+            store.errorMessage = error.localizedDescription
+        }
     }
 }
 

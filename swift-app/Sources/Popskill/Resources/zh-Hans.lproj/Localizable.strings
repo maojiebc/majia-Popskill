@@ -918,6 +918,7 @@
 "settings.about.reonboardDesc" = "重新跑一遍 5 步引导。";
 "settings.about.diagnostics" = "诊断";
 "settings.about.diagnosticsDesc" = "导出一份匿名的链路诊断报告。";
+"settings.about.diagnosticsExported" = "上次导出到 %@。";
 "settings.about.export" = "导出报告";
 "settings.browse" = "浏览…";
 "settings.selectType" = "选择类型";

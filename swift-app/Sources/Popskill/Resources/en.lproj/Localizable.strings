@@ -918,6 +918,7 @@
 "settings.about.reonboardDesc" = "Walk through the 5-step setup again.";
 "settings.about.diagnostics" = "Diagnostics";
 "settings.about.diagnosticsDesc" = "Export an anonymized link diagnostics report.";
+"settings.about.diagnosticsExported" = "Last exported to %@.";
 "settings.about.export" = "Export report";
 "settings.browse" = "Browse…";
 "settings.selectType" = "Select type";
