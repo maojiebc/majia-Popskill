@@ -92,14 +92,29 @@ struct Entry: Identifiable, Equatable {
     /// latest 只在 checkUpdate 确认内容有差异时写入、applyUpdate 后清除，
     /// 所以有值即有更新（源式套装的 latest 是 "N 项" 这类标签，不是 semver）。
     var hasUpdate: Bool { latest != nil }
+    /// 用户视角的「几个技能待更新」：套装按 changedMembers 逐成员计，独立项计 1。
+    /// 套装里 5 个成员有新版就是 5，不是 1——横幅/按钮计数一律用它，别再数源。
+    /// changedMembers 缺失（旧 meta 没存明细）时保守计 1。
+    var updateCount: Int {
+        guard hasUpdate else { return 0 }
+        if let c = changedMembers, !c.isEmpty { return c.count }
+        return 1
+    }
+    /// 套装更新徽标的悬停说明：点名具体哪些成员有新版（卡片/表格两视图共用一份）
+    var updateHelp: String {
+        guard let changed = changedMembers, !changed.isEmpty else { return L("更新此套装") }
+        return L("有新版：\(changed.sorted().joined(separator: L("、")))——点击全部更新")
+    }
 }
 
 enum SourceKind: String {
     case github, npm, local
+    case wellKnown = "well-known"   // rawValue 进 KindTag 直接大写展示，别拼成 WELLKNOWN
 
     static func of(_ url: String?) -> SourceKind {
         guard let url, !url.isEmpty else { return .local }
         if url.hasPrefix("npm:") { return .npm }
+        if url.hasPrefix("wk:") || url.contains("/.well-known/skills/") { return .wellKnown }
         if url.hasPrefix("~") || url.hasPrefix("/") { return .local }
         return .github
     }

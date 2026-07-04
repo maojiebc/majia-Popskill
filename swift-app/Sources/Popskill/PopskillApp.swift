@@ -74,6 +74,7 @@ struct PopskillApp: App {
                 Button(L("设置…")) { if model.sheet == nil { model.sheet = .settings } }
                     .keyboardShortcut(",", modifiers: .command)
                 Button(L("定时任务…")) { if model.sheet == nil { model.sheet = .sched; model.reloadSched() } }
+                Button(L("CLI 巡检…")) { if model.sheet == nil { model.sheet = .cli; if model.globalClis.isEmpty { model.checkCliUpdates() } } }
                     .keyboardShortcut("j", modifiers: .command)
             }
             CommandGroup(replacing: .help) {
@@ -148,6 +149,8 @@ struct RootView: View {
                     SettingsSheet().transition(.opacity)
                 } else if model.sheet == .sched {
                     SchedSheet().transition(.opacity)
+                } else if model.sheet == .cli {
+                    CliSheet().transition(.opacity)
                 }
 
                 // toast：底部居中

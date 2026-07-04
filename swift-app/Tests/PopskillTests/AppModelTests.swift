@@ -113,4 +113,50 @@ final class AppModelTests: XCTestCase {
         model.kbValidate()
         XCTAssertNil(model.kbFocusId, "焦点项从可见列表消失后必须清除")
     }
+
+    // ── 更新计数与跳转（v2.14）───────────────────────────
+
+    private func entryWithUpdate(_ id: String, children: [String]? = nil, changed: [String]? = nil) -> Entry {
+        let cap = makeCap(id, dirExists: false)
+        return Entry(id: id, cap: cap,
+                     children: children?.map { makeCap($0, dirExists: false) },
+                     bundleKind: children != nil ? .source : nil,
+                     sourceUrl: "github.com/t/\(id)",
+                     latest: "新版", changedMembers: changed)
+    }
+
+    func testUpdateCountCountsMembersNotSources() {
+        // 用户之痛：套装里 5 个成员待更新，横幅只写 1——计数必须是技能数
+        let solo = entryWithUpdate("solo")
+        let bundle = entryWithUpdate("pack", children: ["a", "b", "c", "d", "e"], changed: ["a", "b", "c", "d", "e"])
+        let legacy = entryWithUpdate("legacy", children: ["x", "y"], changed: nil)   // 旧 meta 无明细
+        model.entries = [solo, bundle, legacy]
+        XCTAssertEqual(solo.updateCount, 1)
+        XCTAssertEqual(bundle.updateCount, 5)
+        XCTAssertEqual(legacy.updateCount, 1, "缺明细保守计 1")
+        XCTAssertEqual(model.updateItemCount, 7)
+        var fresh = solo
+        fresh.latest = nil
+        XCTAssertEqual(fresh.updateCount, 0)
+    }
+
+    func testJumpToNextUpdateCyclesExpandsAndClearsFilter() {
+        let a = entryWithUpdate("aaa", children: ["a1", "a2"], changed: ["a1"])
+        let b = entryWithUpdate("bbb")
+        var clean = entryWithUpdate("ccc")
+        clean.latest = nil
+        model.entries = [a, b, clean]
+        model.query = "挡视线的搜索词"
+        model.typeFilter = .mcp
+        model.jumpToNextUpdate()
+        XCTAssertEqual(model.kbFocusId, "aaa")
+        XCTAssertTrue(model.expanded.contains("aaa"), "套装必须展开露出待更新成员")
+        XCTAssertEqual(model.flashId, "aaa")
+        XCTAssertEqual(model.query, "", "跳转意图优先于过滤")
+        XCTAssertNil(model.typeFilter)
+        model.jumpToNextUpdate()
+        XCTAssertEqual(model.kbFocusId, "bbb")
+        model.jumpToNextUpdate()
+        XCTAssertEqual(model.kbFocusId, "aaa", "到尾后循环回第一个")
+    }
 }

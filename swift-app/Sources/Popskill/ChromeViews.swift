@@ -306,16 +306,29 @@ struct UpdateBadge: View {
     }
 }
 
-/// 套装子项行的「有新版」迷你角标（v2.5：提醒到具体成员）
+/// 套装子项行的「有新版」迷你角标（v2.5：提醒到具体成员）。
+/// v2.14：可选 action——脱离套装头的场景（类型过滤平铺/表格子行）点它直接更新所属源
 struct MemberUpdateDot: View {
+    var action: (() -> Void)? = nil
+
     var body: some View {
+        if let action {
+            Button(action: action) { tag }
+                .buttonStyle(.plain)
+                .help(L("上游有新版——点击更新所属套装"))
+                .accessibilityLabel(L("有新版，点击更新所属套装"))
+        } else {
+            tag.help(L("上游有新版——点套装头部 ↑ 徽标更新"))
+        }
+    }
+
+    private var tag: some View {
         Text("↑")
             .font(.mono(10, .bold))
             .foregroundStyle(Ink.amberText)
             .padding(.horizontal, 3)
             .background(RoundedRectangle(cornerRadius: 3).fill(Ink.amberBadgeBg))
             .overlay(RoundedRectangle(cornerRadius: 3).stroke(Ink.amberBadgeBorder, lineWidth: 1))
-            .help(L("上游有新版——点套装头部 ↑ 徽标更新"))
     }
 }
 

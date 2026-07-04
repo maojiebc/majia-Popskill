@@ -862,7 +862,69 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(bundle.sourceUrl, "npm:@guandata/guanskill")
         XCTAssertEqual(bundle.children?.count, 5)
         XCTAssertEqual(bundle.children?.first { $0.name == "guancli" }?.type, .cli, "套装内 CLI tag 保留")
-        XCTAssertNil(try fs.checkUpdate(bundle), "npm 源更新检查应安全跳过")
+        // 注入「没装 npm」：v2.14 起 npm 源会真检查（比对全局 CLI），单测不能打网络、
+        // 也不能依赖跑测试这台机器全局装没装包
+        NpmEnv._setForTest(.some(nil))
+        defer { NpmEnv._setForTest(nil) }
+        XCTAssertNil(try fs.checkUpdate(bundle), "没装 npm 时更新检查应安全跳过")
+    }
+
+    // ── npm 源 + 全局 CLI 巡检（v2.14）───────────────────
+
+    func testNpmPureParsers() {
+        XCTAssertEqual(npmPkgName("npm:@guandata/guanskill"), "@guandata/guanskill")
+        XCTAssertEqual(npmPkgName("NPM:@A/B"), "@a/b")
+        XCTAssertNil(npmPkgName("github.com/a/b"))
+        XCTAssertNil(npmPkgName("npm:"))
+        XCTAssertNil(npmPkgName(nil))
+        XCTAssertEqual(npmRegistryLatestURL("@guandata/guanskill")?.absoluteString,
+                       "https://registry.npmjs.org/@guandata%2Fguanskill/latest")
+        XCTAssertEqual(parseNpmRegistryLatest(Data(#"{"name":"x","version":"0.1.11"}"#.utf8)), "0.1.11")
+        XCTAssertNil(parseNpmRegistryLatest(Data("oops".utf8)))
+        let ls = #"{"dependencies":{"@larksuite/cli":{"version":"1.0.63"},"@getnote/cli":{"version":"1.1.8"}}}"#
+        let parsed = parseNpmGlobalList(Data(ls.utf8))
+        XCTAssertEqual(parsed["@larksuite/cli"], "1.0.63")
+        XCTAssertEqual(parsed.count, 2)
+        XCTAssertEqual(parseNpmGlobalList(Data("{}".utf8)), [:])
+    }
+
+    func testNpmGlobalInstallRejectsInjection() {
+        NpmEnv._setForTest("/usr/bin/true")   // 假装有 npm，让校验分支先跑到
+        defer { NpmEnv._setForTest(nil) }
+        XCTAssertThrowsError(try fs.npmGlobalInstall("a'; rm -rf ~", version: "1.0.0"))
+        XCTAssertThrowsError(try fs.npmGlobalInstall("ok-pkg", version: "1.0.0 --evil"))
+    }
+
+    // ── well-known 源（v2.14）────────────────────────────
+
+    func testWellKnownNormalizationAndHelpers() {
+        XCTAssertEqual(StoreFS.normalizeSource("https://open.feishu.cn/.well-known/skills/lark-doc/SKILL.md"),
+                       "wk:open.feishu.cn")
+        XCTAssertEqual(SourceKind.of("wk:open.feishu.cn"), .wellKnown)
+        XCTAssertEqual(SourceKind.of("https://open.feishu.cn/.well-known/skills/x/SKILL.md"), .wellKnown)
+        XCTAssertEqual(wellKnownHost("https://open.feishu.cn/.well-known/skills/lark-doc/SKILL.md"), "open.feishu.cn")
+        XCTAssertNil(wellKnownHost("https://github.com/a/b"))
+        XCTAssertEqual(wellKnownSkillName("https://open.feishu.cn/.well-known/skills/lark-doc/SKILL.md"), "lark-doc")
+        XCTAssertEqual(wellKnownSkillURL(host: "open.feishu.cn", name: "lark-im")?.absoluteString,
+                       "https://open.feishu.cn/.well-known/skills/lark-im/SKILL.md")
+    }
+
+    func testWellKnownLockEntriesGroupIntoOneBundle() throws {
+        // skills.sh 2026-06 改版后 lark 系的真实形态：lock 记 well-known URL。
+        // 曾被 prefix(3) 截成 "open.feishu.cn/.well-known/skills" 当 github 源——
+        // 套装名显示 ".well-known/skills"、checkUpdate 去 clone 必失败
+        for n in ["lark-doc", "lark-im", "lark-base"] { try makeSkill(n) }
+        try writeLock([
+            "lark-doc":  ["source": "open.feishu.cn", "sourceUrl": "https://open.feishu.cn/.well-known/skills/lark-doc/SKILL.md"],
+            "lark-im":   ["source": "open.feishu.cn", "sourceUrl": "https://open.feishu.cn/.well-known/skills/lark-im/SKILL.md"],
+            "lark-base": ["source": "open.feishu.cn", "sourceUrl": "https://open.feishu.cn/.well-known/skills/lark-base/SKILL.md"],
+        ])
+        let entries = scan()
+        let bundle = try XCTUnwrap(entries.first(where: \.isBundle))
+        XCTAssertEqual(bundle.bundleKind, .source)
+        XCTAssertEqual(bundle.name, "open.feishu.cn", "套装名 = 分发域名，不再是 .well-known/skills")
+        XCTAssertEqual(bundle.sourceUrl, "wk:open.feishu.cn")
+        XCTAssertEqual(bundle.children?.count, 3)
     }
 
     // ── 排序 / 类型推断 / 前缀收编（v2.1.2）──────────────

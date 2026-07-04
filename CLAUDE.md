@@ -48,7 +48,8 @@ Tests/PopskillTests/SchedTests.swift     定时任务解析测试（plist/cron/l
 - **LinkStatus 四态**：`on`=symlink 有效 / `off`=未链接 / `stub`=**真实目录占位（本地副本，未托管）** / `broken`=symlink 目标丢失。注意 stub 的真实语义和原型（占位待校验）不同。
 - **套装双形态**：工具侧既可能是「整套一条 symlink」（全部子项 on），也可能是「物化目录 + 逐子项 symlink」。单独关某个子项时 `setBundleChildLink` 自动物化。移除套装时物化目录会被清理。
 - **防呆三条**：`removeLink` 只删 symlink、真实目录一律走 store 回收站（`~/.agents/.trash/`，带时间戳）、store 目录绝不被开关动到。改 StoreFS 必须跑测试。
-- **本地化（v2.12）**：UI 全部用户可见字符串走 `L("中文原文")`（key=中文，插值留在里面，Int→%lld/String→%@，其它类型先转 String）。权威源 `swift-app/l10n/Localizable.xcstrings`（zh-Hans + en 双表），**改完必须跑 `scripts/gen-l10n.sh`** 重新编译 lproj（SPM 5.9 CLI 不编译 xcstrings，预编译产物提交进库）；ci-local 的 `--check` 会抓 catalog↔产物漂移和 L()↔key 双向覆盖（scripts/check-l10n-coverage.py）。语言协商在 Localization.swift 显式做（裸二进制没有 main bundle 语言声明，不自己协商会永远落 en）；不支持的系统语言一律英文。**刻意不本地化**：plog 日志、Fixtures、Catalog 精选目录数据。英文截图：启动参数 `-AppleLanguages "(en)"`（zsh 注意引号防分词）。
+- **本地化（v2.12）**：UI 全部用户可见字符串走 `L("中文原文")`（key=中文，插值留在里面，Int→%lld/String→%@，其它类型先转 String）。权威源 `swift-app/l10n/Localizable.xcstrings`（zh-Hans + en 双表），**改完必须跑 `scripts/gen-l10n.sh`** 重新编译 lproj（SPM 5.9 CLI 不编译 xcstrings，预编译产物提交进库）；ci-local 的 `--check` 会抓 catalog↔产物漂移和 L()↔key 双向覆盖（scripts/check-l10n-coverage.py）。语言协商在 Localization.swift 显式做（裸二进制没有 main bundle 语言声明，不自己协商会永远落 en）；不支持的系统语言一律英文。**刻意不本地化**：plog 日志、Fixtures、调试 env 钩子。英文截图：启动参数 `-AppleLanguages "(en)"`（zsh 注意引号防分词）。
+- **精选目录双语（v2.14，推翻 v2.12 的「Catalog 不本地化」）**：CatalogEntry 带 desc(中)/en(英)，`localizedDesc` 按 `l10nIsChinese` 挑面（内容级数据不进 xcstrings——几百条会把 catalog 变垃圾场），缺英文落回中文。热门扩容在 **CatalogHot.swift（脚本生成勿手改）**：`scripts/gen-catalog-hot.py <hot-skills.json>` 全文件重生成，411 条覆盖 skills.sh 榜前 400+/anthropics 官方/awesome 精选；查找顺序 `Catalog.entry()` = 手工段优先 → 热门段兜底。
 - **来源回填链（v2.1）**：`.popskill.json`（自装）→ `~/.agents/.skill-lock.json`（npx skills 生态，v3 schema，含 skillPath 子路径）→ 目录自带 `.git` remote → frontmatter homepage 正则。`normalizeSource` 统一成 `github.com/owner/repo` 小写。
 - **键盘导航（v2.2/PATCH-02）**：AppModel.kb*（focusId/toolIdx/focusList/focusFrame），MainView syncKbList 按可见顺序回填，PopskillApp NSEvent 监听 ↑↓←→/空格/Esc；激活色=绿 #1a9a4e（蓝只做交互色）。
 - **排序（v2.1.2）**：套装置顶（按名），独立项按 类型(Skill→Agent→MCP→CLI)→名称（`sortEntries`）。
@@ -56,9 +57,12 @@ Tests/PopskillTests/SchedTests.swift     定时任务解析测试（plist/cron/l
 - **前缀族收编（v2.1.2）**：无来源散件（不在 lock、无 homepage，如 baoyu-diagram）按前缀族并入源式套装（≥5 成员共享前缀触发），repoSubdir 猜 skills/<name>，更新检查时核实。
 - **源式套装（v2.1）**：同一 github 来源 ≥2 个平铺成员归拢成 `BundleKind.source` 套装（id `src:<repo>`），磁盘平铺、symlink 逐成员（与 `.directory` 形态的整链/物化区分，toggle/linkPath 按 bundleKind 路由）。实测：72 平铺 → 26 条目（baoyu 22 / lark 26 各一张卡）。store 内软链成员（私有开发）不归拢、更新跳过。
 - **更新机制（v2.1，吸收 cc-switch）**：不靠 semver，对目录算 SHA-256 内容哈希（`computeDirHash`），`checkUpdate` 一次 clone 逐成员比对（lock 的 skillPath 定位 monorepo 子目录，兜底 skills/<name> 约定），还报告上游新增未安装项；`applyUpdate` 只换有变化的成员、原子换版（先拷隐藏临时名再换名，失败回滚）、每个先备份进回收站（保留 200 份，按入站时间 FIFO）。v2.8 起 `ls-remote` HEAD 短路：上游 commit 没动**且本地未漂移**（meta.localDigest 比对）**且没亮更新徽标**（meta.latest 为 nil）才跳过整仓 clone——只比 HEAD 会让终端里改坏的技能永远检不出；亮徽标的要完整比对才能解析上游版本号、或在手动同步后熄灭残留徽标（确认一致时 checkUpdate 自动清 latest）。回收站按 kind 分桶（.trash/skills|agents|mcp|bin/），恢复回原位。启动 2s 后后台自动检查，`autoUpdate=true` 的源直接更。
+- **更新计数语义（v2.14）**：横幅/按钮计数一律 `Entry.updateCount`（套装按 changedMembers 逐成员计，独立项 1）——用户视角是「几个技能」不是「几个源」。横幅「N 个技能可更新」可点击：`jumpToNextUpdate()` 循环跳转+展开套装+闪烁，跳转优先于过滤（清 query/typeFilter）。hero 右侧常驻手动「检查更新」按钮。表格视图三种行都有更新徽标（v2.13 引入表格时漏了整套）。
+- **npm 源（v2.14，NpmSource.swift）**：npm 包发布的是 CLI 本体（tarball 里没有 SKILL.md，技能目录是 CLI 的 install-skill 生成的），所以更新语义 = registry `/latest` vs `npm ls -g` 已装版，`applyNpmUpdate` = `npm i -g`，**绝不碰 store 技能目录**。npm 探测走 `zsh -lc`（GUI app 的 PATH 没有 ~/.local/nvm）缓存在 NpmEnv；「添加」流程仍拒绝 npm 源（装不出技能）。**全局 CLI 巡检**：`checkCliUpdates()` 对 npm -g 全部包逐个比 registry（排除 entries 里 npm 源对应的包防双计），CliSheet 版本矩阵一键升级，入口=横幅「⌨」+设置页+应用菜单。
+- **well-known 源（v2.14，WellKnownSource.swift）**：skills.sh 生态的单文件分发协议（lark 系 24+ 技能 2026-06 起 lock 全改写成 `open.feishu.cn/.well-known/skills/<名>/SKILL.md`）。归拢键 = `wk:<host>`（曾被 prefix(3) 截成 `.well-known/skills` 当 github 源，套装名难看+checkUpdate 去 clone 必失败）；检查=逐成员 GET SKILL.md 比哈希，更新=原子换 SKILL.md 保留 references/（协议只分发单文件，附属文件变化检不出是已知局限）；「添加」框粘 well-known 地址可直装。
 - **安全校验（v2.1）**：`sanitizeName` 拒绝空名 / `/` / `..` / 隐藏名，install 与导入都走它。
 - **未托管导入（v2.1）**：设置 → Store「导入未托管目录」，把工具目录里的真实技能目录收编进 store 并换 symlink。
-- **npm 源暂不支持**（resolve 抛错），GitHub = 浅 clone 到临时目录再扫描，local = 复制进 store。
+- **源解析**：GitHub = 浅 clone 到临时目录再扫描；local = 复制进 store；well-known = GET 单文件建 staging（v2.14）；npm 的「添加」仍拒绝（包里没有 SKILL.md 装不出技能），但更新链全通（见上）。
 
 ### 调试钩子（截图自验用）
 
@@ -138,9 +142,10 @@ scripts/release.sh
 16. **发版链禁静默步骤** — v2.5.0 事故：appcast 注入静默 no-op，DMG/Release 都成了、更新源没更，用户看到「最新 2.4.2/正跑 2.5.0」倒挂。appcast 一律走 `scripts/append-appcast.py`（断言：重复版本拒绝/锚点必中/写后校验）；另注意 Pages CDN max-age=600，发版后 10 分钟内手动检查可能命中旧缓存
 17. **`Bundle.module` 在打包 .app 里会崩** — v2.13.0 事故：SPM 生成的 `Bundle.module` 访问器写死去「.app 顶层」和「**打包机的 .build 绝对路径**」找资源 bundle，资源实际在 `Contents/Resources/`，对不上即 `fatalError`，**别人电脑一开就崩**；dev 与本机 smoke 因那条绝对路径恰存在而全程掩盖。教训：①本地化资源查找**自己写**（多候选位置 + 找不到退回 `.main` 绝不 crash，见 Localization.swift `resourceBundle`），不用 `Bundle.module`；②**发版前必须冷启打包的 .app**（不能只跑 dev binary）——`smoke-bundle.sh` 已加固：冷启前把 `.build/*release*/Popskill_Popskill.bundle` 移开，逼 .app 只用自己 `Contents/Resources` 副本，复现干净机器
 
-## 当前状态（2026-06-16）
+## 当前状态（2026-07-05）
 
-- 线上 **v2.13.0「设计稿 uplift + 新手体检」**：按 claude.ai/design 交接稿账本版最终态补齐三块（皮肤不变）——① 顶部类型统计条（`Stats.byType`/`inactiveByTool` 派生，glyph ◈◉▣⌨▦；未安装工具显示「未安装」）② 断链整卡红（任一工具 broken ⇒ 整卡红边 + 淡红底 + `BrokenBadge`）③ 卡片/表格双视图（`ViewMode`，过滤行右端分段切换 + 状态图例；表格 8 列 + 套装可展开表头行 + `FractionCell` + 子项 │ 缩进 + `StatusCell` 状态符号矩阵，复用现成组件，两视图共享 `kbFocusList`）。调试钩子新增 `POPSKILL_VIEW=list`。**外加 8 角色团队体检（34 确认）修的 6 拦路石**：github 解析前 `ensureGit` 预检 + `humanGitError` 人话错误；未安装工具挂载前 NSAlert 确认（不再静默建 ~/.codex）；导入未托管加确认弹窗（`confirmImport` 共用）；卡片/表格右键 `contextMenu`；统计条未挂载对比度提到 AA；install copyItem 失败回滚、moveToTrash 同秒补后缀。设计稿原包不入库；完整报告见 /tmp（一次性）。
+- **v2.14.0「更新体验大修 + CLI 巡检 + 双语热门目录」已完成待发版**（VERSION 已 bump 到 2.14.0/279，release note 在 docs/release/v2.14.0.md，等用户确认后跑 scripts/release.sh）：①更新计数按技能数+横幅点击跳转定位+主界面常驻检查按钮+表格视图补徽标 ②npm 源更新链（registry vs npm -g，升级 = npm i -g）+CLI 巡检面板（CliSheet 版本矩阵）③well-known 源全链（lark 系 27 项归一张卡+SKILL.md 单文件检查/更新/直装）④精选目录双语化+CatalogHot 411 条热门。测试 100 个。调试钩子新增 POPSKILL_SHEET=cli。
+- 线上 **v2.13.2**；v2.13.0「设计稿 uplift + 新手体检」：按 claude.ai/design 交接稿账本版最终态补齐三块（皮肤不变）——① 顶部类型统计条（`Stats.byType`/`inactiveByTool` 派生，glyph ◈◉▣⌨▦；未安装工具显示「未安装」）② 断链整卡红（任一工具 broken ⇒ 整卡红边 + 淡红底 + `BrokenBadge`）③ 卡片/表格双视图（`ViewMode`，过滤行右端分段切换 + 状态图例；表格 8 列 + 套装可展开表头行 + `FractionCell` + 子项 │ 缩进 + `StatusCell` 状态符号矩阵，复用现成组件，两视图共享 `kbFocusList`）。调试钩子新增 `POPSKILL_VIEW=list`。**外加 8 角色团队体检（34 确认）修的 6 拦路石**：github 解析前 `ensureGit` 预检 + `humanGitError` 人话错误；未安装工具挂载前 NSAlert 确认（不再静默建 ~/.codex）；导入未托管加确认弹窗（`confirmImport` 共用）；卡片/表格右键 `contextMenu`；统计条未挂载对比度提到 AA；install copyItem 失败回滚、moveToTrash 同秒补后缀。设计稿原包不入库；完整报告见 /tmp（一次性）。
 - v2.12.0「双语」：UI 全量本地化（简中 + 英文）——**新增用户可见字符串必须 `L()` + 进 catalog + 跑 gen-l10n.sh**，ci-local 会拦漏网的（见「关键架构事实 → 本地化」节）。
 - v2.11/2.10/2.9：激活 pill 压缩靠右、定时任务面板（launchd/crontab）；v2.8.0 成熟度大版见 docs/release/v2.8.0.md。
 - **v2.13.1 紧急修复**：v2.12 起 `Bundle.module` 在打包 .app 里找不到本地化资源 → 启动即崩（别人机器全中招，dev/本机被 .build 绝对路径掩盖）；改为 Localization.swift 自己多候选找资源 + 找不到退回 .main 绝不崩；smoke-bundle 加固冷启复现（见坑 #17）。
@@ -149,9 +154,9 @@ scripts/release.sh
 ## 下一步候选（设计稿里刻意没做的）
 
 1. **白卡 SaaS 皮肤**（设计 chat 里「保留观望」的另一版方向，账本皮肤的替代选项；做的话是全局换色大改，单独立项）
-2. **npm 源支持**
-3. **store 目录 FSEvents 实时刷新**（现为 ⌘R + 前台激活自动重扫）
-4. **精选目录英文化**（Catalog.swift ~80 条中文简介对英文用户仍直出中文——本地化刻意排除项）
+2. **store 目录 FSEvents 实时刷新**（现为 ⌘R + 前台激活自动重扫）
+3. **well-known 附属文件**：协议只分发 SKILL.md，references/ 变化检不出——若 skills.sh 生态出清单协议再跟进
+4. **cc-switch 参考清单里的备选**：更新徽标 dismiss 机制（「跳过此版本」）、深链接 popskill://、拖拽排序（报告存 docs/dev/cc-switch-reference.md）
 
 ## 沟通偏好（来自 user memory）
 

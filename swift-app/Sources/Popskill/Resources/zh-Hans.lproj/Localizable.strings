@@ -16,14 +16,20 @@
 	<string>%@ 正在更新中，稍候再操作</string>
 	<key>%@ 等</key>
 	<string>%@ 等</string>
+	<key>%@，已装 %@</key>
+	<string>%@，已装 %@</string>
 	<key>%@：%@</key>
 	<string>%@：%@</string>
 	<key>%@：%@。点击切换 / 处理</key>
 	<string>%@：%@。点击切换 / 处理</string>
 	<key>%lld symlinks</key>
 	<string>%lld symlinks</string>
-	<key>%lld 个源可更新</key>
-	<string>%lld 个源可更新</string>
+	<key>%lld 个 CLI 可升级</key>
+	<string>%lld 个 CLI 可升级</string>
+	<key>%lld 个成员的 SKILL.md 拉取失败（%@）</key>
+	<string>%lld 个成员的 SKILL.md 拉取失败（%@）</string>
+	<key>%lld 个技能可更新</key>
+	<string>%lld 个技能可更新</string>
 	<key>%lld 个源检查失败（网络或源不可达）</key>
 	<string>%lld 个源检查失败（网络或源不可达）</string>
 	<key>%lld 个链接问题</key>
@@ -66,6 +72,10 @@ macOS: %@
 
 &lt;!-- 描述问题。若 app 崩溃过，请附上 ~/Library/Logs/DiagnosticReports 里最新的 Popskill-*.ips 文件 --&gt;
 </string>
+	<key>CLI 巡检</key>
+	<string>CLI 巡检</string>
+	<key>CLI 巡检…</key>
+	<string>CLI 巡检…</string>
 	<key>Claude Code Marketplace 插件——只读展示，操作用 /plugin</key>
 	<string>Claude Code Marketplace 插件——只读展示，操作用 /plugin</string>
 	<key>Git · 已同步</key>
@@ -104,8 +114,22 @@ macOS: %@
 	<string>launchctl unload——不再按时执行，plist 文件原样保留，随时可重新启用。</string>
 	<key>launchctl 退出码 %lld</key>
 	<string>launchctl 退出码 %lld</string>
-	<key>npm 源暂不支持——请用 GitHub 仓库或本地路径</key>
-	<string>npm 源暂不支持——请用 GitHub 仓库或本地路径</string>
+	<key>npm 全局 CLI 的版本矩阵与一键升级</key>
+	<string>npm 全局 CLI 的版本矩阵与一键升级</string>
+	<key>npm 全局安装的命令行工具——已装版本对比 registry 最新版，一键升级。</key>
+	<string>npm 全局安装的命令行工具——已装版本对比 registry 最新版，一键升级。</string>
+	<key>npm 全局安装的命令行工具有新版——点击查看版本矩阵</key>
+	<string>npm 全局安装的命令行工具有新版——点击查看版本矩阵</string>
+	<key>npm 包装的是 CLI 本体，装技能请用 GitHub 仓库或本地路径；已装的 npm 源 CLI 会自动纳入更新检查</key>
+	<string>npm 包装的是 CLI 本体，装技能请用 GitHub 仓库或本地路径；已装的 npm 源 CLI 会自动纳入更新检查</string>
+	<key>npm 安装失败</key>
+	<string>npm 安装失败</string>
+	<key>npm 安装失败：%@</key>
+	<string>npm 安装失败：%@</string>
+	<key>registry 响应异常：%@</key>
+	<string>registry 响应异常：%@</string>
+	<key>registry 查询失败（网络）——点右下重新扫描</key>
+	<string>registry 查询失败（网络）——点右下重新扫描</string>
 	<key>store 中已存在 %@</key>
 	<string>store 中已存在 %@</string>
 	<key>store 为空</key>
@@ -118,6 +142,8 @@ macOS: %@
 	<string>store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。</string>
 	<key>store 在设备间同步；symlink 是各机本地状态，不参与同步。</key>
 	<string>store 在设备间同步；symlink 是各机本地状态，不参与同步。</string>
+	<key>well-known 地址需要形如 https://域名/.well-known/skills/名称/SKILL.md</key>
+	<string>well-known 地址需要形如 https://域名/.well-known/skills/名称/SKILL.md</string>
 	<key>”。试试别的关键词，或 + 添加。</key>
 	<string>”。试试别的关键词，或 + 添加。</string>
 	<key>← 返回</key>
@@ -136,6 +162,8 @@ macOS: %@
 	<string>上次 %@ %@</string>
 	<key>上次退出码 %lld</key>
 	<string>上次退出码 %lld</string>
+	<key>上游有新版——点击更新所属套装</key>
+	<string>上游有新版——点击更新所属套装</string>
 	<key>上游有新版——点套装头部 ↑ 徽标更新</key>
 	<string>上游有新版——点套装头部 ↑ 徽标更新</string>
 	<key>不会再跑</key>
@@ -184,6 +212,8 @@ macOS: %@
 	<string>全部</string>
 	<key>全部修复 (%lld)</key>
 	<string>全部修复 (%lld)</string>
+	<key>全部升级 (%lld)</key>
+	<string>全部升级 (%lld)</string>
 	<key>全部更新 (%lld)</key>
 	<string>全部更新 (%lld)</string>
 	<key>全部源已是最新</key>
@@ -194,6 +224,16 @@ macOS: %@
 	<string>关于</string>
 	<key>刷新</key>
 	<string>刷新</string>
+	<key>包名</key>
+	<string>包名</string>
+	<key>包名不合法：%@</key>
+	<string>包名不合法：%@</string>
+	<key>升级</key>
+	<string>升级</string>
+	<key>升级 %@ 失败：%@</key>
+	<string>升级 %@ 失败：%@</string>
+	<key>升级即在后台执行 npm i -g，与终端手动升级完全等价。</key>
+	<string>升级即在后台执行 npm i -g，与终端手动升级完全等价。</string>
 	<key>占位</key>
 	<string>占位</string>
 	<key>占位 (stub)</key>
@@ -304,6 +344,8 @@ macOS: %@
 	<string>已加载，上次运行失败（退出码 %lld）</string>
 	<key>已加载，上次运行正常</key>
 	<string>已加载，上次运行正常</string>
+	<key>已升级 %@ → v%@</key>
+	<string>已升级 %@ → v%@</string>
 	<key>已同步</key>
 	<string>已同步</string>
 	<key>已启用 %@</key>
@@ -330,6 +372,8 @@ macOS: %@
 	<string>已更新 %@（旧版已入回收站）</string>
 	<key>已更新 %@：%@（旧版已入回收站）</key>
 	<string>已更新 %@：%@（旧版已入回收站）</string>
+	<key>已最新</key>
+	<string>已最新</string>
 	<key>已添加的源（%lld）</key>
 	<string>已添加的源（%lld）</string>
 	<key>已激活</key>
@@ -338,6 +382,8 @@ macOS: %@
 	<string>已移除 %@ 在 %@ 侧的副本</string>
 	<key>已移除 %@ 在 %@ 侧的链接</key>
 	<string>已移除 %@ 在 %@ 侧的链接</string>
+	<key>已装</key>
+	<string>已装</string>
 	<key>已触发 %@</key>
 	<string>已触发 %@</string>
 	<key>已重新扫描 store 与工具目录</key>
@@ -380,6 +426,8 @@ macOS: %@
 	<string>把 ~/.claude / ~/.codex 里的真实技能目录收编进 store 并换成 symlink</string>
 	<key>报告问题…</key>
 	<string>报告问题…</string>
+	<key>拉取 SKILL.md 失败（%@）——检查网络后重试。</key>
+	<string>拉取 SKILL.md 失败（%@）——检查网络后重试。</string>
 	<key>挂载会在 %@ 创建目录。如果你还没用这个工具，可以先不挂。确定要创建并挂载吗？</key>
 	<string>挂载会在 %@ 创建目录。如果你还没用这个工具，可以先不挂。确定要创建并挂载吗？</string>
 	<key>挂载到</key>
@@ -436,6 +484,10 @@ macOS: %@
 	<string>更新到 %@ 并修复</string>
 	<key>更新此套装</key>
 	<string>更新此套装</string>
+	<key>最新</key>
+	<string>最新</string>
+	<key>有新版，点击更新所属套装</key>
+	<string>有新版，点击更新所属套装</string>
 	<key>有新版：%@——点击全部更新</key>
 	<string>有新版：%@——点击全部更新</string>
 	<key>有未提交改动</key>
@@ -450,6 +502,8 @@ macOS: %@
 	<string>未挂载</string>
 	<key>未检测到 git（macOS 命令行工具）。请在「终端」运行 xcode-select --install 装好后重试。</key>
 	<string>未检测到 git（macOS 命令行工具）。请在「终端」运行 xcode-select --install 装好后重试。</string>
+	<key>未检测到 npm——请先安装 Node.js。</key>
+	<string>未检测到 npm——请先安装 Node.js。</string>
 	<key>未配置</key>
 	<string>未配置</string>
 	<key>未配置调度</key>
@@ -478,6 +532,8 @@ macOS: %@
 	<string>检查更新…</string>
 	<key>正在从源重新拉取 %@…</key>
 	<string>正在从源重新拉取 %@…</string>
+	<key>正在扫描全局 npm 包…</key>
+	<string>正在扫描全局 npm 包…</string>
 	<key>正在更新 %lld 个源…</key>
 	<string>正在更新 %lld 个源…</string>
 	<key>每 %lld 分钟</key>
@@ -518,6 +574,8 @@ macOS: %@
 	<string>没有 %@ 类型的能力。点 + 添加，或切回「全部」。</string>
 	<key>没有 plist 路径</key>
 	<string>没有 plist 路径</string>
+	<key>没有发现全局 npm 包（或未安装 Node.js/npm）</key>
+	<string>没有发现全局 npm 包（或未安装 Node.js/npm）</string>
 	<key>没有发现未托管的技能目录</key>
 	<string>没有发现未托管的技能目录</string>
 	<key>没有可显示的任务</key>
@@ -538,8 +596,12 @@ macOS: %@
 	<string>点击切换 / 处理</string>
 	<key>点击切换或处理</key>
 	<string>点击切换或处理</string>
+	<key>点击定位待更新的技能</key>
+	<string>点击定位待更新的技能</string>
 	<key>点击展开套装</key>
 	<string>点击展开套装</string>
+	<key>点击逐个定位待更新的技能（循环）</key>
+	<string>点击逐个定位待更新的技能（循环）</string>
 	<key>版本</key>
 	<string>版本</string>
 	<key>登录自启</key>
@@ -608,6 +670,8 @@ macOS: %@
 	<string>设置…</string>
 	<key>该源没有记录 URL，无法更新</key>
 	<string>该源没有记录 URL，无法更新</string>
+	<key>该源没有记录 npm 包名，无法更新</key>
+	<string>该源没有记录 npm 包名，无法更新</string>
 	<key>谁在跑、下次什么时候跑、上次结果如何。点名字旁的 ✎ 加人话备注。</key>
 	<string>谁在跑、下次什么时候跑、上次结果如何。点名字旁的 ✎ 加人话备注。</string>
 	<key>跑一次</key>
@@ -620,14 +684,20 @@ macOS: %@
 	<string>还没有任何能力</string>
 	<key>这个仓库需要登录（可能是私有仓库）——Popskill 暂时只支持公开仓库。</key>
 	<string>这个仓库需要登录（可能是私有仓库）——Popskill 暂时只支持公开仓库。</string>
+	<key>连不上 npm registry——检查网络后重试。</key>
+	<string>连不上 npm registry——检查网络后重试。</string>
 	<key>连不上网络，没法获取这个仓库——检查网络后重试。</key>
 	<string>连不上网络，没法获取这个仓库——检查网络后重试。</string>
+	<key>逐源比对上游内容，发现新版亮出更新徽标</key>
+	<string>逐源比对上游内容，发现新版亮出更新徽标</string>
 	<key>重启</key>
 	<string>重启</string>
 	<key>重启 %@？</key>
 	<string>重启 %@？</string>
 	<key>重启（launchctl kickstart -k）</key>
 	<string>重启（launchctl kickstart -k）</string>
+	<key>重新扫描</key>
+	<string>重新扫描</string>
 	<key>重新拉取 %@ 失败：%@</key>
 	<string>重新拉取 %@ 失败：%@</string>
 	<key>重链到 store 中本地版本</key>

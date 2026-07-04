@@ -281,6 +281,10 @@ struct StoreFS {
         var s = raw.trimmingCharacters(in: .whitespaces)
         if s.hasPrefix("~") || s.hasPrefix("/") { return s }
         if s.lowercased().hasPrefix("npm:") { return s.lowercased() }
+        // well-known 源（v2.14）：归拢键 = 域名——skills.sh 从 open.feishu.cn 装的 24 个
+        // lark 技能同键归一张卡。曾被下面的 prefix(3) 截成 ".well-known/skills" 当 github 源
+        if let host = wellKnownHost(s) { return "wk:\(host)" }
+        if s.lowercased().hasPrefix("wk:") { return s.lowercased() }
         for p in ["https://", "http://", "git@", "ssh://git@"] where s.hasPrefix(p) { s.removeFirst(p.count) }
         s = s.replacingOccurrences(of: "github.com:", with: "github.com/")
         for cut in ["#", "?"] {
@@ -361,7 +365,10 @@ struct StoreFS {
                 }
                 return c
             }
-            let repoName = src.split(separator: "/").dropFirst().joined(separator: "/")   // owner/repo
+            // 套装显示名：github = owner/repo；well-known = 裸域名（"wk:open.feishu.cn" → "open.feishu.cn"）
+            let repoName = src.hasPrefix("wk:")
+                ? String(src.dropFirst(3))
+                : src.split(separator: "/").dropFirst().joined(separator: "/")
             var head = Capability(
                 id: "src:\(src)", name: repoName, type: .bundle,
                 desc: L("同源套装 · \(members.count) 项"), version: nil, author: nil,
@@ -445,7 +452,7 @@ struct StoreFS {
             name: name,
             type: display,
             linkKind: type,
-            desc: curated?.desc ?? front["description"] ?? "",
+            desc: curated?.localizedDesc ?? front["description"] ?? "",
             version: front["version"],
             author: front["author"],
             tokens: type == .cli ? 0 : estimateTokens(dir),
@@ -732,17 +739,35 @@ struct StoreFS {
         var headSha: String? = nil   // github 源 clone 时的 HEAD（ls-remote 短路用）
     }
 
-    /// 解析来源：local 直接扫描；github 浅 clone 到临时目录再扫描；npm 暂不支持。
+    /// 解析来源：local 直接扫描；github 浅 clone 到临时目录再扫描。
+    /// npm 源不走 resolve：npm 包发布的是 CLI 二进制（技能目录是 CLI 运行时生成的），
+    /// 更新走 checkNpmUpdate/applyNpmUpdate，「添加」流程装不出技能所以仍然拒绝。
     func resolve(_ rawUrl: String) throws -> ResolvedSource {
         let url = rawUrl.trimmingCharacters(in: .whitespaces)
         let kind = SourceKind.of(url)
         switch kind {
         case .npm:
-            throw StoreError.sourceUnsupported(L("npm 源暂不支持——请用 GitHub 仓库或本地路径"))
+            throw StoreError.sourceUnsupported(L("npm 包装的是 CLI 本体，装技能请用 GitHub 仓库或本地路径；已装的 npm 源 CLI 会自动纳入更新检查"))
         case .local:
             let dir = URL(fileURLWithPath: NSString(string: url).expandingTildeInPath).standardizedFileURL
             guard fm.fileExists(atPath: dir.path) else { throw StoreError.resolveFailed(L("路径不存在：\(url)")) }
             return try resolveDir(dir, url: url, kind: .local)
+        case .wellKnown:
+            // 单文件协议直装（v2.14）：GET SKILL.md → staging 目录 → 常规安装计划。
+            // 归拢键形态（wk:host，无技能名）只出现在 checkUpdate/applyUpdate，
+            // 它们已在上游分流，这里只会收到「添加」流程粘的完整地址
+            guard let host = wellKnownHost(url), let name = try? sanitizeName(wellKnownSkillName(url) ?? ""),
+                  let dl = wellKnownSkillURL(host: host, name: name) else {
+                throw StoreError.resolveFailed(L("well-known 地址需要形如 https://域名/.well-known/skills/名称/SKILL.md"))
+            }
+            let data: Data
+            do { data = try httpGet(dl) }
+            catch { throw StoreError.resolveFailed(L("拉取 SKILL.md 失败（\(host)）——检查网络后重试。")) }
+            let stageRoot = fm.temporaryDirectory.appendingPathComponent("popskill-stage-\(UUID().uuidString.prefix(8))")
+            let dir = stageRoot.appendingPathComponent(name)
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            try data.write(to: dir.appendingPathComponent("SKILL.md"))
+            return try resolveDir(dir, url: "wk:\(host)", kind: .wellKnown)
         case .github:
             try StoreFS.ensureGit()   // 新 Mac 没装 CLT 时,给人话引导而不是裸 git 系统弹窗
             let (cloneURL, repoName, norm) = try StoreFS.githubTarget(url)
@@ -814,6 +839,11 @@ struct StoreFS {
             let pkg = String(s.dropFirst(4)).trimmingCharacters(in: .whitespaces)  // 去掉 "npm:"
             guard !pkg.isEmpty else { return nil }
             return URL(string: "https://www.npmjs.com/package/\(pkg)")
+        case .wellKnown:
+            // "wk:open.feishu.cn" / 完整 well-known 地址 → 域名首页
+            let host = s.hasPrefix("wk:") ? String(s.dropFirst(3)) : (wellKnownHost(s) ?? "")
+            guard !host.isEmpty else { return nil }
+            return URL(string: "https://\(host)")
         case .local:
             return nil
         }
@@ -840,7 +870,8 @@ struct StoreFS {
     }
 
     func discardStaging(_ src: ResolvedSource) {
-        guard src.kind == .github else { return }
+        // github/wellKnown 的 staging 都是我们自建的临时目录；local 是用户原地目录绝不能删
+        guard src.kind == .github || src.kind == .wellKnown else { return }
         discardStagingDir(src.stagingDir)
     }
 
@@ -1038,7 +1069,13 @@ struct StoreFS {
     /// 返回 nil = 全部最新。本地开发软链成员自动跳过。
     func checkUpdate(_ entry: Entry) throws -> UpdateCheck? {
         guard entry.bundleKind != .marketplace else { return nil }   // 插件更新归 /plugin
-        guard let url = entry.sourceUrl, SourceKind.of(url) != .npm else { return nil }
+        guard let url = entry.sourceUrl else { return nil }
+        // npm 源（v2.14）：语义完全不同——比对/升级的是全局 CLI，不 clone 不碰 store 目录
+        if SourceKind.of(url) == .npm { return try checkNpmUpdate(entry) }
+        // well-known 源（v2.14）：逐成员 GET SKILL.md 比内容，不走 git
+        if SourceKind.of(url) == .wellKnown, url.hasPrefix("wk:") {
+            return try checkWellKnownUpdate(entry, host: String(url.dropFirst(3)))
+        }
         // HEAD 短路（v2.8 性能）：上游 commit 没动 且 本地未漂移 才跳过整仓 clone——
         // 一次 ls-remote 替代几十 MB 下载，13 个源的启动检查从分钟级降到秒级。
         // 本地不变性必须一起验（localDigest，纯磁盘 IO）：目标用户天天在终端动
@@ -1097,6 +1134,10 @@ struct StoreFS {
     @discardableResult
     func applyUpdate(_ entry: Entry) throws -> (updated: [String], upstreamNew: [String]) {
         guard let url = entry.sourceUrl else { throw StoreError.resolveFailed(L("该源没有记录 URL，无法更新")) }
+        if SourceKind.of(url) == .npm { return try applyNpmUpdate(entry) }   // 升级全局 CLI（v2.14）
+        if SourceKind.of(url) == .wellKnown, url.hasPrefix("wk:") {          // 换 SKILL.md 单文件（v2.14）
+            return try applyWellKnownUpdate(entry, host: String(url.dropFirst(3)))
+        }
         let resolved = try resolve(url)
         defer { discardStaging(resolved) }
 

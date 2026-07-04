@@ -137,6 +137,22 @@
         }
       }
     },
+    "%@，已装 %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, installed %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@，已装 %@"
+          }
+        }
+      }
+    },
     "%@：%@": {
       "localizations": {
         "en": {
@@ -197,30 +213,50 @@
         }
       }
     },
-    "%lld 个源可更新": {
+    "%lld 个 CLI 可升级": {
       "localizations": {
         "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld source has updates"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld sources have updates"
-                }
-              }
-            }
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld CLIs can upgrade"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld 个源可更新"
+            "value": "%lld 个 CLI 可升级"
+          }
+        }
+      }
+    },
+    "%lld 个成员的 SKILL.md 拉取失败（%@）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to fetch SKILL.md for %lld members (%@)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 个成员的 SKILL.md 拉取失败（%@）"
+          }
+        }
+      }
+    },
+    "%lld 个技能可更新": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld skills can update"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 个技能可更新"
           }
         }
       }
@@ -617,6 +653,38 @@
         }
       }
     },
+    "CLI 巡检": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CLI Checkup"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CLI 巡检"
+          }
+        }
+      }
+    },
+    "CLI 巡检…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CLI Checkup…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CLI 巡检…"
+          }
+        }
+      }
+    },
     "Claude Code Marketplace 插件——只读展示，操作用 /plugin": {
       "localizations": {
         "en": {
@@ -905,18 +973,130 @@
         }
       }
     },
-    "npm 源暂不支持——请用 GitHub 仓库或本地路径": {
+    "npm 全局 CLI 的版本矩阵与一键升级": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "npm sources are not supported yet — use a GitHub repo or a local path"
+            "value": "Version matrix and one-click upgrades for global npm CLIs"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "npm 源暂不支持——请用 GitHub 仓库或本地路径"
+            "value": "npm 全局 CLI 的版本矩阵与一键升级"
+          }
+        }
+      }
+    },
+    "npm 全局安装的命令行工具——已装版本对比 registry 最新版，一键升级。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Global npm CLIs — installed versions vs registry latest, one-click upgrade."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "npm 全局安装的命令行工具——已装版本对比 registry 最新版，一键升级。"
+          }
+        }
+      }
+    },
+    "npm 全局安装的命令行工具有新版——点击查看版本矩阵": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Global npm CLIs have updates — click for the version matrix"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "npm 全局安装的命令行工具有新版——点击查看版本矩阵"
+          }
+        }
+      }
+    },
+    "npm 包装的是 CLI 本体，装技能请用 GitHub 仓库或本地路径；已装的 npm 源 CLI 会自动纳入更新检查": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "npm packages ship the CLI itself; install skills from a GitHub repo or local path. Installed npm CLIs are checked for updates automatically."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "npm 包装的是 CLI 本体，装技能请用 GitHub 仓库或本地路径；已装的 npm 源 CLI 会自动纳入更新检查"
+          }
+        }
+      }
+    },
+    "npm 安装失败": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "npm install failed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "npm 安装失败"
+          }
+        }
+      }
+    },
+    "npm 安装失败：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "npm install failed: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "npm 安装失败：%@"
+          }
+        }
+      }
+    },
+    "registry 响应异常：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unexpected registry response: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "registry 响应异常：%@"
+          }
+        }
+      }
+    },
+    "registry 查询失败（网络）——点右下重新扫描": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registry lookup failed (network) — rescan from the bottom right"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "registry 查询失败（网络）——点右下重新扫描"
           }
         }
       }
@@ -1013,6 +1193,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "store 在设备间同步；symlink 是各机本地状态，不参与同步。"
+          }
+        }
+      }
+    },
+    "well-known 地址需要形如 https://域名/.well-known/skills/名称/SKILL.md": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A well-known address must look like https://host/.well-known/skills/name/SKILL.md"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "well-known 地址需要形如 https://域名/.well-known/skills/名称/SKILL.md"
           }
         }
       }
@@ -1157,6 +1353,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "上次退出码 %lld"
+          }
+        }
+      }
+    },
+    "上游有新版——点击更新所属套装": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New version upstream — click to update its bundle"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上游有新版——点击更新所属套装"
           }
         }
       }
@@ -1557,6 +1769,22 @@
         }
       }
     },
+    "全部升级 (%lld)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgrade All (%lld)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部升级 (%lld)"
+          }
+        }
+      }
+    },
     "全部更新 (%lld)": {
       "localizations": {
         "en": {
@@ -1633,6 +1861,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "刷新"
+          }
+        }
+      }
+    },
+    "包名": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Package"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "包名"
+          }
+        }
+      }
+    },
+    "包名不合法：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid package name: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "包名不合法：%@"
+          }
+        }
+      }
+    },
+    "升级": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgrade"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "升级"
+          }
+        }
+      }
+    },
+    "升级 %@ 失败：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to upgrade %@: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "升级 %@ 失败：%@"
+          }
+        }
+      }
+    },
+    "升级即在后台执行 npm i -g，与终端手动升级完全等价。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgrades run npm i -g in the background — identical to a manual terminal upgrade."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "升级即在后台执行 npm i -g，与终端手动升级完全等价。"
           }
         }
       }
@@ -2577,6 +2885,22 @@
         }
       }
     },
+    "已升级 %@ → v%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgraded %@ → v%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已升级 %@ → v%@"
+          }
+        }
+      }
+    },
     "已同步": {
       "localizations": {
         "en": {
@@ -2821,6 +3145,22 @@
         }
       }
     },
+    "已最新": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Up to date"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已最新"
+          }
+        }
+      }
+    },
     "已添加的源（%lld）": {
       "localizations": {
         "en": {
@@ -2881,6 +3221,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "已移除 %@ 在 %@ 侧的链接"
+          }
+        }
+      }
+    },
+    "已装": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已装"
           }
         }
       }
@@ -3229,6 +3585,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "报告问题…"
+          }
+        }
+      }
+    },
+    "拉取 SKILL.md 失败（%@）——检查网络后重试。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to fetch SKILL.md (%@) — check your network and retry."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拉取 SKILL.md 失败（%@）——检查网络后重试。"
           }
         }
       }
@@ -3693,6 +4065,38 @@
         }
       }
     },
+    "最新": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latest"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最新"
+          }
+        }
+      }
+    },
+    "有新版，点击更新所属套装": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update available; click to update its bundle"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有新版，点击更新所属套装"
+          }
+        }
+      }
+    },
     "有新版：%@——点击全部更新": {
       "localizations": {
         "en": {
@@ -3801,6 +4205,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "未检测到 git（macOS 命令行工具）。请在「终端」运行 xcode-select --install 装好后重试。"
+          }
+        }
+      }
+    },
+    "未检测到 npm——请先安装 Node.js。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "npm not found — install Node.js first."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未检测到 npm——请先安装 Node.js。"
           }
         }
       }
@@ -4025,6 +4445,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在从源重新拉取 %@…"
+          }
+        }
+      }
+    },
+    "正在扫描全局 npm 包…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanning global npm packages…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在扫描全局 npm 包…"
           }
         }
       }
@@ -4397,6 +4833,22 @@
         }
       }
     },
+    "没有发现全局 npm 包（或未安装 Node.js/npm）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No global npm packages found (or Node.js/npm not installed)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有发现全局 npm 包（或未安装 Node.js/npm）"
+          }
+        }
+      }
+    },
     "没有发现未托管的技能目录": {
       "localizations": {
         "en": {
@@ -4557,6 +5009,22 @@
         }
       }
     },
+    "点击定位待更新的技能": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click to locate the skill pending update"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击定位待更新的技能"
+          }
+        }
+      }
+    },
     "点击展开套装": {
       "localizations": {
         "en": {
@@ -4569,6 +5037,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "点击展开套装"
+          }
+        }
+      }
+    },
+    "点击逐个定位待更新的技能（循环）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click to locate skills pending update, one by one (cycles)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击逐个定位待更新的技能（循环）"
           }
         }
       }
@@ -5129,6 +5613,22 @@
         }
       }
     },
+    "该源没有记录 npm 包名，无法更新": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This source has no npm package recorded; can't update"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该源没有记录 npm 包名，无法更新"
+          }
+        }
+      }
+    },
     "谁在跑、下次什么时候跑、上次结果如何。点名字旁的 ✎ 加人话备注。": {
       "localizations": {
         "en": {
@@ -5225,6 +5725,22 @@
         }
       }
     },
+    "连不上 npm registry——检查网络后重试。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't reach the npm registry — check your network and retry."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连不上 npm registry——检查网络后重试。"
+          }
+        }
+      }
+    },
     "连不上网络，没法获取这个仓库——检查网络后重试。": {
       "localizations": {
         "en": {
@@ -5237,6 +5753,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "连不上网络，没法获取这个仓库——检查网络后重试。"
+          }
+        }
+      }
+    },
+    "逐源比对上游内容，发现新版亮出更新徽标": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compares each source against upstream; update badges light up on changes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "逐源比对上游内容，发现新版亮出更新徽标"
           }
         }
       }
@@ -5285,6 +5817,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "重启（launchctl kickstart -k）"
+          }
+        }
+      }
+    },
+    "重新扫描": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rescan"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新扫描"
           }
         }
       }

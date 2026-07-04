@@ -21,12 +21,14 @@ enum ViewMode: String { case grid, list }
 struct MainView: View {
     @Environment(AppModel.self) private var model
     @FocusState private var searchFocus: Bool
+    @State private var updateHovered = false
+    @State private var cliHovered = false
 
     var body: some View {
         VStack(spacing: 0) {
             hero
             statStrip
-            if !model.issues.isEmpty || !model.updates.isEmpty { banner }
+            if !model.issues.isEmpty || !model.updates.isEmpty || !model.cliUpdates.isEmpty { banner }
             chipRow
             content
         }
@@ -50,6 +52,7 @@ struct MainView: View {
             }
             Spacer()
             HStack(spacing: 8) {
+                checkUpdatesButton
                 searchPill
                 Button { model.sheet = .add } label: {
                     Text(L("+ 添加"))
@@ -65,6 +68,31 @@ struct MainView: View {
         }
         .padding(EdgeInsets(top: 18, leading: 28, bottom: 14, trailing: 28))
         .overlay(alignment: .bottom) { Ink.hairline.frame(height: 1) }
+    }
+
+    /// 手动检查更新（v2.14）：曾只埋在设置弹层里，用户找不到——常驻 hero 右侧。
+    /// 检查中变 spinner 防重入（checkUpdates 内部也有 guard），结果走 toast 如实报告。
+    private var checkUpdatesButton: some View {
+        Button { model.checkUpdates() } label: {
+            HStack(spacing: 5) {
+                if model.checkingUpdates {
+                    ProgressView().controlSize(.small).frame(width: 12, height: 12)
+                } else {
+                    Text("↻").font(.mono(13, .semibold))
+                }
+                Text(model.checkingUpdates ? L("检查中…") : L("检查更新"))
+                    .font(.ui(12.5, .semibold))
+            }
+            .foregroundStyle(Ink.secondary2)
+            .padding(.horizontal, 12)
+            .frame(height: 30)
+            .background(RoundedRectangle(cornerRadius: 7).fill(.white))
+            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(model.checkingUpdates)
+        .help(L("逐源比对上游内容，发现新版亮出更新徽标"))
+        .accessibilityLabel(L("检查更新"))
     }
 
     private var heroSub: String {
@@ -266,12 +294,38 @@ struct MainView: View {
                 Text("·").foregroundStyle(Color(hex: 0xD8CFAE))
             }
             if !model.updates.isEmpty {
-                HStack(spacing: 6) {
-                    Text("↑").font(.mono(12))
-                    Text(L("\(model.updates.count) 个源可更新"))
+                // 可点击：跳到待更新条目（展开套装+闪烁定位），多个时循环跳——
+                // 计数是技能数不是源数：套装里 3 个成员有新版，这里就是 3
+                Button { model.jumpToNextUpdate() } label: {
+                    HStack(spacing: 6) {
+                        Text("↑").font(.mono(12))
+                        Text(L("\(model.updateItemCount) 个技能可更新"))
+                            .underline(updateHovered)
+                    }
+                    .font(.ui(12, .semibold))
+                    .foregroundStyle(Ink.amberText)
                 }
-                .font(.ui(12, .semibold))
-                .foregroundStyle(Ink.amberText)
+                .buttonStyle(.plain)
+                .onHover { updateHovered = $0 }
+                .help(model.updates.count > 1 ? L("点击逐个定位待更新的技能（循环）") : L("点击定位待更新的技能"))
+            }
+            if !model.cliUpdates.isEmpty {
+                if !model.issues.isEmpty || !model.updates.isEmpty {
+                    Text("·").foregroundStyle(Color(hex: 0xD8CFAE))
+                }
+                // 全局 CLI 的更新提醒（v2.14）：点击打开 CLI 巡检矩阵
+                Button { model.sheet = .cli } label: {
+                    HStack(spacing: 6) {
+                        Text("⌨").font(.mono(12))
+                        Text(L("\(model.cliUpdates.count) 个 CLI 可升级"))
+                            .underline(cliHovered)
+                    }
+                    .font(.ui(12, .semibold))
+                    .foregroundStyle(Ink.amberText)
+                }
+                .buttonStyle(.plain)
+                .onHover { cliHovered = $0 }
+                .help(L("npm 全局安装的命令行工具有新版——点击查看版本矩阵"))
             }
             Text(L("点击 ✕ / ◐ / ↑ 可逐项处理"))
                 .font(.ui(11.5))
@@ -288,7 +342,7 @@ struct MainView: View {
             }
             if !model.updates.isEmpty {
                 Button { model.updateAll() } label: {
-                    Text(L("全部更新 (\(model.updates.count))"))
+                    Text(L("全部更新 (\(model.updateItemCount))"))
                         .font(.ui(11.5, .semibold)).foregroundStyle(Color(hex: 0x5A4A14))
                         .padding(.horizontal, 11).padding(.vertical, 4)
                         .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color(hex: 0xCDB878), lineWidth: 1))
@@ -729,6 +783,14 @@ struct CapCard: View {
                 UpdatingDot()
             } else if entry.hasUpdate, fromBundle == nil, let latest = entry.latest {
                 UpdateBadge(latest: latest) { model.runUpdate(entry.id) }
+            } else if fromBundle != nil, entry.changedMembers?.contains(cap.name) == true {
+                // 套装子项的待更新标记：类型过滤下平铺成员看不到套装头徽标，提醒补到行。
+                // 更新单位是整个源（applyUpdate 只换有变化的成员），点它更新所属套装
+                if model.updatingIds.contains(entry.id) {
+                    UpdatingDot()
+                } else {
+                    MemberUpdateDot { model.runUpdate(entry.id) }
+                }
             }
             if let a = cap.author { Text(highlight(a, query)) }
             if cap.tokens >= 100 { Text(formatTokens(cap.tokens)) }
@@ -786,12 +848,6 @@ struct BundleCard: View {
 
     private var headFocused: Bool { model.kbFocusId == entry.id }
 
-    private var bundleUpdateHelp: String {
-        guard let changed = entry.changedMembers, !changed.isEmpty else { return L("更新此套装") }
-        let members = changed.sorted().joined(separator: L("、"))
-        return L("有新版：\(members)——点击全部更新")
-    }
-
     private var header: some View {
         HStack(spacing: 12) {
             Text(kids != nil ? "▼" : "▶")
@@ -847,7 +903,7 @@ struct BundleCard: View {
                 if model.updatingIds.contains(entry.id) {
                     UpdatingDot()
                 } else if entry.hasUpdate, let latest = entry.latest {
-                    UpdateBadge(latest: latest, help: bundleUpdateHelp) { model.runUpdate(entry.id) }
+                    UpdateBadge(latest: latest, help: entry.updateHelp) { model.runUpdate(entry.id) }
                 }
             }
             .font(.ui(11.5))
@@ -1148,6 +1204,15 @@ struct TableCapRow: View {
                              font: .ui(child ? 12 : 12.5, child ? .medium : .semibold),
                              color: broken ? Ink.red : (child ? Ink.secondary2 : Ink.ink), query: query)
                 if broken { BrokenBadge(cause: brokenCause) }
+                // v2.14：表格行的更新提示——独立行整徽标，套装子行迷你角标（点了都更新所属源）
+                if fromBundle == nil, model.updatingIds.contains(entry.id) {
+                    UpdatingDot()
+                } else if fromBundle == nil, entry.hasUpdate, let latest = entry.latest {
+                    UpdateBadge(latest: latest) { model.runUpdate(entry.id) }
+                } else if fromBundle != nil, entry.changedMembers?.contains(cap.name) == true,
+                          !model.updatingIds.contains(entry.id) {
+                    MemberUpdateDot { model.runUpdate(entry.id) }
+                }
                 Spacer(minLength: 6)
                 if hovered {
                     HoverAction(symbol: "↗", danger: false, help: L("在访达中显示")) { model.openInEditor(cap.dirURL) }
@@ -1233,6 +1298,12 @@ struct TableBundleRow: View {
                 Text(open ? "▼" : "▶").font(.mono(9)).foregroundStyle(Color(hex: 0x444444)).frame(width: 16)
                 Text(highlight(entry.name, query)).font(.ui(12.5, .semibold)).foregroundStyle(Ink.ink).lineLimit(1)
                 Text(L("\(entry.children?.count ?? 0) 项")).font(.ui(11)).foregroundStyle(Ink.secondary).fixedSize()
+                // v2.14：表格视图曾完全没有更新徽标（v2.13 引入表格时的疏漏）——补到头行
+                if model.updatingIds.contains(entry.id) {
+                    UpdatingDot()
+                } else if entry.hasUpdate, let latest = entry.latest {
+                    UpdateBadge(latest: latest, help: entry.updateHelp) { model.runUpdate(entry.id) }
+                }
                 Spacer(minLength: 6)
                 if hovered {
                     HoverAction(symbol: "↗", danger: false, help: L("在访达中显示")) { model.openInEditor(entry.cap.dirURL) }

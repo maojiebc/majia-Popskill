@@ -53,3 +53,7 @@ func L(_ key: String.LocalizationValue) -> String {
 /// 与界面语言一致的 Locale——相对时间等格式化跟界面语言走，不跟系统区域
 /// （曾硬编码 zh_CN，英文界面会蹦出中文日期）
 let l10nLocale = Locale(identifier: l10n.lang == "zh-Hans" ? "zh_CN" : l10n.lang)
+
+/// 界面当前是否中文。内容级双语数据（Catalog 精选目录的 zh/en 简介）用它挑面，
+/// 不走 L() 的资源表机制——几百条目录数据进 xcstrings 会把 catalog 变成垃圾场
+let l10nIsChinese = l10n.lang == "zh-Hans"

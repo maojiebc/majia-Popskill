@@ -39,7 +39,7 @@ struct FixOption: Identifiable {
     let toast: String
 }
 
-enum SheetKind { case add, settings, sched }
+enum SheetKind { case add, settings, sched, cli }
 
 /// 键盘导航焦点项（PATCH-02）：与可见顺序一致的扁平序列
 struct KbItem: Equatable, Identifiable {
@@ -74,6 +74,12 @@ final class AppModel {
     var checkingUpdates = false
     var updatingIds: Set<String> = []
 
+    // 全局 CLI 巡检（v2.14）：npm -g 装的 AI CLI 进更新雷达
+    var globalClis: [GlobalCli] = []
+    var checkingClis = false
+    var upgradingClis: Set<String> = []
+    var cliUpdates: [GlobalCli] { globalClis.filter(\.hasUpdate) }
+
     // 定时任务面板（v2.9）
     var schedTasks: [SchedTask] = []
     var schedShowVendor = false
@@ -98,6 +104,8 @@ final class AppModel {
     var stats: Stats { deriveStats(entries, tools: tools) }
     var issues: [Issue] { deriveIssues(entries, tools: tools) }
     var updates: [Entry] { deriveUpdates(entries) }
+    /// 待更新技能总数（用户视角）：套装逐成员计——横幅与「全部更新」按钮都用它
+    var updateItemCount: Int { updates.reduce(0) { $0 + $1.updateCount } }
     var isEmpty: Bool { entries.isEmpty }
 
     init(env: StoreEnv = .real()) {
@@ -117,6 +125,7 @@ final class AppModel {
         case "add": sheet = .add
         case "settings": sheet = .settings
         case "sched": sheet = .sched; reloadSched()
+        case "cli": sheet = .cli; checkCliUpdates()
         default: break
         }
         // PATCH-02：套装默认全折叠（首屏密度），不再自动展开第一个
@@ -531,9 +540,11 @@ final class AppModel {
     func checkUpdates(auto: Bool = false) {
         guard !fake else { say(L("原型数据模式不检查更新")); return }
         guard !checkingUpdates else { return }
-        let candidates = entries.filter { $0.sourceUrl != nil && SourceKind.of($0.sourceUrl) != .npm && !$0.isManagedExternally }
+        // v2.14：npm 源进检查范围（比对全局 CLI 版本）；全局 CLI 巡检顺带跑
+        let candidates = entries.filter { $0.sourceUrl != nil && !$0.isManagedExternally }
         guard !candidates.isEmpty else { say(L("没有可检查的源（需要 GitHub 或本地路径来源）")); return }
         checkingUpdates = true
+        checkCliUpdates()
         let fsCopy = fs
         Task { [weak self] in
             var found: [StoreFS.UpdateCheck] = []
@@ -654,6 +665,77 @@ final class AppModel {
         guard !targets.isEmpty else { return }
         for e in targets { runUpdate(e.id, quiet: true) }
         say(L("正在更新 \(targets.count) 个源…"))
+    }
+
+    // ── 全局 CLI 巡检（v2.14）────────────────────────────
+
+    /// npm ls -g 全量 → 逐包比 registry。entries 里 npm 源对应的包走 entry 更新链，
+    /// 这里排除掉——同一个更新在横幅出现两处计数比漏报更糟。
+    func checkCliUpdates() {
+        guard !fake, !checkingClis else { return }
+        checkingClis = true
+        let fsCopy = fs
+        let entryPkgs = Set(entries.compactMap { npmPkgName($0.sourceUrl) })
+        Task { [weak self] in
+            let clis: [GlobalCli] = await Task.detached {
+                let installed = fsCopy.npmGlobalList().filter { !entryPkgs.contains($0.key) }
+                return installed.sorted { $0.key < $1.key }.map { pkg, ver in
+                    GlobalCli(name: pkg, installed: ver, latest: try? fsCopy.npmLatestVersion(pkg))
+                }
+            }.value
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.globalClis = clis
+                self.checkingClis = false
+            }
+        }
+    }
+
+    /// 升级单个全局 CLI 到 registry 最新版
+    func upgradeCli(_ pkg: String) {
+        guard let cli = globalClis.first(where: { $0.name == pkg }), let latest = cli.latest,
+              !upgradingClis.contains(pkg) else { return }
+        upgradingClis.insert(pkg)
+        let fsCopy = fs
+        Task { [weak self] in
+            let result: Result<Void, Error> = await Task.detached {
+                do { try fsCopy.npmGlobalInstall(pkg, version: latest); return .success(()) }
+                catch { return .failure(error) }
+            }.value
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.upgradingClis.remove(pkg)
+                switch result {
+                case .success:
+                    if let i = self.globalClis.firstIndex(where: { $0.name == pkg }) {
+                        self.globalClis[i] = GlobalCli(name: pkg, installed: latest, latest: latest)
+                    }
+                    self.say(L("已升级 \(pkg) → v\(latest)"))
+                case .failure(let e):
+                    self.sayError(L("升级 \(pkg) 失败：\(e.localizedDescription)"))
+                }
+            }
+        }
+    }
+
+    func upgradeAllClis() {
+        for c in cliUpdates { upgradeCli(c.name) }
+    }
+
+    /// 横幅「N 个技能可更新」点击：跳到下一个待更新条目并闪烁定位，多个时循环。
+    /// 跳转意图优先于过滤——目标被搜索词/类型筛选挡住时直接清掉过滤，
+    /// 否则「点了没反应」是最迷惑的失败模式。滚动由 kbFocusId 的 onChange 联动。
+    func jumpToNextUpdate() {
+        let ids = updates.map(\.id)
+        guard !ids.isEmpty else { return }
+        let cur = kbFocusId.flatMap { ids.firstIndex(of: $0) }
+        let targetId = ids[((cur ?? -1) + 1) % ids.count]
+        guard let e = entries.first(where: { $0.id == targetId }) else { return }
+        query = ""
+        typeFilter = nil
+        if e.isBundle { expanded.insert(e.id) }
+        kbFocusId = e.id
+        flash(e.id)
     }
 
     // ── 未托管目录导入（v2.1）─────────────────────────────

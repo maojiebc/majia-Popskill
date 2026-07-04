@@ -1,0 +1,3290 @@
+[
+ {
+  "name": "find-skills",
+  "repo": "github.com/vercel-labs/skills",
+  "en": "Discover and install agent skills when users ask 'is there a skill for X'",
+  "zh": "技能发现器：按需求搜索并安装生态内 skill",
+  "hot": 2336470,
+  "type": "skill"
+ },
+ {
+  "name": "frontend-design",
+  "repo": "github.com/anthropics/skills",
+  "en": "Intentional UI visual design guidance: aesthetic direction, typography, non-template look",
+  "zh": "前端视觉设计指导：审美定调+字体排印，拒绝模板脸",
+  "hot": 623637,
+  "type": "skill"
+ },
+ {
+  "name": "vercel-react-best-practices",
+  "repo": "github.com/vercel-labs/agent-skills",
+  "en": "React/Next.js performance optimization guidelines from Vercel Engineering",
+  "zh": "Vercel 官方 React/Next.js 性能优化规范",
+  "hot": 524508,
+  "type": "skill"
+ },
+ {
+  "name": "agent-browser",
+  "repo": "github.com/vercel-labs/agent-browser",
+  "en": "Browser automation CLI for agents: navigate, fill forms, click, screenshot, extract data",
+  "zh": "Agent 浏览器自动化 CLI：导航/填表/截图/取数",
+  "hot": 510509,
+  "type": "skill"
+ },
+ {
+  "name": "grill-me",
+  "repo": "github.com/mattpocock/skills",
+  "en": "A relentless interview to sharpen a plan or design",
+  "zh": "拷问式追问，把方案和设计磨到无懈可击",
+  "hot": 452032,
+  "type": "skill"
+ },
+ {
+  "name": "web-design-guidelines",
+  "repo": "github.com/vercel-labs/agent-skills",
+  "en": "Review UI code for Web Interface Guidelines compliance: accessibility and UX audit",
+  "zh": "UI 代码对标 Web 界面规范：无障碍与 UX 审查",
+  "hot": 437095,
+  "type": "skill"
+ },
+ {
+  "name": "microsoft-foundry",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Deploy, evaluate, fine-tune and manage Azure AI Foundry agents end-to-end with azd",
+  "zh": "AI Foundry 智能体全流程：部署/评估/微调",
+  "hot": 431185,
+  "type": "skill"
+ },
+ {
+  "name": "azure-ai",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Azure AI services: Search, Speech, OpenAI, Document Intelligence, vector search, OCR",
+  "zh": "Azure AI 服务：搜索/语音/OpenAI/文档智能",
+  "hot": 428234,
+  "type": "skill"
+ },
+ {
+  "name": "azure-deploy",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Execute Azure deployments for already-prepared apps: azd up, hosting, pipelines",
+  "zh": "执行 Azure 部署：azd 把就绪应用推上云",
+  "hot": 427867,
+  "type": "skill"
+ },
+ {
+  "name": "azure-diagnostics",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Debug Azure production issues with AppLens, Azure Monitor, resource health, safe triage",
+  "zh": "Azure 生产故障诊断：AppLens+Monitor 排障",
+  "hot": 427752,
+  "type": "skill"
+ },
+ {
+  "name": "azure-prepare",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Prepare Azure apps for deployment: Bicep/Terraform infra, azure.yaml, Dockerfiles",
+  "zh": "Azure 部署前准备：IaC 基建+容器化配置",
+  "hot": 427673,
+  "type": "skill"
+ },
+ {
+  "name": "azure-storage",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Azure Storage guidance: Blob, File Shares, Queue, Table, Data Lake and access tiers",
+  "zh": "Azure 存储全案：Blob/队列/表/湖+分层策略",
+  "hot": 427371,
+  "type": "skill"
+ },
+ {
+  "name": "azure-validate",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Pre-deployment validation: config, Bicep/Terraform, RBAC, identity, prerequisites",
+  "zh": "Azure 部署前深检：配置/IaC/RBAC/前置条件",
+  "hot": 427037,
+  "type": "skill"
+ },
+ {
+  "name": "entra-app-registration",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Microsoft Entra ID app registration, OAuth 2.0 authentication and MSAL integration",
+  "zh": "Entra ID 应用注册：OAuth2+MSAL 集成指南",
+  "hot": 426913,
+  "type": "skill"
+ },
+ {
+  "name": "appinsights-instrumentation",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Instrument web apps with Azure Application Insights: telemetry patterns and SDK setup",
+  "zh": "App Insights 埋点：遥测模式与 SDK 配置",
+  "hot": 426839,
+  "type": "skill"
+ },
+ {
+  "name": "azure-compliance",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Azure compliance and security audits with azqr plus Key Vault expiration checks",
+  "zh": "Azure 合规安全审计：azqr+密钥过期巡检",
+  "hot": 426772,
+  "type": "skill"
+ },
+ {
+  "name": "azure-resource-lookup",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "List, find and show Azure resources across subscriptions and resource groups",
+  "zh": "跨订阅查找罗列 Azure 资源清单",
+  "hot": 426770,
+  "type": "skill"
+ },
+ {
+  "name": "azure-rbac",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Find least-privilege Azure RBAC roles and generate CLI/Bicep assignment code",
+  "zh": "RBAC 选角：最小权限+CLI/Bicep 赋权代码",
+  "hot": 426764,
+  "type": "skill"
+ },
+ {
+  "name": "azure-aigateway",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Configure Azure API Management as AI Gateway: caching, token limits, model governance",
+  "zh": "APIM 作 AI 网关：语义缓存/限流/模型治理",
+  "hot": 426675,
+  "type": "skill"
+ },
+ {
+  "name": "azure-kusto",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Query Azure Data Explorer (Kusto) with KQL for logs, telemetry and time series",
+  "zh": "KQL 查询 Kusto/ADX：日志遥测时序分析",
+  "hot": 426621,
+  "type": "skill"
+ },
+ {
+  "name": "azure-resource-visualizer",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Analyze Azure resource groups and generate Mermaid architecture diagrams",
+  "zh": "Azure 资源组分析，生成 Mermaid 架构图",
+  "hot": 426610,
+  "type": "skill"
+ },
+ {
+  "name": "azure-messaging",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Troubleshoot Azure Event Hubs and Service Bus SDK issues: connection, auth, processing",
+  "zh": "Azure 消息 SDK 排障：事件中心/服务总线",
+  "hot": 416370,
+  "type": "skill"
+ },
+ {
+  "name": "remotion-best-practices",
+  "repo": "github.com/remotion-dev/skills",
+  "en": "Best practices for Remotion: programmatic video creation in React",
+  "zh": "Remotion 最佳实践：React 代码生成视频",
+  "hot": 407514,
+  "type": "skill"
+ },
+ {
+  "name": "azure-hosted-copilot-sdk",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Build, deploy and modify GitHub Copilot SDK apps on Azure",
+  "zh": "Copilot SDK 应用上 Azure：构建部署改造",
+  "hot": 399677,
+  "type": "skill"
+ },
+ {
+  "name": "grill-with-docs",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Relentless plan-sharpening interview that also writes ADRs and a glossary as you go",
+  "zh": "拷问式磨方案，顺手沉淀 ADR 与术语表",
+  "hot": 373461,
+  "type": "skill"
+ },
+ {
+  "name": "improve-codebase-architecture",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Scan codebase for deepening opportunities, render visual HTML report, grill through picks",
+  "zh": "扫码库找架构改进点，出报告逐项拷问",
+  "hot": 371058,
+  "type": "skill"
+ },
+ {
+  "name": "azure-compute",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Azure VM/VMSS router: provisioning, size recommendation, pricing, scale sets, autoscale",
+  "zh": "Azure 虚机路由：选型/比价/伸缩集/自动扩缩",
+  "hot": 370399,
+  "type": "skill"
+ },
+ {
+  "name": "azure-cloud-migrate",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Assess and migrate cross-cloud workloads to Azure with reports and code conversion",
+  "zh": "跨云迁移上 Azure：评估报告+代码转换",
+  "hot": 360363,
+  "type": "skill"
+ },
+ {
+  "name": "tdd",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Test-driven development: red-green-refactor workflow for features and bug fixes",
+  "zh": "测试驱动开发：红绿重构节奏做功能修 bug",
+  "hot": 352797,
+  "type": "skill"
+ },
+ {
+  "name": "video-edit",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Edit existing video on RunComfy: smart router picks the right edit model for the intent",
+  "zh": "RunComfy 视频编辑路由：按意图选改片模型",
+  "hot": 347457,
+  "type": "skill"
+ },
+ {
+  "name": "image-to-video",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Animate any still image on RunComfy: routes intent to the best image-to-video model",
+  "zh": "RunComfy 图生视频路由：静图动画选对模型",
+  "hot": 346359,
+  "type": "skill"
+ },
+ {
+  "name": "nano-banana-2",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Generate images with Google Nano Banana 2 on RunComfy with documented prompt patterns",
+  "zh": "Nano Banana 2 文生图：附官方提示词打法",
+  "hot": 346036,
+  "type": "skill"
+ },
+ {
+  "name": "nano-banana-edit",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Edit images with Nano Banana 2: identity-preserving edits, background swap, 20-img batch",
+  "zh": "Nano Banana 图改图：保主体换背景可批量",
+  "hot": 346002,
+  "type": "skill"
+ },
+ {
+  "name": "image-edit",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Edit images on RunComfy: smart router matches intent to the right edit model",
+  "zh": "RunComfy 图像编辑路由：意图匹配最优模型",
+  "hot": 345914,
+  "type": "skill"
+ },
+ {
+  "name": "flux-kontext",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Edit images with Flux 1 Kontext Pro: precise local edits with documented prompting",
+  "zh": "Flux Kontext 精准局部改图：官方提示词加持",
+  "hot": 345724,
+  "type": "skill"
+ },
+ {
+  "name": "gpt-image-edit",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Edit images with OpenAI GPT Image 2 edit endpoint: in-image text rewrite, multilingual",
+  "zh": "GPT Image 2 改图：改画面内文字，多语言",
+  "hot": 345303,
+  "type": "skill"
+ },
+ {
+  "name": "wan-2-7",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Text-to-video with Wan 2.7: multi-reference conditioning, audio-driven lip-sync",
+  "zh": "Wan 2.7 文生视频：多参考+音频驱动口型",
+  "hot": 345169,
+  "type": "skill"
+ },
+ {
+  "name": "flux-2-klein",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Generate images with Flux 2 Klein, BFL's distilled fast variant, with prompt patterns",
+  "zh": "Flux 2 Klein 快速出图：蒸馏版+提示词模板",
+  "hot": 344908,
+  "type": "skill"
+ },
+ {
+  "name": "happyhorse-1-0",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Text-to-video with HappyHorse 1.0: Video Arena #1, native 1080p with synced audio",
+  "zh": "HappyHorse 文生视频：1080p 自带同步音频",
+  "hot": 344856,
+  "type": "skill"
+ },
+ {
+  "name": "seedance-v2",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Cinematic short video with ByteDance Seedance 2.0 Pro: multi-modal refs, synced audio",
+  "zh": "Seedance 2.0 Pro 电影感短片：多模态参考",
+  "hot": 344796,
+  "type": "skill"
+ },
+ {
+  "name": "agentspace",
+  "repo": "github.com/agentspace-so/skills",
+  "en": "Turn the agent's working folder into a live URL to watch, edit and comment from anywhere",
+  "zh": "工作目录变直播网址：随时围观 Agent 产出",
+  "hot": 331785,
+  "type": "skill"
+ },
+ {
+  "name": "remotion-render",
+  "repo": "github.com/halt-catch-fire/skills",
+  "en": "Render React/Remotion TSX code to MP4 via inference.sh: full Remotion API support",
+  "zh": "Remotion 代码渲染成 MP4：传 TSX 出成片",
+  "hot": 331578,
+  "type": "skill"
+ },
+ {
+  "name": "ai-video-generation",
+  "repo": "github.com/halt-catch-fire/skills",
+  "en": "Generate AI video with Veo, Seedance, HappyHorse, Wan, Grok and 40+ models via one CLI",
+  "zh": "一个 CLI 调 40+ 视频模型：Veo/Seedance/Wan",
+  "hot": 331345,
+  "type": "skill"
+ },
+ {
+  "name": "ai-avatar-video",
+  "repo": "github.com/halt-catch-fire/skills",
+  "en": "Create AI avatar and talking-head videos with built-in TTS via inference.sh CLI",
+  "zh": "AI 数字人口播视频：自带 TTS 多模型可选",
+  "hot": 331285,
+  "type": "skill"
+ },
+ {
+  "name": "ai-image-generation",
+  "repo": "github.com/halt-catch-fire/skills",
+  "en": "Generate images with GPT-Image-2, FLUX, Gemini, Seedream and 50+ models via one CLI",
+  "zh": "一个 CLI 调 50+ 图像模型：GPT/FLUX/Seedream",
+  "hot": 331271,
+  "type": "skill"
+ },
+ {
+  "name": "twitter-automation",
+  "repo": "github.com/halt-catch-fire/skills",
+  "en": "Automate Twitter/X via CLI: post tweets with media, like, retweet, DM, follow",
+  "zh": "X/推特自动化：发帖/点赞/转推/私信/关注",
+  "hot": 331262,
+  "type": "skill"
+ },
+ {
+  "name": "to-prd",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Turn the current conversation into a PRD and publish it to the project issue tracker",
+  "zh": "对话直接沉淀成 PRD，发进 issue 跟踪器",
+  "hot": 330995,
+  "type": "skill"
+ },
+ {
+  "name": "kling-3-0",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Kling 3.0 multi-shot video generation with native synced audio and consistent identity",
+  "zh": "可灵 3.0 多镜头视频：原生音频+角色一致",
+  "hot": 321848,
+  "type": "skill"
+ },
+ {
+  "name": "to-issues",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Break a plan, spec or PRD into independently-grabbable tracer-bullet issues",
+  "zh": "方案拆成可独立认领的垂直切片 issue",
+  "hot": 317903,
+  "type": "skill"
+ },
+ {
+  "name": "caveman",
+  "repo": "github.com/juliusbrussee/caveman",
+  "en": "Ultra-compressed caveman speech mode: cuts output tokens 65% with full accuracy",
+  "zh": "原始人压缩话术：省 65% token 不丢准确性",
+  "hot": 314366,
+  "type": "skill"
+ },
+ {
+  "name": "sleek-design-mobile-apps",
+  "repo": "github.com/sleekdotdesign/agent-skills",
+  "en": "Design mobile app UI screens with Sleek and implement them in HTML/React Native/SwiftUI",
+  "zh": "Sleek 移动端 UI 设计，落地 RN/SwiftUI 代码",
+  "hot": 312573,
+  "type": "skill"
+ },
+ {
+  "name": "setup-matt-pocock-skills",
+  "repo": "github.com/mattpocock/skills",
+  "en": "One-time repo setup for the engineering skills: issue tracker, triage labels, doc layout",
+  "zh": "工程技能集初始化：跟踪器/标签/文档布局",
+  "hot": 310677,
+  "type": "skill"
+ },
+ {
+  "name": "codex-pet",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Generate a Codex-compatible pet spritesheet and pet.json from one reference image",
+  "zh": "一张参考图生成 Codex 桌宠精灵图组件",
+  "hot": 310389,
+  "type": "skill"
+ },
+ {
+  "name": "azure-quotas",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Check and manage Azure quotas and usage: capacity validation, region selection, increases",
+  "zh": "Azure 配额管理：容量校验/选区/提额申请",
+  "hot": 296951,
+  "type": "skill"
+ },
+ {
+  "name": "triage",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Move issues and external PRs through triage roles: categorise, verify, write agent briefs",
+  "zh": "issue/PR 分诊流水线：归类核实出执行简报",
+  "hot": 290199,
+  "type": "skill"
+ },
+ {
+  "name": "azure-upgrade",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Assess and upgrade Azure workloads between plans, tiers, SKUs; modernize SDK dependencies",
+  "zh": "Azure 升级评估：换档位/SKU+SDK 现代化",
+  "hot": 289448,
+  "type": "skill"
+ },
+ {
+  "name": "runcomfy-cli",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "One binary, one auth, hundreds of model endpoints: run any RunComfy model from CLI",
+  "zh": "RunComfy 万能 CLI：一次认证跑全部模型",
+  "hot": 288963,
+  "type": "skill"
+ },
+ {
+  "name": "face-swap",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Swap a face or character into video/images on RunComfy: routes to the right model",
+  "zh": "视频图像换脸路由：动画/静帧各选最优模型",
+  "hot": 288451,
+  "type": "skill"
+ },
+ {
+  "name": "video-inpainting",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Region edits across video frames: remove objects, clean watermarks, replace with motion",
+  "zh": "视频区域修补：跨帧除物/去水印/带运动替换",
+  "hot": 286934,
+  "type": "skill"
+ },
+ {
+  "name": "image-inpainting",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Mask-driven image inpainting on RunComfy: dedicated endpoint plus identity-safe editors",
+  "zh": "蒙版图像修补：专用端点+保身份编辑兜底",
+  "hot": 286532,
+  "type": "skill"
+ },
+ {
+  "name": "controlnet-pose",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Pose-conditioned generation: transfer reference-video motion onto a target character",
+  "zh": "姿态控制生成：参考视频动作迁移到角色",
+  "hot": 286329,
+  "type": "skill"
+ },
+ {
+  "name": "lipsync",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Lip-sync a face to audio: routes OmniHuman, Sync Labs, Kling across portrait and video",
+  "zh": "口型同步路由：肖像/视频对齐任意音轨",
+  "hot": 286198,
+  "type": "skill"
+ },
+ {
+  "name": "video-extend",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Extend an existing clip with Veo 3.1 extend-video: prompt what happens next",
+  "zh": "视频续写：Veo 3.1 按提示词接着往下拍",
+  "hot": 285843,
+  "type": "skill"
+ },
+ {
+  "name": "elevenlabs-music-generation",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Full songs from style plus lyrics with ElevenLabs Music: studio-grade stereo, 5s-5min",
+  "zh": "ElevenLabs 写歌：风格+歌词出录音室级成品",
+  "hot": 285537,
+  "type": "skill"
+ },
+ {
+  "name": "image-outpainting",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Extend a still beyond its canvas: fill unseen areas, change aspect ratio, keep content",
+  "zh": "图像扩边：补画面外内容，改比例不动主体",
+  "hot": 285463,
+  "type": "skill"
+ },
+ {
+  "name": "video-outpainting",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Extend a video's spatial canvas: flip 9:16 to 16:9, add environment, keep the action",
+  "zh": "视频扩幅：竖转横补环境，中心动作不变",
+  "hot": 285373,
+  "type": "skill"
+ },
+ {
+  "name": "relight",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Relight a still image: change lighting direction, color temperature and mood",
+  "zh": "图像重打光：改光向/色温/氛围不伤画面",
+  "hot": 285321,
+  "type": "skill"
+ },
+ {
+  "name": "ai-music",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "AI music router on RunComfy: ElevenLabs premium vocals or ACE Step open-weights",
+  "zh": "AI 音乐路由：商用人声或开源模型按需选",
+  "hot": 277410,
+  "type": "skill"
+ },
+ {
+  "name": "ace-step",
+  "repo": "github.com/agentspace-so/runcomfy-agent-skills",
+  "en": "Generate, inpaint and outpaint music with ACE Step: tag-driven, multilingual lyrics",
+  "zh": "ACE Step 作曲：标签定曲风，歌词可多语言",
+  "hot": 277311,
+  "type": "skill"
+ },
+ {
+  "name": "handoff",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Compact the current conversation into a handoff document for another agent to pick up",
+  "zh": "会话压缩成交接文档，换个 Agent 无缝接力",
+  "hot": 273719,
+  "type": "skill"
+ },
+ {
+  "name": "github-actions-docs",
+  "repo": "github.com/xixu-me/skills",
+  "en": "Write, explain, secure and troubleshoot GitHub Actions workflows and custom actions",
+  "zh": "GitHub Actions 全科：语法/复用/安全/排障",
+  "hot": 269165,
+  "type": "skill"
+ },
+ {
+  "name": "supabase-postgres-best-practices",
+  "repo": "github.com/supabase/agent-skills",
+  "en": "Postgres performance optimization and best practices from Supabase",
+  "zh": "Supabase 官方 Postgres 性能优化最佳实践",
+  "hot": 266756,
+  "type": "skill"
+ },
+ {
+  "name": "prototype",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Build a throwaway prototype to answer a design question about state models or UI feel",
+  "zh": "一次性原型验证设计：状态模型/UI 手感",
+  "hot": 266434,
+  "type": "skill"
+ },
+ {
+  "name": "openclaw-secure-linux-cloud",
+  "repo": "github.com/xixu-me/skills",
+  "en": "Self-host OpenClaw on a cloud server securely: tunneling, sandboxing, token auth",
+  "zh": "云上自托管 OpenClaw：隧道/沙箱/鉴权加固",
+  "hot": 264215,
+  "type": "skill"
+ },
+ {
+  "name": "secure-linux-web-hosting",
+  "repo": "github.com/xixu-me/skills",
+  "en": "Set up and harden a self-hosting cloud server: DNS, SSH, firewall, Nginx, HTTPS",
+  "zh": "自托管服务器加固：DNS/SSH/防火墙/HTTPS",
+  "hot": 264037,
+  "type": "skill"
+ },
+ {
+  "name": "skills-cli",
+  "repo": "github.com/xixu-me/skills",
+  "en": "Operate the skills CLI: discover, install, update, back up, sync agent skills",
+  "zh": "skills CLI 管家：装/更/备份/同步技能",
+  "hot": 263810,
+  "type": "skill"
+ },
+ {
+  "name": "running-claude-code-via-litellm-copilot",
+  "repo": "github.com/xixu-me/skills",
+  "en": "Route Claude Code through a local LiteLLM proxy to GitHub Copilot to cut API spend",
+  "zh": "LiteLLM 转接 Copilot 跑 Claude Code 省钱",
+  "hot": 263702,
+  "type": "skill"
+ },
+ {
+  "name": "opensource-guide-coach",
+  "repo": "github.com/xixu-me/skills",
+  "en": "Coach for starting, growing, governing, funding and sustaining open source projects",
+  "zh": "开源项目教练：启动/治理/资金/社区健康",
+  "hot": 263591,
+  "type": "skill"
+ },
+ {
+  "name": "azure-enterprise-infra-planner",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Architect enterprise Azure infra from workload descriptions: WAF-aligned Bicep/Terraform",
+  "zh": "企业级 Azure 架构规划，产出 IaC 代码",
+  "hot": 263507,
+  "type": "skill"
+ },
+ {
+  "name": "readme-i18n",
+  "repo": "github.com/xixu-me/skills",
+  "en": "Translate a repository README and maintain multilingual doc variants with a switcher",
+  "zh": "README 多语言化：翻译+语言切换器维护",
+  "hot": 263423,
+  "type": "skill"
+ },
+ {
+  "name": "use-my-browser",
+  "repo": "github.com/xixu-me/skills",
+  "en": "Work inside the user's live browser session: logged-in dashboards, localhost, DevTools",
+  "zh": "借用户真实浏览器会话：登录态/本地/调试上下文",
+  "hot": 262419,
+  "type": "skill"
+ },
+ {
+  "name": "xget",
+  "repo": "github.com/xixu-me/skills",
+  "en": "Xget URL rewriting to accelerate registries, packages, containers and API downloads",
+  "zh": "Xget 链接改写：包/镜像/API 下载全面加速",
+  "hot": 260625,
+  "type": "skill"
+ },
+ {
+  "name": "tzst",
+  "repo": "github.com/xixu-me/skills",
+  "en": "Create, extract, list and script .tzst / .tar.zst archives with the tzst CLI",
+  "zh": "tzst 归档工具：zstd 压缩包创建解压脚本化",
+  "hot": 260566,
+  "type": "skill"
+ },
+ {
+  "name": "xdrop",
+  "repo": "github.com/xixu-me/skills",
+  "en": "Send and fetch files through an Xdrop server: encrypted share links from the terminal",
+  "zh": "Xdrop 终端传文件：加密分享链收发解密",
+  "hot": 260307,
+  "type": "skill"
+ },
+ {
+  "name": "brainstorming",
+  "repo": "github.com/obra/superpowers",
+  "en": "Mandatory pre-work exploration of intent, requirements and design before implementation",
+  "zh": "动手前强制头脑风暴：意图/需求/设计先行",
+  "hot": 258689,
+  "type": "skill"
+ },
+ {
+  "name": "azure-kubernetes",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Plan and configure production AKS clusters: SKU, networking, security, operations",
+  "zh": "AKS 生产集群规划：选型/网络/安全/运维",
+  "hot": 256384,
+  "type": "skill"
+ },
+ {
+  "name": "ui-ux-pro-max",
+  "repo": "github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+  "en": "UI/UX intelligence: 50+ styles, 161 palettes, 57 font pairs, 99 UX rules across 10 stacks",
+  "zh": "UI/UX 大全：50 风格 161 配色 99 条 UX 军规",
+  "hot": 248946,
+  "type": "skill"
+ },
+ {
+  "name": "gpt-image-2",
+  "repo": "github.com/doany-ai/skills",
+  "en": "Generate and edit images with GPT Image 2: embedded text, logos, multilingual typography",
+  "zh": "GPT Image 2 生图改图：画面文字与标志强项",
+  "hot": 237392,
+  "type": "skill"
+ },
+ {
+  "name": "vercel-composition-patterns",
+  "repo": "github.com/vercel-labs/agent-skills",
+  "en": "Scalable React composition patterns: compound components, render props, context design",
+  "zh": "React 组合模式：复合组件/渲染属性/上下文",
+  "hot": 235968,
+  "type": "skill"
+ },
+ {
+  "name": "azure-cost",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Azure cost management: query spend, forecast, find orphaned resources, cut waste",
+  "zh": "Azure 成本管理：查账/预测/清孤儿资源",
+  "hot": 231846,
+  "type": "skill"
+ },
+ {
+  "name": "diagnose",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Disciplined diagnosis loop: reproduce, minimise, hypothesise, instrument, fix, regress",
+  "zh": "疑难 bug 诊断环：复现最小化假设验证回归",
+  "hot": 231325,
+  "type": "skill"
+ },
+ {
+  "name": "simple",
+  "repo": "github.com/roin-orca/skills",
+  "en": "Streamlined brainstorming before creative or architectural work: fast focused decisions",
+  "zh": "轻量版动手前头脑风暴：快速聚焦定方案",
+  "hot": 224090,
+  "type": "skill"
+ },
+ {
+  "name": "write-a-skill",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Create new agent skills with proper structure, progressive disclosure, bundled resources",
+  "zh": "写新技能：结构规范+渐进披露+资源打包",
+  "hot": 223250,
+  "type": "skill"
+ },
+ {
+  "name": "just-scrape",
+  "repo": "github.com/scrapegraphai/just-scrape",
+  "en": "Search, scrape, crawl and extract structured data via the ScrapeGraph AI CLI",
+  "zh": "ScrapeGraph 抓取：搜索/爬站/结构化提取/监控",
+  "hot": 223168,
+  "type": "skill"
+ },
+ {
+  "name": "zoom-out",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Zoom out for broader context: how this code fits into the bigger picture",
+  "zh": "拉远视角：讲清代码在全局里的位置",
+  "hot": 222663,
+  "type": "skill"
+ },
+ {
+  "name": "shadcn",
+  "repo": "github.com/shadcn/ui",
+  "en": "Manage shadcn/ui components and projects: add, search, debug, style and compose UI",
+  "zh": "shadcn/ui 管家：加组件/查文档/调样式/组界面",
+  "hot": 219344,
+  "type": "skill"
+ },
+ {
+  "name": "develop-userscripts",
+  "repo": "github.com/xixu-me/skills",
+  "en": "Build, debug, package and publish Tampermonkey/ScriptCat userscripts with GM APIs",
+  "zh": "油猴脚本开发：GM API/元数据块/发布全流程",
+  "hot": 217902,
+  "type": "skill"
+ },
+ {
+  "name": "design-taste-frontend",
+  "repo": "github.com/leonxlnx/taste-skill",
+  "en": "Anti-slop frontend for landing pages and redesigns: infer direction, ship non-templated UI",
+  "zh": "反 AI 味前端：读需求定调性，拒绝模板脸",
+  "hot": 215061,
+  "type": "skill"
+ },
+ {
+  "name": "caveman-commit",
+  "repo": "github.com/juliusbrussee/caveman",
+  "en": "Ultra-compressed Conventional Commits: subject under 50 chars, body only when needed",
+  "zh": "极简 commit 生成：50 字符主题，废话全砍",
+  "hot": 210631,
+  "type": "skill"
+ },
+ {
+  "name": "caveman-review",
+  "repo": "github.com/juliusbrussee/caveman",
+  "en": "Ultra-compressed code review: one line per comment with location, problem, fix",
+  "zh": "极简代码评审：一行一条，位置+问题+改法",
+  "hot": 208945,
+  "type": "skill"
+ },
+ {
+  "name": "azure-cost-optimization",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Identify Azure savings from usage data: rightsize VMs, delete orphans, cut waste",
+  "zh": "Azure 省钱分析：虚机瘦身+清废弃资源",
+  "hot": 208167,
+  "type": "skill"
+ },
+ {
+  "name": "caveman-compress",
+  "repo": "github.com/juliusbrussee/caveman",
+  "en": "Compress CLAUDE.md and memory files into caveman format to save input tokens",
+  "zh": "记忆文件原始人压缩：省 token 保留干货",
+  "hot": 206994,
+  "type": "skill"
+ },
+ {
+  "name": "caveman-help",
+  "repo": "github.com/juliusbrussee/caveman",
+  "en": "Quick-reference card for all caveman modes, skills and commands",
+  "zh": "caveman 全家速查卡：模式/技能/命令一览",
+  "hot": 201998,
+  "type": "skill"
+ },
+ {
+  "name": "impeccable",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Design, critique, audit and polish frontend interfaces with production-grade craft",
+  "zh": "前端界面全能工坊：设计/审查/打磨一条龙",
+  "hot": 181532,
+  "type": "skill"
+ },
+ {
+  "name": "airunway-aks-setup",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Set up AI Runway on AKS from bare cluster to running model: GPU, providers, deploy",
+  "zh": "AKS 装 AI Runway：裸集群到模型跑通",
+  "hot": 176532,
+  "type": "skill"
+ },
+ {
+  "name": "systematic-debugging",
+  "repo": "github.com/obra/superpowers",
+  "en": "Systematic root-cause debugging for any bug or test failure before proposing fixes",
+  "zh": "系统化排障：先找根因再谈修复",
+  "hot": 171458,
+  "type": "skill"
+ },
+ {
+  "name": "high-end-visual-design",
+  "repo": "github.com/leonxlnx/taste-skill",
+  "en": "Design like a high-end agency: exact fonts, spacing, shadows that read expensive",
+  "zh": "高端设计范式：字体间距阴影都往贵了做",
+  "hot": 171115,
+  "type": "skill"
+ },
+ {
+  "name": "writing-plans",
+  "repo": "github.com/obra/superpowers",
+  "en": "Turn a spec into a step-by-step implementation plan before touching code",
+  "zh": "动码前先写实施计划：规格拆成步骤",
+  "hot": 169915,
+  "type": "skill"
+ },
+ {
+  "name": "using-superpowers",
+  "repo": "github.com/obra/superpowers",
+  "en": "Session bootstrap that establishes how to find and invoke skills before any response",
+  "zh": "superpowers 引导器：回答前先查该用哪个技能",
+  "hot": 169258,
+  "type": "skill"
+ },
+ {
+  "name": "redesign-existing-projects",
+  "repo": "github.com/leonxlnx/taste-skill",
+  "en": "Upgrade existing sites to premium quality: audit, kill generic AI patterns, keep function",
+  "zh": "旧站升级高端化：审计除 AI 味，功能不破坏",
+  "hot": 168129,
+  "type": "skill"
+ },
+ {
+  "name": "teach",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Teach the user a new skill or concept within this workspace",
+  "zh": "工作区内因材施教：讲透一个概念或技能",
+  "hot": 162350,
+  "type": "skill"
+ },
+ {
+  "name": "hyperframes",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Render video from HTML: entry skill for promos, explainers, captions, motion graphics",
+  "zh": "HTML 渲染视频总入口：宣传片/解说/动效",
+  "hot": 162299,
+  "type": "skill"
+ },
+ {
+  "name": "cavecrew",
+  "repo": "github.com/juliusbrussee/caveman",
+  "en": "Decision guide for delegating to caveman subagents: investigator, builder, reviewer",
+  "zh": "原始人分工指南：查码/改码/审码派对人",
+  "hot": 159868,
+  "type": "skill"
+ },
+ {
+  "name": "caveman-stats",
+  "repo": "github.com/juliusbrussee/caveman",
+  "en": "Show real token usage and estimated savings for the session from the actual log",
+  "zh": "token 账本：真实用量与节省，读日志不估算",
+  "hot": 159724,
+  "type": "skill"
+ },
+ {
+  "name": "hyperframes-cli",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "HyperFrames CLI dev loop: init, add, capture, lint, render, publish, doctor",
+  "zh": "HyperFrames CLI 闭环：初始化到渲染发布",
+  "hot": 158181,
+  "type": "skill"
+ },
+ {
+  "name": "vercel-react-native-skills",
+  "repo": "github.com/vercel-labs/agent-skills",
+  "en": "React Native and Expo best practices: lists, animations, native modules, performance",
+  "zh": "RN/Expo 最佳实践：列表/动画/原生模块",
+  "hot": 157589,
+  "type": "skill"
+ },
+ {
+  "name": "minimalist-ui",
+  "repo": "github.com/leonxlnx/taste-skill",
+  "en": "Clean editorial interfaces: warm monochrome, typographic contrast, flat bento grids",
+  "zh": "极简编辑风 UI：暖调单色+字阶对比+便当格",
+  "hot": 156731,
+  "type": "skill"
+ },
+ {
+  "name": "hyperframes-registry",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Install and wire HyperFrames registry blocks and components into compositions",
+  "zh": "HyperFrames 组件库：装块并接入合成",
+  "hot": 154000,
+  "type": "skill"
+ },
+ {
+  "name": "requesting-code-review",
+  "repo": "github.com/obra/superpowers",
+  "en": "Request verification that completed work meets requirements before merging",
+  "zh": "完工必审：合并前对照需求验收",
+  "hot": 153424,
+  "type": "skill"
+ },
+ {
+  "name": "seo-audit",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Audit and diagnose site SEO: technical issues, on-page, meta tags, ranking drops",
+  "zh": "SEO 体检：技术项/页内优化/掉排名归因",
+  "hot": 152553,
+  "type": "skill"
+ },
+ {
+  "name": "test-driven-development",
+  "repo": "github.com/obra/superpowers",
+  "en": "Write the failing test first: TDD discipline for any feature or bugfix",
+  "zh": "任何功能修复先写失败测试，再写实现",
+  "hot": 151915,
+  "type": "skill"
+ },
+ {
+  "name": "supabase",
+  "repo": "github.com/supabase/agent-skills",
+  "en": "One skill for all Supabase work: Database, Auth, Edge Functions, Realtime, Storage, SSR",
+  "zh": "Supabase 全家桶：库/鉴权/边缘函数/实时/存储",
+  "hot": 151605,
+  "type": "skill"
+ },
+ {
+  "name": "entra-agent-id",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Provision Entra Agent Identity blueprints and OAuth token exchange via Microsoft Graph",
+  "zh": "Entra Agent 身份编排：蓝图+OAuth 令牌交换",
+  "hot": 150740,
+  "type": "skill"
+ },
+ {
+  "name": "full-output-enforcement",
+  "repo": "github.com/leonxlnx/taste-skill",
+  "en": "Override truncation: enforce complete code output, ban placeholders, split cleanly",
+  "zh": "强制完整输出：禁占位符，超长干净分段",
+  "hot": 150035,
+  "type": "skill"
+ },
+ {
+  "name": "industrial-brutalist-ui",
+  "repo": "github.com/leonxlnx/taste-skill",
+  "en": "Raw mechanical interfaces: Swiss print meets military terminal, rigid grids, analog decay",
+  "zh": "工业粗野风 UI：瑞士排印×军用终端美学",
+  "hot": 145773,
+  "type": "skill"
+ },
+ {
+  "name": "stitch-design-taste",
+  "repo": "github.com/leonxlnx/taste-skill",
+  "en": "Generate agent-friendly DESIGN.md for Google Stitch enforcing premium anti-generic UI",
+  "zh": "Stitch 设计基因文件：反平庸 UI 标准落纸",
+  "hot": 145069,
+  "type": "skill"
+ },
+ {
+  "name": "copywriting",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Write and improve marketing copy for homepage, landing, pricing and product pages",
+  "zh": "营销文案：首页/落地页/定价页写改一手包",
+  "hot": 142580,
+  "type": "skill"
+ },
+ {
+  "name": "executing-plans",
+  "repo": "github.com/obra/superpowers",
+  "en": "Execute a written implementation plan in a separate session with review checkpoints",
+  "zh": "按计划施工：独立会话执行+检查点回看",
+  "hot": 140804,
+  "type": "skill"
+ },
+ {
+  "name": "paper-context-resolver",
+  "repo": "github.com/lllllllama/ai-paper-reproduction-skill",
+  "en": "Resolve reproduction-critical paper details: dataset splits, preprocessing, eval metrics",
+  "zh": "论文复现补细节：数据切分/预处理/评测口径",
+  "hot": 140373,
+  "type": "skill"
+ },
+ {
+  "name": "repo-intake-and-plan",
+  "repo": "github.com/lllllllama/ai-paper-reproduction-skill",
+  "en": "Scan a deep learning repo README-first, extract commands, plan reproduction candidates",
+  "zh": "复现前扫仓：读 README 提命令排复现计划",
+  "hot": 139847,
+  "type": "skill"
+ },
+ {
+  "name": "minimal-run-and-audit",
+  "repo": "github.com/lllllllama/ai-paper-reproduction-skill",
+  "en": "Run the chosen smoke test and normalize evidence into standardized repro_outputs files",
+  "zh": "最小复现跑通：证据规范化存档可审计",
+  "hot": 139801,
+  "type": "skill"
+ },
+ {
+  "name": "env-and-assets-bootstrap",
+  "repo": "github.com/lllllllama/ai-paper-reproduction-skill",
+  "en": "Prepare conda-first environment, checkpoints and dataset paths before repo reproduction",
+  "zh": "复现环境引导：conda/权重/数据路径先备齐",
+  "hot": 139797,
+  "type": "skill"
+ },
+ {
+  "name": "gpt-taste",
+  "repo": "github.com/leonxlnx/taste-skill",
+  "en": "Elite UX with advanced GSAP motion: random layout variance, AIDA structure, bento grids",
+  "zh": "GSAP 高级动效 UX：真随机布局+AIDA 结构",
+  "hot": 139211,
+  "type": "skill"
+ },
+ {
+  "name": "remotion-to-hyperframes",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Port an existing Remotion React composition to HyperFrames HTML",
+  "zh": "Remotion 工程平移 HyperFrames HTML",
+  "hot": 136384,
+  "type": "skill"
+ },
+ {
+  "name": "subagent-driven-development",
+  "repo": "github.com/obra/superpowers",
+  "en": "Dispatch independent plan tasks to subagents within the current session",
+  "zh": "子代理开发法：独立任务分头并行执行",
+  "hot": 133485,
+  "type": "skill"
+ },
+ {
+  "name": "hyperframes-media",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Audio and media assets for HyperFrames: multi-provider TTS, music and sound effects",
+  "zh": "HyperFrames 音频资产：TTS/配乐/音效一站",
+  "hot": 131956,
+  "type": "skill"
+ },
+ {
+  "name": "verification-before-completion",
+  "repo": "github.com/obra/superpowers",
+  "en": "Run verification commands and confirm output before any claim of done, fixed or passing",
+  "zh": "宣称完成前必须跑验证：证据先于结论",
+  "hot": 131339,
+  "type": "skill"
+ },
+ {
+  "name": "brandkit",
+  "repo": "github.com/leonxlnx/taste-skill",
+  "en": "Generate premium brand kits: guideline boards, logo systems, identity decks",
+  "zh": "高端品牌套件生成：规范板/标志系统/识别集",
+  "hot": 126752,
+  "type": "skill"
+ },
+ {
+  "name": "receiving-code-review",
+  "repo": "github.com/obra/superpowers",
+  "en": "Handle review feedback with technical rigor: verify before implementing suggestions",
+  "zh": "接评审不盲从：先验证再改，拒绝表演式认同",
+  "hot": 126043,
+  "type": "skill"
+ },
+ {
+  "name": "image-to-code",
+  "repo": "github.com/leonxlnx/taste-skill",
+  "en": "Generate design images first, analyze deeply, then implement the website to match",
+  "zh": "先生成设计图再逐像素实现网页",
+  "hot": 125633,
+  "type": "skill"
+ },
+ {
+  "name": "writing-skills",
+  "repo": "github.com/obra/superpowers",
+  "en": "Create, edit and verify agent skills before deployment",
+  "zh": "技能工程：写/改/验证 skill 再上线",
+  "hot": 125005,
+  "type": "skill"
+ },
+ {
+  "name": "extract-design-system",
+  "repo": "github.com/arvindrk/extract-design-system",
+  "en": "Extract design primitives from a public website and generate starter token files",
+  "zh": "扒站提设计体系：产出可用的 token 起步包",
+  "hot": 124620,
+  "type": "skill"
+ },
+ {
+  "name": "imagegen-frontend-web",
+  "repo": "github.com/leonxlnx/taste-skill",
+  "en": "Generate premium website design references: one horizontal image per page section",
+  "zh": "网页设计参考图：每个区块单独出一张横图",
+  "hot": 124377,
+  "type": "skill"
+ },
+ {
+  "name": "dispatching-parallel-agents",
+  "repo": "github.com/obra/superpowers",
+  "en": "Dispatch parallel agents for 2+ independent tasks without shared state",
+  "zh": "并行派单：无依赖任务多代理同时开工",
+  "hot": 123213,
+  "type": "skill"
+ },
+ {
+  "name": "using-git-worktrees",
+  "repo": "github.com/obra/superpowers",
+  "en": "Ensure isolated workspaces for feature work via git worktree",
+  "zh": "git worktree 隔离工作区，开发互不打架",
+  "hot": 122726,
+  "type": "skill"
+ },
+ {
+  "name": "imagegen-frontend-mobile",
+  "repo": "github.com/leonxlnx/taste-skill",
+  "en": "Generate premium app-native mobile screen concepts and flows for iOS and Android",
+  "zh": "移动端界面概念图：iOS/安卓多屏一致出图",
+  "hot": 121504,
+  "type": "skill"
+ },
+ {
+  "name": "viral-short-form",
+  "repo": "github.com/vyralcontent/content-skills",
+  "en": "Brainstorm and write high-retention short-form video and carousel content",
+  "zh": "短视频爆款内容：高留存脚本与轮播策划",
+  "hot": 121290,
+  "type": "skill"
+ },
+ {
+  "name": "finishing-a-development-branch",
+  "repo": "github.com/obra/superpowers",
+  "en": "Structured completion options when tests pass: merge, PR, or cleanup",
+  "zh": "分支收尾决策：合并/提 PR/清理怎么选",
+  "hot": 120550,
+  "type": "skill"
+ },
+ {
+  "name": "emil-design-eng",
+  "repo": "github.com/emilkowalski/skills",
+  "en": "Emil Kowalski's philosophy on UI polish, component design and animation decisions",
+  "zh": "Emil 设计工学：UI 打磨与动画的隐形细节",
+  "hot": 116215,
+  "type": "skill"
+ },
+ {
+  "name": "viral-hooks",
+  "repo": "github.com/vyralcontent/content-skills",
+  "en": "Write and critique viral hooks: the opening 1-3 seconds that decide everything",
+  "zh": "爆款钩子：开头 3 秒的生死判官",
+  "hot": 111974,
+  "type": "skill"
+ },
+ {
+  "name": "viral-youtube-shorts",
+  "repo": "github.com/vyralcontent/content-skills",
+  "en": "Write YouTube Shorts that hold the feed and route viewers into long-form",
+  "zh": "YouTube Shorts 脚本：留住人再导流长视频",
+  "hot": 111838,
+  "type": "skill"
+ },
+ {
+  "name": "viral-captions-and-ctas",
+  "repo": "github.com/vyralcontent/content-skills",
+  "en": "Captions, on-screen text, hashtags and CTAs that earn saves without bait penalties",
+  "zh": "短视频文案配件：标题话题 CTA 不踩降权线",
+  "hot": 111807,
+  "type": "skill"
+ },
+ {
+  "name": "viral-short-form-ideas",
+  "repo": "github.com/vyralcontent/content-skills",
+  "en": "Generate short-form video ideas at volume: kill the blank-page problem",
+  "zh": "选题弹药库：批量产短视频创意不卡壳",
+  "hot": 111695,
+  "type": "skill"
+ },
+ {
+  "name": "viral-instagram-reels",
+  "repo": "github.com/vyralcontent/content-skills",
+  "en": "Plan, write and diagnose Instagram Reels for cold-audience reach",
+  "zh": "Reels 冷启动：脚本策划+扑街诊断",
+  "hot": 111407,
+  "type": "skill"
+ },
+ {
+  "name": "viral-tiktok-content",
+  "repo": "github.com/vyralcontent/content-skills",
+  "en": "TikTok scripts, hooks and ideas shaped for how the FYP actually ranks",
+  "zh": "TikTok 内容：按 FYP 推荐逻辑定制脚本",
+  "hot": 111106,
+  "type": "skill"
+ },
+ {
+  "name": "azure-reliability",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Assess PaaS reliability posture: zone redundancy, health probes, multi-region failover",
+  "zh": "Azure 可靠性体检：容灾冗余/探针/多区切换",
+  "hot": 110368,
+  "type": "skill"
+ },
+ {
+  "name": "webapp-testing",
+  "repo": "github.com/anthropics/skills",
+  "en": "Test local web apps with Playwright: verify UI, debug, screenshots, browser logs",
+  "zh": "Playwright 测本地 Web 应用：验证 UI、截图、抓日志",
+  "hot": 109224,
+  "type": "skill"
+ },
+ {
+  "name": "marketing-psychology",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Apply behavioral science to marketing: cognitive bias, persuasion, why people buy",
+  "zh": "营销心理学：认知偏差与购买决策的用法",
+  "hot": 105044,
+  "type": "skill"
+ },
+ {
+  "name": "design-an-interface",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Generate radically different interface designs for a module with parallel subagents",
+  "zh": "接口设计多方案：并行子代理各出一版",
+  "hot": 103426,
+  "type": "skill"
+ },
+ {
+  "name": "request-refactor-plan",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Interview-driven refactor plan with tiny commits, filed as a GitHub issue",
+  "zh": "重构计划访谈：小步提交拆解成 issue",
+  "hot": 101072,
+  "type": "skill"
+ },
+ {
+  "name": "content-strategy",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Plan content strategy: what to write, topic clusters, blog planning",
+  "zh": "内容策略：写什么/主题集群/博客排期",
+  "hot": 100491,
+  "type": "skill"
+ },
+ {
+  "name": "firebase-basics",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Firebase CLI foundations: setup, authentication and project management workflows",
+  "zh": "Firebase CLI 基础：初始化/鉴权/项目管理",
+  "hot": 98384,
+  "type": "skill"
+ },
+ {
+  "name": "azure-observability",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Azure observability: Monitor, App Insights, Log Analytics, alerts, KQL, workbooks",
+  "zh": "Azure 可观测：监控/APM/日志分析/告警",
+  "hot": 98215,
+  "type": "skill"
+ },
+ {
+  "name": "ubiquitous-language",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Extract a DDD ubiquitous-language glossary from conversation, flag ambiguities",
+  "zh": "DDD 术语表提炼：统一语言，标出歧义",
+  "hot": 98078,
+  "type": "skill"
+ },
+ {
+  "name": "firebase-auth-basics",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Set up Firebase Authentication: sign-in, user management, secure data access rules",
+  "zh": "Firebase 认证接入：登录/用户管理/安全规则",
+  "hot": 97593,
+  "type": "skill"
+ },
+ {
+  "name": "sentry-cli",
+  "repo": "github.com/sentry/dev",
+  "en": "Use the Sentry CLI: view issues, events, projects, orgs, API calls, authentication",
+  "zh": "Sentry CLI 操作：查问题/事件/项目/调 API",
+  "hot": 97240,
+  "type": "skill"
+ },
+ {
+  "name": "qa",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Conversational QA: report bugs in chat, agent explores codebase and files GitHub issues",
+  "zh": "对话式 QA：口头报 bug，自动查码提 issue",
+  "hot": 96684,
+  "type": "skill"
+ },
+ {
+  "name": "programmatic-seo",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "SEO pages at scale from templates and data: directory, location, comparison pages",
+  "zh": "程序化 SEO：模板+数据批量造页抢长尾",
+  "hot": 96684,
+  "type": "skill"
+ },
+ {
+  "name": "analyze-project",
+  "repo": "github.com/lllllllama/rigorpilot-skills",
+  "en": "Read-only deep learning repo audit: model structure, entrypoints, configs, red flags",
+  "zh": "炼丹仓只读体检：结构/入口/配置/可疑点",
+  "hot": 95802,
+  "type": "skill"
+ },
+ {
+  "name": "ai-research-explore",
+  "repo": "github.com/lllllllama/rigorpilot-skills",
+  "en": "Candidate-only exploration for novel DL research given task, dataset and SOTA refs",
+  "zh": "科研选题探索：给定基准约束下找新点子",
+  "hot": 95756,
+  "type": "skill"
+ },
+ {
+  "name": "explore-code",
+  "repo": "github.com/lllllllama/rigorpilot-skills",
+  "en": "Auditable candidate implementation on isolated branch: transplant modules, adapt backbones",
+  "zh": "隔离分支试验改造：移植模块换骨干可审计",
+  "hot": 95635,
+  "type": "skill"
+ },
+ {
+  "name": "ai-research-reproduction",
+  "repo": "github.com/lllllllama/rigorpilot-skills",
+  "en": "End-to-end README-first repo reproduction with minimal trustworthy targets",
+  "zh": "论文仓库端到端复现：README 优先最小可信",
+  "hot": 95619,
+  "type": "skill"
+ },
+ {
+  "name": "safe-debug",
+  "repo": "github.com/lllllllama/rigorpilot-skills",
+  "en": "Conservative DL debugging: tracebacks, CUDA OOM, shape mismatch, NaN loss diagnosis",
+  "zh": "炼丹排障：OOM/形状不符/NaN 先诊断后动手",
+  "hot": 95581,
+  "type": "skill"
+ },
+ {
+  "name": "run-train",
+  "repo": "github.com/lllllllama/rigorpilot-skills",
+  "en": "Run training conservatively: startup check, short-run verify, kickoff, resume",
+  "zh": "训练执行规程：试跑验证再全量，断点可续",
+  "hot": 95577,
+  "type": "skill"
+ },
+ {
+  "name": "explore-run",
+  "repo": "github.com/lllllllama/rigorpilot-skills",
+  "en": "Bounded exploratory runs: small-subset validation, short-cycle sweeps with evidence",
+  "zh": "探索性小跑：子集验证/短周期扫参留证据",
+  "hot": 95568,
+  "type": "skill"
+ },
+ {
+  "name": "git-guardrails-claude-code",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Claude Code hooks that block dangerous git commands before they execute",
+  "zh": "git 护栏钩子：拦截强推/硬重置等危险命令",
+  "hot": 95447,
+  "type": "skill"
+ },
+ {
+  "name": "firebase-hosting-basics",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Deploy static sites, SPAs and simple microservices with Firebase Hosting",
+  "zh": "Firebase Hosting 部署：静态站/SPA 上线",
+  "hot": 95310,
+  "type": "skill"
+ },
+ {
+  "name": "firebase-app-hosting-basics",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Deploy and manage Next.js/Angular apps with backends on Firebase App Hosting",
+  "zh": "App Hosting 部署带后端的 Next/Angular",
+  "hot": 94941,
+  "type": "skill"
+ },
+ {
+  "name": "obsidian-vault",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Search, create and organize Obsidian notes with wikilinks and index notes",
+  "zh": "Obsidian 笔记管家：搜索/新建/双链组织",
+  "hot": 94889,
+  "type": "skill"
+ },
+ {
+  "name": "grilling",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Grill the user relentlessly to stress-test a plan before building",
+  "zh": "开工前压力测试：把计划拷问到站得住",
+  "hot": 94657,
+  "type": "skill"
+ },
+ {
+  "name": "firebase-data-connect",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Build Firebase Data Connect backends on PostgreSQL: schemas, authorized queries, SDKs",
+  "zh": "Data Connect 后端：PG 建模+授权查询+SDK",
+  "hot": 94491,
+  "type": "skill"
+ },
+ {
+  "name": "marketing-ideas",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Marketing and growth ideas for SaaS products: strategies, tactics, promotion channels",
+  "zh": "SaaS 营销点子库：增长策略与推广打法",
+  "hot": 93991,
+  "type": "skill"
+ },
+ {
+  "name": "edit-article",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Edit articles: restructure sections, improve clarity, tighten prose",
+  "zh": "文章精修：调结构/提清晰度/收紧行文",
+  "hot": 92823,
+  "type": "skill"
+ },
+ {
+  "name": "gsap",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "GSAP animation reference: tweens, easing, stagger, timelines, performance",
+  "zh": "GSAP 动画速查：补间/缓动/时间轴/性能",
+  "hot": 92404,
+  "type": "skill"
+ },
+ {
+  "name": "setup-pre-commit",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Set up Husky pre-commit hooks with lint-staged, type checking and tests",
+  "zh": "pre-commit 三件套：格式化/类型检查/测试",
+  "hot": 91496,
+  "type": "skill"
+ },
+ {
+  "name": "review",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Review changes since a fixed point on two axes: repo standards and spec compliance",
+  "zh": "双轴评审：既查编码规范又对需求规格",
+  "hot": 90572,
+  "type": "skill"
+ },
+ {
+  "name": "scaffold-exercises",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Scaffold course exercise structures: sections, problems, solutions, explainers",
+  "zh": "课程练习脚手架：题目/答案/讲解一键成型",
+  "hot": 89704,
+  "type": "skill"
+ },
+ {
+  "name": "website-to-hyperframes",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Capture a website and turn it into a HyperFrames video: promos, tours, social ads",
+  "zh": "网站一键成片：抓站生成宣传/导览视频",
+  "hot": 89647,
+  "type": "skill"
+ },
+ {
+  "name": "domain-modeling",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Build and sharpen a project's domain model, terminology and architecture decisions",
+  "zh": "领域建模：定术语/记决策/供其他技能调用",
+  "hot": 89599,
+  "type": "skill"
+ },
+ {
+  "name": "copy-editing",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Edit and polish existing marketing copy: proofread, tighten, refresh outdated content",
+  "zh": "营销文案精修：校对/收紧/翻新旧内容",
+  "hot": 88705,
+  "type": "skill"
+ },
+ {
+  "name": "migrate-to-shoehorn",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Migrate test files from `as` type assertions to @total-typescript/shoehorn",
+  "zh": "测试类型断言迁移 shoehorn，告别 as",
+  "hot": 87880,
+  "type": "skill"
+ },
+ {
+  "name": "codebase-design",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Shared vocabulary for designing deep modules: interfaces, seams, testability",
+  "zh": "深模块设计词汇表：接口/切缝/可测性",
+  "hot": 87318,
+  "type": "skill"
+ },
+ {
+  "name": "writing-shape",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Shape raw writing material into an article, paragraph by paragraph",
+  "zh": "写作塑形：素材逐段捏成文章",
+  "hot": 87219,
+  "type": "skill"
+ },
+ {
+  "name": "writing-fragments",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Mine raw writing fragments with no structure yet: the explore phase",
+  "zh": "写作挖矿：先攒碎片素材，不急结构",
+  "hot": 87148,
+  "type": "skill"
+ },
+ {
+  "name": "writing-great-skills",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Reference for writing predictable, well-structured agent skills",
+  "zh": "技能写作要诀：让 skill 触发得稳用得准",
+  "hot": 86876,
+  "type": "skill"
+ },
+ {
+  "name": "writing-beats",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Assemble raw material into a journey of beats, grounding each term first",
+  "zh": "写作节拍法：概念先落地再层层推进",
+  "hot": 86861,
+  "type": "skill"
+ },
+ {
+  "name": "diagnosing-bugs",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Diagnosis loop for hard bugs and performance regressions before any fix",
+  "zh": "硬 bug 诊断环：先复现定位，后谈修复",
+  "hot": 86649,
+  "type": "skill"
+ },
+ {
+  "name": "polish",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Final quality pass before shipping: alignment, spacing, consistency, micro-details",
+  "zh": "上线前抛光：对齐/间距/一致性/微细节",
+  "hot": 86335,
+  "type": "skill"
+ },
+ {
+  "name": "firecrawl",
+  "repo": "github.com/firecrawl/cli",
+  "en": "Search, scrape and crawl the web via the Firecrawl CLI: research, extract, monitor",
+  "zh": "Firecrawl 抓取：搜索/爬站/提取三合一",
+  "hot": 86150,
+  "type": "skill"
+ },
+ {
+  "name": "design-taste-frontend-v1",
+  "repo": "github.com/leonxlnx/taste-skill",
+  "en": "The original v1 taste-skill, preserved for exact backward compatibility",
+  "zh": "taste-skill 初代存档版：兼容老项目",
+  "hot": 85874,
+  "type": "skill"
+ },
+ {
+  "name": "deploy-to-vercel",
+  "repo": "github.com/vercel-labs/agent-skills",
+  "en": "Deploy apps and websites to Vercel: push live or create preview deployments",
+  "zh": "一键部署 Vercel：上线或出预览链接",
+  "hot": 84886,
+  "type": "skill"
+ },
+ {
+  "name": "mcp-builder",
+  "repo": "github.com/anthropics/skills",
+  "en": "Build quality MCP servers in Python (FastMCP) or TypeScript to wrap external APIs as tools",
+  "zh": "MCP 服务器开发指南：Python/TS 封装外部 API",
+  "hot": 84547,
+  "type": "skill"
+ },
+ {
+  "name": "ai-seo",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Optimize content for AI search engines: get cited by LLMs, appear in AI answers",
+  "zh": "AI 搜索优化(GEO)：让大模型引用你的内容",
+  "hot": 84452,
+  "type": "skill"
+ },
+ {
+  "name": "critique",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "UX-perspective design evaluation: hierarchy, cognitive load, scored actionable feedback",
+  "zh": "设计评鉴：视觉层级/认知负荷量化打分",
+  "hot": 83769,
+  "type": "skill"
+ },
+ {
+  "name": "audit",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Technical quality checks: accessibility, performance, theming, responsive, anti-patterns",
+  "zh": "技术质检：无障碍/性能/主题/响应式评分报告",
+  "hot": 82980,
+  "type": "skill"
+ },
+ {
+  "name": "animate",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Enhance features with purposeful animations and micro-interactions that aid usability",
+  "zh": "有目的的动效：微交互提升可用性与愉悦感",
+  "hot": 82847,
+  "type": "skill"
+ },
+ {
+  "name": "adapt",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Adapt designs across screens and devices: breakpoints, fluid layouts, touch targets",
+  "zh": "多端适配：断点/流式布局/触控目标",
+  "hot": 82836,
+  "type": "skill"
+ },
+ {
+  "name": "browser-use",
+  "repo": "github.com/browser-use/browser-use",
+  "en": "Direct browser control via CDP: automation, scraping, testing, screenshots",
+  "zh": "CDP 直控浏览器：自动化/抓取/测试/截图",
+  "hot": 82393,
+  "type": "skill"
+ },
+ {
+  "name": "clarify",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Improve UX copy: error messages, microcopy, labels and instructions people understand",
+  "zh": "界面文案优化：报错/微文案/标签说人话",
+  "hot": 82323,
+  "type": "skill"
+ },
+ {
+  "name": "optimize",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Diagnose and fix UI performance: loading, rendering, animations, images, bundle size",
+  "zh": "UI 性能诊治：加载/渲染/动画/包体积",
+  "hot": 82173,
+  "type": "skill"
+ },
+ {
+  "name": "colorize",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Add strategic color to monochromatic interfaces to make them engaging and expressive",
+  "zh": "配色注入：灰淡界面加对色彩的经营",
+  "hot": 81992,
+  "type": "skill"
+ },
+ {
+  "name": "canvas-design",
+  "repo": "github.com/anthropics/skills",
+  "en": "Create original posters and static visual art as PNG/PDF guided by design philosophy",
+  "zh": "设计哲学驱动的海报与静态视觉，输出 PNG/PDF",
+  "hot": 81901,
+  "type": "skill"
+ },
+ {
+  "name": "ask-matt",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Router over Matt Pocock's skills: ask which skill or flow fits your situation",
+  "zh": "技能导航台：问一句该用哪个 skill",
+  "hot": 81871,
+  "type": "skill"
+ },
+ {
+  "name": "bolder",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Amplify safe, boring designs for more visual impact while keeping usability",
+  "zh": "设计加胆量：平庸变有冲击力，可用性不丢",
+  "hot": 81109,
+  "type": "skill"
+ },
+ {
+  "name": "delight",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Add joy, personality and unexpected touches that make interfaces memorable",
+  "zh": "惊喜感注入：让界面从能用变难忘",
+  "hot": 80946,
+  "type": "skill"
+ },
+ {
+  "name": "distill",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Strip designs to their essence: remove complexity, declutter, sharpen focus",
+  "zh": "设计做减法：去冗杂，留本质",
+  "hot": 80557,
+  "type": "skill"
+ },
+ {
+  "name": "quieter",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Tone down loud, overstimulating designs into a calmer, refined aesthetic",
+  "zh": "设计降噪：太吵的界面调成克制高级",
+  "hot": 79743,
+  "type": "skill"
+ },
+ {
+  "name": "convex-quickstart",
+  "repo": "github.com/get-convex/agent-skills",
+  "en": "Create or add Convex to an app: project setup, frontend wiring, first convex dev run",
+  "zh": "Convex 快速起步：建项目接前端跑通",
+  "hot": 79008,
+  "type": "skill"
+ },
+ {
+  "name": "convex-performance-audit",
+  "repo": "github.com/get-convex/agent-skills",
+  "en": "Audit Convex performance: reads, subscriptions, write contention, function limits",
+  "zh": "Convex 性能审计：读写争用/订阅/限额",
+  "hot": 78620,
+  "type": "skill"
+ },
+ {
+  "name": "convex-setup-auth",
+  "repo": "github.com/get-convex/agent-skills",
+  "en": "Set up Convex auth: providers, identity mapping, users tables, protected functions",
+  "zh": "Convex 鉴权搭建：登录/身份映射/权限",
+  "hot": 78324,
+  "type": "skill"
+ },
+ {
+  "name": "convex-migration-helper",
+  "repo": "github.com/get-convex/agent-skills",
+  "en": "Plan Convex schema and data migrations: widen-migrate-narrow, zero-downtime rollouts",
+  "zh": "Convex 迁移规划：改表回填零停机上线",
+  "hot": 78293,
+  "type": "skill"
+ },
+ {
+  "name": "convex-create-component",
+  "repo": "github.com/get-convex/agent-skills",
+  "en": "Build reusable Convex components with isolated tables and app-facing APIs",
+  "zh": "Convex 组件开发：隔离表+对外 API",
+  "hot": 78261,
+  "type": "skill"
+ },
+ {
+  "name": "higgsfield-generate",
+  "repo": "github.com/higgsfield-ai/skills",
+  "en": "Generate images, video, 3D and audio via Higgsfield AI with sensible model defaults",
+  "zh": "Higgsfield 多模态生成：图/视频/3D/音频",
+  "hot": 77277,
+  "type": "skill"
+ },
+ {
+  "name": "browser-act",
+  "repo": "github.com/browser-act/skills",
+  "en": "Browser automation CLI for agents: sessions, actions and page workflows",
+  "zh": "browser-act 浏览器自动化：会话与动作编排",
+  "hot": 76913,
+  "type": "skill"
+ },
+ {
+  "name": "ad-creative",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Generate and scale ad creative: headlines, primary text, full variations per platform",
+  "zh": "广告素材量产：标题/正文/多版本迭代",
+  "hot": 76111,
+  "type": "skill"
+ },
+ {
+  "name": "web-artifacts-builder",
+  "repo": "github.com/anthropics/skills",
+  "en": "Build complex multi-component claude.ai artifacts with React, Tailwind CSS and shadcn/ui",
+  "zh": "复杂 Claude 网页产物：React+Tailwind+shadcn",
+  "hot": 75802,
+  "type": "skill"
+ },
+ {
+  "name": "playwright-cli",
+  "repo": "github.com/microsoft/playwright-cli",
+  "en": "Automate browser interactions, test web pages and work with Playwright tests",
+  "zh": "Playwright CLI：浏览器自动化与测试",
+  "hot": 75465,
+  "type": "skill"
+ },
+ {
+  "name": "cold-email",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "B2B cold emails and follow-up sequences that get replies: prospecting, SDR campaigns",
+  "zh": "B2B 冷邮件：开发信+跟进序列要回复率",
+  "hot": 75207,
+  "type": "skill"
+ },
+ {
+  "name": "site-architecture",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Plan site page hierarchy, navigation, URL structure and internal linking",
+  "zh": "网站信息架构：层级/导航/URL/内链规划",
+  "hot": 72649,
+  "type": "skill"
+ },
+ {
+  "name": "css-animations",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "CSS keyframe animation patterns HyperFrames can seek deterministically",
+  "zh": "HyperFrames 的 CSS 动画：可寻帧确定渲染",
+  "hot": 72528,
+  "type": "skill"
+ },
+ {
+  "name": "vercel-react-view-transitions",
+  "repo": "github.com/vercel-labs/agent-skills",
+  "en": "Implement native-feeling animations with React's View Transition API",
+  "zh": "React 视图过渡 API：原生手感页面动画",
+  "hot": 71988,
+  "type": "skill"
+ },
+ {
+  "name": "churn-prevention",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Reduce churn: cancellation flows, save offers, dunning, failed payment recovery",
+  "zh": "流失防治：挽留弹窗/救单优惠/催缴回款",
+  "hot": 71357,
+  "type": "skill"
+ },
+ {
+  "name": "sales-enablement",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Create sales collateral: pitch decks, one-pagers, objection handling, demo scripts",
+  "zh": "销售武器库：路演稿/一页纸/异议应对",
+  "hot": 71283,
+  "type": "skill"
+ },
+ {
+  "name": "tailwind",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Tailwind CSS v4 browser-runtime patterns for HyperFrames compositions",
+  "zh": "HyperFrames 里的 Tailwind v4 用法",
+  "hot": 70760,
+  "type": "skill"
+ },
+ {
+  "name": "animejs",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Anime.js adapter patterns: seek-driven deterministic timelines in HyperFrames",
+  "zh": "Anime.js 接入 HyperFrames：可寻帧时间轴",
+  "hot": 70214,
+  "type": "skill"
+ },
+ {
+  "name": "three",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Three.js/WebGL adapter patterns: deterministic scenes, camera motion, shaders",
+  "zh": "Three.js 接入：确定性 3D 场景与镜头",
+  "hot": 69519,
+  "type": "skill"
+ },
+ {
+  "name": "lottie",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Lottie and dotLottie adapter patterns: deterministic After Effects exports",
+  "zh": "Lottie 接入：AE 导出动画确定性渲染",
+  "hot": 69260,
+  "type": "skill"
+ },
+ {
+  "name": "firecrawl-scrape",
+  "repo": "github.com/firecrawl/cli",
+  "en": "Extract clean markdown from any URL, including JavaScript-rendered SPAs",
+  "zh": "任意 URL 提净版 Markdown，SPA 也能啃",
+  "hot": 69216,
+  "type": "skill"
+ },
+ {
+  "name": "firecrawl-search",
+  "repo": "github.com/firecrawl/cli",
+  "en": "Web search with full page content extraction: research topics, find sources",
+  "zh": "带全文抽取的联网搜索：查题找源",
+  "hot": 69131,
+  "type": "skill"
+ },
+ {
+  "name": "waapi",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Web Animations API adapter patterns: element.animate with deterministic seeking",
+  "zh": "WAAPI 原生动画：currentTime 精准寻帧",
+  "hot": 68897,
+  "type": "skill"
+ },
+ {
+  "name": "revops",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Revenue operations: lead scoring and routing, MQL/SQL stages, marketing-sales handoff",
+  "zh": "RevOps 收入运营：线索评分/流转/部门交接",
+  "hot": 68619,
+  "type": "skill"
+ },
+ {
+  "name": "better-auth-best-practices",
+  "repo": "github.com/better-auth/skills",
+  "en": "Configure Better Auth server and client: adapters, sessions, plugins, OAuth",
+  "zh": "Better Auth 配置：适配器/会话/插件/OAuth",
+  "hot": 68203,
+  "type": "skill"
+ },
+ {
+  "name": "firecrawl-crawl",
+  "repo": "github.com/firecrawl/cli",
+  "en": "Bulk extract content from an entire site or docs section by following links",
+  "zh": "整站批量抓取：顺链爬全站或文档区",
+  "hot": 67686,
+  "type": "skill"
+ },
+ {
+  "name": "firecrawl-agent",
+  "repo": "github.com/firecrawl/cli",
+  "en": "Autonomous data extraction: navigates complex sites, returns schema-shaped JSON",
+  "zh": "AI 自主取数：闯复杂网站，按 schema 出 JSON",
+  "hot": 67682,
+  "type": "skill"
+ },
+ {
+  "name": "social-content",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Create and optimize social content for LinkedIn, X, Instagram, TikTok: calendars, threads",
+  "zh": "社媒内容：多平台帖子/话题串/内容日历",
+  "hot": 67429,
+  "type": "skill"
+ },
+ {
+  "name": "firecrawl-map",
+  "repo": "github.com/firecrawl/cli",
+  "en": "Discover and list all URLs on a website with optional search filtering",
+  "zh": "网站测绘：列全站 URL，可关键词过滤",
+  "hot": 67387,
+  "type": "skill"
+ },
+ {
+  "name": "firecrawl-download",
+  "repo": "github.com/firecrawl/cli",
+  "en": "Download an entire website as local files: markdown, screenshots, multiple formats",
+  "zh": "整站离线打包：存成 Markdown/截图多格式",
+  "hot": 67175,
+  "type": "skill"
+ },
+ {
+  "name": "hyperframes-animation",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "All HyperFrames animation knowledge: motion rules, scene blueprints, seven adapters",
+  "zh": "HyperFrames 动画总纲：规则/蓝图/七适配器",
+  "hot": 65551,
+  "type": "skill"
+ },
+ {
+  "name": "typeset",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Fix typography: font choices, hierarchy, sizing, weight and readability",
+  "zh": "字排诊所：字体层级字号字重可读性",
+  "hot": 65546,
+  "type": "skill"
+ },
+ {
+  "name": "hyperframes-core",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "The HyperFrames composition contract: structure, timing attributes, tracks, validation",
+  "zh": "HyperFrames 合成契约：结构/时序/轨道",
+  "hot": 65011,
+  "type": "skill"
+ },
+ {
+  "name": "motion-graphics",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Design-led motion graphics: kinetic type, count-ups, logo stings, lower-thirds",
+  "zh": "动态图形：动态字/数字跳动/角标/片头标版",
+  "hot": 64865,
+  "type": "skill"
+ },
+ {
+  "name": "hyperframes-creative",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Creative direction for HyperFrames videos: design specs, palettes, narration, beats",
+  "zh": "视频创意导演：设计规格/配色/旁白/节拍",
+  "hot": 64746,
+  "type": "skill"
+ },
+ {
+  "name": "general-video",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Fallback workflow for custom HyperFrames compositions: reels, montages, any length",
+  "zh": "通用视频工作流：混剪/长片/自由合成兜底",
+  "hot": 64592,
+  "type": "skill"
+ },
+ {
+  "name": "theme-factory",
+  "repo": "github.com/anthropics/skills",
+  "en": "Style artifacts with 10 preset color/font themes or generate new themes on the fly",
+  "zh": "产物主题工厂：10 套预置配色字体，可即席生成",
+  "hot": 64533,
+  "type": "skill"
+ },
+ {
+  "name": "lead-magnets",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Create and optimize lead magnets: gated content, ebooks, checklists, templates",
+  "zh": "引流钩子设计：白皮书/清单/模板换邮箱",
+  "hot": 64403,
+  "type": "skill"
+ },
+ {
+  "name": "doc-coauthoring",
+  "repo": "github.com/anthropics/skills",
+  "en": "Structured co-authoring workflow for docs, proposals, specs: iterate and verify",
+  "zh": "文档共创流程：传上下文、迭代打磨、读者验证",
+  "hot": 64353,
+  "type": "skill"
+ },
+ {
+  "name": "website-to-video",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Capture a website and turn it into a site tour, showcase or social clip",
+  "zh": "网址变视频：站点导览/展示/社媒短片",
+  "hot": 64328,
+  "type": "skill"
+ },
+ {
+  "name": "product-launch-video",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Turn a product URL, script or brief into a launch video: SaaS promos, feature reveals",
+  "zh": "产品发布视频：链接或脚本直出宣传片",
+  "hot": 64299,
+  "type": "skill"
+ },
+ {
+  "name": "faceless-explainer",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Turn any text into a faceless explainer video with invented visuals, 30-90s sweet spot",
+  "zh": "无真人解说视频：文字进成片出，视觉全造",
+  "hot": 64298,
+  "type": "skill"
+ },
+ {
+  "name": "embedded-captions",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Add captions to talking-head video: 32 visual identities, scene-composited or overlay",
+  "zh": "口播视频加字幕：32 种视觉风格可选",
+  "hot": 64240,
+  "type": "skill"
+ },
+ {
+  "name": "pr-to-video",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Turn a GitHub pull request into a code-change explainer video",
+  "zh": "PR 变解说视频：代码变更可视化走查",
+  "hot": 63732,
+  "type": "skill"
+ },
+ {
+  "name": "overdrive",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Push interfaces past conventional limits: shaders, spring physics, 60fps reveals",
+  "zh": "界面开挂：着色器/弹簧物理/60 帧炫技",
+  "hot": 63627,
+  "type": "skill"
+ },
+ {
+  "name": "brand-guidelines",
+  "repo": "github.com/anthropics/skills",
+  "en": "Apply Anthropic's official brand colors and typography to any artifact",
+  "zh": "为产物套用 Anthropic 官方品牌色与字体规范",
+  "hot": 63184,
+  "type": "skill"
+ },
+ {
+  "name": "algorithmic-art",
+  "repo": "github.com/anthropics/skills",
+  "en": "Create algorithmic/generative art with p5.js: seeded randomness, flow fields, particles",
+  "zh": "p5.js 生成艺术：种子随机、流场、粒子系统",
+  "hot": 62975,
+  "type": "skill"
+ },
+ {
+  "name": "vercel-cli-with-tokens",
+  "repo": "github.com/vercel-labs/agent-skills",
+  "en": "Deploy and manage Vercel projects with token-based auth, no interactive login",
+  "zh": "令牌驱动 Vercel CLI：免交互部署管理",
+  "hot": 62615,
+  "type": "skill"
+ },
+ {
+  "name": "higgsfield-product-photoshoot",
+  "repo": "github.com/higgsfield-ai/skills",
+  "en": "Brand-quality product images via prompt enhancement on GPT Image 2",
+  "zh": "产品摄影级出图：棚拍/生活方式/主图",
+  "hot": 62421,
+  "type": "skill"
+ },
+ {
+  "name": "developing-genkit-js",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Build AI apps with Genkit in Node/TypeScript: agents, flows, tools, debugging",
+  "zh": "Genkit JS 开发：AI 流程/工具/排错",
+  "hot": 62166,
+  "type": "skill"
+ },
+ {
+  "name": "firebase-security-rules-auditor",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Evaluate Firestore security rules for robustness whenever they change",
+  "zh": "Firestore 规则安检：改动即审强度",
+  "hot": 62139,
+  "type": "skill"
+ },
+ {
+  "name": "developing-genkit-dart",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Genkit Dart SDK: build AI agents and LLM flows in Dart/Flutter apps",
+  "zh": "Genkit Dart：Flutter 应用接 AI 流程",
+  "hot": 61903,
+  "type": "skill"
+ },
+ {
+  "name": "higgsfield-soul-id",
+  "repo": "github.com/higgsfield-ai/skills",
+  "en": "Train a Soul Character on a person's face for identity-faithful image and video",
+  "zh": "数字分身训练：人脸建模生成本人图像视频",
+  "hot": 61655,
+  "type": "skill"
+ },
+ {
+  "name": "product-marketing-context",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Create the product marketing context doc: positioning, ICP, target audience",
+  "zh": "产品营销底稿：定位/ICP/目标人群一次讲清",
+  "hot": 61590,
+  "type": "skill"
+ },
+ {
+  "name": "pricing-strategy",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Pricing, packaging and monetization: tiers, freemium, value metrics, price increases",
+  "zh": "定价策略：分层/免费增值/价值锚/提价",
+  "hot": 61588,
+  "type": "skill"
+ },
+ {
+  "name": "firebase-ai-logic-basics",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Integrate Firebase AI Logic (Gemini API) into web apps: multimodal, structured output",
+  "zh": "Firebase AI Logic 接 Gemini：多模态输出",
+  "hot": 61255,
+  "type": "skill"
+ },
+ {
+  "name": "browser-act-skill-forge",
+  "repo": "github.com/browser-act/skills",
+  "en": "Forge reusable skill packages from website exploration: capture internal APIs once",
+  "zh": "探站一次铸成 skill：内部 API 沉淀复用",
+  "hot": 60787,
+  "type": "skill"
+ },
+ {
+  "name": "higgsfield-marketplace-cards",
+  "repo": "github.com/higgsfield-ai/skills",
+  "en": "Marketplace product cards: compliant main image, secondary shots, A+ modules",
+  "zh": "电商主图套装：合规主图/副图/A+ 模块",
+  "hot": 60684,
+  "type": "skill"
+ },
+ {
+  "name": "implement",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Implement a piece of work based on a PRD or set of issues",
+  "zh": "按 PRD/issue 清单老实施工交付",
+  "hot": 59071,
+  "type": "skill"
+ },
+ {
+  "name": "firebase-firestore",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Set up and query Cloud Firestore: full-text search, relational joins via pipelines",
+  "zh": "Firestore 建库查询：全文检索+管道联表",
+  "hot": 58796,
+  "type": "skill"
+ },
+ {
+  "name": "customer-research",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Conduct and synthesize customer research: interviews, surveys, support ticket mining",
+  "zh": "客户研究：访谈/问卷/工单里挖真声音",
+  "hot": 58539,
+  "type": "skill"
+ },
+ {
+  "name": "audit-website",
+  "repo": "github.com/squirrelscan/skills",
+  "en": "Audit sites across SEO, performance, security with 240+ rules and health scores",
+  "zh": "网站体检：240+ 规则出健康分与修复清单",
+  "hot": 58285,
+  "type": "skill"
+ },
+ {
+  "name": "analytics-tracking",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Set up and audit analytics: GA4, conversion events, UTM parameters, tag manager",
+  "zh": "埋点分析：GA4/转化事件/UTM/GTM 配齐",
+  "hot": 58225,
+  "type": "skill"
+ },
+ {
+  "name": "page-cro",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Optimize conversions on any marketing page: homepage, landing, pricing, blog",
+  "zh": "页面转化优化：首页/落地页/定价页 CRO",
+  "hot": 57854,
+  "type": "skill"
+ },
+ {
+  "name": "building-native-ui",
+  "repo": "github.com/expo/skills",
+  "en": "Build beautiful apps with Expo Router: styling, navigation, animations, native tabs",
+  "zh": "Expo Router 原生 UI：样式/导航/动画全指南",
+  "hot": 57686,
+  "type": "skill"
+ },
+ {
+  "name": "firebase-crashlytics",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Set up Firebase Crashlytics: provisioning, SDK usage, crash reporting",
+  "zh": "Crashlytics 崩溃上报：接入配置全流程",
+  "hot": 57409,
+  "type": "skill"
+ },
+ {
+  "name": "playwright-best-practices",
+  "repo": "github.com/currents-dev/playwright-best-practices-skill",
+  "en": "Playwright testing best practices: flaky fixes, POM, CI/CD, mocking, accessibility",
+  "zh": "Playwright 军规：治抖动/POM/CI/mock",
+  "hot": 57109,
+  "type": "skill"
+ },
+ {
+  "name": "xcode-project-setup",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Safely modify Xcode .pbxproj to add Swift Packages and link files",
+  "zh": "Xcode 工程安全改装：加 Swift 包不弄坏",
+  "hot": 57020,
+  "type": "skill"
+ },
+ {
+  "name": "slideshow",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Author HyperFrames slideshows: decks with fragment reveals, branching, hotspots",
+  "zh": "HyperFrames 幻灯片：分步显现/分支/热区",
+  "hot": 56525,
+  "type": "skill"
+ },
+ {
+  "name": "launch-strategy",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Plan product launches: Product Hunt, go-to-market, beta, waitlists, announcements",
+  "zh": "发布战役策划：PH 打榜/GTM/内测/候补名单",
+  "hot": 56432,
+  "type": "skill"
+ },
+ {
+  "name": "schema-markup",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Add and optimize schema.org structured data: JSON-LD, rich snippets, FAQ schema",
+  "zh": "结构化数据：JSON-LD 富摘要各类 schema",
+  "hot": 55865,
+  "type": "skill"
+ },
+ {
+  "name": "internal-comms",
+  "repo": "github.com/anthropics/skills",
+  "en": "Write internal comms: status reports, leadership updates, newsletters, incident reports",
+  "zh": "企业内部通讯写作：状态周报/高层更新/事故通报",
+  "hot": 55863,
+  "type": "skill"
+ },
+ {
+  "name": "contribute-catalog",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Author a new HyperFrames registry block or component and ship it as an upstream PR",
+  "zh": "HyperFrames 投稿：新组件做完提上游 PR",
+  "hot": 55622,
+  "type": "skill"
+ },
+ {
+  "name": "email-sequence",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Create email sequences: drip campaigns, onboarding flows, lifecycle programs",
+  "zh": "邮件序列：滴灌/新手引导/生命周期自动化",
+  "hot": 55498,
+  "type": "skill"
+ },
+ {
+  "name": "normalize",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Audit and realign UI to design system standards: spacing, tokens, patterns",
+  "zh": "设计系统归位：间距/令牌/样式漂移矫正",
+  "hot": 55160,
+  "type": "skill"
+ },
+ {
+  "name": "paid-ads",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Paid campaigns on Google, Meta, LinkedIn: PPC, ROAS, retargeting, audience targeting",
+  "zh": "投流全案：谷歌 Meta 领英/ROAS/再营销",
+  "hot": 55051,
+  "type": "skill"
+ },
+ {
+  "name": "convex",
+  "repo": "github.com/get-convex/agent-skills",
+  "en": "Route general Convex requests to the right project skill",
+  "zh": "Convex 总路由：模糊需求分发到对的技能",
+  "hot": 54887,
+  "type": "skill"
+ },
+ {
+  "name": "competitor-alternatives",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Create competitor comparison and alternative pages for SEO and sales",
+  "zh": "竞品对比页：vs 页/替代品页双吃 SEO 销售",
+  "hot": 54541,
+  "type": "skill"
+ },
+ {
+  "name": "extract",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Extract reusable components, tokens and patterns into your design system",
+  "zh": "设计系统萃取：重复 UI 沉淀成组件令牌",
+  "hot": 54080,
+  "type": "skill"
+ },
+ {
+  "name": "onboarding-cro",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Optimize post-signup onboarding: activation rate, first-run experience, time-to-value",
+  "zh": "新手激活优化：首跑体验缩短见值时间",
+  "hot": 54013,
+  "type": "skill"
+ },
+ {
+  "name": "onboard",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Design onboarding flows, empty states and first-run experiences that reach value fast",
+  "zh": "引导流设计：空状态/首次体验快速到价值",
+  "hot": 53926,
+  "type": "skill"
+ },
+ {
+  "name": "harden",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Make interfaces production-ready: error handling, empty states, i18n, edge cases",
+  "zh": "界面加固：报错/空态/国际化/边界全兜住",
+  "hot": 53850,
+  "type": "skill"
+ },
+ {
+  "name": "slack-gif-creator",
+  "repo": "github.com/anthropics/skills",
+  "en": "Create animated GIFs optimized for Slack with size constraints and validation tools",
+  "zh": "制作 Slack 专用动图：尺寸约束+校验工具",
+  "hot": 53196,
+  "type": "skill"
+ },
+ {
+  "name": "form-cro",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Optimize non-signup forms: lead capture, contact, demo request, checkout",
+  "zh": "表单转化优化：留资/联系/演示申请/结账",
+  "hot": 52945,
+  "type": "skill"
+ },
+ {
+  "name": "wonda-cli",
+  "repo": "github.com/degausai/wonda",
+  "en": "Wonda CLI: generate images, video, music, audio plus LinkedIn/Reddit/X research",
+  "zh": "Wonda 终端创作：图/视频/音乐+社媒调研",
+  "hot": 52874,
+  "type": "skill"
+ },
+ {
+  "name": "free-tool-strategy",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Plan free tools as marketing: calculators, generators, engineering-as-marketing",
+  "zh": "免费工具获客：计算器/生成器当营销资产",
+  "hot": 52705,
+  "type": "skill"
+ },
+ {
+  "name": "referral-program",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Create and optimize referral, affiliate and word-of-mouth programs",
+  "zh": "转介绍体系：推荐/分销/口碑裂变设计",
+  "hot": 52641,
+  "type": "skill"
+ },
+ {
+  "name": "firecrawl-interact",
+  "repo": "github.com/firecrawl/cli",
+  "en": "Drive a live browser on scraped pages: click, fill forms, navigate, extract",
+  "zh": "抓取页实时操作：点击填表走流程取数",
+  "hot": 52605,
+  "type": "skill"
+ },
+ {
+  "name": "stripe-best-practices",
+  "repo": "github.com/stripe/ai",
+  "en": "Stripe integration decisions: Checkout vs PaymentIntents, Connect, billing, migrations",
+  "zh": "Stripe 集成决策：收单/平台/订阅怎么选",
+  "hot": 52604,
+  "type": "skill"
+ },
+ {
+  "name": "design-md",
+  "repo": "github.com/google-labs-code/stitch-skills",
+  "en": "Analyze Stitch projects and synthesize a semantic design system into DESIGN.md",
+  "zh": "Stitch 项目反推设计系统写成 DESIGN.md",
+  "hot": 52597,
+  "type": "skill"
+ },
+ {
+  "name": "ab-test-setup",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Plan and implement A/B tests: hypotheses, variants, growth experimentation programs",
+  "zh": "AB 实验：假设/变体/增长实验体系搭建",
+  "hot": 52481,
+  "type": "skill"
+ },
+ {
+  "name": "tailwind-design-system",
+  "repo": "github.com/wshobson/agents",
+  "en": "Scalable design systems with Tailwind v4: tokens, component libraries, responsive patterns",
+  "zh": "Tailwind v4 设计系统：令牌+组件库",
+  "hot": 52416,
+  "type": "skill"
+ },
+ {
+  "name": "obsidian-markdown",
+  "repo": "github.com/kepano/obsidian-skills",
+  "en": "Obsidian Flavored Markdown: wikilinks, embeds, callouts, properties, tags",
+  "zh": "Obsidian 语法：双链/嵌入/标注/属性",
+  "hot": 52388,
+  "type": "skill"
+ },
+ {
+  "name": "notion-api",
+  "repo": "github.com/intellectronica/agent-skills",
+  "en": "Interact with the Notion API via REST: pages, databases, blocks, comments",
+  "zh": "Notion API 操作：页面/数据库/块增删改查",
+  "hot": 52357,
+  "type": "skill"
+ },
+ {
+  "name": "signup-flow-cro",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Optimize signup and trial activation: reduce friction and dropoff",
+  "zh": "注册流优化：降摩擦防流失提试用激活",
+  "hot": 52194,
+  "type": "skill"
+ },
+ {
+  "name": "paywall-upgrade-cro",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Create and optimize paywalls, upgrade screens, upsell modals, feature gates",
+  "zh": "付费墙优化：升级页/加购弹窗/功能门",
+  "hot": 51794,
+  "type": "skill"
+ },
+ {
+  "name": "popup-cro",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Conversion popups, modals and banners: exit intent, lead capture without annoyance",
+  "zh": "弹窗转化：退出挽留/留资弹层不惹人烦",
+  "hot": 51466,
+  "type": "skill"
+ },
+ {
+  "name": "typescript-advanced-types",
+  "repo": "github.com/wshobson/agents",
+  "en": "Advanced TypeScript types: generics, conditional, mapped, template literals, utilities",
+  "zh": "TS 高级类型：泛型/条件/映射/模板字面量",
+  "hot": 51320,
+  "type": "skill"
+ },
+ {
+  "name": "typegpu",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "TypeGPU and raw WebGPU patterns: WGSL shaders, compute pipelines, particles",
+  "zh": "WebGPU 合成：WGSL 着色器/粒子/液态玻璃",
+  "hot": 51086,
+  "type": "skill"
+ },
+ {
+  "name": "music-to-video",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Beat-synced video from a music track: one analyzer read drives every frame",
+  "zh": "音乐卡点成片：节拍解析驱动全部画面",
+  "hot": 50458,
+  "type": "skill"
+ },
+ {
+  "name": "react:components",
+  "repo": "github.com/google-labs-code/stitch-skills",
+  "en": "Convert Stitch designs into modular Vite React components with AST validation",
+  "zh": "Stitch 设计转 React 组件：AST 校验",
+  "hot": 50432,
+  "type": "skill"
+ },
+ {
+  "name": "firecrawl-build-search",
+  "repo": "github.com/firecrawl/skills",
+  "en": "Integrate Firecrawl /search into product code: query-first discovery then extraction",
+  "zh": "产品内建搜索：Firecrawl /search 集成",
+  "hot": 50000,
+  "type": "skill"
+ },
+ {
+  "name": "firecrawl-build-scrape",
+  "repo": "github.com/firecrawl/skills",
+  "en": "Integrate Firecrawl /scrape for single-page extraction: markdown, links, screenshots",
+  "zh": "产品内建单页抓取：/scrape 接进代码",
+  "hot": 49977,
+  "type": "skill"
+ },
+ {
+  "name": "firecrawl-build-interact",
+  "repo": "github.com/firecrawl/skills",
+  "en": "Integrate Firecrawl /interact for dynamic pages: clicks, forms, auth-aware flows",
+  "zh": "产品内建页面交互：点击填表带登录态",
+  "hot": 49864,
+  "type": "skill"
+ },
+ {
+  "name": "firecrawl-build-onboarding",
+  "repo": "github.com/firecrawl/skills",
+  "en": "Get Firecrawl credentials and SDK set up in a project: API key, .env, first SDK",
+  "zh": "Firecrawl 接入引导：密钥/SDK/环境变量",
+  "hot": 49846,
+  "type": "skill"
+ },
+ {
+  "name": "opentui",
+  "repo": "github.com/msmps/opentui-skill",
+  "en": "Build terminal UIs with OpenTUI Core, React or Solid: components, layout, keymaps",
+  "zh": "OpenTUI 终端界面：组件/布局/按键/动画",
+  "hot": 49526,
+  "type": "skill"
+ },
+ {
+  "name": "resolving-merge-conflicts",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Resolve an in-progress git merge or rebase conflict",
+  "zh": "git 合并/变基冲突现场处置",
+  "hot": 49418,
+  "type": "skill"
+ },
+ {
+  "name": "developing-genkit-go",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Build AI apps with Genkit in Go: generation, prompts, streaming, tool calling",
+  "zh": "Genkit Go 开发：生成/流式/工具调用",
+  "hot": 49323,
+  "type": "skill"
+ },
+ {
+  "name": "nia",
+  "repo": "github.com/nozomio-labs/nia-skill",
+  "en": "Index and search repos, docs, papers, datasets, Slack, Drive and X with Nia AI",
+  "zh": "Nia 万物索引：代码/文档/论文/群聊全检索",
+  "hot": 48613,
+  "type": "skill"
+ },
+ {
+  "name": "enhance-prompt",
+  "repo": "github.com/google-labs-code/stitch-skills",
+  "en": "Transform vague UI ideas into polished Stitch-optimized prompts with design context",
+  "zh": "UI 提示词精修：模糊想法变 Stitch 专用",
+  "hot": 47675,
+  "type": "skill"
+ },
+ {
+  "name": "firebase-remote-config-basics",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Firebase Remote Config: templates, feature flags, dynamic app behavior",
+  "zh": "Remote Config：功能开关动态改行为",
+  "hot": 47233,
+  "type": "skill"
+ },
+ {
+  "name": "claude-api",
+  "repo": "github.com/anthropics/skills",
+  "en": "Claude API / Anthropic SDK reference: model ids, pricing, streaming, tool use, caching",
+  "zh": "Claude API 速查：模型/定价/流式/工具调用/缓存",
+  "hot": 46671,
+  "type": "skill"
+ },
+ {
+  "name": "stitch-loop",
+  "repo": "github.com/google-labs-code/stitch-skills",
+  "en": "Iteratively build websites with Stitch using an autonomous baton-passing loop",
+  "zh": "Stitch 自主迭代：接力循环持续建站",
+  "hot": 46470,
+  "type": "skill"
+ },
+ {
+  "name": "compress",
+  "repo": "github.com/juliusbrussee/caveman",
+  "en": "Compress CLAUDE.md and memory files into caveman format, backup kept human-readable",
+  "zh": "记忆文件压缩：省 token 留人类可读备份",
+  "hot": 46355,
+  "type": "skill"
+ },
+ {
+  "name": "native-data-fetching",
+  "repo": "github.com/expo/skills",
+  "en": "Network requests in Expo: fetch, React Query, SWR, caching, offline, loaders",
+  "zh": "Expo 数据请求：缓存/离线/加载器全覆盖",
+  "hot": 46024,
+  "type": "skill"
+ },
+ {
+  "name": "amazon-product-research",
+  "repo": "github.com/nexscope-ai/amazon-skills",
+  "en": "Amazon product research: demand, competition, profit potential, market entry",
+  "zh": "亚马逊选品：需求/竞争/利润/入场门槛",
+  "hot": 46007,
+  "type": "skill"
+ },
+ {
+  "name": "turborepo",
+  "repo": "github.com/vercel/turborepo",
+  "en": "Turborepo monorepo guidance: task pipelines, caching, --filter, CI optimization",
+  "zh": "Turborepo 单仓：任务管道/缓存/过滤",
+  "hot": 45965,
+  "type": "skill"
+ },
+ {
+  "name": "neon-postgres",
+  "repo": "github.com/neondatabase/agent-skills",
+  "en": "Neon Serverless Postgres: branching, autoscaling, pooling, CLI, SDKs",
+  "zh": "Neon 无服务 PG：分支/伸缩/连接池",
+  "hot": 45650,
+  "type": "skill"
+ },
+ {
+  "name": "google-agents-cli-adk-code",
+  "repo": "github.com/google/agents-cli",
+  "en": "Write ADK agent code: tools, callbacks, state management, Python API patterns",
+  "zh": "ADK 写代码：工具/回调/状态管理范式",
+  "hot": 44063,
+  "type": "skill"
+ },
+ {
+  "name": "upgrade-stripe",
+  "repo": "github.com/stripe/ai",
+  "en": "Guide for upgrading Stripe API versions and SDKs",
+  "zh": "Stripe API/SDK 版本升级指南",
+  "hot": 44009,
+  "type": "skill"
+ },
+ {
+  "name": "obsidian-cli",
+  "repo": "github.com/kepano/obsidian-skills",
+  "en": "Obsidian CLI: read, create, search notes plus plugin and theme development",
+  "zh": "Obsidian CLI：笔记管理+插件主题开发",
+  "hot": 43987,
+  "type": "skill"
+ },
+ {
+  "name": "google-agents-cli-workflow",
+  "repo": "github.com/google/agents-cli",
+  "en": "ADK dev workflow: run locally, debug, test, deploy, publish, monitor agents",
+  "zh": "ADK 开发工作流：本地跑到上线监控",
+  "hot": 43874,
+  "type": "skill"
+ },
+ {
+  "name": "google-agents-cli-eval",
+  "repo": "github.com/google/agents-cli",
+  "en": "Evaluate ADK agents: eval datasets, failure analysis, quality methodology",
+  "zh": "ADK 评估：评测集/失败分析/质量方法论",
+  "hot": 43841,
+  "type": "skill"
+ },
+ {
+  "name": "google-agents-cli-scaffold",
+  "repo": "github.com/google/agents-cli",
+  "en": "Scaffold new ADK agent projects: create, add CI/CD, enhance, upgrade",
+  "zh": "ADK 项目脚手架：新建/加 CI/升级",
+  "hot": 43830,
+  "type": "skill"
+ },
+ {
+  "name": "google-agents-cli-observability",
+  "repo": "github.com/google/agents-cli",
+  "en": "Monitor deployed ADK agents: Cloud Trace, logging, production debugging",
+  "zh": "ADK 可观测：链路追踪/日志/生产调试",
+  "hot": 43821,
+  "type": "skill"
+ },
+ {
+  "name": "google-agents-cli-deploy",
+  "repo": "github.com/google/agents-cli",
+  "en": "Deploy ADK agents: Agent Runtime, Cloud Run, GKE, CI/CD, secrets",
+  "zh": "ADK 部署：Cloud Run/GKE/密钥/流水线",
+  "hot": 43813,
+  "type": "skill"
+ },
+ {
+  "name": "google-agents-cli-publish",
+  "repo": "github.com/google/agents-cli",
+  "en": "Publish ADK agents to Gemini Enterprise via agents-cli",
+  "zh": "ADK 发布：注册进 Gemini Enterprise",
+  "hot": 43758,
+  "type": "skill"
+ },
+ {
+  "name": "shadcn-ui",
+  "repo": "github.com/google-labs-code/stitch-skills",
+  "en": "Integrate and build with shadcn/ui: discovery, installation, customization",
+  "zh": "shadcn/ui 实战：找组件/安装/定制",
+  "hot": 43229,
+  "type": "skill"
+ },
+ {
+  "name": "obsidian-bases",
+  "repo": "github.com/kepano/obsidian-skills",
+  "en": "Create Obsidian Bases (.base): views, filters, formulas, note databases",
+  "zh": "Obsidian Bases：笔记库表格视图与公式",
+  "hot": 43193,
+  "type": "skill"
+ },
+ {
+  "name": "decision-mapping",
+  "repo": "github.com/mattpocock/skills",
+  "en": "Turn a loose idea into sequenced investigation tickets, drive each to resolution",
+  "zh": "决策地图：想法拆成排序工单逐个击破",
+  "hot": 42587,
+  "type": "skill"
+ },
+ {
+  "name": "gws-gmail",
+  "repo": "github.com/googleworkspace/cli",
+  "en": "Gmail via Google Workspace CLI: send, read and manage email",
+  "zh": "Gmail 命令行：收发管理邮件",
+  "hot": 42376,
+  "type": "skill"
+ },
+ {
+  "name": "upgrading-expo",
+  "repo": "github.com/expo/skills",
+  "en": "Upgrade Expo SDK versions and fix dependency issues",
+  "zh": "Expo SDK 升级与依赖问题修理",
+  "hot": 41891,
+  "type": "skill"
+ },
+ {
+  "name": "web-search",
+  "repo": "github.com/halt-catch-fire/skills",
+  "en": "Web search and content extraction with Tavily and Exa via inference.sh CLI",
+  "zh": "Tavily/Exa 联网搜索：研究与 RAG 取料",
+  "hot": 41879,
+  "type": "skill"
+ },
+ {
+  "name": "agent-tools",
+  "repo": "github.com/halt-catch-fire/skills",
+  "en": "Run 250+ AI apps via inference.sh CLI: image, video, LLMs, search, 3D, automation",
+  "zh": "inference.sh 全家：250+ AI 应用一口气",
+  "hot": 41749,
+  "type": "skill"
+ },
+ {
+  "name": "python-executor",
+  "repo": "github.com/halt-catch-fire/skills",
+  "en": "Run Python in a sandbox with 100+ preinstalled libraries: pandas, OpenCV, Playwright",
+  "zh": "沙箱跑 Python：百余库预装即用",
+  "hot": 41743,
+  "type": "skill"
+ },
+ {
+  "name": "infsh-cli",
+  "repo": "github.com/halt-catch-fire/skills",
+  "en": "inference.sh CLI entry: run 250+ AI apps for generation, search and automation",
+  "zh": "infsh 命令行：生成/搜索/自动化总入口",
+  "hot": 41727,
+  "type": "skill"
+ },
+ {
+  "name": "competitor-profiling",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Research and profile competitors from URLs: competitive intelligence reports",
+  "zh": "竞品画像：给网址出竞争情报档案",
+  "hot": 41112,
+  "type": "skill"
+ },
+ {
+  "name": "expo-tailwind-setup",
+  "repo": "github.com/expo/skills",
+  "en": "Set up Tailwind v4 in Expo with react-native-css and NativeWind v5",
+  "zh": "Expo 配 Tailwind v4：全端统一样式",
+  "hot": 40967,
+  "type": "skill"
+ },
+ {
+  "name": "stripe-projects",
+  "repo": "github.com/stripe/ai",
+  "en": "Provision infrastructure via Stripe Projects: databases, auth, caching, hosting",
+  "zh": "Stripe Projects 开资源：库/鉴权/缓存",
+  "hot": 40862,
+  "type": "skill"
+ },
+ {
+  "name": "media-use",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Agent Media OS: resolve any BGM, SFX, image or icon into a frozen local file",
+  "zh": "素材总管：BGM/音效/图标解析落盘登记",
+  "hot": 40144,
+  "type": "skill"
+ },
+ {
+  "name": "community-marketing",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Build communities that drive growth: Discord, Slack, forums, brand advocates",
+  "zh": "社群营销：建群运营养出品牌自来水",
+  "hot": 39966,
+  "type": "skill"
+ },
+ {
+  "name": "expo-deployment",
+  "repo": "github.com/expo/skills",
+  "en": "Deploy Expo apps with EAS: App Store, Play Store, TestFlight, versions, ASO",
+  "zh": "EAS 发布：双商店提审/版本/元数据",
+  "hot": 39831,
+  "type": "skill"
+ },
+ {
+  "name": "arrange",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Improve layout, spacing and visual rhythm: fix monotonous grids and weak hierarchy",
+  "zh": "排布优化：治单调网格/乱间距/弱层级",
+  "hot": 39714,
+  "type": "skill"
+ },
+ {
+  "name": "expo-dev-client",
+  "repo": "github.com/expo/skills",
+  "en": "Build an Expo app for development with a custom dev client",
+  "zh": "Expo 开发客户端构建",
+  "hot": 39671,
+  "type": "skill"
+ },
+ {
+  "name": "agentix-ceo",
+  "repo": "github.com/agentix-cloud/skills",
+  "en": "Manage an agent team: create roles, assign tasks, spawn workers, monitor progress",
+  "zh": "Agent 团队管理：设岗派活/开工监工",
+  "hot": 39576,
+  "type": "skill"
+ },
+ {
+  "name": "solana-dev",
+  "repo": "github.com/solana-foundation/solana-dev-skill",
+  "en": "Build Solana dapps: Anchor programs, tokens, wallets, PDAs, devnet deploys",
+  "zh": "Solana 开发：Anchor 合约/代币/钱包",
+  "hot": 39531,
+  "type": "skill"
+ },
+ {
+  "name": "json-canvas",
+  "repo": "github.com/kepano/obsidian-skills",
+  "en": "Create JSON Canvas files: nodes, edges, groups for mind maps and flowcharts",
+  "zh": "Obsidian 白板文件：节点连线画思维导图",
+  "hot": 39431,
+  "type": "skill"
+ },
+ {
+  "name": "expo-cicd-workflows",
+  "repo": "github.com/expo/skills",
+  "en": "Write EAS workflow YAML for Expo: build pipelines and deployment automation",
+  "zh": "EAS 工作流 YAML：构建流水线自动化",
+  "hot": 38931,
+  "type": "skill"
+ },
+ {
+  "name": "pexo-agent",
+  "repo": "github.com/pexoai/pexo-skills",
+  "en": "Finished multi-shot AI video from text, images or URLs with auto model selection",
+  "zh": "全自动成片：文/图/链接进，多镜头片出",
+  "hot": 38761,
+  "type": "skill"
+ },
+ {
+  "name": "gws-drive",
+  "repo": "github.com/googleworkspace/cli",
+  "en": "Google Drive via CLI: manage files, folders and shared drives",
+  "zh": "Google Drive 命令行：文件目录共享盘",
+  "hot": 38740,
+  "type": "skill"
+ },
+ {
+  "name": "nodejs-backend-patterns",
+  "repo": "github.com/wshobson/agents",
+  "en": "Production Node.js backends: Express/Fastify, middleware, auth, API design",
+  "zh": "Node 后端范式：中间件/鉴权/API 设计",
+  "hot": 38713,
+  "type": "skill"
+ },
+ {
+  "name": "firecrawl-parse",
+  "repo": "github.com/firecrawl/cli",
+  "en": "Parse local files (PDF, DOCX, XLSX, HTML) into clean markdown on disk",
+  "zh": "本地文件转 Markdown：PDF/Word/表格",
+  "hot": 38700,
+  "type": "skill"
+ },
+ {
+  "name": "directory-submissions",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Submit products to startup, SaaS and AI directories for backlinks and discovery",
+  "zh": "目录站投放：拿外链提权重蹭曝光",
+  "hot": 38620,
+  "type": "skill"
+ },
+ {
+  "name": "image",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Create and optimize marketing images: blog heroes, social graphics, brand assets",
+  "zh": "营销出图：博客头图/社媒图/品牌素材",
+  "hot": 38513,
+  "type": "skill"
+ },
+ {
+  "name": "make-interfaces-feel-better",
+  "repo": "github.com/jakubkrehel/make-interfaces-feel-better",
+  "en": "Design engineering principles for polished interfaces: hover, shadows, micro-motion",
+  "zh": "界面手感工程：悬停/阴影/微动效细节",
+  "hot": 38499,
+  "type": "skill"
+ },
+ {
+  "name": "video",
+  "repo": "github.com/coreyhaines31/marketingskills",
+  "en": "Produce marketing video with AI tools: Remotion, HeyGen, Veo, Sora, Runway, Kling",
+  "zh": "营销视频制片：AI 工具与代码框架全谱",
+  "hot": 38331,
+  "type": "skill"
+ },
+ {
+  "name": "ai-sdk",
+  "repo": "github.com/vercel/ai",
+  "en": "Vercel AI SDK: generateText, streamText, agents, chatbots, RAG, tools",
+  "zh": "AI SDK 参考：生成/流式/智能体/RAG",
+  "hot": 38020,
+  "type": "skill"
+ },
+ {
+  "name": "git-commit",
+  "repo": "github.com/github/awesome-copilot",
+  "en": "Conventional commits with intelligent staging and message generation",
+  "zh": "规范化提交：智能暂存+自动生成信息",
+  "hot": 37726,
+  "type": "skill"
+ },
+ {
+  "name": "gws-docs",
+  "repo": "github.com/googleworkspace/cli",
+  "en": "Read and write Google Docs from the CLI",
+  "zh": "Google 文档命令行读写",
+  "hot": 37480,
+  "type": "skill"
+ },
+ {
+  "name": "expo-api-routes",
+  "repo": "github.com/expo/skills",
+  "en": "Create API routes in Expo Router with EAS Hosting",
+  "zh": "Expo Router API 路由+EAS 托管",
+  "hot": 36955,
+  "type": "skill"
+ },
+ {
+  "name": "cross-border-ecommerce",
+  "repo": "github.com/nexscope-ai/ecommerce-skills",
+  "en": "Cross-border e-commerce advisor: score markets on 8 dimensions, compare fulfillment",
+  "zh": "跨境电商顾问：八维评分选市场配履约",
+  "hot": 36769,
+  "type": "skill"
+ },
+ {
+  "name": "firebase-firestore-standard",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Firestore Standard Edition: provisioning, security rules, SDK usage",
+  "zh": "Firestore 标准版：开通/规则/SDK",
+  "hot": 36724,
+  "type": "skill"
+ },
+ {
+  "name": "gws-calendar",
+  "repo": "github.com/googleworkspace/cli",
+  "en": "Google Calendar via CLI: manage calendars and events",
+  "zh": "Google 日历命令行：日程管理",
+  "hot": 36703,
+  "type": "skill"
+ },
+ {
+  "name": "gws-sheets",
+  "repo": "github.com/googleworkspace/cli",
+  "en": "Google Sheets via CLI: read and write spreadsheets",
+  "zh": "Google 表格命令行读写",
+  "hot": 36168,
+  "type": "skill"
+ },
+ {
+  "name": "firebase-firestore-enterprise-native-mode",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Firestore Enterprise native mode: provisioning, data model, security rules, SDK",
+  "zh": "Firestore 企业原生版：建模/规则/SDK",
+  "hot": 35790,
+  "type": "skill"
+ },
+ {
+  "name": "huashu-design",
+  "repo": "github.com/alchaincyf/huashu-design",
+  "en": "Huashu Design: high-fidelity HTML prototypes, slides, animations and expert review",
+  "zh": "花叔Design：HTML 高保真原型/PPT/动画/评审",
+  "hot": 35460,
+  "type": "skill"
+ },
+ {
+  "name": "humanizer-zh",
+  "repo": "github.com/op7418/humanizer-zh",
+  "en": "Remove AI writing tells from Chinese text based on Wikipedia's AI-signs guide",
+  "zh": "中文去 AI 味：修夸饰/套话/破折号滥用",
+  "hot": 35435,
+  "type": "skill"
+ },
+ {
+  "name": "python-appservice-deploy",
+  "repo": "github.com/microsoft/azure-skills",
+  "en": "Deploy Python (Flask/Django/FastAPI) code to Azure App Service Linux",
+  "zh": "Python 应用部署 Azure App Service",
+  "hot": 35418,
+  "type": "skill"
+ },
+ {
+  "name": "planning-with-files",
+  "repo": "github.com/othmanadi/planning-with-files",
+  "en": "Manus-style persistent planning: task_plan.md and progress.md survive context loss",
+  "zh": "文件化规划：计划进度落盘，清上下文不丢",
+  "hot": 35304,
+  "type": "skill"
+ },
+ {
+  "name": "talking-head-recut",
+  "repo": "github.com/heygen-com/hyperframes",
+  "en": "Layer timed graphic overlays onto talking-head video: titles, callouts, quotes",
+  "zh": "口播视频包装：字卡/数据/引用贴片跟稿走",
+  "hot": 34957,
+  "type": "skill"
+ },
+ {
+  "name": "firebase-ai-logic",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Integrate Firebase AI Logic (Gemini API): setup, multimodal, structured output",
+  "zh": "Firebase AI Logic：Gemini 接入网页应用",
+  "hot": 34079,
+  "type": "skill"
+ },
+ {
+  "name": "accessibility",
+  "repo": "github.com/addyosmani/web-quality-skills",
+  "en": "Audit and improve web accessibility per WCAG 2.2: screen readers, keyboard nav",
+  "zh": "无障碍审计：WCAG 2.2/读屏/键盘导航",
+  "hot": 33769,
+  "type": "skill"
+ },
+ {
+  "name": "golang-code-style",
+  "repo": "github.com/samber/cc-skills-golang",
+  "en": "Go code style conventions: line breaking, declarations, control flow clarity",
+  "zh": "Go 代码风格：断行/声明/控制流可读性",
+  "hot": 33476,
+  "type": "skill"
+ },
+ {
+  "name": "developing-genkit-python",
+  "repo": "github.com/firebase/agent-skills",
+  "en": "Build AI apps with Genkit in Python: agents, flows, tools, troubleshooting",
+  "zh": "Genkit Python：AI 流程工具与排错",
+  "hot": 33464,
+  "type": "skill"
+ },
+ {
+  "name": "golang-error-handling",
+  "repo": "github.com/samber/cc-skills-golang",
+  "en": "Idiomatic Go errors: wrapping with %w, errors.Is/As, sentinels, slog logging",
+  "zh": "Go 错误处理：包装/判断/哨兵/结构化日志",
+  "hot": 33198,
+  "type": "skill"
+ },
+ {
+  "name": "seo-geo",
+  "repo": "github.com/resciencelab/opc-skills",
+  "en": "SEO and GEO: keywords, schema markup, optimize for AI and traditional search",
+  "zh": "SEO+GEO 双优化：传统搜索和 AI 搜索都要",
+  "hot": 33106,
+  "type": "skill"
+ },
+ {
+  "name": "golang-performance",
+  "repo": "github.com/samber/cc-skills-golang",
+  "en": "Go performance playbook: allocation, GC tuning, pooling, hot-path optimization",
+  "zh": "Go 性能优化：降分配/调 GC/池化热路径",
+  "hot": 33055,
+  "type": "skill"
+ },
+ {
+  "name": "replicas-agent",
+  "repo": "github.com/replicas-group/skill",
+  "en": "Guide for background coding agents running inside Replicas cloud workspaces",
+  "zh": "Replicas 云工位：后台编码代理行动指南",
+  "hot": 32937,
+  "type": "skill"
+ },
+ {
+  "name": "golang-design-patterns",
+  "repo": "github.com/samber/cc-skills-golang",
+  "en": "Idiomatic Go patterns: functional options, DI, graceful shutdown, resilience",
+  "zh": "Go 设计模式：函数选项/注入/优雅退出",
+  "hot": 32904,
+  "type": "skill"
+ },
+ {
+  "name": "golang-testing",
+  "repo": "github.com/samber/cc-skills-golang",
+  "en": "Production Go tests: table-driven, testify, fuzzing, goleak, snapshots, coverage",
+  "zh": "Go 测试大全：表驱动/模糊/泄漏检测",
+  "hot": 32882,
+  "type": "skill"
+ },
+ {
+  "name": "anysearch",
+  "repo": "github.com/anysearch-ai/anysearch-skill",
+  "en": "Real-time search: web, vertical domains, parallel batch queries, URL extraction",
+  "zh": "实时搜索引擎：垂类/批量并发/URL 抽取",
+  "hot": 32830,
+  "type": "skill"
+ },
+ {
+  "name": "self-improving-agent",
+  "repo": "github.com/charon-fan/agent-playbook",
+  "en": "Self-improving agent with semantic, episodic and working memory plus hook-based fixes",
+  "zh": "自进化 Agent：三层记忆+钩子自纠错",
+  "hot": 31518,
+  "type": "skill"
+ },
+ {
+  "name": "gsap-core",
+  "repo": "github.com/greensock/gsap-skills",
+  "en": "Official GSAP core skill: tweens, easing, stagger, matchMedia responsiveness",
+  "zh": "GSAP 官方核心：补间/缓动/交错/响应式",
+  "hot": 31230,
+  "type": "skill"
+ },
+ {
+  "name": "cloudflare",
+  "repo": "github.com/cloudflare/skills",
+  "en": "Cloudflare platform: Workers, Pages, KV/D1/R2, Workers AI, WAF, Terraform",
+  "zh": "Cloudflare 全平台：Workers/存储/AI/安全",
+  "hot": 30530,
+  "type": "skill"
+ },
+ {
+  "name": "shape",
+  "repo": "github.com/pbakaus/impeccable",
+  "en": "Plan UX/UI before code: structured discovery interview producing a design brief",
+  "zh": "写码前定设计：访谈产出设计简报",
+  "hot": 30490,
+  "type": "skill"
+ },
+ {
+  "name": "gsap-scrolltrigger",
+  "repo": "github.com/greensock/gsap-skills",
+  "en": "Official GSAP ScrollTrigger: scroll-linked animations, pinning, scrub, parallax",
+  "zh": "ScrollTrigger 官方：滚动动画/钉住/视差",
+  "hot": 29809,
+  "type": "skill"
+ },
+ {
+  "name": "vercel-optimize",
+  "repo": "github.com/vercel-labs/agent-skills",
+  "en": "Vercel cost and performance optimization: metric-backed, ranked recommendations",
+  "zh": "Vercel 降本提速：按指标排查出优化清单",
+  "hot": 28655,
+  "type": "skill"
+ },
+ {
+  "name": "writing-guidelines",
+  "repo": "github.com/vercel-labs/agent-skills",
+  "en": "Review docs and prose for Writing Guidelines compliance: style, voice, tone",
+  "zh": "文档文风审查：按写作手册对标",
+  "hot": 28655,
+  "type": "skill"
+ },
+ {
+  "name": "skill-seekers",
+  "repo": "github.com/yusufkaraaslan/Skill_Seekers",
+  "en": "Auto-build AI skills from docs sites, repos, PDFs and videos with source detection",
+  "zh": "文档变技能：官网/仓库/PDF 一键炼成 skill",
+  "hot": 14356,
+  "type": "skill"
+ },
+ {
+  "name": "reddit-fetch",
+  "repo": "github.com/ykdojo/claude-code-tips",
+  "en": "Fetch Reddit content via the curl JSON API, works when Reddit blocks with 403",
+  "zh": "Reddit 内容抓取：JSON API 绕 403 封锁",
+  "hot": 9010,
+  "type": "skill"
+ },
+ {
+  "name": "notebooklm",
+  "repo": "github.com/PleasePrompto/notebooklm-skill",
+  "en": "Query Google NotebookLM notebooks for source-grounded, citation-backed answers",
+  "zh": "直连 NotebookLM：只答文档内容带引用",
+  "hot": 7293,
+  "type": "skill"
+ },
+ {
+  "name": "playwright-skill",
+  "repo": "github.com/lackeyjb/playwright-skill",
+  "en": "Complete Playwright browser automation: auto-detect dev servers, test, screenshot",
+  "zh": "Playwright 全能自动化：识别端口测页面",
+  "hot": 2863,
+  "type": "skill"
+ },
+ {
+  "name": "prompt-engineering",
+  "repo": "github.com/NeoLabHQ/context-engineering-kit",
+  "en": "Prompt engineering for commands, hooks, skills and subagent prompts",
+  "zh": "提示词工程：命令/钩子/子代理提示优化",
+  "hot": 1200,
+  "type": "skill"
+ },
+ {
+  "name": "ios-simulator-skill",
+  "repo": "github.com/conorluddy/ios-simulator-skill",
+  "en": "29 scripts for iOS testing and automation: semantic UI navigation, builds, a11y",
+  "zh": "iOS 模拟器工具箱：29 脚本测试构建导航",
+  "hot": 1130,
+  "type": "skill"
+ }
+]

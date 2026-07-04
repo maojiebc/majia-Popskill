@@ -50,22 +50,6 @@
 			<string>%lld symlinks</string>
 		</dict>
 	</dict>
-	<key>%lld 个源可更新</key>
-	<dict>
-		<key>NSStringLocalizedFormatKey</key>
-		<string>%#@value@</string>
-		<key>value</key>
-		<dict>
-			<key>NSStringFormatSpecTypeKey</key>
-			<string>NSStringPluralRuleType</string>
-			<key>NSStringFormatValueTypeKey</key>
-			<string>lld</string>
-			<key>one</key>
-			<string>%lld source has updates</string>
-			<key>other</key>
-			<string>%lld sources have updates</string>
-		</dict>
-	</dict>
 	<key>%lld 个源检查失败（网络或源不可达）</key>
 	<dict>
 		<key>NSStringLocalizedFormatKey</key>

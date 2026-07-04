@@ -399,6 +399,14 @@ struct SettingsSheet: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(model.checkingUpdates)
+                Button { model.sheet = .cli; if model.globalClis.isEmpty { model.checkCliUpdates() } } label: {
+                    Text(L("CLI 巡检…"))
+                        .font(.ui(11.5, .semibold)).foregroundStyle(Color(hex: 0x444444))
+                        .padding(.horizontal, 10).frame(height: 26)
+                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .help(L("npm 全局 CLI 的版本矩阵与一键升级"))
                 Text(L("开关 = 自动更新。移除源会同时卸载它提供的能力与 symlink。"))
                     .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
             }
