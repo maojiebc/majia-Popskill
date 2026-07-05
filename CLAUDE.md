@@ -141,6 +141,7 @@ scripts/release.sh
 15. **容器 .shadow 会传染子视图** — SwiftUI 给带子背景的容器加 .shadow，每个子行各自投影把底色糊灰（v2.3.1 用户实机发现）；浮层/弹层投影前必须 `compositingGroup()`
 16. **发版链禁静默步骤** — v2.5.0 事故：appcast 注入静默 no-op，DMG/Release 都成了、更新源没更，用户看到「最新 2.4.2/正跑 2.5.0」倒挂。appcast 一律走 `scripts/append-appcast.py`（断言：重复版本拒绝/锚点必中/写后校验）；另注意 Pages CDN max-age=600，发版后 10 分钟内手动检查可能命中旧缓存
 17. **`Bundle.module` 在打包 .app 里会崩** — v2.13.0 事故：SPM 生成的 `Bundle.module` 访问器写死去「.app 顶层」和「**打包机的 .build 绝对路径**」找资源 bundle，资源实际在 `Contents/Resources/`，对不上即 `fatalError`，**别人电脑一开就崩**；dev 与本机 smoke 因那条绝对路径恰存在而全程掩盖。教训：①本地化资源查找**自己写**（多候选位置 + 找不到退回 `.main` 绝不 crash，见 Localization.swift `resourceBundle`），不用 `Bundle.module`；②**发版前必须冷启打包的 .app**（不能只跑 dev binary）——`smoke-bundle.sh` 已加固：冷启前把 `.build/*release*/Popskill_Popskill.bundle` 移开，逼 .app 只用自己 `Contents/Resources` 副本，复现干净机器
+18. **notarytool 403 "required agreement is missing or has expired"** — 不是坑 #6（那是 profile 被清，报 401/找不到钥匙串项）！这是 Apple 更新了开发者协议：登录 developer.apple.com/account 用户本人勾选同意即恢复，别浪费时间重存 App 专用密码（2026-07-05 v2.14 发版实撞）
 
 ## 当前状态（2026-07-05）
 
