@@ -131,7 +131,7 @@ scripts/release.sh
 5. **磁盘满** — `swift-app/.build/` 经常 1GB+，改大代码前清理
 6. **notarytool profile 会被清掉** — 发版前必跑 `xcrun notarytool history --keychain-profile popskill-notarize`
 7. **外部 patch 用 `git apply --3way`**
-8. **GitHub Pages 会被禁用 → Sparkle 静默失效** — 每次发版后必 curl 验证
+8. **GitHub Pages 会被禁用 → Sparkle 静默失效** — 每次发版后必 curl 验证。第二形态（2026-07-05 v2.14 实撞）：Pages 没禁但**构建卡死**（builds/latest 状态 building 且 created==updated 十几分钟不动）——处方 `gh api -X POST repos/maojiebc/majia-Popskill/pages/builds` 请求重建，30 秒即好
 9. **CLT 工具链没有 XCTest** — 跑测试必须 `DEVELOPER_DIR=/Applications/Xcode.app`
 10. **zsh 不对 `$1` 分词** — 脚本里给 env 传多个变量用 `${=1}`
 11. **裸 debug 二进制下 Sparkle 会弹错** — 已用 `SUFeedURL 存在才 startingUpdater` 规避
