@@ -8,6 +8,30 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.15.0</title>
+      <pubDate>Tue, 07 Jul 2026 08:36:14 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.15.0 — 实时同步 + 跳过此版本</h2>
+        <p>「文件系统就是数据库」补上最后一环：磁盘一动界面秒级跟上；更新提醒从此可以说「这版我不要」。</p>
+        <h2>store 实时同步（FSEvents）</h2>
+        <p>目标用户天天在终端直接动 `~/.agents`——`npx skills add`、`rm -rf`、手动 `ln -s`。此前界面只有两条回家路：⌘R 手动重扫、切前台自动重扫；app 开在旁边屏幕时就是脱节的。</p>
+        <p>现在 FSEvents 监听 store 根目录 + 各工具的 `skills/agents/mcp/bin` 链接目录，外部变更 1 秒合并窗口 + 去抖后自动重扫，终端里装完技能抬眼就能看到卡片出现。 刻意不监听 `~/.claude` 整棵树——每个 Claude 会话都在写 projects/，噪音是信号的百倍。 本进程自己的写不触发（IgnoreSelf）；换版进行中让位，不看半成品盘面。 ⌘R 与切前台重扫保留作兜底；调试钩子 `POPSKILL_NO_WATCH=1` 可关闭。</p>
+        <h2>更新徽标可跳过（吸收 cc-switch dismissedVersion）</h2>
+        <p>上游改了个 README 也亮徽标、每次开 app 都提醒同一个「新版」——不想升的版本从此右键「跳过此版本」。</p>
+        <p>跳过钉住的是<b>上游状态指纹</b>（github = HEAD sha / npm = registry 版本号 / well-known = 远端内容哈希），不是文案标签：同一状态不再提醒，上游再出新东西自动重新亮。 右键「恢复更新提醒」随时反悔，恢复即对该源定向重查，徽标从真相重新推导。 跳过态不影响其它源的检查与「全部更新」；github 源跳过期间照常走 HEAD 短路，零 clone 开销。</p>
+        <h2>其它</h2>
+        <p>未安装工具的挂载确认弹窗加「不再询问」（系统原生 suppression）——批量往新工具挂十几个技能不再十几连弹；只有点了「仍然挂载」才记住勾选。 测试 106 个：新增 FSEvents 触发/幂等、外部进程写入穿透 IgnoreSelf、AppModel 全链集成（终端加技能 → 模型自动跟上）、跳过抑制/新状态重亮/恢复提醒清检查点（防 HEAD 短路钉死「最新」）。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.15.0/Popskill-2.15.0.dmg"
+        sparkle:version="280"
+        sparkle:shortVersionString="2.15.0"
+        sparkle:edSignature="Muh6fexbcf5pRPqYaAUbIbQh2dc2pTrmfldG56sVpLYiAjGGfBpNuDFjy2P9/Mnwbs/0rSk1PV04HkoMAlnJBw=="
+        length="2809026"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.14.0</title>
       <pubDate>Sun, 05 Jul 2026 12:41:21 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
