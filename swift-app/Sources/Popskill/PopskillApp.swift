@@ -45,6 +45,7 @@ struct PopskillApp: App {
                 .environment(model)
                 .onAppear {
                     appDelegate.model = model
+                    model.startWatching()   // FSEvents 实时刷新（v2.15）
                     if updaterController.updater.canCheckForUpdates || Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") != nil {
                         model.checkAppUpdate = { [weak updaterController = updaterController] in
                             updaterController?.checkForUpdates(nil)

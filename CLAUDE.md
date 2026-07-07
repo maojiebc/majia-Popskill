@@ -32,12 +32,14 @@ swift-app/Sources/Popskill/
 ├── Sched.swift         定时任务引擎（v2.9 引入 v2.10 重做：plist/cron 解析 + next-fire 计算 + 日志 mtime 推上次运行 + launchctl 操作）
 ├── SchedSheet.swift    定时任务弹层（◷ / ⌘J；行为分组/倒计时排序/人话备注；写操作 NSAlert 确认）
 ├── Localization.swift  L() 取词 + 显式语言协商 + l10nLocale（v2.12，详见「本地化」节）
+├── StoreWatch.swift    FSEvents 监听器（v2.15：store/工具目录外部变更秒级自动重扫）
 ├── Resources/          {zh-Hans,en}.lproj（gen-l10n.sh 从 l10n/ 目录预编译，提交进库）
 └── Fixtures.swift      原型样例数据（POPSKILL_FAKE_DATA=1）
 swift-app/l10n/Localizable.xcstrings     本地化权威源（人/AI 只编辑这一个文件）
 Tests/PopskillTests/StoreFSTests.swift   引擎测试 + RealEnvSmoke 只读冒烟
 Tests/PopskillTests/AppModelTests.swift  纯逻辑测试（修复推荐矩阵/键盘状态机）
 Tests/PopskillTests/SchedTests.swift     定时任务解析测试（plist/cron/launchctl 全 fixture，不碰真系统）
+Tests/PopskillTests/StoreWatchTests.swift FSEvents 触发/幂等 + AppModel 全链集成（外部进程写）
 ```
 
 ### 关键架构事实
@@ -60,6 +62,9 @@ Tests/PopskillTests/SchedTests.swift     定时任务解析测试（plist/cron/l
 - **更新计数语义（v2.14）**：横幅/按钮计数一律 `Entry.updateCount`（套装按 changedMembers 逐成员计，独立项 1）——用户视角是「几个技能」不是「几个源」。横幅「N 个技能可更新」可点击：`jumpToNextUpdate()` 循环跳转+展开套装+闪烁，跳转优先于过滤（清 query/typeFilter）。hero 右侧常驻手动「检查更新」按钮。表格视图三种行都有更新徽标（v2.13 引入表格时漏了整套）。
 - **npm 源（v2.14，NpmSource.swift）**：npm 包发布的是 CLI 本体（tarball 里没有 SKILL.md，技能目录是 CLI 的 install-skill 生成的），所以更新语义 = registry `/latest` vs `npm ls -g` 已装版，`applyNpmUpdate` = `npm i -g`，**绝不碰 store 技能目录**。npm 探测走 `zsh -lc`（GUI app 的 PATH 没有 ~/.local/nvm）缓存在 NpmEnv；「添加」流程仍拒绝 npm 源（装不出技能）。**全局 CLI 巡检**：`checkCliUpdates()` 对 npm -g 全部包逐个比 registry（排除 entries 里 npm 源对应的包防双计），CliSheet 版本矩阵一键升级，入口=横幅「⌨」+设置页+应用菜单。
 - **well-known 源（v2.14，WellKnownSource.swift）**：skills.sh 生态的单文件分发协议（lark 系 24+ 技能 2026-06 起 lock 全改写成 `open.feishu.cn/.well-known/skills/<名>/SKILL.md`）。归拢键 = `wk:<host>`（曾被 prefix(3) 截成 `.well-known/skills` 当 github 源，套装名难看+checkUpdate 去 clone 必失败）；检查=逐成员 GET SKILL.md 比哈希，更新=原子换 SKILL.md 保留 references/（协议只分发单文件，附属文件变化检不出是已知局限）；「添加」框粘 well-known 地址可直装。
+- **实时刷新（v2.15）**：`StoreWatcher` 封装 FSEventStream（IgnoreSelf + 1s 合并窗口），监听 store 根 + connected 工具的 skills/agents/mcp/bin；**刻意不监听 ~/.claude 整棵树**（projects/ 每个 Claude 会话都在写，噪音百倍）。AppModel.startWatching（RootView onAppear 调）→ 回调 350ms 尾去抖 → refresh；updatingIds 非空时让位（换版收尾自带 refresh）。refresh() 末尾 `syncWatchPaths` 幂等对齐监听集（工具目录挂载后才出现）。⌘R/切前台重扫保留兜底；`POPSKILL_NO_WATCH=1` 关闭。测试写文件必须走外部进程（/usr/bin/touch）——本进程的写被 IgnoreSelf 滤掉。
+- **跳过此版本（v2.15，吸收 cc-switch dismissedVersion）**：`UpdateCheck.fingerprint` = 上游状态指纹（github=HEAD sha / npm=registry 版本号 / well-known 与本地路径=变化成员内容组合哈希）；meta 存 `latestFingerprint`（亮徽标时随 saveLatest 落）与 `skipped`（skipLatest 时拷入）。checkUpdate 三条路径返回前 `skipSuppressed`：同指纹→按无更新返回 nil，新指纹→自动清 skipped 重新亮。**unskipLatest 必须连 lastHead/localDigest 检查点一起清**——跳过期间被抑制的检查照常落了检查点，不清的话 HEAD 短路会把「最新」钉死；恢复后走 `checkUpdates(only:)` 定向重查。UI 入口=卡片/表格右键菜单（跳过此版本/恢复更新提醒），套装挂头行不挂子项。
+- **挂载确认「不再询问」（v2.15）**：未装工具的挂载确认 NSAlert 加系统原生 suppression，UserDefaults `suppressMountConfirm`；只在点了「仍然挂载」时才记住勾选（勾了又取消 ≠ 以后默认挂）。
 - **安全校验（v2.1）**：`sanitizeName` 拒绝空名 / `/` / `..` / 隐藏名，install 与导入都走它。
 - **未托管导入（v2.1）**：设置 → Store「导入未托管目录」，把工具目录里的真实技能目录收编进 store 并换 symlink。
 - **源解析**：GitHub = 浅 clone 到临时目录再扫描；local = 复制进 store；well-known = GET 单文件建 staging（v2.14）；npm 的「添加」仍拒绝（包里没有 SKILL.md 装不出技能），但更新链全通（见上）。
@@ -79,6 +84,7 @@ POPSKILL_KB_SIM=d,d,r,space     # 模拟键盘导航（E2E 截图）
 POPSKILL_TOOLS_ROOT=<base>      # 工具根沙盘（<base>/.claude 等，新用户旅程）
 POPSKILL_ONBOARD_SCAN=1         # 启动自动触发空态扫描
 POPSKILL_AUTOCONFIRM=1          # 跳过确认弹窗（配合 E2E）
+POPSKILL_NO_WATCH=1             # 关闭 FSEvents 实时监听（v2.15）
 ```
 
 自截流程（v1 验证过，沿用）：启动 app → osascript 调窗口 1280×820 → `screencapture -x -R` → Read 截图。
@@ -89,7 +95,7 @@ POPSKILL_AUTOCONFIRM=1          # 跳过确认弹窗（配合 E2E）
 swift build --package-path swift-app
 scripts/test.sh        # 封装了 DEVELOPER_DIR=/Applications/Xcode.app（CLT 没有 XCTest）
 scripts/ci-local.sh    # 全链本地 CI：语法/构建/测试/启动冒烟/bundle 冒烟/截图/发布工件
-# 基线：88 个测试（StoreFSTests + AppModelTests + SchedTests）+ 真实环境只读冒烟 POPSKILL_REAL_SMOKE=1
+# 基线：106 个测试（StoreFSTests + AppModelTests + SchedTests + StoreWatchTests）+ 真实环境只读冒烟 POPSKILL_REAL_SMOKE=1
 ```
 
 ## 凭证 / 路径（设了一次终生有效）
@@ -143,10 +149,11 @@ scripts/release.sh
 17. **`Bundle.module` 在打包 .app 里会崩** — v2.13.0 事故：SPM 生成的 `Bundle.module` 访问器写死去「.app 顶层」和「**打包机的 .build 绝对路径**」找资源 bundle，资源实际在 `Contents/Resources/`，对不上即 `fatalError`，**别人电脑一开就崩**；dev 与本机 smoke 因那条绝对路径恰存在而全程掩盖。教训：①本地化资源查找**自己写**（多候选位置 + 找不到退回 `.main` 绝不 crash，见 Localization.swift `resourceBundle`），不用 `Bundle.module`；②**发版前必须冷启打包的 .app**（不能只跑 dev binary）——`smoke-bundle.sh` 已加固：冷启前把 `.build/*release*/Popskill_Popskill.bundle` 移开，逼 .app 只用自己 `Contents/Resources` 副本，复现干净机器
 18. **notarytool 403 "required agreement is missing or has expired"** — 不是坑 #6（那是 profile 被清，报 401/找不到钥匙串项）！这是 Apple 更新了开发者协议：登录 developer.apple.com/account 用户本人勾选同意即恢复，别浪费时间重存 App 专用密码（2026-07-05 v2.14 发版实撞）
 
-## 当前状态（2026-07-05）
+## 当前状态（2026-07-07）
 
-- **v2.14.0「更新体验大修 + CLI 巡检 + 双语热门目录」已完成待发版**（VERSION 已 bump 到 2.14.0/279，release note 在 docs/release/v2.14.0.md，等用户确认后跑 scripts/release.sh）：①更新计数按技能数+横幅点击跳转定位+主界面常驻检查按钮+表格视图补徽标 ②npm 源更新链（registry vs npm -g，升级 = npm i -g）+CLI 巡检面板（CliSheet 版本矩阵）③well-known 源全链（lark 系 27 项归一张卡+SKILL.md 单文件检查/更新/直装）④精选目录双语化+CatalogHot 411 条热门。测试 100 个。调试钩子新增 POPSKILL_SHEET=cli。
-- 线上 **v2.13.2**；v2.13.0「设计稿 uplift + 新手体检」：按 claude.ai/design 交接稿账本版最终态补齐三块（皮肤不变）——① 顶部类型统计条（`Stats.byType`/`inactiveByTool` 派生，glyph ◈◉▣⌨▦；未安装工具显示「未安装」）② 断链整卡红（任一工具 broken ⇒ 整卡红边 + 淡红底 + `BrokenBadge`）③ 卡片/表格双视图（`ViewMode`，过滤行右端分段切换 + 状态图例；表格 8 列 + 套装可展开表头行 + `FractionCell` + 子项 │ 缩进 + `StatusCell` 状态符号矩阵，复用现成组件，两视图共享 `kbFocusList`）。调试钩子新增 `POPSKILL_VIEW=list`。**外加 8 角色团队体检（34 确认）修的 6 拦路石**：github 解析前 `ensureGit` 预检 + `humanGitError` 人话错误；未安装工具挂载前 NSAlert 确认（不再静默建 ~/.codex）；导入未托管加确认弹窗（`confirmImport` 共用）；卡片/表格右键 `contextMenu`；统计条未挂载对比度提到 AA；install copyItem 失败回滚、moveToTrash 同秒补后缀。设计稿原包不入库；完整报告见 /tmp（一次性）。
+- **v2.15.0「实时同步 + 跳过此版本」已完成待发版**（VERSION 已 bump 到 2.15.0/280，release note 在 docs/release/v2.15.0.md，等用户确认后跑 scripts/release.sh）：①FSEvents store 实时刷新（StoreWatch.swift，终端动 ~/.agents 秒级跟上，锁屏没做成 GUI 截图验证——改用 AppModel 全链集成测试锁行为，用户解锁后可随手实测）②更新徽标「跳过此版本/恢复更新提醒」（指纹钉版本，右键菜单入口）③挂载确认「不再询问」suppression。测试 106 个。详见「关键架构事实」三条 v2.15 bullet。
+- 线上 **v2.14.0**「更新体验大修 + CLI 巡检 + 双语热门目录」（2026-07-05 发版，发版实撞坑 #18 notary 403 协议重签 + 坑 #8 第二形态 Pages 构建卡死，均已记档）：①更新计数按技能数+横幅点击跳转定位+主界面常驻检查按钮+表格视图补徽标 ②npm 源更新链（registry vs npm -g，升级 = npm i -g）+CLI 巡检面板（CliSheet 版本矩阵）③well-known 源全链（lark 系 27 项归一张卡+SKILL.md 单文件检查/更新/直装）④精选目录双语化+CatalogHot 411 条热门。调试钩子新增 POPSKILL_SHEET=cli。
+- 此前线上 v2.13.2；v2.13.0「设计稿 uplift + 新手体检」：按 claude.ai/design 交接稿账本版最终态补齐三块（皮肤不变）——① 顶部类型统计条（`Stats.byType`/`inactiveByTool` 派生，glyph ◈◉▣⌨▦；未安装工具显示「未安装」）② 断链整卡红（任一工具 broken ⇒ 整卡红边 + 淡红底 + `BrokenBadge`）③ 卡片/表格双视图（`ViewMode`，过滤行右端分段切换 + 状态图例；表格 8 列 + 套装可展开表头行 + `FractionCell` + 子项 │ 缩进 + `StatusCell` 状态符号矩阵，复用现成组件，两视图共享 `kbFocusList`）。调试钩子新增 `POPSKILL_VIEW=list`。**外加 8 角色团队体检（34 确认）修的 6 拦路石**：github 解析前 `ensureGit` 预检 + `humanGitError` 人话错误；未安装工具挂载前 NSAlert 确认（不再静默建 ~/.codex）；导入未托管加确认弹窗（`confirmImport` 共用）；卡片/表格右键 `contextMenu`；统计条未挂载对比度提到 AA；install copyItem 失败回滚、moveToTrash 同秒补后缀。设计稿原包不入库；完整报告见 /tmp（一次性）。
 - v2.12.0「双语」：UI 全量本地化（简中 + 英文）——**新增用户可见字符串必须 `L()` + 进 catalog + 跑 gen-l10n.sh**，ci-local 会拦漏网的（见「关键架构事实 → 本地化」节）。
 - v2.11/2.10/2.9：激活 pill 压缩靠右、定时任务面板（launchd/crontab）；v2.8.0 成熟度大版见 docs/release/v2.8.0.md。
 - **v2.13.1 紧急修复**：v2.12 起 `Bundle.module` 在打包 .app 里找不到本地化资源 → 启动即崩（别人机器全中招，dev/本机被 .build 绝对路径掩盖）；改为 Localization.swift 自己多候选找资源 + 找不到退回 .main 绝不崩；smoke-bundle 加固冷启复现（见坑 #17）。
@@ -155,9 +162,8 @@ scripts/release.sh
 ## 下一步候选（设计稿里刻意没做的）
 
 1. **白卡 SaaS 皮肤**（设计 chat 里「保留观望」的另一版方向，账本皮肤的替代选项；做的话是全局换色大改，单独立项）
-2. **store 目录 FSEvents 实时刷新**（现为 ⌘R + 前台激活自动重扫）
-3. **well-known 附属文件**：协议只分发 SKILL.md，references/ 变化检不出——若 skills.sh 生态出清单协议再跟进
-4. **cc-switch 参考清单里的备选**：更新徽标 dismiss 机制（「跳过此版本」）、深链接 popskill://、拖拽排序（报告存 docs/dev/cc-switch-reference.md）
+2. **well-known 附属文件**：协议只分发 SKILL.md，references/ 变化检不出——若 skills.sh 生态出清单协议再跟进
+3. **cc-switch 参考清单里剩余备选**：深链接 popskill://（配合 README「一键装进 Popskill」链接）、拖拽排序（价值存疑，矩阵有固定排序语义）（报告存 docs/dev/cc-switch-reference.md；dismiss 机制已在 v2.15 做掉）
 
 ## 沟通偏好（来自 user memory）
 

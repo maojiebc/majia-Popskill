@@ -84,6 +84,7 @@ struct Entry: Identifiable, Equatable {
     var latest: String?                 // 上游最新版；存在且 ≠ version ⇒ 可更新
     var changedMembers: [String]? = nil // 套装里具体哪些成员有新版（提醒到行）
     var autoUpdate: Bool = false
+    var skippedUpdate: Bool = false     // 用户跳过了当前上游版本（v2.15，右键可恢复提醒）
 
     var isBundle: Bool { children != nil }
     var isManagedExternally: Bool { bundleKind == .marketplace }

@@ -152,7 +152,10 @@ extension StoreFS {
             if loadMeta().entries[entry.name]?.latest != nil { saveLatest(entry.name, latest: nil) }
             return nil
         }
-        return UpdateCheck(entryId: entry.id, latest: "CLI v\(latest)", changedMembers: [], upstreamNew: [])
+        // npm 的上游状态指纹 = registry 版本号本身（跳过 1.2.3，出 1.2.4 自动重亮）
+        if skipSuppressed(entry.name, fingerprint: latest) { return nil }
+        return UpdateCheck(entryId: entry.id, latest: "CLI v\(latest)", changedMembers: [],
+                           upstreamNew: [], fingerprint: latest)
     }
 
     /// npm 源 entry 的更新执行：升级全局 CLI，不碰 store 技能目录。

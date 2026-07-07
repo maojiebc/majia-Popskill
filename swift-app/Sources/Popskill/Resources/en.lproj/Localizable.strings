@@ -142,6 +142,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>New version upstream — click the ↑ badge on the bundle header to update</string>
 	<key>不会再跑</key>
 	<string>Won't run again</string>
+	<key>不再询问</key>
+	<string>Don't Ask Again</string>
 	<key>不安全的目录名：%@</key>
 	<string>Unsafe directory name: %@</string>
 	<key>二进制 CLI，无 SKILL.md。</key>
@@ -316,6 +318,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Ready</string>
 	<key>已恢复 %@ 到 store——按需重新链接工具</key>
 	<string>Restored %@ to the store — relink tools as needed</string>
+	<key>已恢复 %@ 的更新提醒，正在重新检查…</key>
+	<string>Restored update alerts for %@, rechecking…</string>
 	<key>已把 %@ · %@ 换成 store 链接</key>
 	<string>Replaced %1$@ · %2$@ with a store link</string>
 	<key>已断开 %@ → %@</key>
@@ -342,6 +346,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Installed</string>
 	<key>已触发 %@</key>
 	<string>Triggered %@</string>
+	<key>已跳过 %@ 的这个版本——上游再出新版会重新提醒</key>
+	<string>Skipped this version of %@ — you'll be alerted when upstream ships something new</string>
 	<key>已重新扫描 store 与工具目录</key>
 	<string>Rescanned store and tool directories</string>
 	<key>已重链 %@ · %@</key>
@@ -362,6 +368,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Failed to restore %1$@: %2$@</string>
 	<key>恢复到 store</key>
 	<string>Restore to store</string>
+	<key>恢复更新提醒</key>
+	<string>Resume Update Alerts</string>
 	<key>打开 GitHub issue，自动带上 app 与 macOS 版本</key>
 	<string>Open a GitHub issue with app and macOS versions pre-filled</string>
 	<key>打开日志</key>
@@ -620,6 +628,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Run once</string>
 	<key>路径不存在：%@</key>
 	<string>Path not found: %@</string>
+	<key>跳过此版本</key>
+	<string>Skip This Version</string>
 	<key>运行中</key>
 	<string>Running</string>
 	<key>还没有任何能力</key>

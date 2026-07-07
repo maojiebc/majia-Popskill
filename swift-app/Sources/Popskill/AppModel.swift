@@ -94,6 +94,9 @@ final class AppModel {
     var winSize: CGSize = .zero
 
     @ObservationIgnored private var toastTask: Task<Void, Never>?
+    // store 实时监听（v2.15）：终端动了 ~/.agents / 工具链接目录，秒级自动跟上
+    @ObservationIgnored private var watcher: StoreWatcher?
+    @ObservationIgnored private var watchDebounce: Task<Void, Never>?
     /// Sparkle 手动检查入口（PopskillApp 注入；裸二进制为 nil）
     @ObservationIgnored var checkAppUpdate: (() -> Void)?
     /// Sparkle 自动检查读/写（PopskillApp 注入）——设置页开关用，AppModel 不直接依赖 Sparkle
@@ -194,11 +197,51 @@ final class AppModel {
         tools = fs.scanTools(meta: meta)
         entries = fs.scanEntries(tools: tools, meta: meta)
         revalidateOverlays()
+        syncWatchPaths()
         let fsCopy = fs
         Task.detached { @Sendable [weak self] in
             let info = fsCopy.syncInfo()
             await MainActor.run { [weak self] in self?.syncInfo = info }
         }
+    }
+
+    // ── store 实时监听（v2.15）──────────────────────────────
+
+    /// FSEvents 监听启动（RootView onAppear 调一次）。⌘R 与切前台重扫保留——
+    /// 睡眠/权限等极端情况下事件可能丢，多一条兜底回家路不冲突。
+    func startWatching() {
+        guard !fake, watcher == nil,
+              ProcessInfo.processInfo.environment["POPSKILL_NO_WATCH"] != "1" else { return }
+        watcher = StoreWatcher { [weak self] in
+            Task { @MainActor [weak self] in self?.scheduleWatchRefresh() }
+        }
+        syncWatchPaths()
+    }
+
+    /// FSEvents 侧已有秒级合并窗口，这里再补一层尾去抖：一批回调只落一次重扫。
+    /// 换版进行中让位（applyUpdate 收尾自带 refresh，中途重扫只会看到换到一半的盘面）。
+    private func scheduleWatchRefresh() {
+        watchDebounce?.cancel()
+        watchDebounce = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard let self, !Task.isCancelled, self.updatingIds.isEmpty else { return }
+            plog.info("FSEvents：store/工具目录有外部变更，自动重扫")
+            self.refresh()
+        }
+    }
+
+    /// 监听集跟着盘面走：工具链接目录（~/.codex/skills 等）挂载后才存在——
+    /// 每次 refresh 后对齐一次。StoreWatcher.sync 幂等，集合没变就是 no-op。
+    /// 刻意不监听 ~/.claude 整棵树：projects/ 每个 Claude 会话都在写，噪音是信号的百倍。
+    private func syncWatchPaths() {
+        guard let watcher else { return }
+        var paths = [fs.env.storeRoot.path]
+        for t in tools where t.connected {
+            for dir in ["skills", "agents", "mcp", "bin"] {
+                paths.append(t.root.appendingPathComponent(dir).path)
+            }
+        }
+        watcher.sync(paths: paths)
     }
 
     /// refresh 换掉 entries 后，开着的修复弹层 / 详情 peek 持有的是旧快照——
@@ -329,13 +372,23 @@ final class AppModel {
         guard from == .on || from == .off else { return }   // stub/broken 走修复弹层
         // 工具没装（~/.claude / ~/.codex 不存在）时挂载会凭空建出该目录——
         // 只用 Claude 的人点了界面里照样可点的 Codex 格，电脑就多个 ~/.codex。先确认。
-        if from == .off, !fake, !tool.connected {
+        // v2.15：加「不再询问」（系统原生 suppression）——批量往新工具挂十几个技能时
+        // 十几连弹是折磨。只在用户点了「仍然挂载」时才记住勾选：勾了又取消 ≠ 以后默认挂。
+        if from == .off, !fake, !tool.connected,
+           ProcessInfo.processInfo.environment["POPSKILL_AUTOCONFIRM"] != "1",
+           !UserDefaults.standard.bool(forKey: "suppressMountConfirm") {
             let alert = NSAlert()
             alert.messageText = L("\(tool.name) 似乎还没安装")
             alert.informativeText = L("挂载会在 \(tool.rootDisplay) 创建目录。如果你还没用这个工具，可以先不挂。确定要创建并挂载吗？")
             alert.addButton(withTitle: L("仍然挂载"))
             alert.addButton(withTitle: L("取消"))
-            guard alert.runModal() == .alertFirstButtonReturn else { return }
+            alert.showsSuppressionButton = true
+            alert.suppressionButton?.title = L("不再询问")
+            let resp = alert.runModal()
+            guard resp == .alertFirstButtonReturn else { return }
+            if alert.suppressionButton?.state == .on {
+                UserDefaults.standard.set(true, forKey: "suppressMountConfirm")
+            }
         }
         let to: LinkStatus = from == .on ? .off : .on
         if fake {
@@ -536,15 +589,18 @@ final class AppModel {
 
     // ── 更新（v2.1：内容哈希比对，吸收自 cc-switch）────────
 
-    /// 检查全部可检查的源；auto=true 时对开了自动更新的源直接执行更新
-    func checkUpdates(auto: Bool = false) {
+    /// 检查全部可检查的源；auto=true 时对开了自动更新的源直接执行更新。
+    /// only 非空 = 定向重查那几个源（恢复更新提醒后用，不扫全部不碰 CLI 巡检）
+    func checkUpdates(auto: Bool = false, only: Set<String>? = nil) {
         guard !fake else { say(L("原型数据模式不检查更新")); return }
         guard !checkingUpdates else { return }
         // v2.14：npm 源进检查范围（比对全局 CLI 版本）；全局 CLI 巡检顺带跑
-        let candidates = entries.filter { $0.sourceUrl != nil && !$0.isManagedExternally }
+        let candidates = entries.filter {
+            $0.sourceUrl != nil && !$0.isManagedExternally && (only?.contains($0.id) ?? true)
+        }
         guard !candidates.isEmpty else { say(L("没有可检查的源（需要 GitHub 或本地路径来源）")); return }
         checkingUpdates = true
-        checkCliUpdates()
+        if only == nil { checkCliUpdates() }
         let fsCopy = fs
         Task { [weak self] in
             var found: [StoreFS.UpdateCheck] = []
@@ -586,7 +642,10 @@ final class AppModel {
                     if let i = self.entries.firstIndex(where: { $0.id == check.entryId }) {
                         self.entries[i].latest = check.latest
                         self.entries[i].changedMembers = check.changedMembers
-                        self.fs.saveLatest(self.entries[i].name, latest: check.latest, changed: check.changedMembers)
+                        // 徽标重亮意味着跳过已失效（checkUpdate 里新指纹清过 meta），内存镜像同步
+                        self.entries[i].skippedUpdate = false
+                        self.fs.saveLatest(self.entries[i].name, latest: check.latest,
+                                           changed: check.changedMembers, fingerprint: check.fingerprint)
                     }
                 }
                 // 确认一致的熄灭残留徽标（如终端手动同步后；meta 由 checkUpdate 清，这里同步内存镜像）。
@@ -665,6 +724,29 @@ final class AppModel {
         guard !targets.isEmpty else { return }
         for e in targets { runUpdate(e.id, quiet: true) }
         say(L("正在更新 \(targets.count) 个源…"))
+    }
+
+    /// 「跳过此版本」（v2.15，吸收 cc-switch dismissedVersion）：徽标熄灭，
+    /// 该上游状态不再提醒；上游再出新东西时 checkUpdate 里指纹不匹配自动重亮。
+    func skipUpdate(_ entry: Entry) {
+        guard entry.hasUpdate else { return }
+        if !fake { fs.skipLatest(entry.name) }
+        if let i = entries.firstIndex(where: { $0.id == entry.id }) {
+            entries[i].latest = nil
+            entries[i].changedMembers = nil
+            entries[i].skippedUpdate = true
+        }
+        plog.info("跳过版本 \(entry.name, privacy: .public)")
+        say(L("已跳过 \(entry.name) 的这个版本——上游再出新版会重新提醒"))
+    }
+
+    /// 恢复更新提醒：清跳过标记，并定向重查这一个源让徽标从真相重新推导
+    func unskipUpdate(_ entry: Entry) {
+        if let i = entries.firstIndex(where: { $0.id == entry.id }) { entries[i].skippedUpdate = false }
+        guard !fake else { return }
+        fs.unskipLatest(entry.name)
+        say(L("已恢复 \(entry.name) 的更新提醒，正在重新检查…"))
+        checkUpdates(only: [entry.id])
     }
 
     // ── 全局 CLI 巡检（v2.14）────────────────────────────

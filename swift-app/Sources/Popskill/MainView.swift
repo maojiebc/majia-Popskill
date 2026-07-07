@@ -1351,6 +1351,12 @@ func capContextMenu(_ cap: Capability, _ entry: Entry, fromBundle: String?, mode
         model.openPeek(cap: cap, entry: entry, anchor: currentClickPoint(), flip: shouldFlip(threshold: 0.52))
     }
     Button(L("在访达中显示")) { model.openInEditor(cap.dirURL) }
+    // 「跳过此版本」挂在源级（独立条目 = 自己就是源）；套装子项去套装头行操作
+    if fromBundle == nil, entry.hasUpdate {
+        Button(L("跳过此版本")) { model.skipUpdate(entry) }
+    } else if fromBundle == nil, entry.skippedUpdate {
+        Button(L("恢复更新提醒")) { model.unskipUpdate(entry) }
+    }
     if fromBundle == nil, !entry.isManagedExternally {
         Divider()
         Button(L("移除"), role: .destructive) { model.removeEntry(entry) }
@@ -1360,6 +1366,11 @@ func capContextMenu(_ cap: Capability, _ entry: Entry, fromBundle: String?, mode
 @MainActor @ViewBuilder
 func bundleContextMenu(_ entry: Entry, model: AppModel) -> some View {
     Button(L("在访达中显示")) { model.openInEditor(entry.cap.dirURL) }
+    if entry.hasUpdate {
+        Button(L("跳过此版本")) { model.skipUpdate(entry) }
+    } else if entry.skippedUpdate {
+        Button(L("恢复更新提醒")) { model.unskipUpdate(entry) }
+    }
     if !entry.isManagedExternally {
         Divider()
         Button(L("移除套装（含全部子项）"), role: .destructive) { model.removeEntry(entry) }

@@ -59,6 +59,7 @@ extension StoreFS {
     func checkWellKnownUpdate(_ entry: Entry, host: String) throws -> UpdateCheck? {
         let members = entry.isBundle ? (entry.children ?? []) : [entry.cap]
         var changed: [String] = []
+        var changedPairs: [(name: String, hash: String)] = []
         var failures = 0
         for cap in members where !isSymlink(cap.dirURL) {
             guard let url = wellKnownSkillURL(host: host, name: cap.name) else { continue }
@@ -66,7 +67,11 @@ extension StoreFS {
             guard let local = try? Data(contentsOf: localFile) else { continue }
             do {
                 let remote = try httpGet(url)
-                if SHA256.hash(data: remote) != SHA256.hash(data: local) { changed.append(cap.name) }
+                let remoteHash = SHA256.hash(data: remote)
+                if remoteHash != SHA256.hash(data: local) {
+                    changed.append(cap.name)
+                    changedPairs.append((cap.name, remoteHash.map { String(format: "%02x", $0) }.joined()))
+                }
             } catch {
                 failures += 1
             }
@@ -78,9 +83,12 @@ extension StoreFS {
             if loadMeta().entries[entry.name]?.latest != nil { saveLatest(entry.name, latest: nil) }
             return nil
         }
+        // 上游状态指纹 = 变化成员的远端内容组合哈希（协议无版本概念，内容即身份）
+        let fingerprint = combinedFingerprint(changedPairs)
+        if skipSuppressed(entry.name, fingerprint: fingerprint) { return nil }
         return UpdateCheck(entryId: entry.id,
                            latest: changed.count == 1 && members.count == 1 ? L("新版") : L("\(changed.count) 项"),
-                           changedMembers: changed, upstreamNew: [])
+                           changedMembers: changed, upstreamNew: [], fingerprint: fingerprint)
     }
 
     /// well-known 源更新执行：只换有变化成员的 SKILL.md（旧文件备份进回收站），

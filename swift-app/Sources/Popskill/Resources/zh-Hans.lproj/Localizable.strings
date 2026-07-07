@@ -168,6 +168,8 @@ macOS: %@
 	<string>上游有新版——点套装头部 ↑ 徽标更新</string>
 	<key>不会再跑</key>
 	<string>不会再跑</string>
+	<key>不再询问</key>
+	<string>不再询问</string>
 	<key>不安全的目录名：%@</key>
 	<string>不安全的目录名：%@</string>
 	<key>二进制 CLI，无 SKILL.md。</key>
@@ -360,6 +362,8 @@ macOS: %@
 	<string>已就绪</string>
 	<key>已恢复 %@ 到 store——按需重新链接工具</key>
 	<string>已恢复 %@ 到 store——按需重新链接工具</string>
+	<key>已恢复 %@ 的更新提醒，正在重新检查…</key>
+	<string>已恢复 %@ 的更新提醒，正在重新检查…</string>
 	<key>已把 %@ · %@ 换成 store 链接</key>
 	<string>已把 %@ · %@ 换成 store 链接</string>
 	<key>已断开 %@ → %@</key>
@@ -386,6 +390,8 @@ macOS: %@
 	<string>已装</string>
 	<key>已触发 %@</key>
 	<string>已触发 %@</string>
+	<key>已跳过 %@ 的这个版本——上游再出新版会重新提醒</key>
+	<string>已跳过 %@ 的这个版本——上游再出新版会重新提醒</string>
 	<key>已重新扫描 store 与工具目录</key>
 	<string>已重新扫描 store 与工具目录</string>
 	<key>已重链 %@ · %@</key>
@@ -406,6 +412,8 @@ macOS: %@
 	<string>恢复 %@ 失败：%@</string>
 	<key>恢复到 store</key>
 	<string>恢复到 store</string>
+	<key>恢复更新提醒</key>
+	<string>恢复更新提醒</string>
 	<key>打开 GitHub issue，自动带上 app 与 macOS 版本</key>
 	<string>打开 GitHub issue，自动带上 app 与 macOS 版本</string>
 	<key>打开日志</key>
@@ -678,6 +686,8 @@ macOS: %@
 	<string>跑一次</string>
 	<key>路径不存在：%@</key>
 	<string>路径不存在：%@</string>
+	<key>跳过此版本</key>
+	<string>跳过此版本</string>
 	<key>运行中</key>
 	<string>运行中</string>
 	<key>还没有任何能力</key>

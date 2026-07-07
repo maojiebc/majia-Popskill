@@ -78,6 +78,7 @@ The filesystem is the database. No sidecar, no SQLite — your directory tree al
 ## Features
 
 - **Capability matrix** — every skill in one ledger: one row per capability, Claude / Codex status pills, one click to mount or unmount
+- **Live sync** — the UI follows your terminal within seconds: `npx skills add`, `rm -rf`, a manual `ln -s` all show up automatically (FSEvents) — no ⌘R, no restart (v2.15)
 - **Source bundles** — skills from the same upstream repo auto-group into one card (e.g. 22 baoyu skills, 26 lark skills); disk stays flat, symlinks untouched
 - **Content-hash updates** — no semver required: per-member SHA-256 against upstream; one clone checks a whole monorepo, only changed members get replaced, and you're told about upstream skills you haven't installed yet
 - **Backup before update** — replaced versions go to a recycle bin (200 kept), restorable anytime

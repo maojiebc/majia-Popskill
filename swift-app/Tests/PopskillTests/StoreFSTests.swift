@@ -190,6 +190,74 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(check.latest, "3.1.0", "应解析出上游版本号而非笼统的「新版」")
     }
 
+    // ── 跳过此版本（v2.15）───────────────────────────────
+
+    /// 上游 fixture + store 本地版 + entry 三件套（跳过场景共用）
+    private func makeSkipFixture(_ name: String, upstreamBody: String) throws -> (upstream: URL, entry: Entry) {
+        let upstream = sandbox.appendingPathComponent("up-\(name)")
+        let upSkill = upstream.appendingPathComponent("skills/\(name)")
+        try fm.createDirectory(at: upSkill, withIntermediateDirectories: true)
+        try "---\nname: \(name)\nversion: 2.0.0\n---\n\(upstreamBody)\n".write(
+            to: upSkill.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        _ = try makeSkill(name, version: "1.0.0")
+        let cap = Capability(id: name, name: name, type: .skill, linkKind: .skill, desc: "",
+                             version: "1.0.0", author: nil, tokens: 0,
+                             dirURL: env.storeRoot.appendingPathComponent("skills/\(name)"))
+        return (upstream, Entry(id: name, cap: cap, children: nil, bundleKind: nil,
+                                sourceUrl: upstream.path, latest: nil))
+    }
+
+    func testSkipSuppressesSameUpstreamState() throws {
+        let (_, entry) = try makeSkipFixture("skippy", upstreamBody: "上游新内容")
+        let check = try XCTUnwrap(try fs.checkUpdate(entry), "有差异应报更新")
+        XCTAssertFalse(check.fingerprint.isEmpty, "检查结论必须带上游状态指纹")
+        fs.saveLatest("skippy", latest: check.latest, changed: check.changedMembers,
+                      fingerprint: check.fingerprint)
+
+        fs.skipLatest("skippy")
+        let m = fs.loadMeta().entries["skippy"]
+        XCTAssertNil(m?.latest, "跳过后徽标应熄灭")
+        XCTAssertNil(m?.latestFingerprint)
+        XCTAssertEqual(m?.skipped, check.fingerprint, "跳过钉住的是指纹，不是文案标签")
+
+        XCTAssertNil(try fs.checkUpdate(entry), "同一上游状态：跳过抑制生效，不再报更新")
+        XCTAssertEqual(fs.loadMeta().entries["skippy"]?.skipped, check.fingerprint,
+                       "抑制路径不得误清跳过标记")
+    }
+
+    func testNewUpstreamStateClearsSkipAndRealerts() throws {
+        let (upstream, entry) = try makeSkipFixture("hoppy", upstreamBody: "第一版上游内容")
+        let first = try XCTUnwrap(try fs.checkUpdate(entry))
+        fs.saveLatest("hoppy", latest: first.latest, changed: first.changedMembers,
+                      fingerprint: first.fingerprint)
+        fs.skipLatest("hoppy")
+        XCTAssertNil(try fs.checkUpdate(entry), "跳过态先确认抑制住")
+
+        // 上游又出了新东西：指纹必变 → 抑制失效、跳过标记自动清除
+        try "---\nname: hoppy\nversion: 3.0.0\n---\n第二版上游内容\n".write(
+            to: upstream.appendingPathComponent("skills/hoppy/SKILL.md"),
+            atomically: true, encoding: .utf8)
+        let second = try XCTUnwrap(try fs.checkUpdate(entry), "新上游状态应重新报更新")
+        XCTAssertNotEqual(second.fingerprint, first.fingerprint)
+        XCTAssertNil(fs.loadMeta().entries["hoppy"]?.skipped, "新状态出现后旧跳过应自动清除")
+    }
+
+    func testUnskipClearsCheckpointSoRecheckSeesUpdate() throws {
+        let (_, entry) = try makeSkipFixture("comeback", upstreamBody: "上游内容")
+        let check = try XCTUnwrap(try fs.checkUpdate(entry))
+        fs.saveLatest("comeback", latest: check.latest, changed: check.changedMembers,
+                      fingerprint: check.fingerprint)
+        fs.skipLatest("comeback")
+        XCTAssertNil(try fs.checkUpdate(entry))
+
+        fs.unskipLatest("comeback")
+        let m = fs.loadMeta().entries["comeback"]
+        XCTAssertNil(m?.skipped)
+        XCTAssertNil(m?.lastHead, "恢复提醒必须清检查点，否则 HEAD 短路会钉死「最新」")
+        let again = try XCTUnwrap(try fs.checkUpdate(entry), "恢复提醒后重查应重新报更新")
+        XCTAssertEqual(again.fingerprint, check.fingerprint, "上游没动，指纹应一致")
+    }
+
     func testFrontmatterTopLevelWinsOverMetadata() throws {
         let dir = try makeSkill("nested2")
         try """

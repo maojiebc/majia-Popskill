@@ -1405,6 +1405,22 @@
         }
       }
     },
+    "不再询问": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Don't Ask Again"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不再询问"
+          }
+        }
+      }
+    },
     "不安全的目录名：%@": {
       "localizations": {
         "en": {
@@ -3049,6 +3065,22 @@
         }
       }
     },
+    "已恢复 %@ 的更新提醒，正在重新检查…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restored update alerts for %@, rechecking…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已恢复 %@ 的更新提醒，正在重新检查…"
+          }
+        }
+      }
+    },
     "已把 %@ · %@ 换成 store 链接": {
       "localizations": {
         "en": {
@@ -3257,6 +3289,22 @@
         }
       }
     },
+    "已跳过 %@ 的这个版本——上游再出新版会重新提醒": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipped this version of %@ — you'll be alerted when upstream ships something new"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已跳过 %@ 的这个版本——上游再出新版会重新提醒"
+          }
+        }
+      }
+    },
     "已重新扫描 store 与工具目录": {
       "localizations": {
         "en": {
@@ -3413,6 +3461,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "恢复到 store"
+          }
+        }
+      }
+    },
+    "恢复更新提醒": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume Update Alerts"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢复更新提醒"
           }
         }
       }
@@ -5673,6 +5737,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "路径不存在：%@"
+          }
+        }
+      }
+    },
+    "跳过此版本": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip This Version"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳过此版本"
           }
         }
       }

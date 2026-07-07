@@ -36,6 +36,9 @@ struct StoreMeta: Codable {
         var changed: [String]?   // 上次检查发现有变化的成员名（套装提醒到具体哪个）
         var lastHead: String?    // 上次完整比对时的上游 HEAD sha（ls-remote 短路用，v2.8）
         var localDigest: String? // 上次完整比对时本地成员的组合哈希——短路必须同时验证本地未漂移
+        // 「跳过此版本」（v2.15，吸收 cc-switch dismissedVersion）：
+        var latestFingerprint: String? // latest 对应的上游状态指纹（github=HEAD sha / npm=版本号 / wk=内容组合哈希）
+        var skipped: String?           // 用户跳过的上游状态指纹；checkUpdate 命中它就不亮徽标，新状态自动清
     }
     struct ToolMeta: Codable {
         var defaultTarget: Bool?
@@ -380,7 +383,8 @@ struct StoreFS {
             bundleAt[idxs[0]] = Entry(id: "src:\(src)", cap: head, children: members,
                                       bundleKind: .source, sourceUrl: src,
                                       latest: m?.latest, changedMembers: m?.changed,
-                                      autoUpdate: m?.autoUpdate ?? false)
+                                      autoUpdate: m?.autoUpdate ?? false,
+                                      skippedUpdate: m?.skipped != nil)
             idxs.forEach { grouped.insert($0) }
         }
         var out: [Entry] = []
@@ -414,7 +418,7 @@ struct StoreFS {
         let m = meta.entries[name]
         return Entry(id: name, cap: cap, children: nil,
                      sourceUrl: source, latest: m?.latest, changedMembers: m?.changed,
-                     autoUpdate: m?.autoUpdate ?? false)
+                     autoUpdate: m?.autoUpdate ?? false, skippedUpdate: m?.skipped != nil)
     }
 
     private func makeBundle(name: String, dir: URL, tools: [Tool], meta: StoreMeta) -> Entry {
@@ -440,7 +444,7 @@ struct StoreFS {
         let source = m?.sourceUrl.map(StoreFS.normalizeSource) ?? gitRemote(dir).map(StoreFS.normalizeSource)
         return Entry(id: name, cap: head, children: children, bundleKind: .directory,
                      sourceUrl: source, latest: m?.latest, changedMembers: m?.changed,
-                     autoUpdate: m?.autoUpdate ?? false)
+                     autoUpdate: m?.autoUpdate ?? false, skippedUpdate: m?.skipped != nil)
     }
 
     private func makeCap(name: String, type: CapType, dir: URL, id: String? = nil) -> Capability {
@@ -1012,6 +1016,57 @@ struct StoreFS {
         let latest: String          // 单成员 = 上游版本号/"新版"；源式套装 = "N 项"
         let changedMembers: [String]
         let upstreamNew: [String]   // 上游有、本地没装的技能（monorepo 月度痛点）
+        let fingerprint: String     // 这次结论对应的上游状态指纹（「跳过此版本」的钉子，v2.15）
+    }
+
+    /// 组合指纹：没有 git HEAD 的源（本地路径/well-known）用「变化成员名:内容哈希」拼合。
+    /// 上游内容再变，指纹必变——跳过只钉得住那一个状态。
+    func combinedFingerprint(_ pairs: [(name: String, hash: String)]) -> String {
+        var hasher = SHA256()
+        for p in pairs.sorted(by: { $0.name < $1.name }) {
+            hasher.update(data: Data("\(p.name):\(p.hash)|".utf8))
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// 跳过抑制（v2.15）：true = 该上游状态已被用户跳过，本次按「无更新」处理。
+    /// 指纹变了（上游又出了新东西）自动清掉旧跳过——「跳过此版本」不是「永不提醒」。
+    func skipSuppressed(_ entryName: String, fingerprint: String) -> Bool {
+        guard let skip = loadMeta().entries[entryName]?.skipped, !skip.isEmpty else { return false }
+        if skip == fingerprint { return true }
+        mutateMeta { meta in
+            var m = meta.entries[entryName] ?? StoreMeta.EntryMeta()
+            m.skipped = nil
+            meta.entries[entryName] = m
+        }
+        return false
+    }
+
+    /// 「跳过此版本」：把当前亮着的更新按上游状态指纹记入 meta，徽标熄灭。
+    /// 旧 meta（2.15 前检查出的徽标）没存指纹时退回 lastHead（github=sha / npm=版本号）；
+    /// 都没有才存 latest 标签——那种源下次完整比对会重亮一次，再跳过就钉住了。
+    func skipLatest(_ entryName: String) {
+        mutateMeta { meta in
+            guard var m = meta.entries[entryName], m.latest != nil else { return }
+            m.skipped = m.latestFingerprint ?? m.lastHead ?? m.latest
+            m.latest = nil
+            m.changed = nil
+            m.latestFingerprint = nil
+            meta.entries[entryName] = m
+        }
+    }
+
+    /// 恢复更新提醒：清跳过标记。检查点必须一起清——跳过期间被抑制的检查照常
+    /// 落盘了 lastHead，不清的话 HEAD 短路会拿它直接判「最新」，徽标永远回不来。
+    /// 调用方随后应对该源定向重查（强制完整比对），让徽标从真相重新推导。
+    func unskipLatest(_ entryName: String) {
+        mutateMeta { meta in
+            guard var m = meta.entries[entryName] else { return }
+            m.skipped = nil
+            m.lastHead = nil
+            m.localDigest = nil
+            meta.entries[entryName] = m
+        }
     }
 
     /// 上游仓库内定位某个成员的目录：lock 的 skillPath 优先，
@@ -1096,11 +1151,14 @@ struct StoreFS {
 
         let members = entry.isBundle && entry.bundleKind == .source ? (entry.children ?? []) : [entry.cap]
         var changed: [String] = []
+        var changedPairs: [(name: String, hash: String)] = []
         var changedVersion: String?
         for cap in members where !isSymlink(cap.dirURL) {
             guard let staged = stagedMemberDir(staging: resolved.stagingDir, cap: cap) else { continue }
-            if computeDirHash(cap.dirURL) != computeDirHash(staged) {
+            let stagedHash = computeDirHash(staged)
+            if computeDirHash(cap.dirURL) != stagedHash {
                 changed.append(cap.name)
+                changedPairs.append((cap.name, stagedHash))
                 changedVersion = frontmatter(staged.appendingPathComponent("SKILL.md"))["version"]
             }
         }
@@ -1112,13 +1170,17 @@ struct StoreFS {
             if loadMeta().entries[entry.name]?.latest != nil { saveLatest(entry.name, latest: nil) }
             return nil
         }
+        // 上游状态指纹：git 源用 HEAD sha；本地路径源退回变化内容组合哈希
+        let fingerprint = resolved.headSha ?? combinedFingerprint(changedPairs)
+        if skipSuppressed(entry.name, fingerprint: fingerprint) { return nil }
         let latest: String
         if changed.count == 1 && members.count == 1 {
             latest = (changedVersion != nil && changedVersion != members[0].version) ? changedVersion! : L("新版")
         } else {
             latest = L("\(changed.count) 项")
         }
-        return UpdateCheck(entryId: entry.id, latest: latest, changedMembers: changed, upstreamNew: upstreamNew)
+        return UpdateCheck(entryId: entry.id, latest: latest, changedMembers: changed,
+                           upstreamNew: upstreamNew, fingerprint: fingerprint)
     }
 
     /// 上游 skills/ 下有 SKILL.md、但本地没装的目录名
@@ -1168,11 +1230,12 @@ struct StoreFS {
         return (updated, upstreamNew)
     }
 
-    func saveLatest(_ entryName: String, latest: String?, changed: [String]? = nil) {
+    func saveLatest(_ entryName: String, latest: String?, changed: [String]? = nil, fingerprint: String? = nil) {
         mutateMeta { meta in
             var m = meta.entries[entryName] ?? StoreMeta.EntryMeta()
             m.latest = latest
             m.changed = latest == nil ? nil : changed
+            m.latestFingerprint = latest == nil ? nil : fingerprint
             meta.entries[entryName] = m
         }
     }
