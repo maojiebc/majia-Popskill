@@ -30,6 +30,9 @@ struct CliSheet: View {
                 .frame(maxHeight: 480)
                 foot
             }
+            // 打开即后台重扫（旧表先显示，v2.16）——曾只在首开扫一次，
+            // app 挂几天后打开面板全是启动时的旧版本号，还无任何「数据多旧」提示
+            .onAppear { model.checkCliUpdates() }
         }
     }
 

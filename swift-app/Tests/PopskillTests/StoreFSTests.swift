@@ -20,6 +20,14 @@ final class RealEnvSmoke: XCTestCase {
         for e in entries where !e.isBundle && e.sourceUrl != nil {
             print("   · \(e.name) ← \(e.sourceUrl!)")
         }
+        // v2.16：链接状态分布（linkStatus 改比对 expectedTarget 后，真实环境不能出现误判风暴）
+        var dist: [String: Int] = [:]
+        for e in entries { for c in e.allCaps { for t in tools {
+            let st = c.status(t.id)
+            dist["\(t.id).\(st)", default: 0] += 1
+            if st == .broken, let cause = c.brokenCause[t.id] { print("   ⚠ broken: \(c.name) · \(t.id) — \(cause)") }
+        } } }
+        print("== 状态分布: \(dist.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))")
         XCTAssertFalse(entries.isEmpty)
     }
 }
@@ -504,7 +512,12 @@ final class StoreFSTests: XCTestCase {
         try fs.moveToTrash(a)
         let b = env.storeRoot.appendingPathComponent("skills/dup"); try fm.createDirectory(at: b, withIntermediateDirectories: true)
         XCTAssertNoThrow(try fs.moveToTrash(b))
-        XCTAssertEqual(trashNames().filter { $0.hasPrefix("dup-") }.count, 2, "同秒两次入站都应保留")
+        XCTAssertEqual(trashNames().filter { $0.hasPrefix("dup") }.count, 2, "同秒两次入站都应保留")
+        // v2.16：撞名后缀改在名字段（~xxxx），戳保持结尾——listTrash 两条都解析出干净名
+        // （旧形状把后缀追加在戳后，导致名字不去戳、时间沉底、恢复出脏名目录）
+        let items = fs.listTrash().filter { $0.name == "dup" }
+        XCTAssertEqual(items.count, 2, "撞名条目的名字也要解析干净")
+        XCTAssertTrue(items.allSatisfy { $0.date != nil }, "撞名条目的入站时间不能丢")
     }
 
     func testHumanGitErrorMapping() {
@@ -1064,11 +1077,165 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(found.map(\.name), ["wild-skill"])
 
         let imported = try fs.importUnmanaged(found)
-        XCTAssertEqual(imported, ["wild-skill"])
+        XCTAssertEqual(imported.imported, ["wild-skill"])
+        XCTAssertTrue(imported.skippedSameName.isEmpty)
         let entries = scan()
         XCTAssertEqual(entries.map(\.name), ["wild-skill"])
         XCTAssertEqual(entries[0].cap.status("claude"), .on, "原位应已换成 symlink")
         XCTAssertTrue(fs.isSymlink(wild))
+    }
+
+    // ── v2.16 打磨批：meta 防护 / 链接判定 / 物化收敛 / 回收站 / 导入 ──
+
+    @MainActor
+    func testAutoUpdateSurvivesRescanForSourceBundle() throws {
+        // v2.16 修复的 P0：源式套装 id 是 "src:…"，曾拿它当 meta 键写、按 repoName 读——
+        // 开关看似打开，任何一次 refresh 就悄悄回落
+        for n in ["m-one", "m-two"] {
+            try makeSkill(n)
+            fs.mutateMeta { meta in
+                meta.entries[n] = StoreMeta.EntryMeta(sourceUrl: "github.com/owner/repo")
+            }
+        }
+        let model = AppModel(env: env)
+        let bundle = try XCTUnwrap(model.entries.first(where: { $0.bundleKind == .source }),
+                                   "两个同源成员应归拢成源式套装")
+        XCTAssertEqual(bundle.id, "src:github.com/owner/repo")
+        XCTAssertFalse(bundle.autoUpdate)
+        model.toggleAutoUpdate(bundle.id)
+        model.refresh()
+        let again = try XCTUnwrap(model.entries.first(where: { $0.bundleKind == .source }))
+        XCTAssertTrue(again.autoUpdate, "重扫后自动更新开关必须还开着（meta 键 = entry.name）")
+    }
+
+    func testGcMetaRemovesOrphanKeys() throws {
+        try makeSkill("alive")
+        fs.mutateMeta { meta in
+            meta.entries["alive"] = StoreMeta.EntryMeta(sourceUrl: "github.com/o/alive")
+            meta.entries["ghost"] = StoreMeta.EntryMeta(sourceUrl: "github.com/o/ghost", autoUpdate: true)
+            meta.entries["src:github.com/o/r"] = StoreMeta.EntryMeta(autoUpdate: true)   // 历史写错键
+        }
+        fs.gcMeta(keep: ["alive"])
+        let keys = Set(fs.loadMeta().entries.keys)
+        XCTAssertEqual(keys, ["alive"], "孤儿键（终端删掉的条目/历史错键）应被清掉——它会让重装的同名技能继承前世 sourceUrl+autoUpdate")
+    }
+
+    func testLoadMetaCorruptedBacksUpInsteadOfSilentReset() throws {
+        fs.saveLatest("x", latest: "新版")
+        try "{ 这不是合法 JSON ——<<<<<<< git 冲突标记".write(to: fs.metaURL, atomically: true, encoding: .utf8)
+        let meta = fs.loadMeta()
+        XCTAssertTrue(meta.entries.isEmpty, "损坏时返回空 meta（不炸）")
+        XCTAssertTrue(fs.metaCorruptBackupExists, "第一现场必须备份成 .corrupt")
+        let backup = try String(contentsOf: fs.metaURL.appendingPathExtension("corrupt"), encoding: .utf8)
+        XCTAssertTrue(backup.contains("git 冲突标记"), "备份保留损坏原文，人工可恢复")
+    }
+
+    func testLinkStatusWrongTargetReportsBroken() throws {
+        let store = try makeSkill("right")
+        let elsewhere = sandbox.appendingPathComponent("elsewhere-copy")
+        try fm.createDirectory(at: elsewhere, withIntermediateDirectories: true)
+        let link = claudeLink("right")
+        try fm.createDirectory(at: link.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try fm.createSymbolicLink(at: link, withDestinationURL: elsewhere)
+
+        let (st, cause) = fs.linkStatus(linkPath: link, expectedTarget: store)
+        XCTAssertEqual(st, .broken, "指到别处旧副本的链接不能谎报健康 on")
+        XCTAssertTrue(cause?.contains(L("指向别处")) == true)
+    }
+
+    func testLinkStatusRelativeSymlinkToCorrectTargetIsOn() throws {
+        // skills.sh CLI 写的是相对 symlink——正确目标的相对链必须仍判 on（回归兜底）
+        let store = try makeSkill("relly")
+        let linkDir = env.toolRoots["claude"]!.appendingPathComponent("skills")
+        let link = linkDir.appendingPathComponent("relly")
+        let rel = relativePath(from: linkDir, to: store)
+        try fm.createSymbolicLink(atPath: link.path, withDestinationPath: rel)
+        let (st, _) = fs.linkStatus(linkPath: link, expectedTarget: store)
+        XCTAssertEqual(st, .on, "相对 symlink 指对目标应为 on")
+    }
+
+    private func relativePath(from: URL, to: URL) -> String {
+        let f = from.standardizedFileURL.pathComponents
+        let t = to.standardizedFileURL.pathComponents
+        var i = 0
+        while i < min(f.count, t.count), f[i] == t[i] { i += 1 }
+        return Array(repeating: "..", count: f.count - i).joined(separator: "/") + "/" + t[i...].joined(separator: "/")
+    }
+
+    func testBundleChildLinksConvergeBackToWholeLink() throws {
+        let dir = try makeBundle("suiteconv", children: ["ca", "cb"])
+        let tool = tools.first { $0.id == "claude" }!
+        try fs.setLink(tool: tool, kind: .bundle, name: "suiteconv", storeDir: dir, on: true)
+        let bundleLink = claudeLink("suiteconv")
+        XCTAssertTrue(fs.isSymlink(bundleLink), "初始整套一条 symlink")
+
+        // 关一个子项 → 物化
+        try fs.setBundleChildLink(tool: tool, bundleName: "suiteconv", bundleDir: dir,
+                                  childName: "ca", allChildren: ["ca", "cb"], on: false)
+        XCTAssertFalse(fs.isSymlink(bundleLink), "部分挂载 = 物化目录")
+
+        // 再开回来 → 收敛回整链（v2.16：曾永久物化，上游新增子项默认漏挂）
+        try fs.setBundleChildLink(tool: tool, bundleName: "suiteconv", bundleDir: dir,
+                                  childName: "ca", allChildren: ["ca", "cb"], on: true)
+        XCTAssertTrue(fs.isSymlink(bundleLink), "全 on 应收敛回整套一条 symlink")
+
+        // 物化目录里混入真实文件：绝不收敛、绝不删用户数据
+        try fs.setBundleChildLink(tool: tool, bundleName: "suiteconv", bundleDir: dir,
+                                  childName: "cb", allChildren: ["ca", "cb"], on: false)
+        try "user data".write(to: bundleLink.appendingPathComponent("notes.txt"), atomically: true, encoding: .utf8)
+        try fs.setBundleChildLink(tool: tool, bundleName: "suiteconv", bundleDir: dir,
+                                  childName: "cb", allChildren: ["ca", "cb"], on: true)
+        XCTAssertFalse(fs.isSymlink(bundleLink), "有未知真实文件时保持物化")
+        XCTAssertTrue(fm.fileExists(atPath: bundleLink.appendingPathComponent("notes.txt").path))
+    }
+
+    func testRemoveEntryCleansDSStoreOnlyMaterializedDir() throws {
+        let dir = try makeBundle("suiteghost", children: ["g1"])
+        let tool = tools.first { $0.id == "claude" }!
+        try fs.setLink(tool: tool, kind: .bundle, name: "suiteghost", storeDir: dir, on: true)
+        try fs.setBundleChildLink(tool: tool, bundleName: "suiteghost", bundleDir: dir,
+                                  childName: "g1", allChildren: ["g1"], on: false)
+        let bundleLink = claudeLink("suiteghost")
+        try Data().write(to: bundleLink.appendingPathComponent(".DS_Store"))   // Finder 逛过一次
+
+        let entry = scan().first { $0.name == "suiteghost" }!
+        try fs.removeEntry(entry, tools: tools)
+        XCTAssertFalse(fm.fileExists(atPath: bundleLink.path),
+                       "只剩 .DS_Store 的物化目录不该留成 UI 看不见的幽灵")
+    }
+
+    func testImportUnmanagedReportsSkippedAndCleansHalfCopy() throws {
+        try makeSkill("occupied")   // store 已有同名
+        let wild = claudeLink("occupied")
+        try fm.createDirectory(at: wild, withIntermediateDirectories: true)
+        try "---\nname: occupied\n---\n".write(to: wild.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let fresh = claudeLink("fresh-one")
+        try fm.createDirectory(at: fresh, withIntermediateDirectories: true)
+        try "---\nname: fresh-one\n---\n".write(to: fresh.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+
+        let r = try fs.importUnmanaged([
+            StoreFS.UnmanagedDir(name: "occupied", toolId: "claude", url: wild),
+            StoreFS.UnmanagedDir(name: "fresh-one", toolId: "claude", url: fresh),
+        ])
+        XCTAssertEqual(r.imported, ["fresh-one"])
+        XCTAssertEqual(r.skippedSameName, ["occupied"], "同名跳过要报账，不再静默吞")
+    }
+
+    func testEmptyTrash() throws {
+        let a = try makeSkill("trashme")
+        try fs.moveToTrash(a)
+        XCTAssertFalse(fs.listTrash().isEmpty)
+        try fs.emptyTrash()
+        XCTAssertTrue(fs.listTrash().isEmpty)
+    }
+
+    func testNpmWebURLRecognizedAsNpmSource() {
+        XCTAssertEqual(SourceKind.of("https://www.npmjs.com/package/@guandata/guanskill"), .npm,
+                       "npmjs.com 包页 URL 应认成 npm 源，让引导语有机会出场")
+        XCTAssertEqual(npmPkgName("https://www.npmjs.com/package/@guandata/guanskill?activeTab=readme"),
+                       "@guandata/guanskill")
+        XCTAssertEqual(npmPkgName("npm:@guandata/guanskill"), "@guandata/guanskill")
+        XCTAssertNil(npmPkgName("github.com/owner/repo"))
     }
 
     // ── Marketplace 插件只读层（v2.6）────────────────────

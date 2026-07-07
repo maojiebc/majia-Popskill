@@ -108,6 +108,15 @@ struct DetailPeekView: View {
                 ForEach(model.tools) { t in statRow(t) }
             }
             .padding(.top, 10)
+            // v2.16：peek 补更新态——「看完即走」的卡此前回答不了「有没有新版 / 是不是被我跳过了」
+            if model.updatingIds.contains(target.entry.id) {
+                UpdatingDot().padding(.top, 8)
+            } else if target.entry.hasUpdate, let latest = target.entry.latest {
+                UpdateBadge(latest: latest, help: target.entry.updateHelp) { model.runUpdate(target.entry.id) }
+                    .padding(.top, 8)
+            } else if target.entry.skippedUpdate {
+                SkippedTag { model.unskipUpdate(target.entry) }.padding(.top, 8)
+            }
             if let url = target.entry.sourceUrl {
                 PeekLink(text: "↗ \(url)", font: .mono(10.5), base: Ink.secondary) {
                     model.openSourceLink(url)

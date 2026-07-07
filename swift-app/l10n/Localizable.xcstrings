@@ -653,6 +653,22 @@
         }
       }
     },
+    "CLI 升级收工：%lld 个成功，%lld 个失败（%@）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CLI upgrades finished: %lld succeeded, %lld failed (%@)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CLI 升级收工：%lld 个成功，%lld 个失败（%@）"
+          }
+        }
+      }
+    },
     "CLI 巡检": {
       "localizations": {
         "en": {
@@ -1149,6 +1165,22 @@
         }
       }
     },
+    "store 元数据曾损坏，已备份为 .popskill.json.corrupt——来源与自动更新设置可能需要重新配置": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Store metadata was corrupted and has been backed up as .popskill.json.corrupt — sources and auto-update settings may need reconfiguring"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "store 元数据曾损坏，已备份为 .popskill.json.corrupt——来源与自动更新设置可能需要重新配置"
+          }
+        }
+      }
+    },
     "store 副本与全部 symlink 已清理": {
       "localizations": {
         "en": {
@@ -1193,6 +1225,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "store 在设备间同步；symlink 是各机本地状态，不参与同步。"
+          }
+        }
+      }
+    },
+    "store 已有同名条目「%@」。想换新版：回主界面对它「检查更新」；确要重装：先移除旧的（会进回收站）再回来安装。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The store already has an entry named “%@”. For the newer version, run “Check Updates” on it from the main screen; to reinstall, remove the old one first (it goes to the recycle bin), then come back."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "store 已有同名条目「%@」。想换新版：回主界面对它「检查更新」；确要重装：先移除旧的（会进回收站）再回来安装。"
           }
         }
       }
@@ -2493,6 +2541,22 @@
         }
       }
     },
+    "回收站已清空": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recycle bin emptied"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回收站已清空"
+          }
+        }
+      }
+    },
     "回收站（%lld）": {
       "localizations": {
         "en": {
@@ -2601,6 +2665,22 @@
         }
       }
     },
+    "安装中…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installing…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装中…"
+          }
+        }
+      }
+    },
     "安装并链接 (%lld)": {
       "localizations": {
         "en": {
@@ -2681,18 +2761,34 @@
         }
       }
     },
-    "导入失败：%@": {
+    "导入中断：%@——已导入的保留，重开设置页可续导剩余项": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Import failed: %@"
+            "value": "Import interrupted: %@ — anything already imported is kept; reopen Settings to import the rest"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "导入失败：%@"
+            "value": "导入中断：%@——已导入的保留，重开设置页可续导剩余项"
+          }
+        }
+      }
+    },
+    "导入中断：%@——已导入的保留，重试可续导剩余项": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import interrupted: %@ — anything already imported is kept; retry to import the rest"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入中断：%@——已导入的保留，重试可续导剩余项"
           }
         }
       }
@@ -2917,6 +3013,50 @@
         }
       }
     },
+    "已升级 %lld 个 CLI": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Upgraded %lld CLI"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Upgraded %lld CLIs"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已升级 %lld 个 CLI"
+          }
+        }
+      }
+    },
+    "已升级全局 CLI %@（npm i -g）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgraded global CLI %@ (npm i -g)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已升级全局 CLI %@（npm i -g）"
+          }
+        }
+      }
+    },
     "已同步": {
       "localizations": {
         "en": {
@@ -3065,6 +3205,22 @@
         }
       }
     },
+    "已恢复 %@ 的更新提醒——当前检查结束后将复查此源": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resumed update alerts for %@ — this source will be rechecked once the current check finishes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已恢复 %@ 的更新提醒——当前检查结束后将复查此源"
+          }
+        }
+      }
+    },
     "已恢复 %@ 的更新提醒，正在重新检查…": {
       "localizations": {
         "en": {
@@ -3173,6 +3329,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "已更新 %@：%@（旧版已入回收站）"
+          }
+        }
+      }
+    },
+    "已更新 %lld 个源": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Updated %lld source"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Updated %lld sources"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已更新 %lld 个源"
+          }
+        }
+      }
+    },
+    "已更新 %lld 项（%@）后失败：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed after updating %lld items (%@): %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已更新 %lld 项（%@）后失败：%@"
           }
         }
       }
@@ -3289,6 +3489,22 @@
         }
       }
     },
+    "已跳过": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipped"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已跳过"
+          }
+        }
+      }
+    },
     "已跳过 %@ 的这个版本——上游再出新版会重新提醒": {
       "localizations": {
         "en": {
@@ -3301,6 +3517,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "已跳过 %@ 的这个版本——上游再出新版会重新提醒"
+          }
+        }
+      }
+    },
+    "已跳过当前上游版本，上游再出新版会重新提醒——点击立即恢复提醒并重查": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipped this upstream version; you'll be alerted when something new ships — click to resume alerts and recheck now"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已跳过当前上游版本，上游再出新版会重新提醒——点击立即恢复提醒并重查"
+          }
+        }
+      }
+    },
+    "已跳过更新，点击恢复提醒": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update skipped, click to resume alerts"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已跳过更新，点击恢复提醒"
           }
         }
       }
@@ -3697,6 +3945,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "挂载到"
+          }
+        }
+      }
+    },
+    "指向别处：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Points elsewhere: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "指向别处：%@"
           }
         }
       }
@@ -4109,6 +4373,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "更新到 %@ 并修复"
+          }
+        }
+      }
+    },
+    "更新收工：%lld 个成功，%lld 个失败（%@）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update run finished: %lld succeeded, %lld failed (%@)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新收工：%lld 个成功，%lld 个失败（%@）"
           }
         }
       }
@@ -4865,6 +5145,50 @@
         }
       }
     },
+    "永久删除全部 %lld 项备份，不可恢复。": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Permanently delete %lld backup. This cannot be undone."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Permanently delete all %lld backups. This cannot be undone."
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "永久删除全部 %lld 项备份，不可恢复。"
+          }
+        }
+      }
+    },
+    "永久删除全部回收站备份——此前只能去 Finder 手删": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permanently delete every backup in the recycle bin"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "永久删除全部回收站备份——此前只能去 Finder 手删"
+          }
+        }
+      }
+    },
     "没有 %@ 类型的能力。点 + 添加，或切回「全部」。": {
       "localizations": {
         "en": {
@@ -4989,6 +5313,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "添加能力"
+          }
+        }
+      }
+    },
+    "清空": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清空"
+          }
+        }
+      }
+    },
+    "清空…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清空…"
+          }
+        }
+      }
+    },
+    "清空回收站失败：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to empty the recycle bin: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清空回收站失败：%@"
+          }
+        }
+      }
+    },
+    "清空回收站？": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty the recycle bin?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清空回收站？"
           }
         }
       }
@@ -5661,6 +6049,22 @@
         }
       }
     },
+    "该工具目录不存在——挂载会创建它，安装时会先跟你确认": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This tool's folder doesn't exist — mounting will create it, and you'll be asked to confirm during install"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该工具目录不存在——挂载会创建它，安装时会先跟你确认"
+          }
+        }
+      }
+    },
     "该源没有记录 URL，无法更新": {
       "localizations": {
         "en": {
@@ -6021,6 +6425,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "，%lld 项断链"
+          }
+        }
+      }
+    },
+    "；%lld 个因同名跳过": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "; %lld skipped (same name)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "；%lld 个因同名跳过"
+          }
+        }
+      }
+    },
+    "；另有 %lld 个套装成员没查成（网络抖动）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "; %lld more bundle members could not be checked (network hiccup)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "；另有 %lld 个套装成员没查成（网络抖动）"
           }
         }
       }

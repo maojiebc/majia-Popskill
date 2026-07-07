@@ -175,8 +175,12 @@ struct SchedSheet: View {
             switch t.behavior {
             case .timed:
                 if let next = t.nextFire, t.loaded {
-                    Text(SchedEngine.humanNext(next))
-                        .font(.ui(11.5, .semibold)).foregroundStyle(Ink.blue)
+                    // TimelineView 让倒计时每 30s 重算（v2.16：曾冻结在面板打开那一刻，
+                    // 「3 分钟后」挂一小时还是「3 分钟后」）；到点后的过期值靠右下「刷新」重扫
+                    TimelineView(.periodic(from: .now, by: 30)) { _ in
+                        Text(SchedEngine.humanNext(next))
+                            .font(.ui(11.5, .semibold)).foregroundStyle(Ink.blue)
+                    }
                 } else {
                     Text(t.loaded ? t.schedule : L("不会再跑"))
                         .font(.ui(11.5, .medium)).foregroundStyle(Ink.secondary)

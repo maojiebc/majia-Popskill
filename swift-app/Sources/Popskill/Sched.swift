@@ -403,7 +403,23 @@ struct SchedEngine {
 
     func setLoaded(_ task: SchedTask, to on: Bool) throws {
         guard let plist = task.plistURL else { throw SchedError.failed(L("没有 plist 路径")) }
-        let r = runProcess("/bin/launchctl", [on ? "load" : "unload", plist.path], timeout: 30)
-        guard r.status == 0 else { throw SchedError.failed(r.err.isEmpty ? L("launchctl 退出码 \(Int(r.status))") : r.err) }
+        let target = "gui/\(getuid())/\(task.label)"
+        if on {
+            // enable 先清掉 disable override（没有 override 时是 no-op），bootstrap 真正拉起
+            _ = runProcess("/bin/launchctl", ["enable", target], timeout: 30)
+            let r = runProcess("/bin/launchctl", ["bootstrap", "gui/\(getuid())", plist.path], timeout: 30)
+            guard r.status == 0 else { throw SchedError.failed(r.err.isEmpty ? L("launchctl 退出码 \(Int(r.status))") : r.err) }
+        } else {
+            // v2.16 修复：旧版 `unload`（无 -w、无 override）——plist 留在 LaunchAgents，
+            // 下次登录 launchd 自动重载，「停用」的任务重启电脑就复活。
+            // bootout 卸载当次 + disable 写 override 才是真停用；plist 本身仍原样保留。
+            // bootout 对「本来就没加载」的任务会报错，以 disable 的结果为准
+            let out = runProcess("/bin/launchctl", ["bootout", target], timeout: 30)
+            let dis = runProcess("/bin/launchctl", ["disable", target], timeout: 30)
+            guard dis.status == 0 else {
+                let msg = [out.err, dis.err].filter { !$0.isEmpty }.joined(separator: "; ")
+                throw SchedError.failed(msg.isEmpty ? L("launchctl 退出码 \(Int(dis.status))") : msg)
+            }
+        }
     }
 }

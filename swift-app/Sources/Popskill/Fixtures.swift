@@ -39,9 +39,10 @@ enum Fixtures {
         func standalone(_ id: String, _ type: CapType, _ desc: String, _ version: String,
                         latest: String? = nil, _ author: String, _ tokens: Int,
                         _ claude: LinkStatus, _ codex: LinkStatus, _ sourceUrl: String,
-                        autoUpdate: Bool = false, cause: String? = nil) -> Entry {
+                        autoUpdate: Bool = false, skipped: Bool = false, cause: String? = nil) -> Entry {
             Entry(id: id, cap: cap(id, id, type, desc, version, author, tokens, claude, codex, cause: cause),
-                  children: nil, sourceUrl: sourceUrl, latest: latest, autoUpdate: autoUpdate)
+                  children: nil, sourceUrl: sourceUrl, latest: latest, autoUpdate: autoUpdate,
+                  skippedUpdate: skipped)
         }
 
         let entries: [Entry] = [
@@ -81,7 +82,7 @@ enum Fixtures {
             standalone("xhs-cover", .skill, "小红书封面文案", "0.6.0", "majia", 8420, .stub, .off, "~/work/my-skills/xhs-cover"),
             standalone("code-reviewer", .agent, "Senior 代码评审 persona", "1.4.0", "anthropic", 154_200, .on, .on, "github.com/anthropics/claude-skills", autoUpdate: true),
             standalone("pm-spec-writer", .agent, "PRD 起草 agent", "0.7.2", "majia", 47800, .on, .broken, "~/work/my-skills/pm-spec-writer", cause: "断链"),
-            standalone("data-analyst", .agent, "SQL + 图表分析师", "2.1.0", "community", 88200, .on, .on, "github.com/community/data-analyst"),
+            standalone("data-analyst", .agent, "SQL + 图表分析师", "2.1.0", "community", 88200, .on, .on, "github.com/community/data-analyst", skipped: true),   // 跳过态样例（v2.16）
             standalone("gh", .cli, "GitHub 官方 CLI", "2.62.0", "github", 0, .on, .on, "github.com/cli/cli", autoUpdate: true),
             standalone("ripgrep", .cli, "rg — 高性能搜索", "14.1.0", "burntsushi", 0, .on, .on, "github.com/BurntSushi/ripgrep", autoUpdate: true),
             standalone("fd-find", .cli, "现代化 find 替代品", "10.2.0", "sharkdp", 0, .on, .on, "github.com/sharkdp/fd", autoUpdate: true),

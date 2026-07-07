@@ -332,6 +332,26 @@ struct MemberUpdateDot: View {
     }
 }
 
+/// 「已跳过」灰徽标（v2.16）：跳过此版本后条目不再消失在黑洞里——
+/// 徽标位可见、悬停有解释、点击即恢复提醒。卡片/表格/peek/设置页共用
+struct SkippedTag: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(L("已跳过"))
+                .font(.ui(9.5, .bold)).kerning(0.4)
+                .foregroundStyle(Ink.monoDim)
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background(RoundedRectangle(cornerRadius: 3).fill(.white))
+                .overlay(RoundedRectangle(cornerRadius: 3).stroke(Ink.control2, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .help(L("已跳过当前上游版本，上游再出新版会重新提醒——点击立即恢复提醒并重查"))
+        .accessibilityLabel(L("已跳过更新，点击恢复提醒"))
+    }
+}
+
 // ── 悬停操作钮 ↗ / ✕ ────────────────────────────────────
 
 struct HoverAction: View {

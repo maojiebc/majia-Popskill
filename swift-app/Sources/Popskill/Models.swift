@@ -114,7 +114,9 @@ enum SourceKind: String {
 
     static func of(_ url: String?) -> SourceKind {
         guard let url, !url.isEmpty else { return .local }
-        if url.hasPrefix("npm:") { return .npm }
+        // npmjs.com 包页 URL 也算 npm（v2.16）：现实中用户粘的是浏览器地址栏，
+        // 曾被当 github 源报「无法识别 GitHub 仓库」，npm 引导语永远没机会出场
+        if url.hasPrefix("npm:") || url.lowercased().contains("npmjs.com/package/") { return .npm }
         if url.hasPrefix("wk:") || url.contains("/.well-known/skills/") { return .wellKnown }
         if url.hasPrefix("~") || url.hasPrefix("/") { return .local }
         return .github

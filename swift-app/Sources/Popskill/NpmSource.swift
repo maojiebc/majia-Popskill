@@ -12,12 +12,20 @@ import Foundation
 
 // ── 纯函数（单测覆盖，不碰网络/进程）─────────────────────
 
-/// "npm:@guandata/guanskill" → "@guandata/guanskill"；非 npm 源返回 nil
+/// "npm:@guandata/guanskill" 或 npmjs.com 包页 URL → "@guandata/guanskill"；非 npm 源返回 nil
 func npmPkgName(_ sourceUrl: String?) -> String? {
-    guard let s = sourceUrl?.trimmingCharacters(in: .whitespaces).lowercased(),
-          s.hasPrefix("npm:") else { return nil }
-    let pkg = String(s.dropFirst(4)).trimmingCharacters(in: .whitespaces)
-    return pkg.isEmpty ? nil : pkg
+    guard let s = sourceUrl?.trimmingCharacters(in: .whitespaces).lowercased() else { return nil }
+    if s.hasPrefix("npm:") {
+        let pkg = String(s.dropFirst(4)).trimmingCharacters(in: .whitespaces)
+        return pkg.isEmpty ? nil : pkg
+    }
+    if let r = s.range(of: "npmjs.com/package/") {
+        // 截到查询串/锚点为止；scoped 包路径里的 @scope/name 原样保留
+        let tail = s[r.upperBound...].split(separator: "?")[0].split(separator: "#")[0]
+        let pkg = tail.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
+        return pkg.isEmpty ? nil : pkg
+    }
+    return nil
 }
 
 /// registry 最新版查询地址。scoped 包的 / 必须转 %2F（registry 的路径约定）

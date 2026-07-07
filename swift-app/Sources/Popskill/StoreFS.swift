@@ -95,9 +95,36 @@ struct StoreFS {
     // ── 元数据 ────────────────────────────────────────────
 
     func loadMeta() -> StoreMeta {
-        guard let data = try? Data(contentsOf: metaURL),
-              let meta = try? JSONDecoder().decode(StoreMeta.self, from: data) else { return StoreMeta() }
+        guard let data = try? Data(contentsOf: metaURL) else { return StoreMeta() }   // 不存在 = 正常新库
+        guard let meta = try? JSONDecoder().decode(StoreMeta.self, from: data) else {
+            // 损坏（store 走 git 同步撞出冲突标记等）绝不能静默归零——下一次 mutateMeta
+            // 就会拿空表覆写落盘，全部来源/自动更新/跳过记录无提示蒸发（v2.16 审计 #2）。
+            // 先备份第一现场（已有备份不覆盖），UI 侧 refresh 发现备份会告警一次
+            let backup = metaURL.appendingPathExtension("corrupt")
+            if !fm.fileExists(atPath: backup.path) {
+                try? fm.copyItem(at: metaURL, to: backup)
+                plog.error("meta 损坏无法解码，已备份到 .popskill.json.corrupt")
+            }
+            return StoreMeta()
+        }
         return meta
+    }
+
+    /// meta 曾损坏的现场证据是否存在（refresh 借此告警一次）
+    var metaCorruptBackupExists: Bool {
+        fm.fileExists(atPath: metaURL.appendingPathExtension("corrupt").path)
+    }
+
+    /// meta 孤儿清理（v2.16 审计 #1）：终端删掉的条目、历史写错键（如 "src:*"）的残留。
+    /// 孤儿最坏能让重装的同名技能继承前世 sourceUrl+autoUpdate，被旧仓库内容静默覆写。
+    /// 只在真有孤儿时写盘——refresh 高频跑，不空转 IO。
+    func gcMeta(keep: Set<String>) {
+        let stale = loadMeta().entries.keys.filter { !keep.contains($0) }
+        guard !stale.isEmpty else { return }
+        mutateMeta { meta in
+            for k in stale { meta.entries.removeValue(forKey: k) }
+        }
+        plog.info("meta GC：清理 \(stale.count) 个孤儿键")
     }
 
     func saveMeta(_ meta: StoreMeta) {
@@ -526,16 +553,25 @@ struct StoreFS {
         tool.root.appendingPathComponent(kind.dirName).appendingPathComponent(name)
     }
 
-    /// 单一路径的链接状态：symlink→store 且目标存在 = on；目标丢失 = broken；
-    /// 真实目录/文件（非 symlink）= stub（本地副本，未托管）；不存在 = off。
+    /// 两个路径是否指同一处（双方解析 symlink 链后比较；macOS 默认卷大小写不敏感）。
+    /// store 成员本身是软链（私有开发场景）时两侧都会解析到最终真身，仍判相等。
+    private func samePath(_ a: URL, _ b: URL) -> Bool {
+        a.standardizedFileURL.resolvingSymlinksInPath().path
+            .compare(b.standardizedFileURL.resolvingSymlinksInPath().path, options: .caseInsensitive) == .orderedSame
+    }
+
+    /// 单一路径的链接状态：symlink→**约定的 store 目标**且目标存在 = on；目标丢失或
+    /// 指到别处 = broken（v2.16：目标「存在」不等于「指对」——指向别处旧副本的链接
+    /// 曾被谎报为健康 on）；真实目录/文件（非 symlink）= stub；不存在 = off。
     func linkStatus(linkPath: URL, expectedTarget: URL) -> (LinkStatus, String?) {
         let p = linkPath.path
         guard let attrs = try? fm.attributesOfItem(atPath: p) else { return (.off, nil) }
         if attrs[.type] as? FileAttributeType == .typeSymbolicLink {
             guard let dest = try? fm.destinationOfSymbolicLink(atPath: p) else { return (.broken, L("断链")) }
             let resolved = URL(fileURLWithPath: dest, relativeTo: linkPath.deletingLastPathComponent()).standardizedFileURL
-            if fm.fileExists(atPath: resolved.path) { return (.on, nil) }
-            return (.broken, L("断链"))
+            guard fm.fileExists(atPath: resolved.path) else { return (.broken, L("断链")) }
+            guard samePath(resolved, expectedTarget) else { return (.broken, L("指向别处：\(abbrev(resolved.path))")) }
+            return (.on, nil)
         }
         return (.stub, L("本地副本"))
     }
@@ -547,8 +583,9 @@ struct StoreFS {
         if attrs[.type] as? FileAttributeType == .typeSymbolicLink {
             guard let dest = try? fm.destinationOfSymbolicLink(atPath: p) else { return (.broken, L("断链")) }
             let resolved = URL(fileURLWithPath: dest, relativeTo: bundleLink.deletingLastPathComponent()).standardizedFileURL
-            if fm.fileExists(atPath: resolved.appendingPathComponent(childName).path) { return (.on, nil) }
-            return (.broken, L("断链"))
+            guard fm.fileExists(atPath: resolved.appendingPathComponent(childName).path) else { return (.broken, L("断链")) }
+            guard samePath(resolved, bundleDir) else { return (.broken, L("指向别处：\(abbrev(resolved.path))")) }
+            return (.on, nil)
         }
         // 物化目录：逐子项
         return linkStatus(
@@ -594,10 +631,12 @@ struct StoreFS {
         try fm.createDirectory(at: bucketURL, withIntermediateDirectories: true)
         let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
         // 时间戳只到秒：同名条目同一秒内二次入站会撞名抛错（移除套装多成员、快速连点）。
-        // 撞了就补一个短后缀，保证操作不失败、戳前缀仍可排序
+        // 撞了就在名字段补短后缀（`~xxxx`）——时间戳必须保持在末尾，
+        // listTrash/pruneTrash 都按「结尾 20 字符戳」解析（v2.16 修正：旧版把
+        // 后缀追加在戳后面，导致该条目名字不去戳、时间沉底、恢复出脏名目录）
         var dest = bucketURL.appendingPathComponent("\(url.lastPathComponent)-\(stamp)")
         if fm.fileExists(atPath: dest.path) {
-            dest = bucketURL.appendingPathComponent("\(url.lastPathComponent)-\(stamp)-\(UUID().uuidString.prefix(4))")
+            dest = bucketURL.appendingPathComponent("\(url.lastPathComponent)~\(UUID().uuidString.prefix(4))-\(stamp)")
         }
         try fm.moveItem(at: url, to: dest)
         pruneTrash()
@@ -661,17 +700,34 @@ struct StoreFS {
         f.timeZone = TimeZone(identifier: "UTC")
         return trashEntryURLs().map { url, bucket in
             let n = url.lastPathComponent
-            let suffix = String(n.suffix(20))
             var name = n
             var date: Date?
-            // 去后缀只看形状，不依赖 date 解析成功（解析失败顶多没时间，名字必须干净）
+            // 去后缀只看形状，不依赖 date 解析成功（解析失败顶多没时间，名字必须干净）。
+            // 三种历史形状都认：name-stamp / name~xxxx-stamp（同秒撞名，v2.16 起）/
+            // name-stamp-xxxx（v2.8–v2.15 的撞名旧形状，戳在中段）
+            let suffix = String(n.suffix(20))
             if suffix.count == 20, suffix.hasSuffix("Z"), suffix.dropFirst(4).first == "-" {
-                name = String(n.dropLast(21))   // 去掉 "-<stamp>"
+                name = String(n.dropLast(21))
                 date = f.date(from: suffix)
+                if let tilde = name.range(of: "~", options: .backwards),
+                   name.distance(from: tilde.upperBound, to: name.endIndex) == 4 {
+                    name = String(name[..<tilde.lowerBound])   // 去掉撞名 ~xxxx
+                }
+            } else if n.count > 26, n.dropLast(4).hasSuffix("-") {
+                let mid = String(n.dropLast(5).suffix(20))     // 旧撞名形状：戳在倒数第 6-25 位
+                if mid.hasSuffix("Z"), mid.dropFirst(4).first == "-" {
+                    name = String(n.dropLast(26))
+                    date = f.date(from: mid)
+                }
             }
             return TrashItem(id: "\(bucket)/\(n)", name: name, kindDir: bucket, date: date, url: url)
         }
         .sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
+    }
+
+    /// 清空回收站（v2.16：设置页此前只能去 Finder 手删）。不可逆，调用方必须先确认
+    func emptyTrash() throws {
+        for e in trashEntryURLs() { try fm.removeItem(at: e.url) }
     }
 
     /// 恢复到 store 的原 kind 目录；同名已存在则拒绝（先移走现有的再恢复）
@@ -708,6 +764,21 @@ struct StoreFS {
         let childLink = bundleLink.appendingPathComponent(childName)
         if on {
             try createLink(at: childLink, to: bundleDir.appendingPathComponent(childName))
+            // 收敛（v2.16 审计 #3）：全部子项都回到 on 就换回「整套一条 symlink」——
+            // 永久物化的套装，上游新增子项默认漏挂（整链形态才会自动跟随新子项）。
+            // 只有目录内容可证明「全是我们自建的子项 symlink（至多混个 .DS_Store）」才收敛，
+            // 有任何真实文件/未知条目一律保持物化，绝不删用户数据
+            if !isSymlink(bundleLink) {
+                let contents = (try? fm.contentsOfDirectory(atPath: bundleLink.path)) ?? []
+                let convergeable = contents.allSatisfy { name in
+                    name == ".DS_Store" || (allChildren.contains(name) && isSymlink(bundleLink.appendingPathComponent(name)))
+                }
+                let allOn = allChildren.allSatisfy { isSymlink(bundleLink.appendingPathComponent($0)) }
+                if convergeable && allOn {
+                    try fm.removeItem(at: bundleLink)
+                    try createLink(at: bundleLink, to: bundleDir)
+                }
+            }
         } else {
             try removeLink(at: childLink)
         }
@@ -957,12 +1028,15 @@ struct StoreFS {
             if isSymlink(link) {
                 try removeLink(at: link)
             } else if entry.isBundle, fm.fileExists(atPath: link.path) {
-                // 物化目录：先撤子项 symlink，空了再删目录
+                // 物化目录：先撤子项 symlink，空了再删目录。
+                // Finder 逛过一次就会留 .DS_Store（v2.16 审计 #4）——只剩它也算空，
+                // 否则整个目录变成 UI 里看不见的幽灵；有其它真实文件仍保守留下
                 for c in entry.children ?? [] {
                     let cl = link.appendingPathComponent(c.name)
                     if isSymlink(cl) { try removeLink(at: cl) }
                 }
-                if ((try? fm.contentsOfDirectory(atPath: link.path)) ?? []).isEmpty {
+                let leftovers = (try? fm.contentsOfDirectory(atPath: link.path)) ?? []
+                if leftovers.allSatisfy({ $0 == ".DS_Store" }) {
                     try fm.removeItem(at: link)
                 }
             }
@@ -1017,6 +1091,7 @@ struct StoreFS {
         let changedMembers: [String]
         let upstreamNew: [String]   // 上游有、本地没装的技能（monorepo 月度痛点）
         let fingerprint: String     // 这次结论对应的上游状态指纹（「跳过此版本」的钉子，v2.15）
+        var partialFailures = 0     // 有变化但另有 N 个成员没查成（well-known 网络抖动，v2.16 如实透出）
     }
 
     /// 组合指纹：没有 git HEAD 的源（本地路径/well-known）用「变化成员名:内容哈希」拼合。
@@ -1170,8 +1245,12 @@ struct StoreFS {
             if loadMeta().entries[entry.name]?.latest != nil { saveLatest(entry.name, latest: nil) }
             return nil
         }
-        // 上游状态指纹：git 源用 HEAD sha；本地路径源退回变化内容组合哈希
-        let fingerprint = resolved.headSha ?? combinedFingerprint(changedPairs)
+        // 上游状态指纹：git 源 = HEAD sha + 变化成员名集合——sha 钉上游、名单钉本地漂移面：
+        // 跳过后在终端又改坏别的成员，changed 集扩大即指纹变化，重新亮徽标
+        // （v2.16 修正：纯 sha 会把跳过期间的本地漂移一并静音，违背 v2.8 立的漂移必检约束）。
+        // 本地路径源退回变化内容组合哈希
+        let fingerprint = resolved.headSha.map { "\($0)|\(changed.sorted().joined(separator: ","))" }
+            ?? combinedFingerprint(changedPairs)
         if skipSuppressed(entry.name, fingerprint: fingerprint) { return nil }
         let latest: String
         if changed.count == 1 && members.count == 1 {
@@ -1214,12 +1293,12 @@ struct StoreFS {
                 .appendingPathComponent(".popskill-incoming-\(cap.name)")
             try? fm.removeItem(at: incoming)
             do { try fm.copyItem(at: staged, to: incoming) }
-            catch { try? fm.removeItem(at: incoming); throw error }
+            catch { try? fm.removeItem(at: incoming); throw partialFailure(error, done: updated) }
             let backup = try moveToTrash(cap.dirURL)
             do { try fm.moveItem(at: incoming, to: cap.dirURL) }
             catch {
                 try? fm.moveItem(at: backup, to: cap.dirURL)   // 换名失败回滚
-                throw error
+                throw partialFailure(error, done: updated)
             }
             updated.append(cap.name)
         }
@@ -1228,6 +1307,13 @@ struct StoreFS {
         if let sha = resolved.headSha { saveCheckpoint(entry.name, head: sha, localDigest: localDigest(entry)) }
         saveLatest(entry.name, latest: nil)
         return (updated, upstreamNew)
+    }
+
+    /// 多成员更新中途失败时，把「已换掉几项」写进错误——旧文案只说「更新 X 失败」，
+    /// 前面已成功落盘的成员从叙事里消失，用户以为整批没动（v2.16 审计 #10）
+    func partialFailure(_ error: Error, done: [String]) -> Error {
+        guard !done.isEmpty else { return error }
+        return StoreError.resolveFailed(L("已更新 \(done.count) 项（\(done.joined(separator: L("、")))）后失败：\(error.localizedDescription)"))
     }
 
     func saveLatest(_ entryName: String, latest: String?, changed: [String]? = nil, fingerprint: String? = nil) {
@@ -1277,19 +1363,30 @@ struct StoreFS {
         return out
     }
 
-    /// 返回导入成功的名字
-    func importUnmanaged(_ items: [UnmanagedDir]) throws -> [String] {
+    /// 导入结果如实分账（v2.16：曾只返回成功名单——「发现 6 个、导入 4 个」差的 2 个无解释）
+    struct ImportResult {
         var imported: [String] = []
+        var skippedSameName: [String] = []
+    }
+
+    func importUnmanaged(_ items: [UnmanagedDir]) throws -> ImportResult {
+        var result = ImportResult()
         for item in items {
             let name = try sanitizeName(item.name)
             let dest = env.storeRoot.appendingPathComponent(CapType.skill.dirName).appendingPathComponent(name)
-            guard !fm.fileExists(atPath: dest.path) else { continue }   // 后到的同名跳过
+            guard !fm.fileExists(atPath: dest.path) else { result.skippedSameName.append(name); continue }
             try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try fm.copyItem(at: item.url, to: dest)
+            do { try fm.copyItem(at: item.url, to: dest) }
+            catch {
+                // 半拷贝必须清掉（与 install 同款防呆，v2.16 审计 #6）：残骸留在 store 会被
+                // 扫成正常条目，重试还会因「同名已存在」被静默跳过——永远修不好
+                try? fm.removeItem(at: dest)
+                throw error
+            }
             try replaceCopyWithLink(at: item.url, target: dest)
-            imported.append(name)
+            result.imported.append(name)
         }
-        return imported
+        return result
     }
 
     // ── 同步信息（store 是 git 仓时）──────────────────────

@@ -223,7 +223,9 @@ struct MainView: View {
         }
         .background(Ink.window)
         .onAppear { syncKbList(list) }
-        .onChange(of: kbIds(list)) { _, _ in syncKbList(items) }
+        // v2.16 修复：曾回填未提升的 items——展开套装被 promoteExpanded 挪到最前后，
+        // ↑↓ 键盘顺序与屏幕顺序脱节（回填必须用实际渲染的 list）
+        .onChange(of: kbIds(list)) { _, _ in syncKbList(list) }
     }
 
     @ViewBuilder
@@ -471,10 +473,12 @@ struct MainView: View {
     }
 
     private var capCount: Int {
+        // 计数按实际展示的子集（v2.16 修复：搜索命中套装成员时只列匹配子集，
+        // 计数却按全员报——界面列 1 个、chip 行说「8 项匹配」）
         items.reduce(0) {
             switch $1 {
             case .cap: $0 + 1
-            case .bundle(let e, _): $0 + (e.children?.count ?? 0)
+            case .bundle(let e, let kids): $0 + (kids ?? e.children ?? []).count
             }
         }
     }
@@ -532,7 +536,9 @@ struct MainView: View {
         }
         .background(Ink.window)
         .onAppear { syncKbList(list) }
-        .onChange(of: kbIds(list)) { _, _ in syncKbList(items) }
+        // v2.16 修复：曾回填未提升的 items——展开套装被 promoteExpanded 挪到最前后，
+        // ↑↓ 键盘顺序与屏幕顺序脱节（回填必须用实际渲染的 list）
+        .onChange(of: kbIds(list)) { _, _ in syncKbList(list) }
     }
 
     /// 空结果提示按原因分支——类型过滤、空搜索时曾显示病句『没有能力匹配 ""』
@@ -652,6 +658,8 @@ struct BundleCompactCard: View {
                         UpdatingDot()
                     } else if entry.hasUpdate, let latest = entry.latest {
                         UpdateBadge(latest: latest) { model.runUpdate(entry.id) }
+                    } else if entry.skippedUpdate {
+                        SkippedTag { model.unskipUpdate(entry) }
                     }
                     if entry.cap.tokens >= 100 { Text(formatTokens(entry.cap.tokens)) }
                     if let url = entry.sourceUrl {
@@ -685,9 +693,14 @@ struct BundleCompactCard: View {
         .onHover { hovered = $0 }
         .help(L("点击展开套装"))
         .contextMenu { bundleContextMenu(entry, model: model) }
-        // hover 才入树的 ↗/✕ 对 VoiceOver 不存在——动作挂在卡片上兜底
+        // hover 才入树的 ↗/✕ 对 VoiceOver 不存在——动作挂在卡片上兜底。
+        // marketplace 套装不宣告「移除」（v2.16：曾宣告动作但闭包内静默 no-op）
         .accessibilityAction(named: L("在访达中显示")) { model.openInEditor(entry.cap.dirURL) }
-        .accessibilityAction(named: L("移除套装")) { if !entry.isManagedExternally { model.removeEntry(entry) } }
+        .accessibilityActions {
+            if !entry.isManagedExternally {
+                Button(L("移除套装")) { model.removeEntry(entry) }
+            }
+        }
         .id(entry.id)
     }
 }
@@ -783,6 +796,8 @@ struct CapCard: View {
                 UpdatingDot()
             } else if entry.hasUpdate, fromBundle == nil, let latest = entry.latest {
                 UpdateBadge(latest: latest) { model.runUpdate(entry.id) }
+            } else if fromBundle == nil, entry.skippedUpdate {
+                SkippedTag { model.unskipUpdate(entry) }
             } else if fromBundle != nil, entry.changedMembers?.contains(cap.name) == true {
                 // 套装子项的待更新标记：类型过滤下平铺成员看不到套装头徽标，提醒补到行。
                 // 更新单位是整个源（applyUpdate 只换有变化的成员），点它更新所属套装
@@ -904,6 +919,8 @@ struct BundleCard: View {
                     UpdatingDot()
                 } else if entry.hasUpdate, let latest = entry.latest {
                     UpdateBadge(latest: latest, help: entry.updateHelp) { model.runUpdate(entry.id) }
+                } else if entry.skippedUpdate {
+                    SkippedTag { model.unskipUpdate(entry) }
                 }
             }
             .font(.ui(11.5))
@@ -925,11 +942,16 @@ struct BundleCard: View {
         .overlay(alignment: .bottom) { Ink.hairline2.frame(height: 1) }
         .contentShape(Rectangle())
         .onTapGesture {
-            guard query.isEmpty else { return }
+            // Bundle chip 下套装是强制展开的——曾照样暗改 expanded 集合，
+            // 界面毫无反应、切回「全部」后套装莫名多开多合（v2.16）
+            guard query.isEmpty, model.typeFilter != .bundle else { return }
             if model.expanded.contains(entry.id) { model.expanded.remove(entry.id) }
             else { model.expanded.insert(entry.id) }
         }
         .contextMenu { bundleContextMenu(entry, model: model) }
+        // hover 才入树的 ↗/✕ 对 VoiceOver 不存在——展开态头行此前漏了兜底（v2.16）
+        .accessibilityAction(named: L("在访达中显示")) { model.openInEditor(entry.cap.dirURL) }
+        .accessibilityAction(named: L("移除套装")) { if !entry.isManagedExternally { model.removeEntry(entry) } }
     }
 
     private func childList(_ kids: [Capability]) -> some View {
@@ -1011,6 +1033,8 @@ struct BundleCard: View {
             if cf { model.kbFocusFrame = frame }
         }
         .onHover { hoverChild = $0 ? c.id : (hoverChild == c.id ? nil : hoverChild) }
+        // v2.16：卡片子行曾是全应用唯一没有右键菜单的行（表格同款行有）
+        .contextMenu { capContextMenu(c, entry, fromBundle: entry.name, model: model) }
         .accessibilityAction(named: L("在访达中显示")) { model.openInEditor(c.dirURL) }
         .id(c.id)
     }
@@ -1209,6 +1233,8 @@ struct TableCapRow: View {
                     UpdatingDot()
                 } else if fromBundle == nil, entry.hasUpdate, let latest = entry.latest {
                     UpdateBadge(latest: latest) { model.runUpdate(entry.id) }
+                } else if fromBundle == nil, entry.skippedUpdate {
+                    SkippedTag { model.unskipUpdate(entry) }
                 } else if fromBundle != nil, entry.changedMembers?.contains(cap.name) == true,
                           !model.updatingIds.contains(entry.id) {
                     MemberUpdateDot { model.runUpdate(entry.id) }
@@ -1254,6 +1280,11 @@ struct TableCapRow: View {
         .onHover { hovered = $0 }
         .contextMenu { capContextMenu(cap, entry, fromBundle: fromBundle, model: model) }
         .accessibilityElement(children: .contain)
+        // 表格行的 hover 动作对 VoiceOver 不存在——补与卡片同款兜底（v2.16）
+        .accessibilityAction(named: L("在访达中显示")) { model.openInEditor(cap.dirURL) }
+        .accessibilityActions {
+            if fromBundle == nil { Button(L("移除")) { model.removeEntry(entry) } }
+        }
         .id(cap.id)
     }
 
@@ -1303,6 +1334,8 @@ struct TableBundleRow: View {
                     UpdatingDot()
                 } else if entry.hasUpdate, let latest = entry.latest {
                     UpdateBadge(latest: latest, help: entry.updateHelp) { model.runUpdate(entry.id) }
+                } else if entry.skippedUpdate {
+                    SkippedTag { model.unskipUpdate(entry) }
                 }
                 Spacer(minLength: 6)
                 if hovered {
@@ -1334,11 +1367,17 @@ struct TableBundleRow: View {
         .onHover { hovered = $0 }
         .contentShape(Rectangle())
         .onTapGesture {
-            guard query.isEmpty else { return }
+            guard query.isEmpty, model.typeFilter != .bundle else { return }
             if model.expanded.contains(entry.id) { model.expanded.remove(entry.id) }
             else { model.expanded.insert(entry.id) }
         }
         .contextMenu { bundleContextMenu(entry, model: model) }
+        .accessibilityAction(named: L("在访达中显示")) { model.openInEditor(entry.cap.dirURL) }
+        .accessibilityActions {
+            if !entry.isManagedExternally {
+                Button(L("移除套装")) { model.removeEntry(entry) }
+            }
+        }
         .id(entry.id)
     }
 }
@@ -1351,10 +1390,10 @@ func capContextMenu(_ cap: Capability, _ entry: Entry, fromBundle: String?, mode
         model.openPeek(cap: cap, entry: entry, anchor: currentClickPoint(), flip: shouldFlip(threshold: 0.52))
     }
     Button(L("在访达中显示")) { model.openInEditor(cap.dirURL) }
-    // 「跳过此版本」挂在源级（独立条目 = 自己就是源）；套装子项去套装头行操作
-    if fromBundle == nil, entry.hasUpdate {
+    // 跳过作用于源级；套装成员行也给入口（类型过滤平铺时套装头行不可见，v2.16）
+    if entry.hasUpdate {
         Button(L("跳过此版本")) { model.skipUpdate(entry) }
-    } else if fromBundle == nil, entry.skippedUpdate {
+    } else if entry.skippedUpdate {
         Button(L("恢复更新提醒")) { model.unskipUpdate(entry) }
     }
     if fromBundle == nil, !entry.isManagedExternally {
@@ -1365,6 +1404,10 @@ func capContextMenu(_ cap: Capability, _ entry: Entry, fromBundle: String?, mode
 
 @MainActor @ViewBuilder
 func bundleContextMenu(_ entry: Entry, model: AppModel) -> some View {
+    // 套装头行曾没有任何「查看详情」入口——能力名可 peek、套装名不可（v2.16）
+    Button(L("查看详情")) {
+        model.openPeek(cap: entry.cap, entry: entry, anchor: currentClickPoint(), flip: shouldFlip(threshold: 0.52))
+    }
     Button(L("在访达中显示")) { model.openInEditor(entry.cap.dirURL) }
     if entry.hasUpdate {
         Button(L("跳过此版本")) { model.skipUpdate(entry) }

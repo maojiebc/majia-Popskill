@@ -75,7 +75,7 @@ struct PopskillApp: App {
                 Button(L("设置…")) { if model.sheet == nil { model.sheet = .settings } }
                     .keyboardShortcut(",", modifiers: .command)
                 Button(L("定时任务…")) { if model.sheet == nil { model.sheet = .sched; model.reloadSched() } }
-                Button(L("CLI 巡检…")) { if model.sheet == nil { model.sheet = .cli; if model.globalClis.isEmpty { model.checkCliUpdates() } } }
+                Button(L("CLI 巡检…")) { if model.sheet == nil { model.sheet = .cli } }   // 面板 onAppear 自会重扫（v2.16）
                     .keyboardShortcut("j", modifiers: .command)
             }
             CommandGroup(replacing: .help) {
@@ -185,11 +185,34 @@ struct RootView: View {
         guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             if event.keyCode == 53 {   // Esc
+                // 输入框正在编辑：第一下 Esc 只退出编辑（v2.16——曾直接关掉整个弹层，
+                // 定时任务备注打到一半说没就没），第二下才走关闭链
+                if NSApp.keyWindow?.firstResponder is NSTextView {
+                    NSApp.keyWindow?.makeFirstResponder(nil)
+                    return nil
+                }
                 if model.peekTarget != nil { model.peekTarget = nil; return nil }
                 if model.fixTarget != nil { model.fixTarget = nil; return nil }
                 if model.sheet != nil { model.sheet = nil; return nil }
                 if model.kbFocusId != nil { model.kbFocusId = nil; return nil }
                 return event
+            }
+            // 修复弹层内的键盘操作（v2.16：空格能打开弹层，打开后却只剩 Esc）——
+            // ↑↓ 换方案、回车执行、数字 1-4 直选
+            if let t = model.fixTarget, event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty {
+                let opts = model.fixOptions(for: t)
+                switch event.keyCode {
+                case 125: model.fixKbIdx = min(model.fixKbIdx + 1, max(0, opts.count - 1)); return nil   // ↓
+                case 126: model.fixKbIdx = max(model.fixKbIdx - 1, 0); return nil                        // ↑
+                case 36, 49:                                                                             // 回车 / 空格
+                    if model.fixKbIdx < opts.count { model.applyFix(opts[model.fixKbIdx], target: t) }
+                    return nil
+                case 18...21:                                                                            // 1-4
+                    let n = Int(event.keyCode) - 18
+                    if n < opts.count { model.applyFix(opts[n], target: t) }
+                    return nil
+                default: break
+                }
             }
             // 带 ⌘/⌥/⌃ 的组合键一律放行给系统/菜单——曾经 ⌘↑、⌥↓、⌘/ 全被吞掉
             let mods = event.modifierFlags.intersection([.command, .option, .control, .shift])

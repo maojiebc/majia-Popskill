@@ -46,6 +46,8 @@ macOS: %2$@
 
 &lt;!-- Describe the issue. If the app has crashed, please attach the latest Popskill-*.ips file from ~/Library/Logs/DiagnosticReports --&gt;
 </string>
+	<key>CLI 升级收工：%lld 个成功，%lld 个失败（%@）</key>
+	<string>CLI upgrades finished: %lld succeeded, %lld failed (%@)</string>
 	<key>CLI 巡检</key>
 	<string>CLI Checkup</string>
 	<key>CLI 巡检…</key>
@@ -110,12 +112,16 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Store is empty</string>
 	<key>store 为空，工具目录里也没有发现技能——点「+ 添加」装第一个</key>
 	<string>The store is empty and no skills were found in the tool directories — click “+ Add” to install your first one</string>
+	<key>store 元数据曾损坏，已备份为 .popskill.json.corrupt——来源与自动更新设置可能需要重新配置</key>
+	<string>Store metadata was corrupted and has been backed up as .popskill.json.corrupt — sources and auto-update settings may need reconfiguring</string>
 	<key>store 副本与全部 symlink 已清理</key>
 	<string>Store copy and all symlinks cleaned up</string>
 	<key>store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。</key>
 	<string>The store copy and all symlinks will be cleaned up (the store copy goes to the trash and can be restored).</string>
 	<key>store 在设备间同步；symlink 是各机本地状态，不参与同步。</key>
 	<string>The store syncs across devices; symlinks are per-machine state and never sync.</string>
+	<key>store 已有同名条目「%@」。想换新版：回主界面对它「检查更新」；确要重装：先移除旧的（会进回收站）再回来安装。</key>
+	<string>The store already has an entry named “%@”. For the newer version, run “Check Updates” on it from the main screen; to reinstall, remove the old one first (it goes to the recycle bin), then come back.</string>
 	<key>well-known 地址需要形如 https://域名/.well-known/skills/名称/SKILL.md</key>
 	<string>A well-known address must look like https://host/.well-known/skills/name/SKILL.md</string>
 	<key>”。试试别的关键词，或 + 添加。</key>
@@ -264,6 +270,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Command timed out and output pipes could not be drained — giving up: %@</string>
 	<key>命令超时（%lld s）已终止：%@ %@</key>
 	<string>Command timed out (%lld s), terminated: %@ %@</string>
+	<key>回收站已清空</key>
+	<string>Recycle bin emptied</string>
 	<key>回收站（%lld）</key>
 	<string>Trash (%lld)</string>
 	<key>图例</key>
@@ -274,6 +282,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Reveal in Finder</string>
 	<key>安装 %@ 失败：%@</key>
 	<string>Failed to install %1$@: %2$@</string>
+	<key>安装中…</key>
+	<string>Installing…</string>
 	<key>安装并链接 (%lld)</key>
 	<string>Install &amp; Link (%lld)</string>
 	<key>定时任务</key>
@@ -284,8 +294,10 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Scheduled tasks (launchd / crontab)</string>
 	<key>导入 %lld 个</key>
 	<string>Import %lld</string>
-	<key>导入失败：%@</key>
-	<string>Import failed: %@</string>
+	<key>导入中断：%@——已导入的保留，重开设置页可续导剩余项</key>
+	<string>Import interrupted: %@ — anything already imported is kept; reopen Settings to import the rest</string>
+	<key>导入中断：%@——已导入的保留，重试可续导剩余项</key>
+	<string>Import interrupted: %@ — anything already imported is kept; retry to import the rest</string>
 	<key>导入未托管目录</key>
 	<string>Import unmanaged dirs</string>
 	<key>将写入</key>
@@ -310,6 +322,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Loaded; last run succeeded</string>
 	<key>已升级 %@ → v%@</key>
 	<string>Upgraded %@ → v%@</string>
+	<key>已升级全局 CLI %@（npm i -g）</key>
+	<string>Upgraded global CLI %@ (npm i -g)</string>
 	<key>已同步</key>
 	<string>Synced</string>
 	<key>已启用 %@</key>
@@ -318,6 +332,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Ready</string>
 	<key>已恢复 %@ 到 store——按需重新链接工具</key>
 	<string>Restored %@ to the store — relink tools as needed</string>
+	<key>已恢复 %@ 的更新提醒——当前检查结束后将复查此源</key>
+	<string>Resumed update alerts for %@ — this source will be rechecked once the current check finishes</string>
 	<key>已恢复 %@ 的更新提醒，正在重新检查…</key>
 	<string>Restored update alerts for %@, rechecking…</string>
 	<key>已把 %@ · %@ 换成 store 链接</key>
@@ -332,6 +348,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Updated %@ (old version moved to the trash)</string>
 	<key>已更新 %@：%@（旧版已入回收站）</key>
 	<string>Updated %1$@: %2$@ (old versions moved to the trash)</string>
+	<key>已更新 %lld 项（%@）后失败：%@</key>
+	<string>Failed after updating %lld items (%@): %@</string>
 	<key>已最新</key>
 	<string>Up to date</string>
 	<key>已添加的源（%lld）</key>
@@ -346,8 +364,14 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Installed</string>
 	<key>已触发 %@</key>
 	<string>Triggered %@</string>
+	<key>已跳过</key>
+	<string>Skipped</string>
 	<key>已跳过 %@ 的这个版本——上游再出新版会重新提醒</key>
 	<string>Skipped this version of %@ — you'll be alerted when upstream ships something new</string>
+	<key>已跳过当前上游版本，上游再出新版会重新提醒——点击立即恢复提醒并重查</key>
+	<string>Skipped this upstream version; you'll be alerted when something new ships — click to resume alerts and recheck now</string>
+	<key>已跳过更新，点击恢复提醒</key>
+	<string>Update skipped, click to resume alerts</string>
 	<key>已重新扫描 store 与工具目录</key>
 	<string>Rescanned store and tool directories</string>
 	<key>已重链 %@ · %@</key>
@@ -394,6 +418,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Linking will create a directory at %@. If you don’t use this tool yet, you can skip it. Create and link anyway?</string>
 	<key>挂载到</key>
 	<string>Link to</string>
+	<key>指向别处：%@</key>
+	<string>Points elsewhere: %@</string>
 	<key>指回 store 中现存的目录</key>
 	<string>Points back to the directory that still exists in the store</string>
 	<key>按时间跑（%lld）· 按下次运行排序</key>
@@ -442,6 +468,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Update to %@</string>
 	<key>更新到 %@ 并修复</key>
 	<string>Update to %@ and repair</string>
+	<key>更新收工：%lld 个成功，%lld 个失败（%@）</key>
+	<string>Update run finished: %lld succeeded, %lld failed (%@)</string>
 	<key>更新此套装</key>
 	<string>Update this bundle</string>
 	<key>最新</key>
@@ -522,6 +550,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Monthly on day %lld</string>
 	<key>每月 %lld 日 %@</key>
 	<string>Monthly on day %1$lld at %2$@</string>
+	<key>永久删除全部回收站备份——此前只能去 Finder 手删</key>
+	<string>Permanently delete every backup in the recycle bin</string>
 	<key>没有 %@ 类型的能力。点 + 添加，或切回「全部」。</key>
 	<string>No %@ capabilities. Click + Add, or switch back to “All”.</string>
 	<key>没有 plist 路径</key>
@@ -538,6 +568,14 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>No capabilities match “</string>
 	<key>添加能力</key>
 	<string>Add Capability</string>
+	<key>清空</key>
+	<string>Empty</string>
+	<key>清空…</key>
+	<string>Empty…</string>
+	<key>清空回收站失败：%@</key>
+	<string>Failed to empty the recycle bin: %@</string>
+	<key>清空回收站？</key>
+	<string>Empty the recycle bin?</string>
 	<key>源</key>
 	<string>the source</string>
 	<key>源、工具与 store — 全部配置都在这一页。</key>
@@ -618,6 +656,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Settings</string>
 	<key>设置…</key>
 	<string>Settings…</string>
+	<key>该工具目录不存在——挂载会创建它，安装时会先跟你确认</key>
+	<string>This tool's folder doesn't exist — mounting will create it, and you'll be asked to confirm during install</string>
 	<key>该源没有记录 URL，无法更新</key>
 	<string>No source URL on record — cannot update</string>
 	<key>该源没有记录 npm 包名，无法更新</key>
@@ -660,5 +700,9 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Error: %@</string>
 	<key>，%lld 项断链</key>
 	<string>, %lld broken</string>
+	<key>；%lld 个因同名跳过</key>
+	<string>; %lld skipped (same name)</string>
+	<key>；另有 %lld 个套装成员没查成（网络抖动）</key>
+	<string>; %lld more bundle members could not be checked (network hiccup)</string>
 </dict>
 </plist>

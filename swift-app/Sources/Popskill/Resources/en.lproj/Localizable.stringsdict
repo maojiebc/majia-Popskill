@@ -306,6 +306,22 @@
 			<string>Repaired %lld link issues</string>
 		</dict>
 	</dict>
+	<key>已升级 %lld 个 CLI</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>Upgraded %lld CLI</string>
+			<key>other</key>
+			<string>Upgraded %lld CLIs</string>
+		</dict>
+	</dict>
 	<key>已安装 %@ 并链接到 %lld 个工具</key>
 	<dict>
 		<key>NSStringLocalizedFormatKey</key>
@@ -352,6 +368,22 @@
 			<string>Imported %lld unmanaged directory into the store (original moved to the trash)</string>
 			<key>other</key>
 			<string>Imported %lld unmanaged directories into the store (originals moved to the trash)</string>
+		</dict>
+	</dict>
+	<key>已更新 %lld 个源</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>Updated %lld source</string>
+			<key>other</key>
+			<string>Updated %lld sources</string>
 		</dict>
 	</dict>
 	<key>扫描完成：发现 %lld 项能力</key>
@@ -448,6 +480,22 @@
 			<string>Every %lld second</string>
 			<key>other</key>
 			<string>Every %lld seconds</string>
+		</dict>
+	</dict>
+	<key>永久删除全部 %lld 项备份，不可恢复。</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>Permanently delete %lld backup. This cannot be undone.</string>
+			<key>other</key>
+			<string>Permanently delete all %lld backups. This cannot be undone.</string>
 		</dict>
 	</dict>
 	<key>自动更新 %lld 个源</key>

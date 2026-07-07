@@ -110,6 +110,7 @@ struct AddSheet: View {
     @State private var plan: StoreFS.ResolvedSource?
     @State private var targets: [String: Bool] = [:]
     @State private var resolving = false
+    @State private var resolveTask: Task<Void, Never>?
     @State private var error: String?
     @FocusState private var urlFocus: Bool
 
@@ -123,12 +124,13 @@ struct AddSheet: View {
                 foot
             }
         }
-        // 任何方式离开弹层（取消/遮罩/esc/安装完成）都清掉 github 临时 clone——
-        // 曾经取消即把整仓副本泄漏在临时目录
-        .onDisappear { discardPlan(plan) }
+        // 任何方式离开弹层（取消/遮罩/esc/安装完成）都清掉临时 staging——
+        // 曾经取消即把整仓副本泄漏在临时目录；解析进行中离开由 resolve 的取消回调兜底
+        .onDisappear { resolveTask?.cancel(); discardPlan(plan) }
         .onAppear {
             // 未安装的工具默认不挂载（避免给新用户凭空创建 ~/.codex）
             targets = Dictionary(uniqueKeysWithValues: model.tools.map { ($0.id, $0.defaultTarget && $0.connected) })
+            model.installError = nil
             urlFocus = true
             // 调试钩子：POPSKILL_ADD_URL 预填并自动解析（截图验证用）
             if let preset = ProcessInfo.processInfo.environment["POPSKILL_ADD_URL"], plan == nil {
@@ -223,6 +225,16 @@ struct AddSheet: View {
                                 Text(t.name).font(.ui(12.5, .semibold)).foregroundStyle(Ink.ink)
                                 Text("\(t.rootDisplay)\(CapType.skill.dirName)/")
                                     .font(.mono(10.5)).foregroundStyle(Ink.tertiary)
+                                if !t.connected {
+                                    // v2.16：曾无任何标识——随手拨开就静默建出 ~/.codex（安装时会再确认）
+                                    Text(L("未安装"))
+                                        .font(.ui(9.5, .bold)).kerning(0.4)
+                                        .foregroundStyle(Ink.amberText)
+                                        .padding(.horizontal, 5).padding(.vertical, 1)
+                                        .background(RoundedRectangle(cornerRadius: 3).fill(Ink.amberBadgeBg))
+                                        .overlay(RoundedRectangle(cornerRadius: 3).stroke(Ink.amberBadgeBorder, lineWidth: 1))
+                                        .help(L("该工具目录不存在——挂载会创建它，安装时会先跟你确认"))
+                                }
                                 Spacer()
                                 PsSwitch(on: targets[t.id] ?? false) {
                                     targets[t.id] = !(targets[t.id] ?? false)
@@ -245,6 +257,12 @@ struct AddSheet: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(RoundedRectangle(cornerRadius: 8).fill(Ink.terminalBg))
                 }
+                // 安装失败驻留证据（v2.16：曾只有 6 秒 toast，消失后计划页零线索）
+                if let err = model.installError {
+                    Text(err)
+                        .font(.ui(11.5)).foregroundStyle(Ink.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .padding(EdgeInsets(top: 16, leading: 20, bottom: 16, trailing: 20))
         }
@@ -263,13 +281,14 @@ struct AddSheet: View {
     private var foot: some View {
         HStack(spacing: 8) {
             if plan != nil {
-                SheetButton(label: L("← 返回")) { discardPlan(plan); plan = nil; error = nil }
+                SheetButton(label: L("← 返回")) { discardPlan(plan); plan = nil; error = nil; model.installError = nil }
             }
             Spacer()
             SheetButton(label: L("取消")) { model.sheet = nil }
             if let plan {
                 let n = model.tools.filter { targets[$0.id] == true }.count
-                SheetButton(label: n > 0 ? L("安装并链接 (\(n))") : L("仅保存到 store"), primary: true) {
+                SheetButton(label: model.installing ? L("安装中…") : (n > 0 ? L("安装并链接 (\(n))") : L("仅保存到 store")),
+                            primary: true, disabled: model.installing) {
                     model.install(plan, targets: targets)
                 }
             } else {
@@ -289,19 +308,22 @@ struct AddSheet: View {
         guard !u.isEmpty, !resolving else { return }
         resolving = true
         error = nil
-        Task {
+        resolveTask = Task {
             defer { resolving = false }
             do {
-                plan = try await model.resolveSource(u)
+                let p = try await model.resolveSource(u)
+                // 解析中弹层被关（Esc/遮罩）：clone 白跑也不能把整仓副本泄漏在临时目录（v2.16）
+                if Task.isCancelled { discardPlan(p) } else { plan = p }
             } catch {
-                self.error = error.localizedDescription
+                if !Task.isCancelled { self.error = error.localizedDescription }
             }
         }
     }
 
-    /// github 计划的临时 clone（连 stage 父目录）后台清掉；local 源原地目录不动
+    /// github / well-known 计划的临时 staging（连 stage 父目录）后台清掉；local 源原地目录不动。
+    /// v2.16：曾只认 github——well-known 计划取消会把单文件 staging 留在临时目录
     private func discardPlan(_ p: StoreFS.ResolvedSource?) {
-        guard let p, p.kind == .github, !model.fake else { return }
+        guard let p, p.kind == .github || p.kind == .wellKnown, !model.fake else { return }
         let fsCopy = model.fs
         let dir = p.stagingDir
         Task.detached { fsCopy.discardStagingDir(dir) }
@@ -376,6 +398,8 @@ struct SettingsSheet: View {
                         } else {
                             if e.hasUpdate, let latest = e.latest {
                                 UpdateBadge(latest: latest) { model.runUpdate(e.id) }
+                            } else if e.skippedUpdate {
+                                SkippedTag { model.unskipUpdate(e) }
                             }
                             PsSwitch(on: e.autoUpdate) { model.toggleAutoUpdate(e.id) }
                             HoverAction(symbol: "✕", danger: true, help: L("移除该源（含其能力）")) { model.removeEntry(e) }
@@ -399,7 +423,7 @@ struct SettingsSheet: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(model.checkingUpdates)
-                Button { model.sheet = .cli; if model.globalClis.isEmpty { model.checkCliUpdates() } } label: {
+                Button { model.sheet = .cli } label: {   // 面板 onAppear 自会重扫（v2.16）
                     Text(L("CLI 巡检…"))
                         .font(.ui(11.5, .semibold)).foregroundStyle(Color(hex: 0x444444))
                         .padding(.horizontal, 10).frame(height: 26)
@@ -525,12 +549,39 @@ struct SettingsSheet: View {
                             .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
+                    Button { emptyTrashConfirmed() } label: {
+                        Text(L("清空…"))
+                            .font(.ui(11)).foregroundStyle(Ink.red)
+                            .padding(.horizontal, 8).frame(height: 24)
+                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.red.opacity(0.35), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .help(L("永久删除全部回收站备份——此前只能去 Finder 手删"))
                 }
                 .padding(.top, 6)
             }
         }
-        // 读盘一次进 @State，不在每次渲染路径上扫目录
+        // 读盘一次进 @State，不在每次渲染路径上扫目录；
+        // 盘面变了（本页 ✕ 移除源 / 导入未托管）同步重读——曾停在打开时的旧清单（v2.16）
         .onAppear { trashItems = model.fs.listTrash() }
+        .onChange(of: model.entries) { _, _ in trashItems = model.fs.listTrash() }
+    }
+
+    private func emptyTrashConfirmed() {
+        let alert = NSAlert()
+        alert.messageText = L("清空回收站？")
+        alert.informativeText = L("永久删除全部 \(trashItems.count) 项备份，不可恢复。")
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: L("清空"))
+        alert.addButton(withTitle: L("取消"))
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        do {
+            try model.fs.emptyTrash()
+            trashItems = model.fs.listTrash()
+            model.say(L("回收站已清空"))
+        } catch {
+            model.sayError(L("清空回收站失败：\(error.localizedDescription)"))
+        }
     }
 
     private func relativeLabel(_ d: Date) -> String {

@@ -44,10 +44,10 @@ struct FixPopoverView: View {
             .background(Ink.window)
             .overlay(alignment: .bottom) { Ink.hairline2.frame(height: 1) }
 
-            // 方案列表
+            // 方案列表（v2.16：↑↓/回车/数字可选——kbFocused 画键盘焦点）
             VStack(spacing: 2) {
-                ForEach(model.fixOptions(for: target)) { opt in
-                    FixOptionRow(option: opt) { model.applyFix(opt, target: target) }
+                ForEach(Array(model.fixOptions(for: target).enumerated()), id: \.element.id) { i, opt in
+                    FixOptionRow(option: opt, kbFocused: model.fixKbIdx == i) { model.applyFix(opt, target: target) }
                 }
             }
             .padding(6)
@@ -72,6 +72,7 @@ struct FixPopoverView: View {
 
 struct FixOptionRow: View {
     let option: FixOption
+    var kbFocused = false
     let action: () -> Void
     @State private var hovered = false
 
@@ -98,8 +99,10 @@ struct FixOptionRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(EdgeInsets(top: 8, leading: 10, bottom: 8, trailing: 10))
-            .background(RoundedRectangle(cornerRadius: 6).fill(option.rec ? Ink.greenBg : (hovered ? Ink.chrome : .clear)))
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(option.rec ? Ink.greenBorder : .clear, lineWidth: 1))
+            .background(RoundedRectangle(cornerRadius: 6).fill(option.rec ? Ink.greenBg : (hovered || kbFocused ? Ink.chrome : .clear)))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(
+                kbFocused ? Ink.blue.opacity(0.45) : (option.rec ? Ink.greenBorder : .clear),
+                lineWidth: kbFocused ? 1.5 : 1))
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }

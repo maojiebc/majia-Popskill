@@ -86,9 +86,12 @@ extension StoreFS {
         // 上游状态指纹 = 变化成员的远端内容组合哈希（协议无版本概念，内容即身份）
         let fingerprint = combinedFingerprint(changedPairs)
         if skipSuppressed(entry.name, fingerprint: fingerprint) { return nil }
+        // failures>0 但已有变化：结论照报，失败数如实透出（v2.16——曾被静默吞掉，
+        // 「1 项可更新」背后可能还有 5 个成员状态未知）
         return UpdateCheck(entryId: entry.id,
                            latest: changed.count == 1 && members.count == 1 ? L("新版") : L("\(changed.count) 项"),
-                           changedMembers: changed, upstreamNew: [], fingerprint: fingerprint)
+                           changedMembers: changed, upstreamNew: [], fingerprint: fingerprint,
+                           partialFailures: failures)
     }
 
     /// well-known 源更新执行：只换有变化成员的 SKILL.md（旧文件备份进回收站），
@@ -100,7 +103,9 @@ extension StoreFS {
             guard let url = wellKnownSkillURL(host: host, name: cap.name) else { continue }
             let localFile = cap.dirURL.appendingPathComponent("SKILL.md")
             guard let local = try? Data(contentsOf: localFile) else { continue }
-            let remote = try httpGet(url)
+            let remote: Data
+            do { remote = try httpGet(url) }
+            catch { throw partialFailure(error, done: updated) }   // 中途失败：已换几项如实进错误文案
             guard SHA256.hash(data: remote) != SHA256.hash(data: local) else { continue }
             // 原子换文件：先落临时名，成功后备份旧文件再换名——失败旧版无损
             let incoming = cap.dirURL.appendingPathComponent(".popskill-incoming-SKILL.md")

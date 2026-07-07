@@ -73,6 +73,8 @@ final class AppModel {
     var searchFocused = false
     var checkingUpdates = false
     var updatingIds: Set<String> = []
+    var installing = false           // 添加弹层安装忙态（v2.16：曾在主线程同步 copy，大仓直接卡死 UI）
+    var installError: String?        // 添加弹层驻留错误（v2.16：曾只有 6 秒 toast，消失后计划页零线索）
 
     // 全局 CLI 巡检（v2.14）：npm -g 装的 AI CLI 进更新雷达
     var globalClis: [GlobalCli] = []
@@ -89,6 +91,7 @@ final class AppModel {
     // 键盘导航（PATCH-02）
     var kbFocusId: String?
     var kbToolIdx = 0
+    var fixKbIdx = 0                 // 修复弹层内的键盘选中项（v2.16：键盘能开弹层却按不动）
     var kbFocusList: [KbItem] = []           // MainView 按可见顺序回填
     var kbFocusFrame: CGRect = .zero         // 聚焦行的窗口坐标（修复弹层锚点用）
     var winSize: CGSize = .zero
@@ -97,6 +100,19 @@ final class AppModel {
     // store 实时监听（v2.15）：终端动了 ~/.agents / 工具链接目录，秒级自动跟上
     @ObservationIgnored private var watcher: StoreWatcher?
     @ObservationIgnored private var watchDebounce: Task<Void, Never>?
+    // v2.16 打磨批新增：
+    @ObservationIgnored private var warnedMetaCorrupt = false          // meta 损坏告警只发一次
+    @ObservationIgnored private var pendingRecheck: Set<String> = []   // 全量检查中收到的定向重查请求，收尾后追跑
+    @ObservationIgnored private var updateBatch: UpdateBatch?          // 「全部更新」的收工账本
+    @ObservationIgnored private var cliQueue: [String] = []            // npm 升级串行队列（并发 npm i -g 会互相咬全局目录）
+    @ObservationIgnored private var cliPumping = false
+    @ObservationIgnored private var cliBatch: (ok: Int, fail: [String])?
+
+    struct UpdateBatch {
+        var remaining: Set<String>
+        var ok: [String] = []
+        var failed: [String] = []
+    }
     /// Sparkle 手动检查入口（PopskillApp 注入；裸二进制为 nil）
     @ObservationIgnored var checkAppUpdate: (() -> Void)?
     /// Sparkle 自动检查读/写（PopskillApp 注入）——设置页开关用，AppModel 不直接依赖 Sparkle
@@ -198,8 +214,16 @@ final class AppModel {
         entries = fs.scanEntries(tools: tools, meta: meta)
         revalidateOverlays()
         syncWatchPaths()
+        // meta 曾损坏（loadMeta 已备份第一现场）：告警一次，别静默装无事发生
+        if !warnedMetaCorrupt, fs.metaCorruptBackupExists {
+            warnedMetaCorrupt = true
+            sayError(L("store 元数据曾损坏，已备份为 .popskill.json.corrupt——来源与自动更新设置可能需要重新配置"))
+        }
+        // 孤儿 meta 键随手清（终端删掉的条目残留的 sourceUrl/autoUpdate 会祸害重装的同名技能）
+        let keep = Set(entries.flatMap { [$0.name] + $0.allCaps.map(\.name) })
         let fsCopy = fs
         Task.detached { @Sendable [weak self] in
+            fsCopy.gcMeta(keep: keep)
             let info = fsCopy.syncInfo()
             await MainActor.run { [weak self] in self?.syncInfo = info }
         }
@@ -319,7 +343,8 @@ final class AppModel {
         guard let i = kbIdx else { return }
         let item = kbFocusList[i]
         if item.isBundle {
-            guard query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+            // Bundle chip 下强制展开——空格折叠是暗改状态、界面无反应（与点击守卫一致，v2.16）
+            guard query.trimmingCharacters(in: .whitespaces).isEmpty, typeFilter != .bundle else { return }
             if expanded.contains(item.entryId) { expanded.remove(item.entryId) }
             else { expanded.insert(item.entryId) }
             return
@@ -350,6 +375,8 @@ final class AppModel {
     func openFix(_ target: FixTarget) {
         peekTarget = nil
         fixTarget = target
+        // 键盘选中项落在推荐方案上（v2.16）
+        fixKbIdx = fixOptions(for: target).firstIndex(where: \.rec) ?? 0
     }
 
     func openPeek(cap: Capability, entry: Entry, anchor: CGPoint, flip: Bool) {
@@ -370,26 +397,8 @@ final class AppModel {
         }
         let from = cap.status(tool.id)
         guard from == .on || from == .off else { return }   // stub/broken 走修复弹层
-        // 工具没装（~/.claude / ~/.codex 不存在）时挂载会凭空建出该目录——
-        // 只用 Claude 的人点了界面里照样可点的 Codex 格，电脑就多个 ~/.codex。先确认。
-        // v2.15：加「不再询问」（系统原生 suppression）——批量往新工具挂十几个技能时
-        // 十几连弹是折磨。只在用户点了「仍然挂载」时才记住勾选：勾了又取消 ≠ 以后默认挂。
-        if from == .off, !fake, !tool.connected,
-           ProcessInfo.processInfo.environment["POPSKILL_AUTOCONFIRM"] != "1",
-           !UserDefaults.standard.bool(forKey: "suppressMountConfirm") {
-            let alert = NSAlert()
-            alert.messageText = L("\(tool.name) 似乎还没安装")
-            alert.informativeText = L("挂载会在 \(tool.rootDisplay) 创建目录。如果你还没用这个工具，可以先不挂。确定要创建并挂载吗？")
-            alert.addButton(withTitle: L("仍然挂载"))
-            alert.addButton(withTitle: L("取消"))
-            alert.showsSuppressionButton = true
-            alert.suppressionButton?.title = L("不再询问")
-            let resp = alert.runModal()
-            guard resp == .alertFirstButtonReturn else { return }
-            if alert.suppressionButton?.state == .on {
-                UserDefaults.standard.set(true, forKey: "suppressMountConfirm")
-            }
-        }
+        // 工具没装（~/.claude / ~/.codex 不存在）时挂载会凭空建出该目录——先确认
+        if from == .off, !fake, !tool.connected, !confirmMountUnconnected(tool) { return }
         let to: LinkStatus = from == .on ? .off : .on
         if fake {
             mutateFake(capId: cap.id, toolId: tool.id, to: to)
@@ -412,6 +421,27 @@ final class AppModel {
             }
         }
         say(to == .on ? L("已链接 \(cap.name) → \(tool.name)") : L("已断开 \(cap.name) → \(tool.name)"))
+    }
+
+    /// 未装工具的挂载确认——矩阵格与添加流程共用（v2.16：添加流程曾绕过这道防线，
+    /// 静默建出 ~/.codex）。v2.15 的「不再询问」（系统原生 suppression）在这里：
+    /// 批量往新工具挂十几个技能时十几连弹是折磨；只在点了「仍然挂载」时才记住勾选。
+    func confirmMountUnconnected(_ tool: Tool) -> Bool {
+        if ProcessInfo.processInfo.environment["POPSKILL_AUTOCONFIRM"] == "1" { return true }
+        if UserDefaults.standard.bool(forKey: "suppressMountConfirm") { return true }
+        let alert = NSAlert()
+        alert.messageText = L("\(tool.name) 似乎还没安装")
+        alert.informativeText = L("挂载会在 \(tool.rootDisplay) 创建目录。如果你还没用这个工具，可以先不挂。确定要创建并挂载吗？")
+        alert.addButton(withTitle: L("仍然挂载"))
+        alert.addButton(withTitle: L("取消"))
+        alert.showsSuppressionButton = true
+        alert.suppressionButton?.title = L("不再询问")
+        let resp = alert.runModal()
+        guard resp == .alertFirstButtonReturn else { return false }
+        if alert.suppressionButton?.state == .on {
+            UserDefaults.standard.set(true, forKey: "suppressMountConfirm")
+        }
+        return true
     }
 
     // ── 修复 ─────────────────────────────────────────────
@@ -476,6 +506,8 @@ final class AppModel {
             case .update:
                 try? relink(cap: t.cap, entry: t.entry, tool: t.tool)   // 先把这格链上，更新落盘后自动生效
                 runUpdate(t.entry.id)
+                refresh()
+                return   // 收尾 toast 由 runUpdate 发——曾在这抢跑说「已更新」，失败时前后矛盾（v2.16）
             }
             refresh()
             if !opt.toast.isEmpty { say(opt.toast) }
@@ -656,6 +688,9 @@ final class AppModel {
                         self.entries[i].changedMembers = nil
                     }
                 }
+                // well-known 部分成员没查成时如实透出（v2.16——「1 项可更新」背后可能还有 5 个状态未知）
+                let partial = found.reduce(0) { $0 + $1.partialFailures }
+                let partialNote = partial > 0 ? L("；另有 \(partial) 个套装成员没查成（网络抖动）") : ""
                 let autoTargets = auto ? self.entries.filter { $0.hasUpdate && $0.autoUpdate } : []
                 if !autoTargets.isEmpty {
                     for e in autoTargets { self.runUpdate(e.id, quiet: true) }
@@ -663,14 +698,20 @@ final class AppModel {
                 } else if failedCount > 0 {
                     // 启动自动检查的失败不弹 toast 打扰（断网开机最常见），日志已留痕；手动检查必须如实报
                     if !auto {
-                        self.sayError(found.isEmpty
+                        self.sayError((found.isEmpty
                             ? L("\(failedCount) 个源检查失败（网络或源不可达）")
-                            : L("发现 \(found.count) 个源可更新；\(failedCount) 个源检查失败（网络或源不可达）"))
+                            : L("发现 \(found.count) 个源可更新；\(failedCount) 个源检查失败（网络或源不可达）")) + partialNote)
                     } else if !found.isEmpty {
-                        self.say(L("发现 \(found.count) 个源可更新（另有 \(failedCount) 个检查失败）"))
+                        self.say(L("发现 \(found.count) 个源可更新（另有 \(failedCount) 个检查失败）") + partialNote)
                     }
                 } else if !auto || !found.isEmpty {
-                    self.say(found.isEmpty ? L("全部源已是最新") : L("发现 \(found.count) 个源可更新"))
+                    self.say((found.isEmpty ? L("全部源已是最新") : L("发现 \(found.count) 个源可更新")) + partialNote)
+                }
+                // 全量检查期间收到的「恢复更新提醒」定向重查，此刻追跑（v2.16：曾被 guard 静默吞掉）
+                if !self.pendingRecheck.isEmpty {
+                    let ids = self.pendingRecheck
+                    self.pendingRecheck = []
+                    self.checkUpdates(only: ids)
                 }
             }
         }
@@ -703,25 +744,54 @@ final class AppModel {
                 case .success(let r):
                     plog.info("更新 \(entry.name, privacy: .public) 完成：\(r.updated.joined(separator: ","), privacy: .public)")
                     self.refresh()
-                    if !quiet {
-                        let names = r.updated.count <= 3 ? r.updated.joined(separator: L("、"))
-                            : L("\(r.updated.prefix(3).joined(separator: L("、"))) 等")
-                        var msg = r.updated.count == 1 && !entry.isBundle
-                            ? L("已更新 \(entry.name)（旧版已入回收站）")
-                            : L("已更新 \(entry.name)：\(names)（旧版已入回收站）")
-                        if !r.upstreamNew.isEmpty { msg += L(" · 上游另有 \(r.upstreamNew.count) 个未安装技能") }
-                        self.say(msg)
+                    let inBatch = self.batchNote(entryId, name: entry.name, ok: true)
+                    if !quiet && !inBatch {
+                        // npm 源的「更新」= npm i -g 全局 CLI，全程不碰回收站——
+                        // 曾统一说「旧版已入回收站」，谎报可回滚（v2.16 审计）
+                        if SourceKind.of(entry.sourceUrl) == .npm {
+                            self.say(L("已升级全局 CLI \(r.updated.first ?? entry.name)（npm i -g）"))
+                        } else {
+                            let names = r.updated.count <= 3 ? r.updated.joined(separator: L("、"))
+                                : L("\(r.updated.prefix(3).joined(separator: L("、"))) 等")
+                            var msg = r.updated.count == 1 && !entry.isBundle
+                                ? L("已更新 \(entry.name)（旧版已入回收站）")
+                                : L("已更新 \(entry.name)：\(names)（旧版已入回收站）")
+                            if !r.upstreamNew.isEmpty { msg += L(" · 上游另有 \(r.upstreamNew.count) 个未安装技能") }
+                            self.say(msg)
+                        }
                     }
                 case .failure(let err):
-                    self.sayError(L("更新 \(entry.name) 失败：\(err.localizedDescription)"))
+                    plog.error("更新 \(entry.name, privacy: .public) 失败：\(err.localizedDescription, privacy: .public)")
+                    if !self.batchNote(entryId, name: entry.name, ok: false) {
+                        self.sayError(L("更新 \(entry.name) 失败：\(err.localizedDescription)"))
+                    }
                 }
             }
         }
     }
 
+    /// 「全部更新」的收工账本（v2.16：曾只报开工不报收工——成功零反馈、
+    /// 部分失败的 toast 互相覆盖只剩最后一条）。返回是否记入了批次。
+    private func batchNote(_ entryId: String, name: String, ok: Bool) -> Bool {
+        guard updateBatch?.remaining.contains(entryId) == true else { return false }
+        updateBatch?.remaining.remove(entryId)
+        if ok { updateBatch?.ok.append(name) } else { updateBatch?.failed.append(name) }
+        if let b = updateBatch, b.remaining.isEmpty {
+            updateBatch = nil
+            if b.failed.isEmpty {
+                say(L("已更新 \(b.ok.count) 个源"))
+            } else {
+                sayError(L("更新收工：\(b.ok.count) 个成功，\(b.failed.count) 个失败（\(b.failed.joined(separator: L("、")))）"))
+            }
+        }
+        return true
+    }
+
     func updateAll() {
-        let targets = updates
+        // 已在更新中的条目 runUpdate 会直接跳过——不入账本，否则批次永远等不齐
+        let targets = updates.filter { !updatingIds.contains($0.id) }
         guard !targets.isEmpty else { return }
+        updateBatch = UpdateBatch(remaining: Set(targets.map(\.id)))
         for e in targets { runUpdate(e.id, quiet: true) }
         say(L("正在更新 \(targets.count) 个源…"))
     }
@@ -740,13 +810,20 @@ final class AppModel {
         say(L("已跳过 \(entry.name) 的这个版本——上游再出新版会重新提醒"))
     }
 
-    /// 恢复更新提醒：清跳过标记，并定向重查这一个源让徽标从真相重新推导
+    /// 恢复更新提醒：清跳过标记，并定向重查这一个源让徽标从真相重新推导。
+    /// 全量检查进行中时排队等收尾追跑——曾直接调 checkUpdates 被 guard 吞掉，
+    /// toast 说「正在重新检查」实际什么都没发生（v2.16 审计）
     func unskipUpdate(_ entry: Entry) {
         if let i = entries.firstIndex(where: { $0.id == entry.id }) { entries[i].skippedUpdate = false }
         guard !fake else { return }
         fs.unskipLatest(entry.name)
-        say(L("已恢复 \(entry.name) 的更新提醒，正在重新检查…"))
-        checkUpdates(only: [entry.id])
+        if checkingUpdates {
+            pendingRecheck.insert(entry.id)
+            say(L("已恢复 \(entry.name) 的更新提醒——当前检查结束后将复查此源"))
+        } else {
+            say(L("已恢复 \(entry.name) 的更新提醒，正在重新检查…"))
+            checkUpdates(only: [entry.id])
+        }
     }
 
     // ── 全局 CLI 巡检（v2.14）────────────────────────────
@@ -773,11 +850,52 @@ final class AppModel {
         }
     }
 
-    /// 升级单个全局 CLI 到 registry 最新版
+    /// 升级单个全局 CLI 到 registry 最新版（实际执行走串行队列）
     func upgradeCli(_ pkg: String) {
-        guard let cli = globalClis.first(where: { $0.name == pkg }), let latest = cli.latest,
-              !upgradingClis.contains(pkg) else { return }
-        upgradingClis.insert(pkg)
+        enqueueCliUpgrades([pkg])
+    }
+
+    /// 「全部升级」：批量入队 + 收工汇总（v2.16：曾并发喷 N 个 npm i -g——
+    /// 同一全局前缀无锁并发写会互相咬，且成功/失败 toast 互相覆盖只剩最后一条）
+    func upgradeAllClis() {
+        let targets = cliUpdates.map(\.name)
+        guard !targets.isEmpty else { return }
+        if cliBatch == nil { cliBatch = (0, []) }
+        enqueueCliUpgrades(targets)
+    }
+
+    private func enqueueCliUpgrades(_ pkgs: [String]) {
+        let fresh = pkgs.filter { p in
+            globalClis.first(where: { $0.name == p })?.hasUpdate == true
+                && !upgradingClis.contains(p) && !cliQueue.contains(p)
+        }
+        guard !fresh.isEmpty else { return }
+        upgradingClis.formUnion(fresh)   // 排队即转 spinner——「点了没反应」是最迷惑的失败模式
+        cliQueue.append(contentsOf: fresh)
+        pumpCliQueue()
+    }
+
+    private func pumpCliQueue() {
+        guard !cliPumping, !cliQueue.isEmpty else {
+            // 队列干了才结账
+            if cliQueue.isEmpty, !cliPumping, let b = cliBatch {
+                cliBatch = nil
+                if b.fail.isEmpty {
+                    say(L("已升级 \(b.ok) 个 CLI"))
+                } else {
+                    sayError(L("CLI 升级收工：\(b.ok) 个成功，\(b.fail.count) 个失败（\(b.fail.joined(separator: L("、")))）"))
+                }
+            }
+            return
+        }
+        cliPumping = true
+        let pkg = cliQueue.removeFirst()
+        guard let cli = globalClis.first(where: { $0.name == pkg }), let latest = cli.latest else {
+            upgradingClis.remove(pkg)
+            cliPumping = false
+            pumpCliQueue()
+            return
+        }
         let fsCopy = fs
         Task { [weak self] in
             let result: Result<Void, Error> = await Task.detached {
@@ -792,16 +910,15 @@ final class AppModel {
                     if let i = self.globalClis.firstIndex(where: { $0.name == pkg }) {
                         self.globalClis[i] = GlobalCli(name: pkg, installed: latest, latest: latest)
                     }
-                    self.say(L("已升级 \(pkg) → v\(latest)"))
+                    if self.cliBatch != nil { self.cliBatch!.ok += 1 } else { self.say(L("已升级 \(pkg) → v\(latest)")) }
                 case .failure(let e):
-                    self.sayError(L("升级 \(pkg) 失败：\(e.localizedDescription)"))
+                    plog.error("升级 CLI \(pkg, privacy: .public) 失败：\(e.localizedDescription, privacy: .public)")
+                    if self.cliBatch != nil { self.cliBatch!.fail.append(pkg) } else { self.sayError(L("升级 \(pkg) 失败：\(e.localizedDescription)")) }
                 }
+                self.cliPumping = false
+                self.pumpCliQueue()
             }
         }
-    }
-
-    func upgradeAllClis() {
-        for c in cliUpdates { upgradeCli(c.name) }
     }
 
     /// 横幅「N 个技能可更新」点击：跳到下一个待更新条目并闪烁定位，多个时循环。
@@ -831,12 +948,15 @@ final class AppModel {
         // 不能像过去那样点一下就静默把人家手装的技能都搬走
         guard confirmImport(Set(found.map(\.name))) else { return }
         do {
-            let imported = try fs.importUnmanaged(found)
-            plog.info("导入未托管目录 \(imported.joined(separator: ","), privacy: .public)")
+            let r = try fs.importUnmanaged(found)
+            plog.info("导入未托管目录 \(r.imported.joined(separator: ","), privacy: .public)（同名跳过 \(r.skippedSameName.count)）")
             refresh()
-            say(L("已导入 \(imported.count) 个未托管目录进 store（原目录已入回收站）"))
+            // 分账如实报（v2.16：曾「发现 6 个、导入 4 个」，差的 2 个无解释）
+            var msg = L("已导入 \(r.imported.count) 个未托管目录进 store（原目录已入回收站）")
+            if !r.skippedSameName.isEmpty { msg += L("；\(r.skippedSameName.count) 个因同名跳过") }
+            say(msg)
         } catch {
-            sayError(L("导入失败：\(error.localizedDescription)"))
+            sayError(L("导入中断：\(error.localizedDescription)——已导入的保留，重开设置页可续导剩余项"))
         }
     }
 
@@ -866,12 +986,12 @@ final class AppModel {
         }
         guard confirmImport(Set(found.map(\.name))) else { return }
         do {
-            let imported = try fs.importUnmanaged(found)
-            plog.info("空态收编 \(imported.joined(separator: ","), privacy: .public)")
+            let r = try fs.importUnmanaged(found)
+            plog.info("空态收编 \(r.imported.joined(separator: ","), privacy: .public)")
             refresh()
-            say(L("已导入 \(imported.count) 个技能进 store 并建链——这就是你的能力矩阵"))
+            say(L("已导入 \(r.imported.count) 个技能进 store 并建链——这就是你的能力矩阵"))
         } catch {
-            sayError(L("导入失败：\(error.localizedDescription)"))
+            sayError(L("导入中断：\(error.localizedDescription)——已导入的保留，重试可续导剩余项"))
         }
     }
 
@@ -898,19 +1018,46 @@ final class AppModel {
                                  tokens: src.items.first?.tokens ?? 0, dirURL: URL(fileURLWithPath: "/tmp"))
             for t in tools { cap.links[t.id] = targets[t.id] == true ? .on : .off }
             entries.insert(Entry(id: src.entryName, cap: cap, children: nil, sourceUrl: src.url), at: 0)
-        } else {
-            do {
-                try fs.install(src, linkTools: linkTools)
-                plog.info("安装 \(src.entryName, privacy: .public) ← \(src.url, privacy: .public)，链 \(linkTools.count) 个工具")
-                refresh()
-            } catch {
-                sayError(L("安装 \(src.entryName) 失败：\(error.localizedDescription)"))
-                return
+            sheet = nil
+            flash(src.entryName)
+            say(linkTools.isEmpty ? L("已保存 \(src.entryName) 到 store") : L("已安装 \(src.entryName) 并链接到 \(linkTools.count) 个工具"))
+            return
+        }
+        // 未装工具确认（v2.16：添加流程曾绕过矩阵格的同款防线，静默建出 ~/.codex）
+        for t in linkTools where !t.connected {
+            guard confirmMountUnconnected(t) else { return }
+        }
+        guard !installing else { return }
+        installing = true
+        installError = nil
+        let fsCopy = fs
+        // 后台执行（v2.16：曾在主线程同步 copyItem，大仓安装期间整个 UI 卡死）
+        Task { [weak self] in
+            let result: Result<Void, Error> = await Task.detached {
+                do { try fsCopy.install(src, linkTools: linkTools); return .success(()) }
+                catch { return .failure(error) }
+            }.value
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.installing = false
+                switch result {
+                case .success:
+                    plog.info("安装 \(src.entryName, privacy: .public) ← \(src.url, privacy: .public)，链 \(linkTools.count) 个工具")
+                    self.refresh()
+                    self.sheet = nil
+                    self.flash(src.entryName)
+                    self.say(linkTools.isEmpty ? L("已保存 \(src.entryName) 到 store") : L("已安装 \(src.entryName) 并链接到 \(linkTools.count) 个工具"))
+                case .failure(let error):
+                    // 驻留在计划页（v2.16：曾只有 6 秒 toast，消失后零线索）；同名冲突给出路
+                    if case StoreError.alreadyExists = error {
+                        self.installError = L("store 已有同名条目「\(src.entryName)」。想换新版：回主界面对它「检查更新」；确要重装：先移除旧的（会进回收站）再回来安装。")
+                    } else {
+                        self.installError = L("安装 \(src.entryName) 失败：\(error.localizedDescription)")
+                    }
+                    self.sayError(self.installError!)
+                }
             }
         }
-        sheet = nil
-        flash(src.entryName)
-        say(linkTools.isEmpty ? L("已保存 \(src.entryName) 到 store") : L("已安装 \(src.entryName) 并链接到 \(linkTools.count) 个工具"))
     }
 
     func removeEntry(_ entry: Entry) {
@@ -953,10 +1100,14 @@ final class AppModel {
         entries[i].autoUpdate.toggle()
         guard !fake else { return }
         let on = entries[i].autoUpdate
+        // meta 键一律 entry.name（v2.16 修复：曾写 entry.id——源式套装的 id 是
+        // "src:github.com/owner/repo"，扫描回读用的却是 repoName，开关看似打开、
+        // 任何一次 refresh 就悄悄回落，主力套装的自动更新从来没真正生效过）
+        let name = entries[i].name
         fs.mutateMeta { meta in
-            var m = meta.entries[entryId] ?? StoreMeta.EntryMeta()
+            var m = meta.entries[name] ?? StoreMeta.EntryMeta()
             m.autoUpdate = on
-            meta.entries[entryId] = m
+            meta.entries[name] = m
         }
     }
 
