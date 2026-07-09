@@ -48,6 +48,24 @@ final class StoreWatchTests: XCTestCase {
         w.stop()
         XCTAssertEqual(w.watchedPaths, [])
     }
+
+    /// v2.17：store 根消失后改听父目录，重建后换回 store
+    func testSyncSwitchesToParentWhenStoreMissingThenBack() throws {
+        let store = dir.appendingPathComponent("agents")
+        try fm.createDirectory(at: store, withIntermediateDirectories: true)
+        let parent = dir.path
+        let w = StoreWatcher(latency: 0.05) {}
+        defer { w.stop() }
+        w.sync(paths: [store.path])
+        XCTAssertEqual(w.watchedPaths, [store.path])
+        try fm.removeItem(at: store)
+        // 模拟 AppModel.syncWatchPaths：根没了听父目录
+        w.sync(paths: [parent])
+        XCTAssertEqual(w.watchedPaths, [parent])
+        try fm.createDirectory(at: store, withIntermediateDirectories: true)
+        w.sync(paths: [store.path])
+        XCTAssertEqual(w.watchedPaths, [store.path], "重建后应换回只听 store")
+    }
 }
 
 /// 全链集成：终端动 store → AppModel 自动重扫（startWatching → 去抖 → refresh）。

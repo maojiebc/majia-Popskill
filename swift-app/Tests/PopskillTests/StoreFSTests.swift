@@ -1328,4 +1328,121 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(s.inactiveByTool["codex"], s.total)
         _ = ag
     }
+
+    // ── v2.17：上游新增 / 回收站 meta / 四 kind 未托管 ──
+
+    func testSaveUpstreamNewSurvivesScan() throws {
+        try makeSkill("a1")
+        try makeSkill("a2")
+        fs.mutateMeta { meta in
+            meta.entries["a1"] = StoreMeta.EntryMeta(sourceUrl: "github.com/owner/repo")
+            meta.entries["a2"] = StoreMeta.EntryMeta(sourceUrl: "github.com/owner/repo")
+            meta.entries["owner/repo"] = StoreMeta.EntryMeta(
+                sourceUrl: "github.com/owner/repo", upstreamNew: ["a3", "a4"])
+        }
+        let entries = scan()
+        let bundle = try XCTUnwrap(entries.first(where: { $0.bundleKind == .source }))
+        XCTAssertEqual(bundle.upstreamNew, ["a3", "a4"])
+        XCTAssertEqual(bundle.upstreamNewCount, 2)
+        XCTAssertTrue(bundle.hasUpstreamNew)
+        XCTAssertFalse(bundle.hasUpdate)
+    }
+
+    func testInstallUpstreamMembersFromLocalStaging() throws {
+        // 本地 monorepo 源：skills/ 下有 a1（已装）和 a-new（未装）
+        let monorepo = sandbox.appendingPathComponent("upstream-repo")
+        try makeSkill("a1", in: monorepo.appendingPathComponent("skills"))
+        try makeSkill("a-new", desc: "上游新增", in: monorepo.appendingPathComponent("skills"))
+        // store 只装 a1，同源
+        try makeSkill("a1")
+        fs.mutateMeta { meta in
+            meta.entries["a1"] = StoreMeta.EntryMeta(sourceUrl: monorepo.path)
+            meta.entries["a1"]?.sourceUrl = monorepo.path
+            // 独立条目源
+            meta.entries["a1"] = StoreMeta.EntryMeta(sourceUrl: monorepo.path, upstreamNew: ["a-new"])
+        }
+        // 再扫：单源只有一个成员不会归拢成套装
+        var entries = scan()
+        var entry = try XCTUnwrap(entries.first(where: { $0.name == "a1" }))
+        entry.sourceUrl = monorepo.path
+        entry.upstreamNew = ["a-new"]
+        let installed = try fs.installUpstreamMembers(entry, names: ["a-new"], linkTools: tools)
+        XCTAssertEqual(installed, ["a-new"])
+        entries = scan()
+        XCTAssertTrue(entries.contains(where: { $0.name == "a-new" || ($0.children ?? []).contains(where: { $0.name == "a-new" }) }))
+        let dest = env.storeRoot.appendingPathComponent("skills/a-new")
+        XCTAssertTrue(fm.fileExists(atPath: dest.path))
+        // 已挂载默认工具
+        XCTAssertTrue(fs.isSymlink(claudeLink("a-new")))
+    }
+
+    func testTrashRestoreRestoresMetaSourceUrl() throws {
+        let dir = try makeSkill("keep-src")
+        fs.mutateMeta { meta in
+            meta.entries["keep-src"] = StoreMeta.EntryMeta(
+                sourceUrl: "github.com/owner/keep-src", autoUpdate: true)
+        }
+        let entry = try XCTUnwrap(scan().first(where: { $0.name == "keep-src" }))
+        try fs.removeEntry(entry, tools: tools)
+        XCTAssertNil(fs.loadMeta().entries["keep-src"], "移除后 meta 键应清掉")
+        let item = try XCTUnwrap(fs.listTrash().first(where: { $0.name == "keep-src" }))
+        // 快照应在回收站目录内
+        XCTAssertTrue(fm.fileExists(atPath: item.url.appendingPathComponent(".popskill-meta.json").path))
+        try fs.restoreFromTrash(item)
+        let restored = fs.loadMeta().entries["keep-src"]
+        XCTAssertEqual(restored?.sourceUrl, "github.com/owner/keep-src")
+        XCTAssertEqual(restored?.autoUpdate, true)
+        XCTAssertNil(restored?.latest, "恢复后检查点清空，避免误亮徽标")
+        XCTAssertTrue(fm.fileExists(atPath: env.storeRoot.appendingPathComponent("skills/keep-src").path))
+        _ = dir
+    }
+
+    func testScanUnmanagedFourKinds() throws {
+        // skill
+        let wildSkill = claudeLink("wild-skill")
+        try fm.createDirectory(at: wildSkill, withIntermediateDirectories: true)
+        try "---\nname: wild-skill\ndescription: s\n---\n".write(
+            to: wildSkill.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        // agent
+        let agents = env.toolRoots["claude"]!.appendingPathComponent("agents")
+        try fm.createDirectory(at: agents, withIntermediateDirectories: true)
+        let wildAgent = agents.appendingPathComponent("wild-agent")
+        try fm.createDirectory(at: wildAgent, withIntermediateDirectories: true)
+        try "# agent\n".write(to: wildAgent.appendingPathComponent("AGENT.md"), atomically: true, encoding: .utf8)
+        // mcp
+        let mcp = env.toolRoots["claude"]!.appendingPathComponent("mcp")
+        let wildMcp = mcp.appendingPathComponent("wild-mcp")
+        try fm.createDirectory(at: wildMcp, withIntermediateDirectories: true)
+        // cli
+        let bin = env.toolRoots["claude"]!.appendingPathComponent("bin")
+        try fm.createDirectory(at: bin, withIntermediateDirectories: true)
+        try "#!/bin/sh\necho hi\n".write(to: bin.appendingPathComponent("wild-cli"), atomically: true, encoding: .utf8)
+
+        let found = fs.scanUnmanaged(tools: tools, knownNames: [])
+        let byKind = Dictionary(grouping: found, by: \.kind)
+        XCTAssertEqual(byKind[.skill]?.map(\.name), ["wild-skill"])
+        XCTAssertEqual(byKind[.agent]?.map(\.name), ["wild-agent"])
+        XCTAssertEqual(byKind[.mcp]?.map(\.name), ["wild-mcp"])
+        XCTAssertEqual(byKind[.cli]?.map(\.name), ["wild-cli"])
+
+        let r = try fs.importUnmanaged(found)
+        XCTAssertEqual(Set(r.imported), Set(["wild-skill", "wild-agent", "wild-mcp", "wild-cli"]))
+        XCTAssertTrue(fm.fileExists(atPath: env.storeRoot.appendingPathComponent("skills/wild-skill").path))
+        XCTAssertTrue(fm.fileExists(atPath: env.storeRoot.appendingPathComponent("agents/wild-agent").path))
+        XCTAssertTrue(fm.fileExists(atPath: env.storeRoot.appendingPathComponent("mcp/wild-mcp").path))
+        XCTAssertTrue(fm.fileExists(atPath: env.storeRoot.appendingPathComponent("bin/wild-cli").path))
+        XCTAssertTrue(fs.isSymlink(wildSkill))
+        XCTAssertTrue(fs.isSymlink(wildAgent))
+    }
+
+    func testHasUpdateIgnoresEmptyLatest() {
+        var e = Entry(id: "x", cap: Capability(
+            id: "x", name: "x", type: .skill, desc: "", version: nil, author: nil,
+            tokens: 0, dirURL: URL(fileURLWithPath: "/tmp")), children: nil, latest: "")
+        XCTAssertFalse(e.hasUpdate)
+        e.latest = "1.2.0"
+        XCTAssertTrue(e.hasUpdate)
+        e.upstreamNew = ["n1"]
+        XCTAssertEqual(e.upstreamNewCount, 1)
+    }
 }

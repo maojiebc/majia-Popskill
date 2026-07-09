@@ -132,8 +132,13 @@ struct AddSheet: View {
             targets = Dictionary(uniqueKeysWithValues: model.tools.map { ($0.id, $0.defaultTarget && $0.connected) })
             model.installError = nil
             urlFocus = true
-            // 调试钩子：POPSKILL_ADD_URL 预填并自动解析（截图验证用）
-            if let preset = ProcessInfo.processInfo.environment["POPSKILL_ADD_URL"], plan == nil {
+            // 深链接 popskill://install?src=…（v2.17）优先于调试钩子
+            if let pending = model.pendingAddURL, plan == nil {
+                model.pendingAddURL = nil
+                url = pending
+                resolve()
+            } else if let preset = ProcessInfo.processInfo.environment["POPSKILL_ADD_URL"], plan == nil {
+                // 调试钩子：POPSKILL_ADD_URL 预填并自动解析（截图验证用）
                 url = preset
                 resolve()
             }

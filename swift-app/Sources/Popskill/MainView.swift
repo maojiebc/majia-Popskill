@@ -23,12 +23,16 @@ struct MainView: View {
     @FocusState private var searchFocus: Bool
     @State private var updateHovered = false
     @State private var cliHovered = false
+    @State private var upstreamHovered = false
 
     var body: some View {
         VStack(spacing: 0) {
             hero
             statStrip
-            if !model.issues.isEmpty || !model.updates.isEmpty || !model.cliUpdates.isEmpty { banner }
+            let envW = model.activeEnvWarnings()
+            if !envW.isEmpty { envBanner(envW) }
+            if !model.issues.isEmpty || !model.updates.isEmpty || !model.cliUpdates.isEmpty
+                || model.upstreamNewItemCount > 0 { banner }
             chipRow
             content
         }
@@ -280,6 +284,34 @@ struct MainView: View {
         )
     }
 
+    // ── 环境横幅（v2.17）──────────────────────────────────
+
+    private func envBanner(_ warnings: [EnvWarning]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(warnings) { w in
+                HStack(spacing: 10) {
+                    Text("⚠").font(.mono(12))
+                    Text(w.message)
+                        .font(.ui(12))
+                        .foregroundStyle(Color(hex: 0x3A4A6A))
+                        .lineLimit(2)
+                    Spacer(minLength: 8)
+                    Button { model.dismissEnvWarning(w.id) } label: {
+                        Text(L("知道了"))
+                            .font(.ui(11, .semibold))
+                            .foregroundStyle(Ink.blue)
+                            .padding(.horizontal, 10).padding(.vertical, 3)
+                            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Ink.blue.opacity(0.4), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 28).padding(.vertical, 8)
+                .background(Color(hex: 0xE8F0FF))
+                .overlay(alignment: .bottom) { Color(hex: 0xC5D4F0).frame(height: 1) }
+            }
+        }
+    }
+
     // ── 健康横幅 ──────────────────────────────────────────
 
     private var banner: some View {
@@ -292,7 +324,7 @@ struct MainView: View {
                 .font(.ui(12, .semibold))
                 .foregroundStyle(Ink.red)
             }
-            if !model.issues.isEmpty && !model.updates.isEmpty {
+            if !model.issues.isEmpty && (!model.updates.isEmpty || model.upstreamNewItemCount > 0) {
                 Text("·").foregroundStyle(Color(hex: 0xD8CFAE))
             }
             if !model.updates.isEmpty {
@@ -311,8 +343,25 @@ struct MainView: View {
                 .onHover { updateHovered = $0 }
                 .help(model.updates.count > 1 ? L("点击逐个定位待更新的技能（循环）") : L("点击定位待更新的技能"))
             }
-            if !model.cliUpdates.isEmpty {
+            if model.upstreamNewItemCount > 0 {
                 if !model.issues.isEmpty || !model.updates.isEmpty {
+                    Text("·").foregroundStyle(Color(hex: 0xD8CFAE))
+                }
+                Button { model.jumpToNextUpstreamNew() } label: {
+                    HStack(spacing: 6) {
+                        Text("+").font(.mono(12, .bold))
+                        Text(L("上游新增 \(model.upstreamNewItemCount) 个未装"))
+                            .underline(upstreamHovered)
+                    }
+                    .font(.ui(12, .semibold))
+                    .foregroundStyle(Ink.blue)
+                }
+                .buttonStyle(.plain)
+                .onHover { upstreamHovered = $0 }
+                .help(L("点击定位有上游新增技能的套装（循环）"))
+            }
+            if !model.cliUpdates.isEmpty {
+                if !model.issues.isEmpty || !model.updates.isEmpty || model.upstreamNewItemCount > 0 {
                     Text("·").foregroundStyle(Color(hex: 0xD8CFAE))
                 }
                 // 全局 CLI 的更新提醒（v2.14）：点击打开 CLI 巡检矩阵
@@ -329,7 +378,7 @@ struct MainView: View {
                 .onHover { cliHovered = $0 }
                 .help(L("npm 全局安装的命令行工具有新版——点击查看版本矩阵"))
             }
-            Text(L("点击 ✕ / ◐ / ↑ 可逐项处理"))
+            Text(L("点击 ✕ / ◐ / ↑ / + 可逐项处理"))
                 .font(.ui(11.5))
                 .foregroundStyle(Color(hex: 0x8A8268))
             Spacer()
@@ -350,6 +399,16 @@ struct MainView: View {
                         .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color(hex: 0xCDB878), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+            }
+            if model.upstreamNewItemCount > 0 {
+                Button { model.installAllUpstreamNew() } label: {
+                    Text(L("全部安装 (\(model.upstreamNewItemCount))"))
+                        .font(.ui(11.5, .semibold)).foregroundStyle(Ink.blue)
+                        .padding(.horizontal, 11).padding(.vertical, 4)
+                        .overlay(RoundedRectangle(cornerRadius: 5).stroke(Ink.blue.opacity(0.45), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .help(L("把检查到的上游新增技能全部装进 store 并按默认工具挂载"))
             }
         }
         .padding(.horizontal, 28).padding(.vertical, 9)
@@ -661,6 +720,11 @@ struct BundleCompactCard: View {
                     } else if entry.skippedUpdate {
                         SkippedTag { model.unskipUpdate(entry) }
                     }
+                    if entry.hasUpstreamNew {
+                        UpstreamNewBadge(count: entry.upstreamNewCount, help: entry.upstreamNewHelp) {
+                            model.installUpstreamNew(entry)
+                        }
+                    }
                     if entry.cap.tokens >= 100 { Text(formatTokens(entry.cap.tokens)) }
                     if let url = entry.sourceUrl {
                         Text("↗ \(url)").font(.mono(10)).lineLimit(1).truncationMode(.tail)
@@ -807,6 +871,11 @@ struct CapCard: View {
                     MemberUpdateDot { model.runUpdate(entry.id) }
                 }
             }
+            if fromBundle == nil, entry.hasUpstreamNew {
+                UpstreamNewBadge(count: entry.upstreamNewCount, help: entry.upstreamNewHelp) {
+                    model.installUpstreamNew(entry)
+                }
+            }
             if let a = cap.author { Text(highlight(a, query)) }
             if cap.tokens >= 100 { Text(formatTokens(cap.tokens)) }
             if let from = fromBundle {
@@ -922,6 +991,11 @@ struct BundleCard: View {
                 } else if entry.skippedUpdate {
                     SkippedTag { model.unskipUpdate(entry) }
                 }
+                    if entry.hasUpstreamNew {
+                        UpstreamNewBadge(count: entry.upstreamNewCount, help: entry.upstreamNewHelp) {
+                            model.installUpstreamNew(entry)
+                        }
+                    }
             }
             .font(.ui(11.5))
             .foregroundStyle(Ink.secondary)
@@ -1239,6 +1313,11 @@ struct TableCapRow: View {
                           !model.updatingIds.contains(entry.id) {
                     MemberUpdateDot { model.runUpdate(entry.id) }
                 }
+                if fromBundle == nil, entry.hasUpstreamNew {
+                    UpstreamNewBadge(count: entry.upstreamNewCount, help: entry.upstreamNewHelp) {
+                        model.installUpstreamNew(entry)
+                    }
+                }
                 Spacer(minLength: 6)
                 if hovered {
                     HoverAction(symbol: "↗", danger: false, help: L("在访达中显示")) { model.openInEditor(cap.dirURL) }
@@ -1337,6 +1416,11 @@ struct TableBundleRow: View {
                 } else if entry.skippedUpdate {
                     SkippedTag { model.unskipUpdate(entry) }
                 }
+                    if entry.hasUpstreamNew {
+                        UpstreamNewBadge(count: entry.upstreamNewCount, help: entry.upstreamNewHelp) {
+                            model.installUpstreamNew(entry)
+                        }
+                    }
                 Spacer(minLength: 6)
                 if hovered {
                     HoverAction(symbol: "↗", danger: false, help: L("在访达中显示")) { model.openInEditor(entry.cap.dirURL) }
@@ -1396,6 +1480,9 @@ func capContextMenu(_ cap: Capability, _ entry: Entry, fromBundle: String?, mode
     } else if entry.skippedUpdate {
         Button(L("恢复更新提醒")) { model.unskipUpdate(entry) }
     }
+    if entry.hasUpstreamNew {
+        Button(L("安装上游新增 (\(entry.upstreamNewCount))")) { model.installUpstreamNew(entry) }
+    }
     if fromBundle == nil, !entry.isManagedExternally {
         Divider()
         Button(L("移除"), role: .destructive) { model.removeEntry(entry) }
@@ -1413,6 +1500,9 @@ func bundleContextMenu(_ entry: Entry, model: AppModel) -> some View {
         Button(L("跳过此版本")) { model.skipUpdate(entry) }
     } else if entry.skippedUpdate {
         Button(L("恢复更新提醒")) { model.unskipUpdate(entry) }
+    }
+    if entry.hasUpstreamNew {
+        Button(L("安装上游新增 (\(entry.upstreamNewCount))")) { model.installUpstreamNew(entry) }
     }
     if !entry.isManagedExternally {
         Divider()

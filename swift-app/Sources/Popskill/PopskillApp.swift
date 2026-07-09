@@ -19,6 +19,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         return .terminateLater
     }
+
+    /// 深链接（v2.17）：冷启动时系统走 delegate，热启动时走 SwiftUI onOpenURL——两边都接
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls { model?.handleDeepLink(url) }
+    }
 }
 
 @main
@@ -45,7 +50,8 @@ struct PopskillApp: App {
                 .environment(model)
                 .onAppear {
                     appDelegate.model = model
-                    model.startWatching()   // FSEvents 实时刷新（v2.15）
+                    model.startWatching()        // FSEvents 实时刷新（v2.15）
+                    model.launchEnvProbeOnce()   // git/npm 环境探测（v2.17）
                     if updaterController.updater.canCheckForUpdates || Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") != nil {
                         model.checkAppUpdate = { [weak updaterController = updaterController] in
                             updaterController?.checkForUpdates(nil)
@@ -59,6 +65,7 @@ struct PopskillApp: App {
                         }
                     }
                 }
+                .onOpenURL { model.handleDeepLink($0) }   // v2.17：popskill://install?src=…
                 .preferredColorScheme(.light)
                 .tint(Ink.blue)
                 .frame(minWidth: 1080, minHeight: 720)

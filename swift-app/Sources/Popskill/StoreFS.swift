@@ -34,6 +34,7 @@ struct StoreMeta: Codable {
         var autoUpdate: Bool?
         var latest: String?
         var changed: [String]?   // 上次检查发现有变化的成员名（套装提醒到具体哪个）
+        var upstreamNew: [String]? // 上游有、本地没装（v2.17：进 Entry + 可一键装）
         var lastHead: String?    // 上次完整比对时的上游 HEAD sha（ls-remote 短路用，v2.8）
         var localDigest: String? // 上次完整比对时本地成员的组合哈希——短路必须同时验证本地未漂移
         // 「跳过此版本」（v2.15，吸收 cc-switch dismissedVersion）：
@@ -410,6 +411,7 @@ struct StoreFS {
             bundleAt[idxs[0]] = Entry(id: "src:\(src)", cap: head, children: members,
                                       bundleKind: .source, sourceUrl: src,
                                       latest: m?.latest, changedMembers: m?.changed,
+                                      upstreamNew: m?.upstreamNew,
                                       autoUpdate: m?.autoUpdate ?? false,
                                       skippedUpdate: m?.skipped != nil)
             idxs.forEach { grouped.insert($0) }
@@ -445,6 +447,7 @@ struct StoreFS {
         let m = meta.entries[name]
         return Entry(id: name, cap: cap, children: nil,
                      sourceUrl: source, latest: m?.latest, changedMembers: m?.changed,
+                     upstreamNew: m?.upstreamNew,
                      autoUpdate: m?.autoUpdate ?? false, skippedUpdate: m?.skipped != nil)
     }
 
@@ -471,6 +474,7 @@ struct StoreFS {
         let source = m?.sourceUrl.map(StoreFS.normalizeSource) ?? gitRemote(dir).map(StoreFS.normalizeSource)
         return Entry(id: name, cap: head, children: children, bundleKind: .directory,
                      sourceUrl: source, latest: m?.latest, changedMembers: m?.changed,
+                     upstreamNew: m?.upstreamNew,
                      autoUpdate: m?.autoUpdate ?? false, skippedUpdate: m?.skipped != nil)
     }
 
@@ -623,8 +627,10 @@ struct StoreFS {
     /// 最多留 trashRetainCount（200）份，按入站时间 FIFO 轮换。
     /// 按来源的 kind 目录分桶存放（.trash/skills/ 等）——恢复时必须回到原 kind，
     /// 否则 MCP/Agent 被恢复进 skills/ 会让 layoutKind 和 symlink 路径静默错位。
+    /// metaSnapshot（v2.17）：移除时把 EntryMeta 写进目录内 `.popskill-meta.json`，
+    /// 恢复时回填 sourceUrl/autoUpdate——更新链不会因进回收站而断。
     @discardableResult
-    func moveToTrash(_ url: URL) throws -> URL {
+    func moveToTrash(_ url: URL, metaSnapshot: StoreMeta.EntryMeta? = nil) throws -> URL {
         let parent = url.deletingLastPathComponent().lastPathComponent
         let bucket = StoreFS.trashBuckets.contains(parent) ? parent : CapType.skill.dirName
         let bucketURL = trashURL.appendingPathComponent(bucket)
@@ -639,6 +645,12 @@ struct StoreFS {
             dest = bucketURL.appendingPathComponent("\(url.lastPathComponent)~\(UUID().uuidString.prefix(4))-\(stamp)")
         }
         try fm.moveItem(at: url, to: dest)
+        if let snap = metaSnapshot {
+            let enc = JSONEncoder()
+            enc.outputFormatting = [.sortedKeys]
+            let sidecar = dest.appendingPathComponent(".popskill-meta.json")
+            try? enc.encode(snap).write(to: sidecar, options: .atomic)
+        }
         pruneTrash()
         return dest
     }
@@ -730,7 +742,8 @@ struct StoreFS {
         for e in trashEntryURLs() { try fm.removeItem(at: e.url) }
     }
 
-    /// 恢复到 store 的原 kind 目录；同名已存在则拒绝（先移走现有的再恢复）
+    /// 恢复到 store 的原 kind 目录；同名已存在则拒绝（先移走现有的再恢复）。
+    /// v2.17：若回收站目录内有 `.popskill-meta.json` 快照，回填 meta（不覆盖已有键）。
     func restoreFromTrash(_ item: TrashItem) throws {
         let name = try sanitizeName(item.name)
         let kind = StoreFS.trashBuckets.contains(item.kindDir) ? item.kindDir : CapType.skill.dirName
@@ -738,6 +751,26 @@ struct StoreFS {
         guard !fm.fileExists(atPath: dest.path) else { throw StoreError.alreadyExists(name) }
         try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
         try fm.moveItem(at: item.url, to: dest)
+        let sidecar = dest.appendingPathComponent(".popskill-meta.json")
+        if let data = try? Data(contentsOf: sidecar),
+           let snap = try? JSONDecoder().decode(StoreMeta.EntryMeta.self, from: data) {
+            mutateMeta { meta in
+                // 同名已有 meta（例如先装了新版）不覆盖——恢复的是「被删那一版」的来源记忆
+                if meta.entries[name] == nil {
+                    var m = snap
+                    // 恢复后本地已是当前内容，旧 latest/检查点会误亮徽标——清掉让下次检查重算
+                    m.latest = nil
+                    m.changed = nil
+                    m.latestFingerprint = nil
+                    m.skipped = nil
+                    m.lastHead = nil
+                    m.localDigest = nil
+                    m.upstreamNew = nil
+                    meta.entries[name] = m
+                }
+            }
+            try? fm.removeItem(at: sidecar)
+        }
     }
 
     /// 独立能力 / 套装整体 开↔关
@@ -1010,12 +1043,19 @@ struct StoreFS {
         }
         // 源式套装 = 平铺成员的集合，逐成员按独立条目移除
         if entry.bundleKind == .source {
+            let metaNow = loadMeta()
+            let headMeta = metaNow.entries[entry.name]
             for cap in entry.children ?? [] {
                 for t in tools {
                     let link = toolLinkPath(t, kind: cap.layoutKind, name: cap.name)
                     if isSymlink(link) { try removeLink(at: link) }
                 }
-                try moveToTrash(cap.dirURL)
+                // 快照成员 meta；缺 sourceUrl 时用套装源补上——恢复后仍能归拢/更新
+                var snap = metaNow.entries[cap.name] ?? StoreMeta.EntryMeta()
+                if snap.sourceUrl == nil {
+                    snap.sourceUrl = headMeta?.sourceUrl ?? entry.sourceUrl
+                }
+                try moveToTrash(cap.dirURL, metaSnapshot: snap)
             }
             mutateMeta { meta in
                 for cap in entry.children ?? [] { meta.entries.removeValue(forKey: cap.name) }
@@ -1041,7 +1081,8 @@ struct StoreFS {
                 }
             }
         }
-        try moveToTrash(entry.cap.dirURL)
+        let snap = loadMeta().entries[entry.name]
+        try moveToTrash(entry.cap.dirURL, metaSnapshot: snap)
         mutateMeta { meta in meta.entries.removeValue(forKey: entry.name) }
     }
 
@@ -1087,11 +1128,12 @@ struct StoreFS {
 
     struct UpdateCheck {
         let entryId: String
-        let latest: String          // 单成员 = 上游版本号/"新版"；源式套装 = "N 项"
+        let latest: String          // 单成员 = 上游版本号/"新版"；源式套装 = "N 项"；contentUnchanged 时为空
         let changedMembers: [String]
         let upstreamNew: [String]   // 上游有、本地没装的技能（monorepo 月度痛点）
         let fingerprint: String     // 这次结论对应的上游状态指纹（「跳过此版本」的钉子，v2.15）
         var partialFailures = 0     // 有变化但另有 N 个成员没查成（well-known 网络抖动，v2.16 如实透出）
+        var contentUnchanged = false // 仅有上游新增、无内容差异——不亮更新徽标（v2.17）
     }
 
     /// 组合指纹：没有 git HEAD 的源（本地路径/well-known）用「变化成员名:内容哈希」拼合。
@@ -1237,12 +1279,22 @@ struct StoreFS {
                 changedVersion = frontmatter(staged.appendingPathComponent("SKILL.md"))["version"]
             }
         }
-        let upstreamNew = upstreamOnlySkills(staging: resolved.stagingDir, knownNames: Set(members.map(\.name)))
+        // known = 本条目成员 ∪ store 顶层 skills 名——同仓已装的兄弟（本地路径不归拢时）不算「新增」
+        let knownNames = Set(members.map(\.name)).union(topLevelSkillNames())
+        let upstreamNew = upstreamOnlySkills(staging: resolved.stagingDir, knownNames: knownNames)
+        // 无论有没有内容更新，上游新增名单都落 meta——toast 曾只报个数，用户装不了（v2.17）
+        saveUpstreamNew(entry.name, upstreamNew.isEmpty ? nil : upstreamNew)
         if let sha = resolved.headSha { saveCheckpoint(entry.name, head: sha, localDigest: localDigest(entry)) }
         guard !changed.isEmpty else {
             // 完整比对确认与上游一致（如用户在终端手动同步过）：熄灭残留的更新徽标。
             // 只有这条路径能清——HEAD 短路的 nil 是「没变化」不是「已一致」
             if loadMeta().entries[entry.name]?.latest != nil { saveLatest(entry.name, latest: nil) }
+            // 仅有上游新增、无内容变更：仍返回检查结果，让 UI 亮「+N」而不亮更新徽标
+            if !upstreamNew.isEmpty {
+                return UpdateCheck(entryId: entry.id, latest: "", changedMembers: [],
+                                   upstreamNew: upstreamNew, fingerprint: "upstream-new|\(upstreamNew.joined(separator: ","))",
+                                   contentUnchanged: true)
+            }
             return nil
         }
         // 上游状态指纹：git 源 = HEAD sha + 变化成员名集合——sha 钉上游、名单钉本地漂移面：
@@ -1251,7 +1303,14 @@ struct StoreFS {
         // 本地路径源退回变化内容组合哈希
         let fingerprint = resolved.headSha.map { "\($0)|\(changed.sorted().joined(separator: ","))" }
             ?? combinedFingerprint(changedPairs)
-        if skipSuppressed(entry.name, fingerprint: fingerprint) { return nil }
+        if skipSuppressed(entry.name, fingerprint: fingerprint) {
+            // 跳过内容更新时仍暴露上游新增
+            if !upstreamNew.isEmpty {
+                return UpdateCheck(entryId: entry.id, latest: "", changedMembers: [],
+                                   upstreamNew: upstreamNew, fingerprint: fingerprint, contentUnchanged: true)
+            }
+            return nil
+        }
         let latest: String
         if changed.count == 1 && members.count == 1 {
             latest = (changedVersion != nil && changedVersion != members[0].version) ? changedVersion! : L("新版")
@@ -1262,12 +1321,27 @@ struct StoreFS {
                            upstreamNew: upstreamNew, fingerprint: fingerprint)
     }
 
+    /// 把上游新增名单写入 meta（空/nil = 清除）
+    func saveUpstreamNew(_ entryName: String, _ names: [String]?) {
+        mutateMeta { meta in
+            var m = meta.entries[entryName] ?? StoreMeta.EntryMeta()
+            m.upstreamNew = (names?.isEmpty == false) ? names : nil
+            meta.entries[entryName] = m
+        }
+    }
+
     /// 上游 skills/ 下有 SKILL.md、但本地没装的目录名
     private func upstreamOnlySkills(staging: URL, knownNames: Set<String>) -> [String] {
         let skillsDir = staging.appendingPathComponent("skills")
         let base = fm.fileExists(atPath: skillsDir.path) ? skillsDir : staging
         return ((try? fm.contentsOfDirectory(atPath: base.path)) ?? []).sorted()
             .filter { !$0.hasPrefix(".") && !knownNames.contains($0) && hasManifest(base.appendingPathComponent($0)) }
+    }
+
+    /// store/skills 顶层目录名（平铺安装的技能 + 目录形套装名）
+    private func topLevelSkillNames() -> Set<String> {
+        let dir = env.storeRoot.appendingPathComponent(CapType.skill.dirName)
+        return Set(((try? fm.contentsOfDirectory(atPath: dir.path)) ?? []).filter { !$0.hasPrefix(".") })
     }
 
     /// 执行更新：clone 一次，只换有变化的成员；每个被换的成员先备份进回收站。
@@ -1302,11 +1376,62 @@ struct StoreFS {
             }
             updated.append(cap.name)
         }
-        let upstreamNew = upstreamOnlySkills(staging: resolved.stagingDir, knownNames: Set(members.map(\.name)))
+        let knownNames = Set(members.map(\.name)).union(topLevelSkillNames())
+        let upstreamNew = upstreamOnlySkills(staging: resolved.stagingDir, knownNames: knownNames)
         // 落盘后再算 digest——此刻本地已是新版内容
         if let sha = resolved.headSha { saveCheckpoint(entry.name, head: sha, localDigest: localDigest(entry)) }
         saveLatest(entry.name, latest: nil)
+        saveUpstreamNew(entry.name, upstreamNew.isEmpty ? nil : upstreamNew)
         return (updated, upstreamNew)
+    }
+
+    /// 安装上游 monorepo 里本地还没有的技能（v2.17）。
+    /// 从源 clone/读一次，把 names 拷进 store/skills/ 并可选挂载；meta 继承套装 sourceUrl。
+    @discardableResult
+    func installUpstreamMembers(_ entry: Entry, names: [String], linkTools: [Tool]) throws -> [String] {
+        guard let url = entry.sourceUrl, !url.isEmpty else {
+            throw StoreError.resolveFailed(L("该源没有记录 URL，无法安装上游新增技能"))
+        }
+        let sk = SourceKind.of(url)
+        guard sk == .github || sk == .local else {
+            throw StoreError.sourceUnsupported(L("只有 GitHub / 本地路径来源支持安装上游新增技能"))
+        }
+        let resolved = try resolve(url)
+        defer { discardStaging(resolved) }
+        var installed: [String] = []
+        let srcNorm = StoreFS.normalizeSource(url)
+        for raw in names {
+            let name = try sanitizeName(raw)
+            let dest = env.storeRoot.appendingPathComponent(CapType.skill.dirName).appendingPathComponent(name)
+            guard !fm.fileExists(atPath: dest.path) else { continue }
+            var staged: URL?
+            for candidate in ["skills/\(name)", name] {
+                let d = resolved.stagingDir.appendingPathComponent(candidate)
+                if hasManifest(d) { staged = d; break }
+            }
+            if staged == nil {
+                let d = resolved.stagingDir.appendingPathComponent("skills").appendingPathComponent(name)
+                if hasManifest(d) { staged = d }
+            }
+            guard let srcDir = staged else { continue }
+            try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
+            do { try fm.copyItem(at: srcDir, to: dest) }
+            catch { try? fm.removeItem(at: dest); throw error }
+            mutateMeta { meta in
+                var m = meta.entries[name] ?? StoreMeta.EntryMeta()
+                m.sourceUrl = srcNorm
+                meta.entries[name] = m
+            }
+            for t in linkTools {
+                try createLink(at: toolLinkPath(t, kind: .skill, name: name), to: dest)
+            }
+            installed.append(name)
+        }
+        // 从套装 upstreamNew 名单里扣掉已装；未找到的下次 check 会重算
+        let prev = loadMeta().entries[entry.name]?.upstreamNew ?? entry.upstreamNew ?? []
+        let remaining = prev.filter { !installed.contains($0) }
+        saveUpstreamNew(entry.name, remaining.isEmpty ? nil : remaining)
+        return installed
     }
 
     /// 多成员更新中途失败时，把「已换掉几项」写进错误——旧文案只说「更新 X 失败」，
@@ -1344,20 +1469,38 @@ struct StoreFS {
         let name: String
         let toolId: String
         let url: URL
+        var kind: CapType = .skill   // v2.17：扩到 agents/mcp/bin
     }
 
+    /// 扫描工具侧未托管的真实目录/文件（非 symlink 且 store 无同名）。
+    /// v2.17 起覆盖 skills / agents / mcp / bin 四 kind（此前只扫 skills，agent 漏收）。
     func scanUnmanaged(tools: [Tool], knownNames: Set<String>) -> [UnmanagedDir] {
         var out: [UnmanagedDir] = []
+        let kinds: [CapType] = [.skill, .agent, .mcp, .cli]
         for t in tools {
-            let dir = t.root.appendingPathComponent(CapType.skill.dirName)
-            for name in ((try? fm.contentsOfDirectory(atPath: dir.path)) ?? []).sorted() where !name.hasPrefix(".") {
-                guard !knownNames.contains(name) else { continue }
-                let url = dir.appendingPathComponent(name)
-                guard !isSymlink(url) else { continue }
-                var isDir: ObjCBool = false
-                guard fm.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue else { continue }
-                guard hasManifest(url) || isBundleDir(url) else { continue }
-                out.append(UnmanagedDir(name: name, toolId: t.id, url: url))
+            for kind in kinds {
+                let dir = t.root.appendingPathComponent(kind.dirName)
+                for name in ((try? fm.contentsOfDirectory(atPath: dir.path)) ?? []).sorted() where !name.hasPrefix(".") {
+                    guard !knownNames.contains(name) else { continue }
+                    let url = dir.appendingPathComponent(name)
+                    guard !isSymlink(url) else { continue }
+                    var isDir: ObjCBool = false
+                    guard fm.fileExists(atPath: url.path, isDirectory: &isDir) else { continue }
+                    switch kind {
+                    case .skill:
+                        guard isDir.boolValue, hasManifest(url) || isBundleDir(url) else { continue }
+                    case .agent, .mcp:
+                        // agent/mcp 多为目录；Claude agents 也有单文件 .md
+                        if isDir.boolValue { /* ok */ }
+                        else if kind == .agent, name.hasSuffix(".md") { /* ok */ }
+                        else { continue }
+                    case .cli:
+                        break   // bin 下文件或目录都算
+                    case .bundle:
+                        continue
+                    }
+                    out.append(UnmanagedDir(name: name, toolId: t.id, url: url, kind: kind))
+                }
             }
         }
         return out
@@ -1373,7 +1516,8 @@ struct StoreFS {
         var result = ImportResult()
         for item in items {
             let name = try sanitizeName(item.name)
-            let dest = env.storeRoot.appendingPathComponent(CapType.skill.dirName).appendingPathComponent(name)
+            let kindDir = item.kind.dirName
+            let dest = env.storeRoot.appendingPathComponent(kindDir).appendingPathComponent(name)
             guard !fm.fileExists(atPath: dest.path) else { result.skippedSameName.append(name); continue }
             try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
             do { try fm.copyItem(at: item.url, to: dest) }

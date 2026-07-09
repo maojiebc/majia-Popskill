@@ -41,6 +41,12 @@ struct FixOption: Identifiable {
 
 enum SheetKind { case add, settings, sched, cli }
 
+/// 环境探测警告（v2.17）：git / npm 不在 PATH 时横幅提示，避免「无法识别仓库」黑洞
+struct EnvWarning: Identifiable, Equatable {
+    let id: String
+    let message: String
+}
+
 /// 键盘导航焦点项（PATCH-02）：与可见顺序一致的扁平序列
 struct KbItem: Equatable, Identifiable {
     let id: String          // 行 id（套装=entry.id，能力=cap.id）
@@ -113,6 +119,9 @@ final class AppModel {
         var ok: [String] = []
         var failed: [String] = []
     }
+
+    /// 环境探测的进程级单飞标志（v2.17，见 init 注释）
+    private static var envProbeLaunched = false
     /// Sparkle 手动检查入口（PopskillApp 注入；裸二进制为 nil）
     @ObservationIgnored var checkAppUpdate: (() -> Void)?
     /// Sparkle 自动检查读/写（PopskillApp 注入）——设置页开关用，AppModel 不直接依赖 Sparkle
@@ -125,7 +134,15 @@ final class AppModel {
     var updates: [Entry] { deriveUpdates(entries) }
     /// 待更新技能总数（用户视角）：套装逐成员计——横幅与「全部更新」按钮都用它
     var updateItemCount: Int { updates.reduce(0) { $0 + $1.updateCount } }
+    /// 上游 monorepo 新增未装技能总数（v2.17 横幅）
+    var upstreamNewItemCount: Int { entries.reduce(0) { $0 + $1.upstreamNewCount } }
+    var entriesWithUpstreamNew: [Entry] { entries.filter(\.hasUpstreamNew) }
     var isEmpty: Bool { entries.isEmpty }
+
+    // v2.17 环境探测 / 深链接
+    var envWarnings: [EnvWarning] = []
+    var pendingAddURL: String?          // popskill://install?src=… 预填添加框
+    @ObservationIgnored private var envProbed = false
 
     init(env: StoreEnv = .real()) {
         fs = StoreFS(env: env)
@@ -159,6 +176,8 @@ final class AppModel {
                 await MainActor.run { self?.checkUpdates(auto: true) }
             }
         }
+        // 环境探测（v2.17）见 launchEnvProbeOnce()——RootView onAppear 启动，
+        // 不放 init：detached task 在 init 里捕获构造中的 self 是 Swift 6 错误
         // 调试钩子：POPSKILL_ONBOARD_SCAN=1 启动后自动触发空态扫描（新用户旅程 E2E）
         if pe["POPSKILL_ONBOARD_SCAN"] == "1" {
             Task { [weak self] in
@@ -257,15 +276,93 @@ final class AppModel {
     /// 监听集跟着盘面走：工具链接目录（~/.codex/skills 等）挂载后才存在——
     /// 每次 refresh 后对齐一次。StoreWatcher.sync 幂等，集合没变就是 no-op。
     /// 刻意不监听 ~/.claude 整棵树：projects/ 每个 Claude 会话都在写，噪音是信号的百倍。
+    /// v2.17：store 根被删时改听父目录——重建后 sync 自动换回只听 store（曾靠切前台兜底）。
     private func syncWatchPaths() {
         guard let watcher else { return }
-        var paths = [fs.env.storeRoot.path]
+        var paths: [String] = []
+        let store = fs.env.storeRoot
+        if FileManager.default.fileExists(atPath: store.path) {
+            paths.append(store.path)
+        } else {
+            // 根没了：听父目录等它被重建；父目录事件多，scheduleWatchRefresh 仍去抖+幂等 refresh
+            paths.append(store.deletingLastPathComponent().path)
+        }
         for t in tools where t.connected {
             for dir in ["skills", "agents", "mcp", "bin"] {
                 paths.append(t.root.appendingPathComponent(dir).path)
             }
         }
         watcher.sync(paths: paths)
+    }
+
+    /// 环境探测启动（v2.17，RootView onAppear 调）。进程探测（ensureGit / zsh -lc 找 npm）
+    /// 整个在后台线程做——login shell 可能 1-3 秒（nvm 用户常见），放 MainActor 会冻窗口。
+    /// 进程级单飞：环境是机器属性，一个进程探测一次就够——测试套件会构造十几个 AppModel，
+    /// 若各起一个 detached 探测会并行卡在 NpmEnv 的 NSLock 上，把 Swift 协作线程池
+    /// 占满饿死其它 async 工作（watcher 集成测试实测被饿挂）
+    func launchEnvProbeOnce() {
+        guard !fake, !Self.envProbeLaunched else { return }
+        Self.envProbeLaunched = true
+        Task.detached(priority: .utility) { @Sendable [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            let gitOK = (try? StoreFS.ensureGit()) != nil
+            let npmOK = NpmEnv.npmBin() != nil
+            await MainActor.run { [weak self] in self?.applyEnvProbe(gitOK: gitOK, npmOK: npmOK) }
+        }
+    }
+
+    /// 环境探测结果装配（v2.17）：git 影响 GitHub 安装，npm 影响 CLI 巡检 / npm 源更新。
+    /// 探测本体（起进程）在 launchEnvProbeOnce 的 detached Task 里做，这里只在主线程装配状态
+    func applyEnvProbe(gitOK: Bool, npmOK: Bool) {
+        guard !fake else { return }
+        var warnings: [EnvWarning] = []
+        if !gitOK {
+            warnings.append(EnvWarning(
+                id: "git",
+                message: L("未检测到 git——安装 GitHub 技能需要它。在「终端」运行：xcode-select --install")))
+        }
+        if !npmOK {
+            warnings.append(EnvWarning(
+                id: "npm",
+                message: L("未检测到 npm——CLI 巡检与 npm 源更新不可用。请安装 Node.js 或把 npm 加入 PATH。")))
+        }
+        envWarnings = warnings
+        envProbed = true
+    }
+
+    func dismissEnvWarning(_ id: String) {
+        envWarnings.removeAll { $0.id == id }
+        UserDefaults.standard.set(true, forKey: "dismissedEnvWarning.\(id)")
+    }
+
+    /// 过滤已点「知道了」的警告（会话外持久）
+    func activeEnvWarnings() -> [EnvWarning] {
+        envWarnings.filter { !UserDefaults.standard.bool(forKey: "dismissedEnvWarning.\($0.id)") }
+    }
+
+    /// 深链接（v2.17）：`popskill://install?src=github.com/owner/repo`
+    func handleDeepLink(_ url: URL) {
+        guard url.scheme?.lowercased() == "popskill" else { return }
+        let host = (url.host ?? "").lowercased()
+        let path = url.path.lowercased()
+        let isInstall = host == "install" || path == "/install" || path.hasSuffix("/install")
+            || (host.isEmpty && path.contains("install"))
+        guard isInstall else {
+            say(L("无法识别的 Popskill 链接"))
+            return
+        }
+        let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let src = comps?.queryItems?.first(where: { ["src", "url", "source"].contains($0.name.lowercased()) })?.value?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let src, !src.isEmpty else {
+            sheet = .add
+            say(L("已打开添加面板——请粘贴仓库地址"))
+            return
+        }
+        pendingAddURL = src
+        sheet = .add
+        plog.info("深链接进入添加流程：\(src, privacy: .public)")
+        say(L("已从链接打开添加流程"))
     }
 
     /// refresh 换掉 entries 后，开着的修复弹层 / 详情 peek 持有的是旧快照——
@@ -672,25 +769,47 @@ final class AppModel {
                 self.checkingUpdates = false
                 for check in found {
                     if let i = self.entries.firstIndex(where: { $0.id == check.entryId }) {
-                        self.entries[i].latest = check.latest
-                        self.entries[i].changedMembers = check.changedMembers
-                        // 徽标重亮意味着跳过已失效（checkUpdate 里新指纹清过 meta），内存镜像同步
-                        self.entries[i].skippedUpdate = false
-                        self.fs.saveLatest(self.entries[i].name, latest: check.latest,
-                                           changed: check.changedMembers, fingerprint: check.fingerprint)
+                        // contentUnchanged = 仅上游新增，不亮更新徽标
+                        if check.contentUnchanged {
+                            self.entries[i].upstreamNew = check.upstreamNew.isEmpty ? nil : check.upstreamNew
+                        } else {
+                            self.entries[i].latest = check.latest
+                            self.entries[i].changedMembers = check.changedMembers
+                            self.entries[i].skippedUpdate = false
+                            self.entries[i].upstreamNew = check.upstreamNew.isEmpty ? nil : check.upstreamNew
+                            self.fs.saveLatest(self.entries[i].name, latest: check.latest,
+                                               changed: check.changedMembers, fingerprint: check.fingerprint)
+                        }
                     }
                 }
                 // 确认一致的熄灭残留徽标（如终端手动同步后；meta 由 checkUpdate 清，这里同步内存镜像）。
                 // 检查失败的不在 freshIds 里——失败 ≠ 最新
                 for id in freshIds {
-                    if let i = self.entries.firstIndex(where: { $0.id == id }), self.entries[i].latest != nil {
-                        self.entries[i].latest = nil
-                        self.entries[i].changedMembers = nil
+                    if let i = self.entries.firstIndex(where: { $0.id == id }) {
+                        if self.entries[i].latest != nil {
+                            self.entries[i].latest = nil
+                            self.entries[i].changedMembers = nil
+                        }
+                        // 完整比对无更新也无 upstreamNew 时 meta 已清；同步内存
+                        let metaNew = self.fs.loadMeta().entries[self.entries[i].name]?.upstreamNew
+                        self.entries[i].upstreamNew = metaNew
+                    }
+                }
+                // found 里 contentUnchanged 的 upstreamNew 已写；全量再从 meta 对齐一次防漏
+                let metaAll = self.fs.loadMeta()
+                for e in candidates {
+                    if let i = self.entries.firstIndex(where: { $0.id == e.id }) {
+                        if let u = metaAll.entries[self.entries[i].name]?.upstreamNew {
+                            self.entries[i].upstreamNew = u
+                        }
                     }
                 }
                 // well-known 部分成员没查成时如实透出（v2.16——「1 项可更新」背后可能还有 5 个状态未知）
                 let partial = found.reduce(0) { $0 + $1.partialFailures }
                 let partialNote = partial > 0 ? L("；另有 \(partial) 个套装成员没查成（网络抖动）") : ""
+                let contentFound = found.filter { !$0.contentUnchanged }
+                let newOnlyCount = found.filter(\.contentUnchanged).reduce(0) { $0 + $1.upstreamNew.count }
+                let newOnlyNote = newOnlyCount > 0 ? L("；上游新增 \(newOnlyCount) 个未装技能") : ""
                 let autoTargets = auto ? self.entries.filter { $0.hasUpdate && $0.autoUpdate } : []
                 if !autoTargets.isEmpty {
                     for e in autoTargets { self.runUpdate(e.id, quiet: true) }
@@ -698,14 +817,20 @@ final class AppModel {
                 } else if failedCount > 0 {
                     // 启动自动检查的失败不弹 toast 打扰（断网开机最常见），日志已留痕；手动检查必须如实报
                     if !auto {
-                        self.sayError((found.isEmpty
+                        self.sayError((contentFound.isEmpty
                             ? L("\(failedCount) 个源检查失败（网络或源不可达）")
-                            : L("发现 \(found.count) 个源可更新；\(failedCount) 个源检查失败（网络或源不可达）")) + partialNote)
-                    } else if !found.isEmpty {
-                        self.say(L("发现 \(found.count) 个源可更新（另有 \(failedCount) 个检查失败）") + partialNote)
+                            : L("发现 \(contentFound.count) 个源可更新；\(failedCount) 个源检查失败（网络或源不可达）")) + partialNote + newOnlyNote)
+                    } else if !contentFound.isEmpty {
+                        self.say(L("发现 \(contentFound.count) 个源可更新（另有 \(failedCount) 个检查失败）") + partialNote + newOnlyNote)
                     }
-                } else if !auto || !found.isEmpty {
-                    self.say((found.isEmpty ? L("全部源已是最新") : L("发现 \(found.count) 个源可更新")) + partialNote)
+                } else if !auto || !contentFound.isEmpty || newOnlyCount > 0 {
+                    if contentFound.isEmpty && newOnlyCount == 0 {
+                        self.say(L("全部源已是最新") + partialNote)
+                    } else if contentFound.isEmpty {
+                        self.say(L("内容已是最新") + newOnlyNote + partialNote)
+                    } else {
+                        self.say(L("发现 \(contentFound.count) 个源可更新") + newOnlyNote + partialNote)
+                    }
                 }
                 // 全量检查期间收到的「恢复更新提醒」定向重查，此刻追跑（v2.16：曾被 guard 静默吞掉）
                 if !self.pendingRecheck.isEmpty {
@@ -756,7 +881,13 @@ final class AppModel {
                             var msg = r.updated.count == 1 && !entry.isBundle
                                 ? L("已更新 \(entry.name)（旧版已入回收站）")
                                 : L("已更新 \(entry.name)：\(names)（旧版已入回收站）")
-                            if !r.upstreamNew.isEmpty { msg += L(" · 上游另有 \(r.upstreamNew.count) 个未安装技能") }
+                            if !r.upstreamNew.isEmpty {
+                                msg += L(" · 上游另有 \(r.upstreamNew.count) 个未安装技能")
+                                // 内存镜像跟上（meta 已由 applyUpdate 写入）
+                                if let i = self.entries.firstIndex(where: { $0.id == entryId }) {
+                                    self.entries[i].upstreamNew = r.upstreamNew
+                                }
+                            }
                             self.say(msg)
                         }
                     }
@@ -937,16 +1068,103 @@ final class AppModel {
         flash(e.id)
     }
 
+    /// 横幅「上游新增」循环定位（v2.17）
+    func jumpToNextUpstreamNew() {
+        let ids = entriesWithUpstreamNew.map(\.id)
+        guard !ids.isEmpty else { return }
+        let cur = kbFocusId.flatMap { ids.firstIndex(of: $0) }
+        let targetId = ids[((cur ?? -1) + 1) % ids.count]
+        guard let e = entries.first(where: { $0.id == targetId }) else { return }
+        query = ""
+        typeFilter = nil
+        if e.isBundle { expanded.insert(e.id) }
+        kbFocusId = e.id
+        flash(e.id)
+    }
+
+    /// 安装某个源的上游新增技能（默认装名单全部；可传子集）
+    func installUpstreamNew(_ entry: Entry, names: [String]? = nil, skipConfirm: Bool = false) {
+        guard !entry.isManagedExternally else { return }
+        let list = names ?? entry.upstreamNew ?? []
+        guard !list.isEmpty else { return }
+        if fake {
+            if let i = entries.firstIndex(where: { $0.id == entry.id }) {
+                entries[i].upstreamNew = nil
+            }
+            say(L("已安装上游新增 \(list.count) 个（原型）"))
+            return
+        }
+        if !skipConfirm, !confirmInstallUpstream(entry.name, names: list) { return }
+        // 只挂 connected 的默认工具——未装的工具不因批量安装被静默建目录
+        let linkTools = tools.filter { $0.defaultTarget && $0.connected }
+        guard !updatingIds.contains(entry.id) else {
+            say(L("\(entry.name) 正在更新中，稍候再操作")); return
+        }
+        updatingIds.insert(entry.id)
+        let fsCopy = fs
+        Task { [weak self] in
+            let result: Result<[String], Error> = await Task.detached {
+                do { return .success(try fsCopy.installUpstreamMembers(entry, names: list, linkTools: linkTools)) }
+                catch { return .failure(error) }
+            }.value
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.updatingIds.remove(entry.id)
+                switch result {
+                case .success(let installed):
+                    plog.info("安装上游新增 \(entry.name, privacy: .public)：\(installed.joined(separator: ","), privacy: .public)")
+                    self.refresh()
+                    if installed.isEmpty {
+                        self.say(L("未能安装任何上游新增技能——检查源是否仍包含这些目录"))
+                    } else {
+                        let tail = installed.count > 4 ? "…" : ""
+                        let head = installed.prefix(4).joined(separator: L("、"))
+                        self.say(L("已安装上游新增 \(installed.count) 个：\(head)\(tail)"))
+                        if let first = installed.first { self.flash(first) }
+                    }
+                case .failure(let err):
+                    self.sayError(L("安装上游新增失败：\(err.localizedDescription)"))
+                }
+            }
+        }
+    }
+
+    /// 横幅「全部安装上游新增」：一次确认后逐源装
+    func installAllUpstreamNew() {
+        let targets = entriesWithUpstreamNew
+        guard !targets.isEmpty else { return }
+        let allNames = targets.flatMap { $0.upstreamNew ?? [] }
+        if !confirmInstallUpstream(L("全部源"), names: allNames, totalHint: allNames.count) {
+            return
+        }
+        for e in targets {
+            installUpstreamNew(e, skipConfirm: true)
+        }
+    }
+
+    private func confirmInstallUpstream(_ source: String, names: [String], totalHint: Int? = nil) -> Bool {
+        if ProcessInfo.processInfo.environment["POPSKILL_AUTOCONFIRM"] == "1" { return true }
+        let alert = NSAlert()
+        let n = totalHint ?? names.count
+        alert.messageText = L("安装上游新增的 \(n) 个技能？")
+        let preview = names.sorted().prefix(6).joined(separator: L("、"))
+        let more = names.count > 6 ? "…" : ""
+        alert.informativeText = L("来自 \(source)：\(preview)\(more)。将写入 store 并按默认工具挂载。")
+        alert.addButton(withTitle: L("安装"))
+        alert.addButton(withTitle: L("取消"))
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
     // ── 未托管目录导入（v2.1）─────────────────────────────
 
     func importUnmanaged() {
         guard !fake else { say(L("原型数据模式不可导入")); return }
         let known = Set(entries.flatMap { $0.allCaps.map(\.name) + [$0.name] })
         let found = fs.scanUnmanaged(tools: tools, knownNames: known)
-        guard !found.isEmpty else { say(L("没有发现未托管的技能目录")); return }
+        guard !found.isEmpty else { say(L("没有发现未托管的能力目录")); return }
         // 批量搬运是破坏性操作（原目录移进回收站），必须先让用户看清清单再确认——
         // 不能像过去那样点一下就静默把人家手装的技能都搬走
-        guard confirmImport(Set(found.map(\.name))) else { return }
+        guard confirmImport(Set(found.map(\.name)), kinds: Set(found.map(\.kind))) else { return }
         do {
             let r = try fs.importUnmanaged(found)
             plog.info("导入未托管目录 \(r.imported.joined(separator: ","), privacy: .public)（同名跳过 \(r.skippedSameName.count)）")
@@ -961,11 +1179,14 @@ final class AppModel {
     }
 
     /// 收编确认弹窗（onboarding 与设置页导入共用）：列清单 + 说清后果，POPSKILL_AUTOCONFIRM=1 跳过（E2E）
-    private func confirmImport(_ names: Set<String>) -> Bool {
+    private func confirmImport(_ names: Set<String>, kinds: Set<CapType> = [.skill]) -> Bool {
         if ProcessInfo.processInfo.environment["POPSKILL_AUTOCONFIRM"] == "1" { return true }
         let alert = NSAlert()
-        alert.messageText = L("发现 \(names.count) 个未托管的技能目录")
-        alert.informativeText = L("在 Claude / Codex 目录里发现现有技能（如 \(names.sorted().prefix(3).joined(separator: L("、")))…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。")
+        let kindHint = kinds.count > 1
+            ? L("技能 / Agent / MCP / CLI")
+            : (kinds.first.map { $0.rawValue } ?? "Skill")
+        alert.messageText = L("发现 \(names.count) 个未托管的能力目录")
+        alert.informativeText = L("在 Claude / Codex 的 \(kindHint) 目录里发现现有能力（如 \(names.sorted().prefix(3).joined(separator: L("、")))…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。")
         alert.addButton(withTitle: L("导入 \(names.count) 个"))
         alert.addButton(withTitle: L("暂不"))
         return alert.runModal() == .alertFirstButtonReturn
@@ -984,7 +1205,7 @@ final class AppModel {
             say(L("store 为空，工具目录里也没有发现技能——点「+ 添加」装第一个"))
             return
         }
-        guard confirmImport(Set(found.map(\.name))) else { return }
+        guard confirmImport(Set(found.map(\.name)), kinds: Set(found.map(\.kind))) else { return }
         do {
             let r = try fs.importUnmanaged(found)
             plog.info("空态收编 \(r.imported.joined(separator: ","), privacy: .public)")

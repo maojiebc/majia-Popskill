@@ -210,6 +210,22 @@
 			<string>%lld matches</string>
 		</dict>
 	</dict>
+	<key>上游新增 %lld 个未装</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld new upstream skill</string>
+			<key>other</key>
+			<string>%lld new upstream skills</string>
+		</dict>
+	</dict>
 	<key>今天还会跑 %lld 个：%@</key>
 	<dict>
 		<key>NSStringLocalizedFormatKey</key>
@@ -226,7 +242,7 @@
 			<string>%1$lld more runs today: %2$@</string>
 		</dict>
 	</dict>
-	<key>发现 %lld 个未托管的技能目录</key>
+	<key>发现 %lld 个未托管的能力目录</key>
 	<dict>
 		<key>NSStringLocalizedFormatKey</key>
 		<string>%#@value@</string>
@@ -237,9 +253,9 @@
 			<key>NSStringFormatValueTypeKey</key>
 			<string>lld</string>
 			<key>one</key>
-			<string>Found %lld unmanaged skill directory</string>
+			<string>Found %lld unmanaged capability folder</string>
 			<key>other</key>
-			<string>Found %lld unmanaged skill directories</string>
+			<string>Found %lld unmanaged capability folders</string>
 		</dict>
 	</dict>
 	<key>发现 %lld 个源可更新</key>

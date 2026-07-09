@@ -12,6 +12,8 @@
 	<string>%@ is updating — try again in a moment</string>
 	<key>%@ 等</key>
 	<string>%@ and more</string>
+	<key>%@ 等 %lld 个</key>
+	<string>%@ and %lld more</string>
 	<key>%@，已装 %@</key>
 	<string>%@, installed %@</string>
 	<key>%@：%@</key>
@@ -34,6 +36,8 @@
 	<string>+ Add</string>
 	<key>+ 粘贴 URL 添加</key>
 	<string>+ Add from URL</string>
+	<key>+%lld 未装</key>
+	<string>+%lld new</string>
 	<key>/plugin 管理</key>
 	<string>Managed by /plugin</string>
 	<key>App: Popskill v%@
@@ -142,6 +146,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Last run %1$@ %2$@</string>
 	<key>上次退出码 %lld</key>
 	<string>Last exit code %lld</string>
+	<key>上游新增未装：%@——点击安装</key>
+	<string>New upstream, not installed: %@ — click to install</string>
 	<key>上游有新版——点击更新所属套装</key>
 	<string>New version upstream — click to update its bundle</string>
 	<key>上游有新版——点套装头部 ↑ 徽标更新</key>
@@ -194,14 +200,20 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Fix all (%lld)</string>
 	<key>全部升级 (%lld)</key>
 	<string>Upgrade All (%lld)</string>
+	<key>全部安装 (%lld)</key>
+	<string>Install All (%lld)</string>
 	<key>全部更新 (%lld)</key>
 	<string>Update all (%lld)</string>
+	<key>全部源</key>
+	<string>all sources</string>
 	<key>全部源已是最新</key>
 	<string>All sources are up to date</string>
 	<key>关</key>
 	<string>Off</string>
 	<key>关于</key>
 	<string>About</string>
+	<key>内容已是最新</key>
+	<string>Content is up to date</string>
 	<key>刷新</key>
 	<string>Refresh</string>
 	<key>包名</key>
@@ -234,6 +246,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>%1$lld sources have updates; %2$lld failed the check (network or source unreachable)</string>
 	<key>取消</key>
 	<string>Cancel</string>
+	<key>只有 GitHub / 本地路径来源支持安装上游新增技能</key>
+	<string>Only GitHub / local-path sources support installing new upstream skills</string>
 	<key>同步于%@</key>
 	<string>Synced %@</string>
 	<key>同步后端</key>
@@ -276,12 +290,24 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Trash (%lld)</string>
 	<key>图例</key>
 	<string>Legend</string>
-	<key>在 Claude / Codex 目录里发现现有技能（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。</key>
-	<string>Found existing skills in the Claude / Codex directories (e.g. %@…). Import them into the store for unified management and replace each in place with a symlink? Originals go to the store trash and can be restored.</string>
+	<key>在 Claude / Codex 的 %@ 目录里发现现有能力（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。</key>
+	<string>Found existing capabilities in Claude / Codex %@ folders (e.g. %@…). Import them into the store and replace in place with symlinks? Originals go to the store recycle bin, restorable.</string>
 	<key>在访达中显示</key>
 	<string>Reveal in Finder</string>
+	<key>安装</key>
+	<string>Install</string>
 	<key>安装 %@ 失败：%@</key>
 	<string>Failed to install %1$@: %2$@</string>
+	<key>安装上游新增 %lld 个技能</key>
+	<string>Install %lld new upstream skills</string>
+	<key>安装上游新增 (%lld)</key>
+	<string>Install New Upstream (%lld)</string>
+	<key>安装上游新增失败：%@</key>
+	<string>Failed to install new upstream skills: %@</string>
+	<key>安装上游新增技能</key>
+	<string>Install new upstream skills</string>
+	<key>安装上游新增的 %lld 个技能？</key>
+	<string>Install %lld new upstream skills?</string>
 	<key>安装中…</key>
 	<string>Installing…</string>
 	<key>安装并链接 (%lld)</key>
@@ -306,6 +332,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Tools (link targets)</string>
 	<key>已从源重新拉取 %@</key>
 	<string>Re-pulled %@ from its source</string>
+	<key>已从链接打开添加流程</key>
+	<string>Opened the add flow from the link</string>
 	<key>已保存 %@ 到 store</key>
 	<string>Saved %@ to the store</string>
 	<key>已修复 %lld 个，跳过 %lld 个（正在更新中）</key>
@@ -328,6 +356,10 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Synced</string>
 	<key>已启用 %@</key>
 	<string>Enabled %@</string>
+	<key>已安装上游新增 %lld 个（原型）</key>
+	<string>Installed %lld new upstream skills (prototype)</string>
+	<key>已安装上游新增 %lld 个：%@%@</key>
+	<string>Installed %lld new upstream skills: %@%@</string>
 	<key>已就绪</key>
 	<string>Ready</string>
 	<key>已恢复 %@ 到 store——按需重新链接工具</key>
@@ -336,6 +368,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Resumed update alerts for %@ — this source will be rechecked once the current check finishes</string>
 	<key>已恢复 %@ 的更新提醒，正在重新检查…</key>
 	<string>Restored update alerts for %@, rechecking…</string>
+	<key>已打开添加面板——请粘贴仓库地址</key>
+	<string>Add panel opened — paste a repository address</string>
 	<key>已把 %@ · %@ 换成 store 链接</key>
 	<string>Replaced %1$@ · %2$@ with a store link</string>
 	<key>已断开 %@ → %@</key>
@@ -406,10 +440,14 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Repository not found — check the address and that it’s public.</string>
 	<key>找出你已经手动放进 Claude / Codex 的技能，收编进 Popskill 统一管理（动手前会先让你确认）</key>
 	<string>Find skills you put into Claude / Codex by hand and bring them under Popskill (you’ll be asked to confirm first)</string>
+	<key>技能 / Agent / MCP / CLI</key>
+	<string>skills / agents / MCP / CLI</string>
 	<key>把 store（~/.agents）做成 git 仓库即可在多台 Mac 间同步——这是可选项，不影响本机使用。</key>
 	<string>Make the store (~/.agents) a git repo to sync across Macs — this is optional and doesn’t affect local use.</string>
 	<key>把 ~/.claude / ~/.codex 里的真实技能目录收编进 store 并换成 symlink</key>
 	<string>Adopt real skill directories in ~/.claude / ~/.codex into the store and replace them with symlinks</string>
+	<key>把检查到的上游新增技能全部装进 store 并按默认工具挂载</key>
+	<string>Install every detected new upstream skill into the store and mount to your default tools</string>
 	<key>报告问题…</key>
 	<string>Report Issue…</string>
 	<key>拉取 SKILL.md 失败（%@）——检查网络后重试。</key>
@@ -450,6 +488,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Can’t open source link: %@</string>
 	<key>无法识别 GitHub 仓库：%@</key>
 	<string>Unrecognized GitHub repository: %@</string>
+	<key>无法识别的 Popskill 链接</key>
+	<string>Unrecognized Popskill link</string>
 	<key>明天</key>
 	<string>tomorrow</string>
 	<key>昨天 %@</key>
@@ -488,10 +528,16 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>No SKILL.md found — this source is neither a skill nor a bundle</string>
 	<key>未挂载</key>
 	<string>Inactive</string>
+	<key>未检测到 git——安装 GitHub 技能需要它。在「终端」运行：xcode-select --install</key>
+	<string>git not found — installing GitHub skills needs it. Run in Terminal: xcode-select --install</string>
 	<key>未检测到 git（macOS 命令行工具）。请在「终端」运行 xcode-select --install 装好后重试。</key>
 	<string>git (macOS command line tools) wasn’t found. Run xcode-select --install in Terminal, then try again.</string>
+	<key>未检测到 npm——CLI 巡检与 npm 源更新不可用。请安装 Node.js 或把 npm 加入 PATH。</key>
+	<string>npm not found — CLI checkup and npm-source updates are unavailable. Install Node.js or add npm to PATH.</string>
 	<key>未检测到 npm——请先安装 Node.js。</key>
 	<string>npm not found — install Node.js first.</string>
+	<key>未能安装任何上游新增技能——检查源是否仍包含这些目录</key>
+	<string>Could not install any new upstream skills — check whether the source still contains those folders</string>
 	<key>未配置</key>
 	<string>Not set up</string>
 	<key>未配置调度</key>
@@ -506,6 +552,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Source</string>
 	<key>来源 URL</key>
 	<string>Source URL</string>
+	<key>来自 %@：%@%@。将写入 store 并按默认工具挂载。</key>
+	<string>From %@: %@%@. They will be written to the store and mounted to your default tools.</string>
 	<key>查找</key>
 	<string>Find</string>
 	<key>查看详情</key>
@@ -558,8 +606,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>No plist path</string>
 	<key>没有发现全局 npm 包（或未安装 Node.js/npm）</key>
 	<string>No global npm packages found (or Node.js/npm not installed)</string>
-	<key>没有发现未托管的技能目录</key>
-	<string>No unmanaged skill directories found</string>
+	<key>没有发现未托管的能力目录</key>
+	<string>No unmanaged capability folders found</string>
 	<key>没有可显示的任务</key>
 	<string>No tasks to show</string>
 	<key>没有可检查的源（需要 GitHub 或本地路径来源）</key>
@@ -580,14 +628,16 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>the source</string>
 	<key>源、工具与 store — 全部配置都在这一页。</key>
 	<string>Sources, tools, and the store — every setting on this one page.</string>
-	<key>点击 ✕ / ◐ / ↑ 可逐项处理</key>
-	<string>Click ✕ / ◐ / ↑ to handle items one by one</string>
+	<key>点击 ✕ / ◐ / ↑ / + 可逐项处理</key>
+	<string>Click ✕ / ◐ / ↑ / + to handle items one by one</string>
 	<key>点击切换 / 处理</key>
 	<string>Click to toggle / fix</string>
 	<key>点击切换或处理</key>
 	<string>Click to toggle or fix</string>
 	<key>点击定位待更新的技能</key>
 	<string>Click to locate the skill pending update</string>
+	<key>点击定位有上游新增技能的套装（循环）</key>
+	<string>Click to locate bundles with new upstream skills (cycles)</string>
 	<key>点击展开套装</key>
 	<string>Click to expand bundle</string>
 	<key>点击逐个定位待更新的技能（循环）</key>
@@ -600,6 +650,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Login items (%lld)</string>
 	<key>目录移入 store 回收站，不建链接</key>
 	<string>Moves the directory to the store trash without creating a link</string>
+	<key>知道了</key>
+	<string>Got it</string>
 	<key>移回 store 原目录（%@/）——同名能力已存在时会拒绝</key>
 	<string>Move back to its store directory (%@/) — refused if a same-named capability exists</string>
 	<key>移除</key>
@@ -658,6 +710,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Settings…</string>
 	<key>该工具目录不存在——挂载会创建它，安装时会先跟你确认</key>
 	<string>This tool's folder doesn't exist — mounting will create it, and you'll be asked to confirm during install</string>
+	<key>该源没有记录 URL，无法安装上游新增技能</key>
+	<string>This source has no recorded URL, cannot install new upstream skills</string>
 	<key>该源没有记录 URL，无法更新</key>
 	<string>No source URL on record — cannot update</string>
 	<key>该源没有记录 npm 包名，无法更新</key>
@@ -702,6 +756,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>, %lld broken</string>
 	<key>；%lld 个因同名跳过</key>
 	<string>; %lld skipped (same name)</string>
+	<key>；上游新增 %lld 个未装技能</key>
+	<string>; upstream has %lld new uninstalled skills</string>
 	<key>；另有 %lld 个套装成员没查成（网络抖动）</key>
 	<string>; %lld more bundle members could not be checked (network hiccup)</string>
 </dict>

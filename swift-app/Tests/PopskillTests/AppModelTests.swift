@@ -159,4 +159,45 @@ final class AppModelTests: XCTestCase {
         model.jumpToNextUpdate()
         XCTAssertEqual(model.kbFocusId, "aaa", "到尾后循环回第一个")
     }
+
+    // ── v2.17 深链接 / 上游新增定位 ──
+
+    func testHandleDeepLinkInstallPrefillsAddSheet() {
+        let url = URL(string: "popskill://install?src=github.com/anthropics/skills")!
+        model.handleDeepLink(url)
+        XCTAssertEqual(model.sheet, .add)
+        XCTAssertEqual(model.pendingAddURL, "github.com/anthropics/skills")
+    }
+
+    func testHandleDeepLinkInstallWithUrlQuery() {
+        let url = URL(string: "popskill://install?url=https://github.com/foo/bar")!
+        model.handleDeepLink(url)
+        XCTAssertEqual(model.pendingAddURL, "https://github.com/foo/bar")
+        XCTAssertEqual(model.sheet, .add)
+    }
+
+    func testHandleDeepLinkUnknownHost() {
+        model.sheet = nil
+        model.handleDeepLink(URL(string: "popskill://settings")!)
+        XCTAssertNil(model.sheet)
+    }
+
+    func testJumpToNextUpstreamNew() {
+        var a = entryWithUpdate("src-a", children: ["x"], changed: nil)
+        a.latest = nil
+        a.upstreamNew = ["new-1", "new-2"]
+        var b = entryWithUpdate("src-b")
+        b.latest = nil
+        b.upstreamNew = ["new-3"]
+        var clean = entryWithUpdate("src-c")
+        clean.latest = nil
+        model.entries = [a, b, clean]
+        XCTAssertEqual(model.upstreamNewItemCount, 3)
+        model.query = "noise"
+        model.jumpToNextUpstreamNew()
+        XCTAssertEqual(model.kbFocusId, "src-a")
+        XCTAssertEqual(model.query, "")
+        model.jumpToNextUpstreamNew()
+        XCTAssertEqual(model.kbFocusId, "src-b")
+    }
 }

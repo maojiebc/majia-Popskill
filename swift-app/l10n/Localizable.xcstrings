@@ -137,6 +137,22 @@
         }
       }
     },
+    "%@ 等 %lld 个": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ and %lld more"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 等 %lld 个"
+          }
+        }
+      }
+    },
     "%@，已装 %@": {
       "localizations": {
         "en": {
@@ -617,6 +633,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "+ 粘贴 URL 添加"
+          }
+        }
+      }
+    },
+    "+%lld 未装": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%lld new"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%lld 未装"
           }
         }
       }
@@ -1405,6 +1437,50 @@
         }
       }
     },
+    "上游新增 %lld 个未装": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld new upstream skill"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld new upstream skills"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上游新增 %lld 个未装"
+          }
+        }
+      }
+    },
+    "上游新增未装：%@——点击安装": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New upstream, not installed: %@ — click to install"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上游新增未装：%@——点击安装"
+          }
+        }
+      }
+    },
     "上游有新版——点击更新所属套装": {
       "localizations": {
         "en": {
@@ -1849,6 +1925,22 @@
         }
       }
     },
+    "全部安装 (%lld)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install All (%lld)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部安装 (%lld)"
+          }
+        }
+      }
+    },
     "全部更新 (%lld)": {
       "localizations": {
         "en": {
@@ -1861,6 +1953,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部更新 (%lld)"
+          }
+        }
+      }
+    },
+    "全部源": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "all sources"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部源"
           }
         }
       }
@@ -1909,6 +2017,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "关于"
+          }
+        }
+      }
+    },
+    "内容已是最新": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Content is up to date"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "内容已是最新"
           }
         }
       }
@@ -2121,7 +2245,7 @@
         }
       }
     },
-    "发现 %lld 个未托管的技能目录": {
+    "发现 %lld 个未托管的能力目录": {
       "localizations": {
         "en": {
           "variations": {
@@ -2129,13 +2253,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Found %lld unmanaged skill directory"
+                  "value": "Found %lld unmanaged capability folder"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Found %lld unmanaged skill directories"
+                  "value": "Found %lld unmanaged capability folders"
                 }
               }
             }
@@ -2144,7 +2268,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "发现 %lld 个未托管的技能目录"
+            "value": "发现 %lld 个未托管的能力目录"
           }
         }
       }
@@ -2221,6 +2345,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "取消"
+          }
+        }
+      }
+    },
+    "只有 GitHub / 本地路径来源支持安装上游新增技能": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only GitHub / local-path sources support installing new upstream skills"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只有 GitHub / 本地路径来源支持安装上游新增技能"
           }
         }
       }
@@ -2589,18 +2729,18 @@
         }
       }
     },
-    "在 Claude / Codex 目录里发现现有技能（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。": {
+    "在 Claude / Codex 的 %@ 目录里发现现有能力（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Found existing skills in the Claude / Codex directories (e.g. %@…). Import them into the store for unified management and replace each in place with a symlink? Originals go to the store trash and can be restored."
+            "value": "Found existing capabilities in Claude / Codex %@ folders (e.g. %@…). Import them into the store and replace in place with symlinks? Originals go to the store recycle bin, restorable."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在 Claude / Codex 目录里发现现有技能（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。"
+            "value": "在 Claude / Codex 的 %@ 目录里发现现有能力（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。"
           }
         }
       }
@@ -2649,6 +2789,22 @@
         }
       }
     },
+    "安装": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装"
+          }
+        }
+      }
+    },
     "安装 %@ 失败：%@": {
       "localizations": {
         "en": {
@@ -2661,6 +2817,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "安装 %@ 失败：%@"
+          }
+        }
+      }
+    },
+    "安装上游新增 %lld 个技能": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install %lld new upstream skills"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装上游新增 %lld 个技能"
+          }
+        }
+      }
+    },
+    "安装上游新增 (%lld)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install New Upstream (%lld)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装上游新增 (%lld)"
+          }
+        }
+      }
+    },
+    "安装上游新增失败：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to install new upstream skills: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装上游新增失败：%@"
+          }
+        }
+      }
+    },
+    "安装上游新增技能": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install new upstream skills"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装上游新增技能"
+          }
+        }
+      }
+    },
+    "安装上游新增的 %lld 个技能？": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install %lld new upstream skills?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装上游新增的 %lld 个技能？"
           }
         }
       }
@@ -2853,6 +3089,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "已从源重新拉取 %@"
+          }
+        }
+      }
+    },
+    "已从链接打开添加流程": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opened the add flow from the link"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已从链接打开添加流程"
           }
         }
       }
@@ -3117,6 +3369,38 @@
         }
       }
     },
+    "已安装上游新增 %lld 个（原型）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installed %lld new upstream skills (prototype)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已安装上游新增 %lld 个（原型）"
+          }
+        }
+      }
+    },
+    "已安装上游新增 %lld 个：%@%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installed %lld new upstream skills: %@%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已安装上游新增 %lld 个：%@%@"
+          }
+        }
+      }
+    },
     "已导入 %lld 个技能进 store 并建链——这就是你的能力矩阵": {
       "localizations": {
         "en": {
@@ -3233,6 +3517,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "已恢复 %@ 的更新提醒，正在重新检查…"
+          }
+        }
+      }
+    },
+    "已打开添加面板——请粘贴仓库地址": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add panel opened — paste a repository address"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已打开添加面板——请粘贴仓库地址"
           }
         }
       }
@@ -3853,6 +4153,22 @@
         }
       }
     },
+    "技能 / Agent / MCP / CLI": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "skills / agents / MCP / CLI"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "技能 / Agent / MCP / CLI"
+          }
+        }
+      }
+    },
     "把 store（~/.agents）做成 git 仓库即可在多台 Mac 间同步——这是可选项，不影响本机使用。": {
       "localizations": {
         "en": {
@@ -3881,6 +4197,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "把 ~/.claude / ~/.codex 里的真实技能目录收编进 store 并换成 symlink"
+          }
+        }
+      }
+    },
+    "把检查到的上游新增技能全部装进 store 并按默认工具挂载": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install every detected new upstream skill into the store and mount to your default tools"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把检查到的上游新增技能全部装进 store 并按默认工具挂载"
           }
         }
       }
@@ -4233,6 +4565,22 @@
         }
       }
     },
+    "无法识别的 Popskill 链接": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unrecognized Popskill link"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法识别的 Popskill 链接"
+          }
+        }
+      }
+    },
     "明天": {
       "localizations": {
         "en": {
@@ -4537,6 +4885,22 @@
         }
       }
     },
+    "未检测到 git——安装 GitHub 技能需要它。在「终端」运行：xcode-select --install": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "git not found — installing GitHub skills needs it. Run in Terminal: xcode-select --install"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未检测到 git——安装 GitHub 技能需要它。在「终端」运行：xcode-select --install"
+          }
+        }
+      }
+    },
     "未检测到 git（macOS 命令行工具）。请在「终端」运行 xcode-select --install 装好后重试。": {
       "localizations": {
         "en": {
@@ -4553,6 +4917,22 @@
         }
       }
     },
+    "未检测到 npm——CLI 巡检与 npm 源更新不可用。请安装 Node.js 或把 npm 加入 PATH。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "npm not found — CLI checkup and npm-source updates are unavailable. Install Node.js or add npm to PATH."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未检测到 npm——CLI 巡检与 npm 源更新不可用。请安装 Node.js 或把 npm 加入 PATH。"
+          }
+        }
+      }
+    },
     "未检测到 npm——请先安装 Node.js。": {
       "localizations": {
         "en": {
@@ -4565,6 +4945,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "未检测到 npm——请先安装 Node.js。"
+          }
+        }
+      }
+    },
+    "未能安装任何上游新增技能——检查源是否仍包含这些目录": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not install any new upstream skills — check whether the source still contains those folders"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未能安装任何上游新增技能——检查源是否仍包含这些目录"
           }
         }
       }
@@ -4677,6 +5073,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "来源 URL"
+          }
+        }
+      }
+    },
+    "来自 %@：%@%@。将写入 store 并按默认工具挂载。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From %@: %@%@. They will be written to the store and mounted to your default tools."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来自 %@：%@%@。将写入 store 并按默认工具挂载。"
           }
         }
       }
@@ -5237,18 +5649,18 @@
         }
       }
     },
-    "没有发现未托管的技能目录": {
+    "没有发现未托管的能力目录": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No unmanaged skill directories found"
+            "value": "No unmanaged capability folders found"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "没有发现未托管的技能目录"
+            "value": "没有发现未托管的能力目录"
           }
         }
       }
@@ -5413,18 +5825,18 @@
         }
       }
     },
-    "点击 ✕ / ◐ / ↑ 可逐项处理": {
+    "点击 ✕ / ◐ / ↑ / + 可逐项处理": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Click ✕ / ◐ / ↑ to handle items one by one"
+            "value": "Click ✕ / ◐ / ↑ / + to handle items one by one"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "点击 ✕ / ◐ / ↑ 可逐项处理"
+            "value": "点击 ✕ / ◐ / ↑ / + 可逐项处理"
           }
         }
       }
@@ -5473,6 +5885,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "点击定位待更新的技能"
+          }
+        }
+      }
+    },
+    "点击定位有上游新增技能的套装（循环）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click to locate bundles with new upstream skills (cycles)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击定位有上游新增技能的套装（循环）"
           }
         }
       }
@@ -5569,6 +5997,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "目录移入 store 回收站，不建链接"
+          }
+        }
+      }
+    },
+    "知道了": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Got it"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "知道了"
           }
         }
       }
@@ -6065,6 +6509,22 @@
         }
       }
     },
+    "该源没有记录 URL，无法安装上游新增技能": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This source has no recorded URL, cannot install new upstream skills"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该源没有记录 URL，无法安装上游新增技能"
+          }
+        }
+      }
+    },
     "该源没有记录 URL，无法更新": {
       "localizations": {
         "en": {
@@ -6441,6 +6901,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "；%lld 个因同名跳过"
+          }
+        }
+      }
+    },
+    "；上游新增 %lld 个未装技能": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "; upstream has %lld new uninstalled skills"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "；上游新增 %lld 个未装技能"
           }
         }
       }

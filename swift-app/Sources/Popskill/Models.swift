@@ -83,6 +83,7 @@ struct Entry: Identifiable, Equatable {
     var sourceUrl: String?
     var latest: String?                 // 上游最新版；存在且 ≠ version ⇒ 可更新
     var changedMembers: [String]? = nil // 套装里具体哪些成员有新版（提醒到行）
+    var upstreamNew: [String]? = nil    // 上游有、本地没装的成员名（v2.17：可一键安装）
     var autoUpdate: Bool = false
     var skippedUpdate: Bool = false     // 用户跳过了当前上游版本（v2.15，右键可恢复提醒）
 
@@ -92,7 +93,10 @@ struct Entry: Identifiable, Equatable {
     var allCaps: [Capability] { children ?? [cap] }
     /// latest 只在 checkUpdate 确认内容有差异时写入、applyUpdate 后清除，
     /// 所以有值即有更新（源式套装的 latest 是 "N 项" 这类标签，不是 semver）。
-    var hasUpdate: Bool { latest != nil }
+    var hasUpdate: Bool { guard let latest, !latest.isEmpty else { return false }; return true }
+    /// 上游 monorepo 新增、本地还没装的技能数（横幅汇总用）
+    var upstreamNewCount: Int { upstreamNew?.count ?? 0 }
+    var hasUpstreamNew: Bool { upstreamNewCount > 0 }
     /// 用户视角的「几个技能待更新」：套装按 changedMembers 逐成员计，独立项计 1。
     /// 套装里 5 个成员有新版就是 5，不是 1——横幅/按钮计数一律用它，别再数源。
     /// changedMembers 缺失（旧 meta 没存明细）时保守计 1。
@@ -105,6 +109,13 @@ struct Entry: Identifiable, Equatable {
     var updateHelp: String {
         guard let changed = changedMembers, !changed.isEmpty else { return L("更新此套装") }
         return L("有新版：\(changed.sorted().joined(separator: L("、")))——点击全部更新")
+    }
+    /// 上游新增徽标悬停：点名可装技能
+    var upstreamNewHelp: String {
+        guard let names = upstreamNew, !names.isEmpty else { return L("安装上游新增技能") }
+        let list = names.count <= 4 ? names.sorted().joined(separator: L("、"))
+            : L("\(names.sorted().prefix(3).joined(separator: L("、"))) 等 \(names.count) 个")
+        return L("上游新增未装：\(list)——点击安装")
     }
 }
 

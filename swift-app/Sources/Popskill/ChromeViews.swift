@@ -352,6 +352,27 @@ struct SkippedTag: View {
     }
 }
 
+/// 上游新增未装徽标（v2.17）：检查更新发现 monorepo 新成员后，一点安装
+struct UpstreamNewBadge: View {
+    let count: Int
+    var help: String? = nil
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(L("+\(count) 未装"))
+                .font(.mono(10, .bold))
+                .foregroundStyle(Ink.blue)
+                .padding(.horizontal, 5).padding(.vertical, 1)
+                .background(RoundedRectangle(cornerRadius: 3).fill(Ink.blue.opacity(0.08)))
+                .overlay(RoundedRectangle(cornerRadius: 3).stroke(Ink.blue.opacity(0.35), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .help(help ?? L("安装上游新增技能"))
+        .accessibilityLabel(help ?? L("安装上游新增 \(count) 个技能"))
+    }
+}
+
 // ── 悬停操作钮 ↗ / ✕ ────────────────────────────────────
 
 struct HoverAction: View {

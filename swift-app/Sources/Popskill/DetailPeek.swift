@@ -117,6 +117,21 @@ struct DetailPeekView: View {
             } else if target.entry.skippedUpdate {
                 SkippedTag { model.unskipUpdate(target.entry) }.padding(.top, 8)
             }
+            if target.entry.hasUpstreamNew {
+                VStack(alignment: .leading, spacing: 6) {
+                    UpstreamNewBadge(count: target.entry.upstreamNewCount, help: target.entry.upstreamNewHelp) {
+                        model.installUpstreamNew(target.entry)
+                        model.peekTarget = nil
+                    }
+                    if let names = target.entry.upstreamNew, !names.isEmpty {
+                        Text(names.sorted().joined(separator: L("、")))
+                            .font(.mono(10))
+                            .foregroundStyle(Ink.tertiary)
+                            .lineLimit(3)
+                    }
+                }
+                .padding(.top, 8)
+            }
             if let url = target.entry.sourceUrl {
                 PeekLink(text: "↗ \(url)", font: .mono(10.5), base: Ink.secondary) {
                     model.openSourceLink(url)

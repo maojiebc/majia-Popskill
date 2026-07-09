@@ -111,6 +111,17 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
   <true/>
   <key>NSHumanReadableCopyright</key>
   <string>Copyright © 2026 majia. All rights reserved.</string>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>com.majia.popskill</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>popskill</string>
+      </array>
+    </dict>
+  </array>
 </dict>
 </plist>
 PLIST
