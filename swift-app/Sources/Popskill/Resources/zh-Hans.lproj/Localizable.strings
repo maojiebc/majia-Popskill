@@ -472,6 +472,8 @@ macOS: %@
 	<string>开</string>
 	<key>开关 = 自动更新。移除源会同时卸载它提供的能力与 symlink。</key>
 	<string>开关 = 自动更新。移除源会同时卸载它提供的能力与 symlink。</string>
+	<key>开启后每次检查更新会把本机全局 npm 包名逐个发给 registry.npmjs.org 查询新版。默认关闭；CLI 面板（⌨）打开时始终会巡检。</key>
+	<string>开启后每次检查更新会把本机全局 npm 包名逐个发给 registry.npmjs.org 查询新版。默认关闭；CLI 面板（⌨）打开时始终会巡检。</string>
 	<key>恢复 %@ 失败：%@</key>
 	<string>恢复 %@ 失败：%@</string>
 	<key>恢复到 store</key>
@@ -620,6 +622,8 @@ macOS: %@
 	<string>检查更新</string>
 	<key>检查更新…</key>
 	<string>检查更新…</string>
+	<key>检查更新时巡检全局 npm CLI</key>
+	<string>检查更新时巡检全局 npm CLI</string>
 	<key>正在从源重新拉取 %@…</key>
 	<string>正在从源重新拉取 %@…</string>
 	<key>正在扫描全局 npm 包…</key>
@@ -774,6 +778,16 @@ macOS: %@
 	<string>设置</string>
 	<key>设置…</key>
 	<string>设置…</string>
+	<key>设置没能写入磁盘（检查磁盘空间/权限）——「恢复更新提醒」未保存</key>
+	<string>设置没能写入磁盘（检查磁盘空间/权限）——「恢复更新提醒」未保存</string>
+	<key>设置没能写入磁盘（检查磁盘空间/权限）——「跳过此版本」未保存</key>
+	<string>设置没能写入磁盘（检查磁盘空间/权限）——「跳过此版本」未保存</string>
+	<key>设置没能写入磁盘（检查磁盘空间/权限）——备注未保存</key>
+	<string>设置没能写入磁盘（检查磁盘空间/权限）——备注未保存</string>
+	<key>设置没能写入磁盘（检查磁盘空间/权限）——自动更新开关未保存</key>
+	<string>设置没能写入磁盘（检查磁盘空间/权限）——自动更新开关未保存</string>
+	<key>设置没能写入磁盘（检查磁盘空间/权限）——默认挂载开关未保存</key>
+	<string>设置没能写入磁盘（检查磁盘空间/权限）——默认挂载开关未保存</string>
 	<key>该工具目录不存在——挂载会创建它，安装时会先跟你确认</key>
 	<string>该工具目录不存在——挂载会创建它，安装时会先跟你确认</string>
 	<key>该源没有记录 URL，无法安装上游新增技能</key>

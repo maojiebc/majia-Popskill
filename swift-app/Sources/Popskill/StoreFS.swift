@@ -157,21 +157,32 @@ struct StoreFS {
         if migrated > 0 { plog.info("meta 键迁移到类型化 id：\(migrated) 个") }
     }
 
-    func saveMeta(_ meta: StoreMeta) {
+    /// 写盘结果如实返回（v2.18）：磁盘满/权限变化时 UI 曾照样提示「已保存」，
+    /// 设置实际没落盘。false = 写失败（已留 plog 证据），调用方对用户可见的
+    /// 设置动作必须回滚内存态并报错。
+    @discardableResult
+    func saveMeta(_ meta: StoreMeta) -> Bool {
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try? enc.encode(meta).write(to: metaURL, options: .atomic)
+        do {
+            try enc.encode(meta).write(to: metaURL, options: .atomic)
+            return true
+        } catch {
+            plog.error("meta 写盘失败：\(error.localizedDescription, privacy: .public)")
+            return false
+        }
     }
 
     /// meta 的读-改-写必须走这里：checkUpdate 在 4 路并发的后台任务里写 meta，
     /// 与主线程设置页的写互相覆盖会静默丢更新（.atomic 只保证不撕裂，不保证不丢）。
     private static let metaLock = NSLock()
-    func mutateMeta(_ body: (inout StoreMeta) -> Void) {
+    @discardableResult
+    func mutateMeta(_ body: (inout StoreMeta) -> Void) -> Bool {
         StoreFS.metaLock.lock()
         defer { StoreFS.metaLock.unlock() }
         var meta = loadMeta()
         body(&meta)
-        saveMeta(meta)
+        return saveMeta(meta)
     }
 
     // ── 扫描 ─────────────────────────────────────────────
@@ -1308,7 +1319,8 @@ struct StoreFS {
     /// 「跳过此版本」：把当前亮着的更新按上游状态指纹记入 meta，徽标熄灭。
     /// 旧 meta（2.15 前检查出的徽标）没存指纹时退回 lastHead（github=sha / npm=版本号）；
     /// 都没有才存 latest 标签——那种源下次完整比对会重亮一次，再跳过就钉住了。
-    func skipLatest(_ entryId: String) {
+    @discardableResult
+    func skipLatest(_ entryId: String) -> Bool {
         mutateMeta { meta in
             guard var m = meta.entries[entryId], m.latest != nil else { return }
             m.skipped = m.latestFingerprint ?? m.lastHead ?? m.latest
@@ -1322,7 +1334,8 @@ struct StoreFS {
     /// 恢复更新提醒：清跳过标记。检查点必须一起清——跳过期间被抑制的检查照常
     /// 落盘了 lastHead，不清的话 HEAD 短路会拿它直接判「最新」，徽标永远回不来。
     /// 调用方随后应对该源定向重查（强制完整比对），让徽标从真相重新推导。
-    func unskipLatest(_ entryId: String) {
+    @discardableResult
+    func unskipLatest(_ entryId: String) -> Bool {
         mutateMeta { meta in
             guard var m = meta.entries[entryId] else { return }
             m.skipped = nil
@@ -1610,7 +1623,8 @@ struct StoreFS {
     }
 
     /// 定时任务人话备注（v2.10）。note 传 nil/空串 = 清除
-    func saveSchedNote(_ label: String, note: String?) {
+    @discardableResult
+    func saveSchedNote(_ label: String, note: String?) -> Bool {
         mutateMeta { meta in
             var notes = meta.schedNotes ?? [:]
             let trimmed = note?.trimmingCharacters(in: .whitespaces)

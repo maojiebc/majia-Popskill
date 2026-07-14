@@ -88,6 +88,15 @@ final class AppModel {
     var upgradingClis: Set<String> = []
     var cliUpdates: [GlobalCli] { globalClis.filter(\.hasUpdate) }
 
+    /// 随「检查更新」自动巡检全局 CLI 的开关（v2.18，默认关）。
+    /// 巡检会枚举本机**全部**全局 npm 包并逐个向 registry.npmjs.org 查最新版——
+    /// 超出「已添加源」的范围，包名清单不该未经同意离开本机（SECURITY.md 披露口径）。
+    /// 打开 CLI 面板（⌨）始终会巡检：那是用户主动查看的动作。
+    var autoCliPatrol: Bool {
+        get { UserDefaults.standard.bool(forKey: "autoCliPatrol") }
+        set { UserDefaults.standard.set(newValue, forKey: "autoCliPatrol") }
+    }
+
     // 定时任务面板（v2.9）
     var schedTasks: [SchedTask] = []
     var schedShowVendor = false
@@ -733,7 +742,9 @@ final class AppModel {
         }
         guard !candidates.isEmpty else { say(L("没有可检查的源（需要 GitHub 或本地路径来源）")); return }
         checkingUpdates = true
-        if only == nil { checkCliUpdates() }
+        // 全局 CLI 巡检只在显式开启后随检查跑（v2.18）——启动静默扫描全部
+        // npm -g 包名喂给 registry 超出披露，曾是「联网承诺与实际不符」主证之一
+        if only == nil, autoCliPatrol { checkCliUpdates() }
         let fsCopy = fs
         Task { [weak self] in
             var found: [StoreFS.UpdateCheck] = []
@@ -935,7 +946,10 @@ final class AppModel {
     /// 该上游状态不再提醒；上游再出新东西时 checkUpdate 里指纹不匹配自动重亮。
     func skipUpdate(_ entry: Entry) {
         guard entry.hasUpdate else { return }
-        if !fake { fs.skipLatest(entry.id) }
+        if !fake, !fs.skipLatest(entry.id) {
+            sayError(L("设置没能写入磁盘（检查磁盘空间/权限）——「跳过此版本」未保存"))
+            return
+        }
         if let i = entries.firstIndex(where: { $0.id == entry.id }) {
             entries[i].latest = nil
             entries[i].changedMembers = nil
@@ -951,7 +965,11 @@ final class AppModel {
     func unskipUpdate(_ entry: Entry) {
         if let i = entries.firstIndex(where: { $0.id == entry.id }) { entries[i].skippedUpdate = false }
         guard !fake else { return }
-        fs.unskipLatest(entry.id)
+        if !fs.unskipLatest(entry.id) {
+            if let i = entries.firstIndex(where: { $0.id == entry.id }) { entries[i].skippedUpdate = true }
+            sayError(L("设置没能写入磁盘（检查磁盘空间/权限）——「恢复更新提醒」未保存"))
+            return
+        }
         if checkingUpdates {
             pendingRecheck.insert(entry.id)
             say(L("已恢复 \(entry.name) 的更新提醒——当前检查结束后将复查此源"))
@@ -1331,10 +1349,15 @@ final class AppModel {
         // 让套装自动更新从未生效，当时统一到 name；类型化身份后 id 成为唯一读写键，
         // 源式套装头键即 "src:<归拢键>"，扫描回读同键，歧义根除
         let id = entries[i].id
-        fs.mutateMeta { meta in
+        let ok = fs.mutateMeta { meta in
             var m = meta.entries[id] ?? StoreMeta.EntryMeta()
             m.autoUpdate = on
             meta.entries[id] = m
+        }
+        // 写盘失败开关弹回 + 报错（v2.18）——磁盘满时曾谎报已保存，重启全部蒸发
+        if !ok {
+            entries[i].autoUpdate.toggle()
+            sayError(L("设置没能写入磁盘（检查磁盘空间/权限）——自动更新开关未保存"))
         }
     }
 
@@ -1343,10 +1366,14 @@ final class AppModel {
         tools[i].defaultTarget.toggle()
         guard !fake else { return }
         let on = tools[i].defaultTarget
-        fs.mutateMeta { meta in
+        let ok = fs.mutateMeta { meta in
             var m = meta.tools[toolId] ?? StoreMeta.ToolMeta()
             m.defaultTarget = on
             meta.tools[toolId] = m
+        }
+        if !ok {
+            tools[i].defaultTarget.toggle()
+            sayError(L("设置没能写入磁盘（检查磁盘空间/权限）——默认挂载开关未保存"))
         }
     }
 
@@ -1435,7 +1462,10 @@ final class AppModel {
     /// 保存任务人话备注（空串 = 清除），立即回写内存镜像
     func schedSaveNote(_ task: SchedTask, note: String) {
         let trimmed = note.trimmingCharacters(in: .whitespaces)
-        fs.saveSchedNote(task.label, note: trimmed)
+        guard fs.saveSchedNote(task.label, note: trimmed) else {
+            sayError(L("设置没能写入磁盘（检查磁盘空间/权限）——备注未保存"))
+            return
+        }
         if let i = schedTasks.firstIndex(where: { $0.id == task.id }) {
             schedTasks[i].note = trimmed.isEmpty ? nil : trimmed
         }

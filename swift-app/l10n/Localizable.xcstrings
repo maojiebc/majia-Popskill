@@ -3981,6 +3981,22 @@
         }
       }
     },
+    "开启后每次检查更新会把本机全局 npm 包名逐个发给 registry.npmjs.org 查询新版。默认关闭；CLI 面板（⌨）打开时始终会巡检。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When on, every update check sends each of your global npm package names to registry.npmjs.org to look up the latest version. Off by default; opening the CLI panel (⌨) always patrols."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开启后每次检查更新会把本机全局 npm 包名逐个发给 registry.npmjs.org 查询新版。默认关闭；CLI 面板（⌨）打开时始终会巡检。"
+          }
+        }
+      }
+    },
     "恢复 %@ 失败：%@": {
       "localizations": {
         "en": {
@@ -5185,6 +5201,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "检查更新…"
+          }
+        }
+      }
+    },
+    "检查更新时巡检全局 npm CLI": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Patrol global npm CLIs during update checks"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检查更新时巡检全局 npm CLI"
           }
         }
       }
@@ -6489,6 +6521,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "设置…"
+          }
+        }
+      }
+    },
+    "设置没能写入磁盘（检查磁盘空间/权限）——「恢复更新提醒」未保存": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setting couldn't be written to disk (check disk space/permissions) — \"Resume Update Alerts\" not saved"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置没能写入磁盘（检查磁盘空间/权限）——「恢复更新提醒」未保存"
+          }
+        }
+      }
+    },
+    "设置没能写入磁盘（检查磁盘空间/权限）——「跳过此版本」未保存": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setting couldn't be written to disk (check disk space/permissions) — \"Skip This Version\" not saved"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置没能写入磁盘（检查磁盘空间/权限）——「跳过此版本」未保存"
+          }
+        }
+      }
+    },
+    "设置没能写入磁盘（检查磁盘空间/权限）——备注未保存": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setting couldn't be written to disk (check disk space/permissions) — note not saved"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置没能写入磁盘（检查磁盘空间/权限）——备注未保存"
+          }
+        }
+      }
+    },
+    "设置没能写入磁盘（检查磁盘空间/权限）——自动更新开关未保存": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setting couldn't be written to disk (check disk space/permissions) — auto-update toggle not saved"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置没能写入磁盘（检查磁盘空间/权限）——自动更新开关未保存"
+          }
+        }
+      }
+    },
+    "设置没能写入磁盘（检查磁盘空间/权限）——默认挂载开关未保存": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setting couldn't be written to disk (check disk space/permissions) — default-mount toggle not saved"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置没能写入磁盘（检查磁盘空间/权限）——默认挂载开关未保存"
           }
         }
       }
