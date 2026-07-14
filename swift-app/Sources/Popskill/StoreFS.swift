@@ -86,7 +86,9 @@ func sanitizeName(_ name: String) throws -> String {
     return name
 }
 
-struct StoreFS {
+// @unchecked 只为 fm：FileManager.default 按 Apple 文档是线程安全的共享单例，
+// 其余存储属性（env）全是值类型。StoreFS 本身无可变状态——meta 互斥走 metaLock。
+struct StoreFS: @unchecked Sendable {
     let env: StoreEnv
     let fm = FileManager.default
 
@@ -1796,6 +1798,17 @@ struct StoreFS {
     }
 }
 
+/// 线程安全的一次性结果盒（同步桥专用，v2.18 严格并发整改）：
+/// 回调/后台线程写、调用线程读，NSLock 保护——semaphore 超时后迟到的回调
+/// 只会写进无人再读的盒子，不再直接改捕获的局部 var（Swift 6 里是数据竞态错误）。
+/// 首写生效，后续写被忽略。
+final class ResultBox<T>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: T?
+    func set(_ v: T) { lock.lock(); if value == nil { value = v }; lock.unlock() }
+    func get() -> T? { lock.lock(); defer { lock.unlock() }; return value }
+}
+
 /// 子进程封装（StoreFS / SchedEngine 共用）：并发排空双管道 + 超时 watchdog + 组 KILL
 @discardableResult
 func runProcess(_ bin: String, _ args: [String], timeout: TimeInterval = 120) -> (status: Int32, out: String, err: String) {
@@ -1807,10 +1820,10 @@ func runProcess(_ bin: String, _ args: [String], timeout: TimeInterval = 120) ->
     p.standardError = errPipe
     do { try p.run() } catch { return (-1, "", "\(error)") }
     // 两路管道必须并发排空——顺序 readDataToEndOfFile 会在 stderr 写满 64KB 缓冲时与子进程互相卡死
-    var outData = Data(), errData = Data()
+    let outBox = ResultBox<Data>(), errBox = ResultBox<Data>()
     let drained = DispatchGroup()
-    DispatchQueue.global().async(group: drained) { outData = outPipe.fileHandleForReading.readDataToEndOfFile() }
-    DispatchQueue.global().async(group: drained) { errData = errPipe.fileHandleForReading.readDataToEndOfFile() }
+    DispatchQueue.global().async(group: drained) { outBox.set(outPipe.fileHandleForReading.readDataToEndOfFile()) }
+    DispatchQueue.global().async(group: drained) { errBox.set(errPipe.fileHandleForReading.readDataToEndOfFile()) }
     // watchdog：git 遇到网络黑洞可以永远不退出，不能让调用线程跟着无限期挂住
     let timedOut = drained.wait(timeout: .now() + timeout) == .timedOut
     let cmd = URL(fileURLWithPath: bin).lastPathComponent
@@ -1822,14 +1835,14 @@ func runProcess(_ bin: String, _ args: [String], timeout: TimeInterval = 120) ->
             kill(-p.processIdentifier, SIGKILL)
             if drained.wait(timeout: .now() + 5) == .timedOut {
                 // 病理场景（D 态进程钉死管道）：放弃读取立即返回——
-                // outData/errData 可能仍被后台读线程写入，此后不许再碰
+                // 后台读线程之后写进的是带锁盒子，不再有内存危险
                 return (-1, "", L("命令超时且输出管道无法排空，已放弃：\(cmd)"))
             }
         }
     }
     p.waitUntilExit()
-    let out = String(data: outData, encoding: .utf8) ?? ""
-    let err = String(data: errData, encoding: .utf8) ?? ""
+    let out = String(data: outBox.get() ?? Data(), encoding: .utf8) ?? ""
+    let err = String(data: errBox.get() ?? Data(), encoding: .utf8) ?? ""
     if timedOut {
         return (-1, out, L("命令超时（\(Int(timeout)) s）已终止：\(cmd) \(args.first ?? "")"))
     }

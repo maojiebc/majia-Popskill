@@ -37,9 +37,13 @@ jobs:
           sudo xcode-select -s "$XCODE_PATH"
           swift --version
 
-      - name: Build (release)
+      - name: Build (release · strict concurrency · zero warnings)
         timeout-minutes: 15
-        run: swift build -c release --package-path swift-app
+        # v2.18 起严格并发保持零警告（曾积到 17 条，Swift 6 模式下全是错误）——
+        # 出现任何 warning 即 fail，防回潮
+        run: |
+          swift build -c release --package-path swift-app -Xswiftc -strict-concurrency=complete 2>&1 | tee build.log
+          ! grep -q 'warning:' build.log
 
       - name: Test
         timeout-minutes: 10

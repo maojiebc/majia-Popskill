@@ -67,7 +67,9 @@ struct GlobalCli: Identifiable, Equatable {
 
 enum NpmEnv {
     private static let lock = NSLock()
-    private static var cached: String??
+    // 全部读写都在下方 lock 临界区内——nonisolated(unsafe) 只是向编译器声明
+    // 「互斥由我保证」，不是消音（v2.18 严格并发整改）
+    nonisolated(unsafe) private static var cached: String??
 
     /// GUI app 的 PATH 只有 /usr/bin:/bin 一族，nvm / npm prefix ~/.local 都不在——
     /// 走一次 login shell 探测真实 PATH 里的 npm，探测结果（含「没有」）缓存。
@@ -89,32 +91,18 @@ enum NpmEnv {
 extension StoreFS {
     /// registry 一次 HTTP 拿最新版（等价 github 源的 ls-remote HEAD）。
     /// URLSession 遵循系统代理；失败抛错——断网必须如实计入「检查失败」，不能装最新。
+    /// 同步桥复用 httpGet（v2.18：ResultBox 化，消除 semaphore 超时后的回调竞态）
     func npmLatestVersion(_ pkg: String) throws -> String {
         guard let url = npmRegistryLatestURL(pkg) else {
             throw StoreError.resolveFailed(L("包名不合法：\(pkg)"))
         }
-        var req = URLRequest(url: url, timeoutInterval: 20)
-        req.setValue("application/json", forHTTPHeaderField: "Accept")
-        let sem = DispatchSemaphore(value: 0)
-        var result: Result<Data, Error> = .failure(URLError(.unknown))
-        URLSession.shared.dataTask(with: req) { data, resp, err in
-            defer { sem.signal() }
-            if let err { result = .failure(err); return }
-            guard let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode), let data else {
-                result = .failure(URLError(.badServerResponse)); return
-            }
-            result = .success(data)
-        }.resume()
-        _ = sem.wait(timeout: .now() + 25)
-        switch result {
-        case .success(let data):
-            guard let v = parseNpmRegistryLatest(data) else {
-                throw StoreError.resolveFailed(L("registry 响应异常：\(pkg)"))
-            }
-            return v
-        case .failure:
-            throw StoreError.resolveFailed(L("连不上 npm registry——检查网络后重试。"))
+        let data: Data
+        do { data = try httpGet(url, accept: "application/json") }
+        catch { throw StoreError.resolveFailed(L("连不上 npm registry——检查网络后重试。")) }
+        guard let v = parseNpmRegistryLatest(data) else {
+            throw StoreError.resolveFailed(L("registry 响应异常：\(pkg)"))
         }
+        return v
     }
 
     /// 全局已装版本。没装 npm / 没装这个包 → nil（不算错误：无从比较就不进更新雷达）

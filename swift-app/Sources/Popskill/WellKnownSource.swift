@@ -35,21 +35,25 @@ func wellKnownSkillName(_ raw: String) -> String? {
     return name.isEmpty ? nil : name
 }
 
-/// 同步 GET（走系统代理）。调用方都在后台线程（checkUpdate/applyUpdate 的 Task.detached 世界）
-func httpGet(_ url: URL, timeout: TimeInterval = 20) throws -> Data {
+/// 同步 GET（走系统代理）。调用方都在后台线程（checkUpdate/applyUpdate 的 Task.detached 世界）。
+/// v2.18 严格并发整改：结果走带锁 ResultBox——semaphore 等待超时返回后，
+/// 迟到的回调只写盒子，不再改已被读取的捕获变量（曾是真实数据竞态窗口）
+func httpGet(_ url: URL, timeout: TimeInterval = 20, accept: String? = nil) throws -> Data {
     var req = URLRequest(url: url, timeoutInterval: timeout)
     req.httpMethod = "GET"   // 部分 CDN（Tengine）对 HEAD 返回 404，别用 HEAD 探测
+    if let accept { req.setValue(accept, forHTTPHeaderField: "Accept") }
     let sem = DispatchSemaphore(value: 0)
-    var result: Result<Data, Error> = .failure(URLError(.timedOut))
+    let box = ResultBox<Result<Data, Error>>()
     URLSession.shared.dataTask(with: req) { data, resp, err in
         defer { sem.signal() }
-        if let err { result = .failure(err); return }
+        if let err { box.set(.failure(err)); return }
         guard let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode), let data else {
-            result = .failure(URLError(.badServerResponse)); return
+            box.set(.failure(URLError(.badServerResponse))); return
         }
-        result = .success(data)
+        box.set(.success(data))
     }.resume()
     _ = sem.wait(timeout: .now() + timeout + 5)
+    guard let result = box.get() else { throw URLError(.timedOut) }
     return try result.get()
 }
 

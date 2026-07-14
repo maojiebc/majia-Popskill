@@ -39,7 +39,8 @@ struct SchedTask: Identifiable, Equatable {
     var stalled: Bool { behavior == .daemon && loaded && pid == nil }
 }
 
-struct SchedEngine {
+// @unchecked 只为 fm：FileManager.default 线程安全；agentsDir 是值类型，引擎本身无可变状态
+struct SchedEngine: @unchecked Sendable {
     let agentsDir: URL
     private let fm = FileManager.default
 

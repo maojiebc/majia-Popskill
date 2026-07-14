@@ -1503,7 +1503,7 @@ final class AppModel {
         schedRun(task, doneToast: on ? L("已启用 \(task.displayName)") : L("已停用 \(task.displayName)")) { try $0.setLoaded($1, to: on) }
     }
 
-    private func schedRun(_ task: SchedTask, doneToast: String, _ op: @escaping (SchedEngine, SchedTask) throws -> Void) {
+    private func schedRun(_ task: SchedTask, doneToast: String, _ op: @escaping @Sendable (SchedEngine, SchedTask) throws -> Void) {
         guard !schedBusy.contains(task.id) else { return }
         schedBusy.insert(task.id)
         let engine = sched
