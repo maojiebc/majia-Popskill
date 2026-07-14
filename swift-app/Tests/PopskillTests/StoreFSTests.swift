@@ -1599,6 +1599,30 @@ final class StoreFSTests: XCTestCase {
         XCTAssertNil(m?.latest, "重拉后徽标检查点归零")
     }
 
+    /// npm 源套装头键（如 "guanskill"）不含 "/" 不含 "."、磁盘无同名目录——
+    /// 键级形状规则认不出，必须等扫描归拢后按 name → id 补搬（真实 meta 影子验证发现）
+    func testAdoptLegacyNpmHeadKey() throws {
+        try makeSkill("m-a"); try makeSkill("m-b")
+        fs.mutateMeta { meta in
+            meta.entries["skill:m-a"] = StoreMeta.EntryMeta(sourceUrl: "npm:@scope/pkg")
+            meta.entries["skill:m-b"] = StoreMeta.EntryMeta(sourceUrl: "npm:@scope/pkg")
+            meta.entries["pkg"] = StoreMeta.EntryMeta(autoUpdate: true, lastHead: "0.1.12")  // 旧头键=显示名
+        }
+        var entries = scan()
+        let bundle = try XCTUnwrap(entries.first(where: { $0.bundleKind == .source }))
+        XCTAssertEqual(bundle.id, "src:npm:@scope/pkg")
+        XCTAssertEqual(bundle.name, "pkg")
+        XCTAssertFalse(bundle.autoUpdate, "补迁前旧头键状态读不到")
+        XCTAssertEqual(fs.adoptLegacyHeadKeys(entries), 1)
+        entries = scan()
+        let migrated = try XCTUnwrap(entries.first(where: { $0.bundleKind == .source }))
+        XCTAssertTrue(migrated.autoUpdate, "补迁 + 重扫后 autoUpdate 回位")
+        let m = fs.loadMeta().entries
+        XCTAssertEqual(m["src:npm:@scope/pkg"]?.lastHead, "0.1.12")
+        XCTAssertNil(m["pkg"])
+        XCTAssertEqual(fs.adoptLegacyHeadKeys(entries), 0, "幂等")
+    }
+
     /// store 托管了 skills/shared，工具侧另有真实目录 agents/shared——
     /// 裸名 known 集合曾让后者永远躲过未托管扫描
     func testScanUnmanagedCrossKindSameName() throws {

@@ -159,6 +159,28 @@ struct StoreFS: @unchecked Sendable {
         if migrated > 0 { plog.info("meta 键迁移到类型化 id：\(migrated) 个") }
     }
 
+    /// 迁移第二阶段（v2.18）：源式套装的旧头键 = 显示名（repoName / 域名 / npm 包尾段）。
+    /// npm 头键（如 "guanskill"）不含 "/" 不含 "."，键级形状规则认不出、磁盘上也没有
+    /// 同名目录（成员平铺）——必须等扫描归拢出 Entry 后按 name → id 补搬。
+    /// 返回搬迁数；>0 时调用方应重扫一次，让 autoUpdate/skipped 状态当场回位。幂等。
+    @discardableResult
+    func adoptLegacyHeadKeys(_ entries: [Entry]) -> Int {
+        let heads = entries.filter { $0.bundleKind == .source && $0.name != $0.id }
+        guard !heads.isEmpty else { return 0 }
+        let now = loadMeta().entries
+        let pending = heads.filter { now[$0.name] != nil && now[$0.id] == nil }
+        guard !pending.isEmpty else { return 0 }
+        mutateMeta { meta in
+            for e in pending {
+                guard let val = meta.entries[e.name], meta.entries[e.id] == nil else { continue }
+                meta.entries[e.id] = val
+                meta.entries.removeValue(forKey: e.name)
+            }
+        }
+        plog.info("meta 头键补迁：\(pending.count) 个（npm/无形状头键）")
+        return pending.count
+    }
+
     /// 写盘结果如实返回（v2.18）：磁盘满/权限变化时 UI 曾照样提示「已保存」，
     /// 设置实际没落盘。false = 写失败（已留 plog 证据），调用方对用户可见的
     /// 设置动作必须回滚内存态并报错。

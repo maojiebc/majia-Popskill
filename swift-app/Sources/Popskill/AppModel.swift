@@ -244,6 +244,11 @@ final class AppModel {
         let meta = fs.loadMeta()
         tools = fs.scanTools(meta: meta)
         entries = fs.scanEntries(tools: tools, meta: meta)
+        // 第二阶段：npm 等无形状源套装头键要等归拢结果才认得出——补搬后重扫一次，
+        // autoUpdate/skipped 状态当场回位（一次性成本，幂等后零开销）
+        if fs.adoptLegacyHeadKeys(entries) > 0 {
+            entries = fs.scanEntries(tools: tools, meta: fs.loadMeta())
+        }
         revalidateOverlays()
         syncWatchPaths()
         // meta 曾损坏（loadMeta 已备份第一现场）：告警一次，别静默装无事发生
