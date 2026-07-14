@@ -18,7 +18,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        # 第三方 Action 固定到完整 SHA（审查 P2-04）：可变 tag 可被上游重指
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Shell syntax（scripts/*.sh 全量 bash -n）
+        timeout-minutes: 2
+        run: for f in scripts/*.sh; do bash -n "$f"; done
+
+      - name: L10n drift（catalog ↔ 产物 ↔ L() 双向覆盖）
+        timeout-minutes: 2
+        run: scripts/gen-l10n.sh --check
 
       - name: Select Xcode 16
         timeout-minutes: 2
