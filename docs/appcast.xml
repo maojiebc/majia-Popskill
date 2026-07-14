@@ -8,6 +8,26 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.18.1</title>
+      <pubDate>Tue, 14 Jul 2026 07:57:38 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.18.1 — 修复中文界面下精选目录显示英文</h2>
+        <p>中文界面下，卡片上的技能简介（内置精选目录提供的那份）一直显示英文——比如 guancli 显示 &quot;Guandata BI querying: ETL, datasets, pages, lineage, metrics&quot;，而不是「观远 BI 全能查询：ETL / 数据集 / 页面 / 血缘 / 指标」。中文简介一直都在，只是取不到。本版修复。</p>
+        <p><b>根因是一次大小写事故</b>：仓库里的中文资源目录叫 `zh-Hans.lproj`，但 SwiftPM 把它复制进应用时小写成了 `zh-hans`；语言协商读的是目录真实名，于是「当前是不是中文」这个判断拿 `zh-hans` 去和 `zh-Hans` 逐字比对，判成了「不是中文」，精选目录随即整片改用英文面。</p>
+        <p><b>为什么潜伏了三个版本</b>（v2.14 引入双语目录至今）：macOS 文件系统不区分大小写，界面取词照样命中中文资源，加上界面文案的 key 本身就是中文原文——协商即使完全失败也照样显示中文。<b>「界面是中文」从来不能证明语言协商是对的</b>，这个假象盖住了它，直到精选目录成为唯一真正依赖协商结果的地方才露出来。</p>
+        <p>修复后判断与大小写、地区后缀、分隔符形态一概无关。同时补上三层防线：锁死真实形态（`zh-hans`）的协商回归测试（并做了变异验证——把 bug 注回去，测试确实会红）、目录挑面逻辑的独立测试，以及 `POPSKILL_L10N_PROBE=1` 自检钩子，可在打包后的应用上直接打印真实协商结果。</p>
+        <p>只影响简介文案显示，功能、链接、更新链均不受影响。测试 134 → 137。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.18.1/Popskill-2.18.1.dmg"
+        sparkle:version="284"
+        sparkle:shortVersionString="2.18.1"
+        sparkle:edSignature="0DUf0Cuht7R3S3t/qfgFnHnOkcQ68Uf7J6yBF3Fe9JJBpQ8FVTBvcaj3ls/kIsiT8ywQLrWXkUUc0z4No9cmCw=="
+        length="2948154"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.18.0</title>
       <pubDate>Tue, 14 Jul 2026 06:43:20 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
