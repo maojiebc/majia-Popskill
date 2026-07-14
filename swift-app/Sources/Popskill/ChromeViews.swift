@@ -419,8 +419,11 @@ func highlight(_ text: String, _ query: String) -> AttributedString {
     var attr = AttributedString(text)
     let q = query.trimmingCharacters(in: .whitespaces)
     guard !q.isEmpty, let range = attr.range(of: q, options: .caseInsensitive) else { return attr }
-    attr[range].backgroundColor = Ink.highlight
-    attr[range].foregroundColor = Ink.ink
+    // 显式 attribute 类型下标而非 .backgroundColor 动态成员：后者经由 KeyPath，
+    // CI 的 Xcode 16 旧小版本在严格并发下报「cannot form key path…non-sendable」
+    // （无源位置 <unknown>:0，本地新编译器已不报）——语义等价，零警告门才守得住
+    attr[range][AttributeScopes.SwiftUIAttributes.BackgroundColorAttribute.self] = Ink.highlight
+    attr[range][AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute.self] = Ink.ink
     return attr
 }
 

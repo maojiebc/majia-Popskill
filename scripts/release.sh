@@ -146,7 +146,12 @@ PY
 
 step "发版 commit（appcast 刻意不在这次——DMG 就位后单独上线）"
 git add VERSION README.md README.en.md "$NOTES_MD"
-git commit -m "v$VERSION release"
+if git diff --cached --quiet; then
+  # CI 门失败后追修复 commit 重跑的场景：发版文件上一轮已提交，构建照跑、commit 跳过
+  echo "  发版文件无变化（此前已提交），跳过 commit"
+else
+  git commit -m "v$VERSION release"
+fi
 
 fi   # RELEASED_COMMIT 续发跳到这里
 
