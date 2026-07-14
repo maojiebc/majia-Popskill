@@ -8,6 +8,29 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.18.0</title>
+      <pubDate>Tue, 14 Jul 2026 06:43:20 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.18.0 — 审查修复：安全热修 + 类型化身份 + 安装事务 + 发布门</h2>
+        <p>本版由一次外部代码审查（2026-07-14，基线 v2.17.0）驱动：5 项高优先级发现全部收口，另清 4 项中优先级与 1 项工程改进。无新功能，全部是让既有能力更可信。</p>
+        <p><b>安全热修</b>：内置 Sparkle 自动更新框架 2.9.1 → 2.9.4（2.9.2 起含 delta 更新 symlink 防护与安装器连接验证两项安全修复）。发版链新增打包内 Sparkle 版本断言，低于批准基线直接拒发。</p>
+        <p><b>类型化身份</b>：Skill / Agent / MCP / CLI 四类同名（比如都叫 shared）时不再共用一个身份——曾经点 Agent 会操作到同名 Skill、自动更新与「跳过此版本」互相覆盖、同名未托管 Agent 永远不被扫描发现。条目身份与 `.popskill.json` 键统一为 `skill:名字` 形态，首次启动自动迁移旧键（含 npm 源套装头键的两阶段补搬），无需手动处理。</p>
+        <p><b>安装事务化</b>：安装/重拉改为「预检 → 临时目录 → 原子换名 → 记账建链」，任一步失败磁盘回到操作前——曾经链接阶段失败会留下 store 半成品、重试永远撞「同名已存在」；重拉曾经「旧版已进回收站、新版只装一半」。批量安装上游新增的同名并发竞态一并根除。</p>
+        <p><b>联网披露对齐</b>：README / SECURITY 完整列出全部四类网络端点（GitHub、npm registry、well-known、Sparkle）与 npm 全局 prefix 写入面。全局 CLI 巡检（会把本机全局 npm 包名送给 registry 查版本）改为<b>默认关闭</b>、设置里显式开启；打开 CLI 面板（⌨）视为主动查看，仍会巡检。</p>
+        <p><b>发布门改序</b>：发版链先过全部质量门（shell 语法 / l10n / 全部测试 / bundle 冷启 smoke / Sparkle 版本断言），push main 等云 CI 绿之后才打 tag、上传 DMG——发布资产不再先于测试结论公开；appcast 仍最后上线，保证用户看到新版的瞬间 DMG 一定可下。</p>
+        <p><b>其它</b>：设置写盘失败不再谎报「已保存」（开关回弹 + 红字报错）；Swift 6 严格并发警告 17 → 0 并入 CI 零警告门；云 CI 补 shell 语法与 l10n 漂移检查；GitHub 仓库开启 Dependabot、secret scanning、push protection 与 main 分支防 force-push 规则。</p>
+        <p>测试 126 → 134，真实环境只读冒烟零误判。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.18.0/Popskill-2.18.0.dmg"
+        sparkle:version="283"
+        sparkle:shortVersionString="2.18.0"
+        sparkle:edSignature="eU4brbCVJ1sy0FVqEfMranbQ2wk58fwIwu86sv3yyWH7jYbayZlLkmQ3UupmFiFoh4N+v7TaAsiVyfs+QL5tDA=="
+        length="2946905"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.17.0</title>
       <pubDate>Sat, 11 Jul 2026 13:00:48 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
