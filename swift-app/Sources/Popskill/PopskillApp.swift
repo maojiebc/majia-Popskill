@@ -40,6 +40,15 @@ struct PopskillApp: App {
         // 产品决策是全亮色账本视觉。只靠 preferredColorScheme 锁不住 AppKit 层——
         // 深色模式下 NSAlert/Sparkle 弹窗/菜单会保持深色，与暖纸白主窗割裂
         NSApplication.shared.appearance = NSAppearance(named: .aqua)
+        // 语言协商自检（v2.18.1，坑 #22）：打印真实协商结果后退出。**只有打包 .app
+        // 能验这条链**——测试进程找不到资源 bundle 会走兜底 lang，测不到真实形态
+        if ProcessInfo.processInfo.environment["POPSKILL_L10N_PROBE"] == "1" {
+            let sample = Catalog.entry("guancli").map { "\($0.localizedDesc.prefix(40))" } ?? "-"
+            print("l10nLang=\(l10nLang) isChinese=\(l10nIsChinese) locale=\(l10nLocale.identifier)")
+            print("catalog[guancli]=\(sample)")
+            print("L(\"能力矩阵\")=\(L("能力矩阵"))")
+            exit(l10nIsChinese == l10nLangIsChinese(Locale.preferredLanguages.first ?? "en") ? 0 : 1)
+        }
     }
 
     var body: some Scene {

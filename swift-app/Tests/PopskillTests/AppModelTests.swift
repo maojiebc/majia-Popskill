@@ -200,4 +200,47 @@ final class AppModelTests: XCTestCase {
         model.jumpToNextUpstreamNew()
         XCTAssertEqual(model.kbFocusId, "src-b")
     }
+
+    // ── v2.18.1：语言判定与大小写形态无关（坑 #22）────────
+
+    /// SwiftPM 把资源 bundle 的 lproj 目录名小写成 zh-hans，Bundle.localizations
+    /// 返回磁盘真实名，协商结果就是 "zh-hans"——曾拿它跟 "zh-Hans" 裸比判 false，
+    /// 中文界面下 Catalog 精选目录整片走英文面（v2.14 起潜伏三版）
+    func testLangIsChineseIgnoresTagShape() {
+        XCTAssertTrue(l10nLangIsChinese("zh-hans"), "SwiftPM 产物的真实形态——本 bug 的现场")
+        XCTAssertTrue(l10nLangIsChinese("zh-Hans"), "catalog 里的标准形态")
+        XCTAssertTrue(l10nLangIsChinese("zh-Hans-CN"))
+        XCTAssertTrue(l10nLangIsChinese("zh_CN"))
+        XCTAssertTrue(l10nLangIsChinese("zh"))
+        XCTAssertFalse(l10nLangIsChinese("en"))
+        XCTAssertFalse(l10nLangIsChinese("en-US"))
+        XCTAssertFalse(l10nLangIsChinese(""))
+        XCTAssertFalse(l10nLangIsChinese("zhuang"), "zh 前缀不等于中文，要认边界")
+    }
+
+    /// 协商 → 判定 全链（纯函数，锁死真实现场的输入形态）。
+    /// available 必须写 SwiftPM 产物的**小写** "zh-hans"——测试进程里资源 bundle
+    /// 找不到会走兜底 lang="zh-Hans"，断言全局 l10nIsChinese 是结构性假绿，
+    /// 拿 bug 版代码也照过；只有喂真实形态的纯函数才抓得住（v2.18.1 实撞）
+    func testLangNegotiationUnderSwiftPMLowercasedLproj() {
+        let available = ["zh-hans", "en"]   // = Bundle.localizations 在真实 .app 里的值
+        let picked = l10nLangCandidates(available: available, prefs: ["zh-Hans-CN"]).first
+        XCTAssertEqual(picked, "zh-hans", "协商返回目录真实名，不是标准 tag")
+        XCTAssertTrue(l10nLangIsChinese(picked ?? ""), "中文系统下必须判成中文——Catalog 靠它挑面")
+        // 英文系统仍要落英文
+        let en = l10nLangCandidates(available: available, prefs: ["en-US"]).first
+        XCTAssertFalse(l10nLangIsChinese(en ?? ""))
+        // 不支持的语言 → en 兜底
+        let fallback = l10nLangCandidates(available: available, prefs: ["fr-FR"])
+        XCTAssertTrue(fallback.contains("en"))
+        XCTAssertFalse(l10nLangIsChinese(fallback.first ?? ""))
+    }
+
+    /// 挑面逻辑本身：中文取 desc、英文取 en、缺 en 落回 desc
+    func testCatalogLocalizedDescPicksSide() {
+        let e = CatalogEntry(desc: "中文简介", en: "English blurb")
+        XCTAssertEqual(e.localizedDesc(chinese: true), "中文简介")
+        XCTAssertEqual(e.localizedDesc(chinese: false), "English blurb")
+        XCTAssertEqual(CatalogEntry(desc: "只有中文").localizedDesc(chinese: false), "只有中文", "缺英文落回中文")
+    }
 }

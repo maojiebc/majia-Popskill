@@ -15,7 +15,9 @@ struct CatalogEntry {
     /// 由目录补一手——能归拢成套装
     var source: String? = nil
     /// 界面语言取词：中文界面 → desc；其它 → en（缺则落回 desc）
-    var localizedDesc: String { l10nIsChinese ? desc : (en ?? desc) }
+    var localizedDesc: String { localizedDesc(chinese: l10nIsChinese) }
+    /// 挑面本体（可测：全局 l10nIsChinese 在测试进程里走兜底，注入才测得准）
+    func localizedDesc(chinese: Bool) -> String { chinese ? desc : (en ?? desc) }
 }
 
 enum Catalog {
