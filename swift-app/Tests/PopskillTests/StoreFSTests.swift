@@ -1506,6 +1506,99 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(fs.loadMeta().entries.count, m.count)
     }
 
+    // ── v2.18：安装 / 重拉事务性（任一步失败磁盘回到操作前）──
+
+    /// 手工构造 ResolvedSource（local 源 staging = 原地目录，不会被 discard）
+    private func makeResolved(name: String, staging: URL, url: String = "github.com/o/tx") -> StoreFS.ResolvedSource {
+        StoreFS.ResolvedSource(url: url, kind: .local, entryName: name, isBundle: false,
+                               items: [], stagingDir: staging, version: nil)
+    }
+
+    /// 报告 P1-03 最小复现的反例：工具侧同名真实目录，install 必须在动盘前
+    /// 就报计划错误——store 不留副本、重试不撞「已存在」
+    func testInstallLinkConflictPreflightLeavesNoResidue() throws {
+        let staging = sandbox.appendingPathComponent("stage-src")
+        try makeSkill("sample", in: staging.deletingLastPathComponent().appendingPathComponent("stage-holder"))
+        let src = makeResolved(name: "sample",
+                               staging: sandbox.appendingPathComponent("stage-holder/sample"))
+        // claude 侧同名真实目录占位
+        let occupied = claudeLink("sample")
+        try fm.createDirectory(at: occupied, withIntermediateDirectories: true)
+        XCTAssertThrowsError(try fs.install(src, linkTools: tools)) { err in
+            XCTAssertTrue("\(err)".contains("symlink") || err is StoreError)
+        }
+        XCTAssertFalse(fm.fileExists(atPath: env.storeRoot.appendingPathComponent("skills/sample").path),
+                       "预检失败不许留 store 副本")
+        XCTAssertNil(fs.loadMeta().entries["skill:sample"])
+        var isDir: ObjCBool = false
+        XCTAssertTrue(fm.fileExists(atPath: occupied.path, isDirectory: &isDir) && isDir.boolValue,
+                      "占位真实目录原样保留")
+        // 占位清掉后重试直接成功——不需要人工清理 store
+        try fm.removeItem(at: occupied)
+        try fs.install(src, linkTools: tools)
+        XCTAssertTrue(fm.fileExists(atPath: env.storeRoot.appendingPathComponent("skills/sample").path))
+        _ = staging
+    }
+
+    /// copy 阶段失败（staging 不可读）：正式位与临时名都不留残骸
+    func testInstallCopyFailureCleansIncoming() throws {
+        let src = makeResolved(name: "ghost", staging: sandbox.appendingPathComponent("no-such-dir"))
+        XCTAssertThrowsError(try fs.install(src, linkTools: []))
+        let skills = env.storeRoot.appendingPathComponent("skills")
+        let leftovers = (try? fm.contentsOfDirectory(atPath: skills.path)) ?? []
+        XCTAssertTrue(leftovers.filter { $0.contains("ghost") || $0.hasPrefix(".popskill-incoming") }.isEmpty,
+                      "copy 失败不许留任何残骸：\(leftovers)")
+    }
+
+    /// repullSwap 建链阶段失败（不可写工具根注入）：旧版内容、旧链接、meta 全部回滚
+    func testRepullSwapLinkFailureRollsBackEverything() throws {
+        let dir = try makeSkill("swapee", desc: "旧版")
+        try "旧版本体".write(to: dir.appendingPathComponent("BODY.txt"), atomically: true, encoding: .utf8)
+        try fs.setLink(tool: tools[0], kind: .skill, name: "swapee", storeDir: dir, on: true)
+        fs.mutateMeta { $0.entries["skill:swapee"] = StoreMeta.EntryMeta(sourceUrl: "github.com/o/tx", autoUpdate: true) }
+        let entry = try XCTUnwrap(scan().first(where: { $0.name == "swapee" }))
+        XCTAssertEqual(entry.cap.status("claude"), .on)
+        // 新版 staging
+        let stagingHolder = sandbox.appendingPathComponent("swap-stage")
+        let staged = try makeSkill("swapee", desc: "新版", in: stagingHolder)
+        try "新版本体".write(to: staged.appendingPathComponent("BODY.txt"), atomically: true, encoding: .utf8)
+        let src = makeResolved(name: "swapee", staging: staged)
+        // 注入必失败工具：根路径挂在文件下面，createDirectory 必炸
+        let bad = Tool(id: "bad", name: "Bad", root: URL(fileURLWithPath: "/dev/null/nope"),
+                       connected: false, defaultTarget: true)
+        let oldTrash = fs.listTrash().count
+        XCTAssertThrowsError(
+            try fs.repullSwap(entry, resolved: src, relinkTools: [tools[0], bad], tools: tools + [bad]))
+        // 旧版内容原位、旧链接恢复、meta 原样、回收站无新增滞留
+        XCTAssertEqual(try String(contentsOf: dir.appendingPathComponent("BODY.txt"), encoding: .utf8), "旧版本体")
+        let (st, _) = fs.linkStatus(linkPath: claudeLink("swapee"), expectedTarget: dir)
+        XCTAssertEqual(st, .on, "旧链接必须恢复")
+        XCTAssertEqual(fs.loadMeta().entries["skill:swapee"]?.autoUpdate, true)
+        XCTAssertEqual(fs.listTrash().count, oldTrash, "回滚后回收站不留让位副本")
+        let leftovers = ((try? fm.contentsOfDirectory(atPath: env.storeRoot.appendingPathComponent("skills").path)) ?? [])
+            .filter { $0.hasPrefix(".popskill-incoming") }
+        XCTAssertTrue(leftovers.isEmpty, "不许留 incoming 残骸")
+    }
+
+    /// repullSwap 成功路径：新版换入、链接延续、旧版进回收站、meta 键重置到新源
+    func testRepullSwapSuccessSwapsAndBacksUp() throws {
+        let dir = try makeSkill("fresh", desc: "旧版")
+        try fs.setLink(tool: tools[0], kind: .skill, name: "fresh", storeDir: dir, on: true)
+        fs.mutateMeta { $0.entries["skill:fresh"] = StoreMeta.EntryMeta(sourceUrl: "github.com/o/tx", latest: "新版") }
+        let entry = try XCTUnwrap(scan().first(where: { $0.name == "fresh" }))
+        let stagingHolder = sandbox.appendingPathComponent("fresh-stage")
+        let staged = try makeSkill("fresh", desc: "新版", version: "2.0.0", in: stagingHolder)
+        let src = makeResolved(name: "fresh", staging: staged)
+        try fs.repullSwap(entry, resolved: src, relinkTools: [tools[0]], tools: tools)
+        let rescanned = try XCTUnwrap(scan().first(where: { $0.name == "fresh" }))
+        XCTAssertEqual(rescanned.cap.version, "2.0.0", "store 已是新版")
+        XCTAssertEqual(rescanned.cap.status("claude"), .on, "链接延续")
+        XCTAssertTrue(fs.listTrash().contains { $0.name == "fresh" }, "旧版进回收站可恢复")
+        let m = fs.loadMeta().entries["skill:fresh"]
+        XCTAssertEqual(m?.sourceUrl, "github.com/o/tx")
+        XCTAssertNil(m?.latest, "重拉后徽标检查点归零")
+    }
+
     /// store 托管了 skills/shared，工具侧另有真实目录 agents/shared——
     /// 裸名 known 集合曾让后者永远躲过未托管扫描
     func testScanUnmanagedCrossKindSameName() throws {

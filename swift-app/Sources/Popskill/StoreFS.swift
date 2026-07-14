@@ -1054,23 +1054,131 @@ struct StoreFS {
                               items: items, stagingDir: dir, version: nil)
     }
 
-    /// 安装：staging → store/skills/<name>，再为选中工具建链
+    /// 安装事务（v2.18 重做）：预检 → 隐藏临时名 → 原子 rename → 记账建链 → meta。
+    /// 任一步失败磁盘回到操作前——曾经「链接失败留 store 半成品，重试撞已存在」。
+    /// 链接目标位的真实目录冲突在**动盘之前**就报错（不再让 createLink 半途拦）。
     func install(_ src: ResolvedSource, linkTools: [Tool]) throws {
         let name = try sanitizeName(src.entryName)
-        let dest = env.storeRoot.appendingPathComponent(CapType.skill.dirName).appendingPathComponent(name)
+        let kindDir = env.storeRoot.appendingPathComponent(CapType.skill.dirName)
+        let dest = kindDir.appendingPathComponent(name)
         guard !fm.fileExists(atPath: dest.path) else { throw StoreError.alreadyExists(src.entryName) }
-        try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
-        // copy 中途失败（磁盘满等）会留半个目录，重试又撞「已存在」卡死——失败即清残留再抛
-        //（applyUpdate 已对同一风险做了原子处理，这里曾漏）
-        do { try fm.copyItem(at: src.stagingDir, to: dest) }
-        catch { try? fm.removeItem(at: dest); throw error }
-        discardStaging(src)
+        let linkKind: CapType = src.isBundle ? .bundle : .skill
+        // ① 预检全部链接位：真实目录占位 = 计划错误，此时一个字节都没写
         for t in linkTools {
-            try createLink(at: toolLinkPath(t, kind: src.isBundle ? .bundle : .skill, name: src.entryName), to: dest)
+            let link = toolLinkPath(t, kind: linkKind, name: name)
+            if fm.fileExists(atPath: link.path) && !isSymlink(link) {
+                throw StoreError.notASymlink(link.path)
+            }
         }
+        // ② 新内容先落同卷隐藏临时名——copy 中途失败（磁盘满等）只清自己的临时目录
+        try fm.createDirectory(at: kindDir, withIntermediateDirectories: true)
+        let incoming = kindDir.appendingPathComponent(".popskill-incoming-\(name)")
+        try? fm.removeItem(at: incoming)
+        do { try fm.copyItem(at: src.stagingDir, to: incoming) }
+        catch { try? fm.removeItem(at: incoming); throw error }
+        // ③ 原子 rename 竞争正式名：并发装同名时输家在这一步得 alreadyExists，
+        //    绝不会删掉赢家刚落好的目录（旧 check-then-copy 有 TOCTOU 窗）
+        do { try fm.moveItem(at: incoming, to: dest) }
+        catch {
+            try? fm.removeItem(at: incoming)
+            if fm.fileExists(atPath: dest.path) { throw StoreError.alreadyExists(src.entryName) }
+            throw error
+        }
+        // ④ 建链记账；失败只撤本次建的链接 + 本次落的 store 副本
+        var created: [URL] = []
+        do {
+            for t in linkTools {
+                let link = toolLinkPath(t, kind: linkKind, name: name)
+                try createLink(at: link, to: dest)
+                created.append(link)
+            }
+        } catch {
+            for link in created { try? removeLink(at: link) }
+            try? fm.removeItem(at: dest)   // 本次安装写入的新内容，撤销 ≠ 删用户数据
+            throw error
+        }
+        discardStaging(src)
         mutateMeta { meta in
-            meta.entries[typedId(src.isBundle ? .bundle : .skill, src.entryName)]
+            meta.entries[typedId(linkKind, name)]
                 = StoreMeta.EntryMeta(sourceUrl: src.url, autoUpdate: false, latest: nil)
+        }
+    }
+
+    /// 重拉事务（v2.18，取代「先 removeEntry 再 install」的裸序）：
+    /// 旧版保留到新版与链接全部就位才让位；任一步失败按账本回滚，
+    /// 磁盘回到操作前——曾经「旧版已进回收站、新版只装了一半」。
+    /// 行为对齐旧 repull：旧 meta 键清除、新键记 sourceUrl（autoUpdate 归零）。
+    func repullSwap(_ entry: Entry, resolved: ResolvedSource, relinkTools: [Tool], tools: [Tool]) throws {
+        let name = try sanitizeName(resolved.entryName)
+        let kindDir = env.storeRoot.appendingPathComponent(CapType.skill.dirName)
+        let dest = kindDir.appendingPathComponent(name)
+        let linkKind: CapType = resolved.isBundle ? .bundle : .skill
+        // ① 预检要建的链接位：真实目录冲突动盘前报错（stub 走修复弹层，不该静默覆盖）
+        for t in relinkTools {
+            let link = toolLinkPath(t, kind: linkKind, name: name)
+            if fm.fileExists(atPath: link.path) && !isSymlink(link) {
+                throw StoreError.notASymlink(link.path)
+            }
+        }
+        // ② 新内容落隐藏临时名（此刻旧版分毫未动）
+        try fm.createDirectory(at: kindDir, withIntermediateDirectories: true)
+        let incoming = kindDir.appendingPathComponent(".popskill-incoming-\(name)")
+        try? fm.removeItem(at: incoming)
+        do { try fm.copyItem(at: resolved.stagingDir, to: incoming) }
+        catch { try? fm.removeItem(at: incoming); throw error }
+        // ③ 撤旧链接（记账可回滚）：全部工具 × 全部成员，与 removeEntry 同覆盖面
+        var removedLinks: [(link: URL, target: URL)] = []
+        // ④ 旧 store 目录让位进回收站（记账可回滚；多成员=源式套装逐成员）
+        var movedDirs: [(from: URL, backup: URL)] = []
+        func rollback() {
+            for m in movedDirs.reversed() { try? fm.moveItem(at: m.backup, to: m.from) }
+            for r in removedLinks.reversed() { try? fm.createSymbolicLink(at: r.link, withDestinationURL: r.target) }
+            try? fm.removeItem(at: incoming)
+        }
+        let metaNow = loadMeta()
+        do {
+            for cap in entry.allCaps {
+                for t in tools {
+                    let link = toolLinkPath(t, kind: cap.layoutKind, name: cap.name)
+                    if isSymlink(link) {
+                        let target = (try? fm.destinationOfSymbolicLink(atPath: link.path))
+                            .map { URL(fileURLWithPath: $0, relativeTo: link.deletingLastPathComponent()).standardizedFileURL }
+                            ?? cap.dirURL
+                        try removeLink(at: link)
+                        removedLinks.append((link, target))
+                    }
+                }
+            }
+            for cap in (entry.bundleKind == .source ? (entry.children ?? []) : [entry.cap])
+            where fm.fileExists(atPath: cap.dirURL.path) && !isSymlink(cap.dirURL) {
+                let snap = metaNow.entries[cap.id]
+                let backup = try moveToTrash(cap.dirURL, metaSnapshot: snap)
+                movedDirs.append((cap.dirURL, backup))
+            }
+        } catch { rollback(); throw error }
+        // ⑤ 原子 rename 进正式位
+        do { try fm.moveItem(at: incoming, to: dest) }
+        catch { rollback(); throw error }
+        // ⑥ 建新链记账；失败撤新链/新目录并整体回滚
+        var created: [URL] = []
+        do {
+            for t in relinkTools {
+                let link = toolLinkPath(t, kind: linkKind, name: name)
+                try createLink(at: link, to: dest)
+                created.append(link)
+            }
+        } catch {
+            for l in created { try? removeLink(at: l) }
+            try? fm.removeItem(at: dest)
+            rollback()
+            throw error
+        }
+        discardStaging(resolved)
+        mutateMeta { meta in
+            for cap in entry.children ?? [] { meta.entries.removeValue(forKey: cap.id) }
+            meta.entries.removeValue(forKey: entry.id)
+            meta.entries[typedId(linkKind, name)]
+                = StoreMeta.EntryMeta(sourceUrl: resolved.url, autoUpdate: false, latest: nil)
         }
     }
 
@@ -1453,8 +1561,19 @@ struct StoreFS {
             }
             guard let srcDir = staged else { continue }
             try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
-            do { try fm.copyItem(at: srcDir, to: dest) }
-            catch { try? fm.removeItem(at: dest); throw error }
+            // 唯一临时名 + 原子 rename 竞争正式名（v2.18）：批量装多源并发时同名新增
+            // 只会一家胜出，输家清理自己的临时目录——旧 check-then-copy 失败时
+            // 无条件删正式目标，会把赢家刚装好的目录连根拔掉留一地断链
+            let incoming = dest.deletingLastPathComponent()
+                .appendingPathComponent(".popskill-incoming-\(name)-\(UUID().uuidString.prefix(8))")
+            do { try fm.copyItem(at: srcDir, to: incoming) }
+            catch { try? fm.removeItem(at: incoming); throw error }
+            do { try fm.moveItem(at: incoming, to: dest) }
+            catch {
+                try? fm.removeItem(at: incoming)
+                if fm.fileExists(atPath: dest.path) { continue }   // 另一个源先装好：跳过，不算失败
+                throw error
+            }
             mutateMeta { meta in
                 let key = typedId(.skill, name)   // 上游新增永远装进 skills/
                 var m = meta.entries[key] ?? StoreMeta.EntryMeta()

@@ -619,7 +619,8 @@ final class AppModel {
 
     /// 从源重拉：曾在 @MainActor 上同步跑 git clone，网络慢时整个 UI 冻死。
     /// 现照 resolveSource/runUpdate 的模式下放后台，期间条目置 updating 态。
-    /// 顺序不变：先 resolve（clone 失败时本地分毫未动）→ removeEntry → install。
+    /// v2.18 事务化：resolve（clone 失败本地分毫未动）→ repullSwap（旧版保留到
+    /// 新版全部就位才让位，任一步失败自动回滚——不再有「旧版已移走新版装一半」）。
     private func repull(entry: Entry, primaryToolId: String, url: String, toast toastMsg: String) {
         guard !updatingIds.contains(entry.id) else { return }
         updatingIds.insert(entry.id)
@@ -631,11 +632,10 @@ final class AppModel {
                 do {
                     let resolved = try fsCopy.resolve(url)
                     do {
-                        try fsCopy.removeEntry(entry, tools: allTools)
                         let relinkTools = allTools.filter { tool in
                             tool.id == primaryToolId || entry.allCaps.contains { $0.status(tool.id) != .off }
                         }
-                        try fsCopy.install(resolved, linkTools: relinkTools)
+                        try fsCopy.repullSwap(entry, resolved: resolved, relinkTools: relinkTools, tools: allTools)
                     } catch {
                         // SECURITY.md 承诺临时 clone「用完即删，失败也删」——失败路径必须兜底
                         fsCopy.discardStaging(resolved)
