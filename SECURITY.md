@@ -15,13 +15,24 @@ Please don't open a public GitHub issue for security bugs — file them privatel
 
 ## Threat model
 
-Popskill runs **100% locally** on the user's Mac. It does **NOT**:
+Popskill runs **100% locally** on the user's Mac. It does **NOT** collect usage analytics or telemetry — there is no first-party server. "No telemetry" is not the same claim as "never touches the network": the app talks to the following third-party endpoints, each tied to a user-visible feature, and nothing else.
 
-- Make outbound network requests, except: (a) Sparkle checking for app updates, (b) `git clone` / `git ls-remote` of the upstream repos of **your own skills** when you run a skill update check
-- Collect usage analytics or telemetry
-- Read or write outside the user's home directory — with one exception: GitHub installs/update checks shallow-clone into the **system temporary directory** (`$TMPDIR`), and the clone is deleted when the operation finishes or fails
+### Network access (complete list)
 
-Paths Popskill reads / writes:
+| Endpoint | When | What is sent |
+|---|---|---|
+| GitHub — `git clone` / `git ls-remote` | Installing or update-checking a GitHub-sourced skill | The upstream repo URL of **your own skill** |
+| `registry.npmjs.org` | ① Update-checking an entry whose source is an npm package ② the **global CLI patrol** (see below) | The npm package name(s) being checked |
+| Well-known hosts (e.g. `open.feishu.cn`) | Installing or update-checking a skill distributed via the `/.well-known/skills/` protocol | HTTPS GET of that skill's `SKILL.md` |
+| `maojiebc.github.io` (GitHub Pages) | Sparkle app-update check (daily; toggle in Settings) | Standard Sparkle appcast request |
+
+**Global CLI patrol** enumerates every globally-installed npm package (`npm ls -g`) and queries the registry for each one's latest version — i.e. your global npm package **names** leave the machine. Since v2.18 this is **off by default**: it runs only if you enable it in Settings, or when you explicitly open the CLI panel (⌨). Upgrading a CLI from that panel runs `npm i -g`.
+
+At launch (2 s after start) Popskill runs one background update check against **the sources of skills you added**. Disable globally with `POPSKILL_NO_AUTOCHECK=1`.
+
+### Filesystem access
+
+Popskill reads/writes the paths below. Two of them can live **outside your home directory**: the transient clone dir (`$TMPDIR`), and — only when you upgrade a CLI — the npm global prefix (often `/usr/local` or `/opt/homebrew` on Homebrew setups; that write is performed by `npm i -g`, not by Popskill's own file code).
 
 | Path | Purpose |
 |---|---|
@@ -32,6 +43,7 @@ Paths Popskill reads / writes:
 | `~/.agents/.skill-lock.json` | Read-only — provenance from the `npx skills` ecosystem |
 | `~/Library/Caches/Sparkle/` | Sparkle's update download cache |
 | `$TMPDIR/popskill-stage-*` | Transient shallow clones during GitHub install / update check (removed afterwards) |
+| npm global prefix (`npm prefix -g`) | Written **only** by `npm i -g` when you upgrade a CLI from the CLI panel |
 
 Three hard safety rules, enforced by unit tests: only symlinks are ever deleted; real directories always go to `~/.agents/.trash/`; store directories are never touched by enable/disable toggles.
 

@@ -340,6 +340,7 @@ struct AddSheet: View {
 struct SettingsSheet: View {
     @Environment(AppModel.self) private var model
     @State private var sparkleAuto = false
+    @State private var cliPatrol = false
     @State private var trashItems: [StoreFS.TrashItem] = []
 
     var body: some View {
@@ -635,6 +636,20 @@ struct SettingsSheet: View {
                 .padding(.top, 8)
                 .onAppear { sparkleAuto = model.sparkleAutoCheckGet?() ?? false }
             }
+            // 全局 CLI 巡检默认关（v2.18）：会把本机全部全局 npm 包名发给 registry，
+            // 超出「已添加源」的联网范围——必须用户点头
+            HStack(spacing: 10) {
+                Text(L("检查更新时巡检全局 npm CLI"))
+                    .font(.ui(11.5)).foregroundStyle(Ink.secondary)
+                Spacer()
+                PsSwitch(on: cliPatrol) {
+                    cliPatrol.toggle()
+                    model.autoCliPatrol = cliPatrol
+                }
+            }
+            .padding(.top, 8)
+            .help(L("开启后每次检查更新会把本机全局 npm 包名逐个发给 registry.npmjs.org 查询新版。默认关闭；CLI 面板（⌨）打开时始终会巡检。"))
+            .onAppear { cliPatrol = model.autoCliPatrol }
         }
         .padding(.bottom, 4)
     }

@@ -119,7 +119,7 @@ Provenance is a five-level backfill: Popskill's own install records → `.skill-
 The App Store sandbox won't let an app manage symlinks in `~/.claude` and `~/.codex`. Direct distribution is what makes the app able to do its job. Signing + notarization provide equivalent safety.
 
 **Q: Any data collection?**
-No. 100% local, no analytics, no telemetry. The only network calls: `git clone` of your own skills' upstream repos during update checks, and Sparkle checking for app updates.
+No. 100% local, no analytics, no telemetry, no first-party server. "Local" doesn't mean "never touches the network" — it talks to exactly four kinds of endpoints, each tied to a feature you can see: ① `git clone` / `ls-remote` of the GitHub skill sources **you added**; ② registry.npmjs.org for npm-sourced entries and the global CLI patrol (the patrol sends your global npm package names; off by default since v2.18, opt-in in Settings); ③ HTTPS GET of `SKILL.md` for well-known-protocol sources; ④ Sparkle checking for app updates. Full endpoint and filesystem disclosure: [SECURITY.md](./SECURITY.md).
 
 **Q: Where is data stored? How do I uninstall?**
 Skills live in `~/.agents/` (your data, not Popskill's); the app's own metadata is a single `~/.agents/.popskill.json`. Uninstall = drag Popskill.app to Trash; your skills and symlinks stay intact.
