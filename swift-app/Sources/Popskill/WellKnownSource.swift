@@ -80,12 +80,12 @@ extension StoreFS {
             throw StoreError.resolveFailed(L("\(failures) 个成员的 SKILL.md 拉取失败（\(host)）"))
         }
         guard !changed.isEmpty else {
-            if loadMeta().entries[entry.name]?.latest != nil { saveLatest(entry.name, latest: nil) }
+            if loadMeta().entries[entry.id]?.latest != nil { saveLatest(entry.id, latest: nil) }
             return nil
         }
         // 上游状态指纹 = 变化成员的远端内容组合哈希（协议无版本概念，内容即身份）
         let fingerprint = combinedFingerprint(changedPairs)
-        if skipSuppressed(entry.name, fingerprint: fingerprint) { return nil }
+        if skipSuppressed(entry.id, fingerprint: fingerprint) { return nil }
         // failures>0 但已有变化：结论照报，失败数如实透出（v2.16——曾被静默吞掉，
         // 「1 项可更新」背后可能还有 5 个成员状态未知）
         return UpdateCheck(entryId: entry.id,
@@ -120,7 +120,7 @@ extension StoreFS {
             }
             updated.append(cap.name)
         }
-        saveLatest(entry.name, latest: nil)
+        saveLatest(entry.id, latest: nil)
         return (updated: updated, upstreamNew: [])
     }
 }

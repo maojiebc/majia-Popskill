@@ -23,7 +23,25 @@ enum CapType: String, Codable, CaseIterable, Identifiable {
         case .cli: "bin"
         }
     }
+
+    /// 身份前缀（v2.18）：按磁盘 kind 目录分命名空间（bundle 与 skill 同居 skills/）。
+    /// skills/shared 与 agents/shared 是两个对象——裸名当全局键会让它们在
+    /// UI 和 meta 层互相串（点 Agent 动到 Skill、设置互相覆盖）。
+    var idPrefix: String {
+        switch self {
+        case .skill, .bundle: "skill"
+        case .agent: "agent"
+        case .mcp: "mcp"
+        case .cli: "cli"
+        }
+    }
 }
+
+/// 类型化稳定身份：`skill:foo` / `agent:foo` / `mcp:foo` / `cli:foo`。
+/// Entry.id、Capability.id、meta 键统一用它；kind 取**磁盘位置**（layoutKind/扫描 kind），
+/// 不取展示类型——展示类型随 frontmatter 漂移，不能当身份。
+/// 与既有 `src:<repo>`（源式套装）、`plugin:<key>`（marketplace）前缀共存。
+func typedId(_ kind: CapType, _ name: String) -> String { "\(kind.idPrefix):\(name)" }
 
 struct Tool: Identifiable, Equatable {
     let id: String            // "claude" / "codex"

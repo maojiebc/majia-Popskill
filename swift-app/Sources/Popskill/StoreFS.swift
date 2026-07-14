@@ -128,6 +128,35 @@ struct StoreFS {
         plog.info("meta GC：清理 \(stale.count) 个孤儿键")
     }
 
+    /// v2.18 一次性迁移：meta.entries 键从裸名迁到类型化 id。
+    /// 旧键按磁盘 kind 目录定位（skills/agents/mcp/bin 顶层同名即归它）；
+    /// 磁盘不在的按形态猜套装头键（含 "/" = github 源式套装 repoName，
+    /// 含 "." = well-known 域名头键）；都不中的孤儿留给 gcMeta 照常清理。
+    /// 幂等：新格式键（含 ":"）永不再动；无旧键时零写盘。
+    func migrateMetaKeys() {
+        guard loadMeta().entries.keys.contains(where: { !$0.contains(":") }) else { return }
+        var migrated = 0
+        mutateMeta { meta in
+            for key in meta.entries.keys.filter({ !$0.contains(":") }) {
+                guard let val = meta.entries[key] else { continue }
+                var newKey: String?
+                for kind in [CapType.skill, .agent, .mcp, .cli]
+                where fm.fileExists(atPath: env.storeRoot.appendingPathComponent(kind.dirName)
+                    .appendingPathComponent(key).path) {
+                    newKey = typedId(kind, key)   // 目录套装也居 skills/，同样命中 skill: 前缀
+                    break
+                }
+                if newKey == nil, key.contains("/") { newKey = "src:github.com/\(key)" }
+                else if newKey == nil, key.contains(".") { newKey = "src:wk:\(key)" }
+                guard let nk = newKey else { continue }
+                if meta.entries[nk] == nil { meta.entries[nk] = val }
+                meta.entries.removeValue(forKey: key)
+                migrated += 1
+            }
+        }
+        if migrated > 0 { plog.info("meta 键迁移到类型化 id：\(migrated) 个") }
+    }
+
     func saveMeta(_ meta: StoreMeta) {
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -337,7 +366,8 @@ struct StoreFS {
 
     private func provenance(name: String, dir: URL, type: CapType, meta: StoreMeta,
                             lock: [String: LockEntry]) -> (source: String?, subdir: String?) {
-        if let s = meta.entries[name]?.sourceUrl { return (StoreFS.normalizeSource(s), nil) }
+        // meta 键 = 类型化 id（v2.18）；lock/curated 是外部生态文件，键保持裸名
+        if let s = meta.entries[typedId(type, name)]?.sourceUrl { return (StoreFS.normalizeSource(s), nil) }
         if let l = lock[name] {
             let src = StoreFS.normalizeSource(l.sourceUrl ?? l.source)
             let subdir = l.skillPath.map { ($0 as NSString).deletingLastPathComponent }
@@ -407,7 +437,9 @@ struct StoreFS {
                 dirURL: members[0].dirURL.deletingLastPathComponent()
             )
             head.links = [:]
-            let m = meta.entries[repoName]
+            // 源式套装 meta 键 = entry.id（"src:<归拢键>"）。v2.16 曾因写 id 读 repoName
+            // 键歧义让自动更新从未生效——v2.18 起读写统一走 id，歧义根除
+            let m = meta.entries["src:\(src)"]
             bundleAt[idxs[0]] = Entry(id: "src:\(src)", cap: head, children: members,
                                       bundleKind: .source, sourceUrl: src,
                                       latest: m?.latest, changedMembers: m?.changed,
@@ -436,7 +468,8 @@ struct StoreFS {
 
     private func makeStandalone(name: String, type: CapType, dir: URL, tools: [Tool],
                                 meta: StoreMeta, lock: [String: LockEntry]) -> Entry {
-        var cap = makeCap(name: name, type: type, dir: dir)
+        let id = typedId(type, name)   // type 此处 = 磁盘扫描 kind，skills/x 与 agents/x 各有身份
+        var cap = makeCap(name: name, type: type, dir: dir, id: id)
         let (source, subdir) = provenance(name: name, dir: dir, type: type, meta: meta, lock: lock)
         cap.repoSubdir = subdir
         for t in tools {
@@ -444,20 +477,21 @@ struct StoreFS {
             cap.links[t.id] = st
             if let cause { cap.brokenCause[t.id] = cause }
         }
-        let m = meta.entries[name]
-        return Entry(id: name, cap: cap, children: nil,
+        let m = meta.entries[id]
+        return Entry(id: id, cap: cap, children: nil,
                      sourceUrl: source, latest: m?.latest, changedMembers: m?.changed,
                      upstreamNew: m?.upstreamNew,
                      autoUpdate: m?.autoUpdate ?? false, skippedUpdate: m?.skipped != nil)
     }
 
     private func makeBundle(name: String, dir: URL, tools: [Tool], meta: StoreMeta) -> Entry {
-        var head = makeCap(name: name, type: .bundle, dir: dir)
+        let id = typedId(.bundle, name)   // 目录套装居 skills/，与同名 skill 目录互斥，共用 skill: 前缀
+        var head = makeCap(name: name, type: .bundle, dir: dir, id: id)
         var children: [Capability] = []
         let subNames = ((try? fm.contentsOfDirectory(atPath: dir.path)) ?? []).sorted()
             .filter { !$0.hasPrefix(".") && hasManifest(dir.appendingPathComponent($0)) }
         for sub in subNames {
-            var c = makeCap(name: sub, type: .skill, dir: dir.appendingPathComponent(sub), id: "\(name)/\(sub)")
+            var c = makeCap(name: sub, type: .skill, dir: dir.appendingPathComponent(sub), id: "\(id)/\(sub)")
             for t in tools {
                 let bundleLink = toolLinkPath(t, kind: .bundle, name: name)
                 let (st, cause) = bundleChildStatus(bundleLink: bundleLink, bundleDir: dir, childName: sub)
@@ -470,9 +504,9 @@ struct StoreFS {
         if head.desc.isEmpty {
             head.desc = L("\(children.count) 项 skill 套装")
         }
-        let m = meta.entries[name]
+        let m = meta.entries[id]
         let source = m?.sourceUrl.map(StoreFS.normalizeSource) ?? gitRemote(dir).map(StoreFS.normalizeSource)
-        return Entry(id: name, cap: head, children: children, bundleKind: .directory,
+        return Entry(id: id, cap: head, children: children, bundleKind: .directory,
                      sourceUrl: source, latest: m?.latest, changedMembers: m?.changed,
                      upstreamNew: m?.upstreamNew,
                      autoUpdate: m?.autoUpdate ?? false, skippedUpdate: m?.skipped != nil)
@@ -754,9 +788,12 @@ struct StoreFS {
         let sidecar = dest.appendingPathComponent(".popskill-meta.json")
         if let data = try? Data(contentsOf: sidecar),
            let snap = try? JSONDecoder().decode(StoreMeta.EntryMeta.self, from: data) {
+            // 恢复目的地的 kind 目录决定身份前缀（bucket 名 → CapType）
+            let restoredKind = CapType.allCases.first { $0.dirName == kind } ?? .skill
+            let metaKey = typedId(restoredKind, name)
             mutateMeta { meta in
                 // 同名已有 meta（例如先装了新版）不覆盖——恢复的是「被删那一版」的来源记忆
-                if meta.entries[name] == nil {
+                if meta.entries[metaKey] == nil {
                     var m = snap
                     // 恢复后本地已是当前内容，旧 latest/检查点会误亮徽标——清掉让下次检查重算
                     m.latest = nil
@@ -766,7 +803,7 @@ struct StoreFS {
                     m.lastHead = nil
                     m.localDigest = nil
                     m.upstreamNew = nil
-                    meta.entries[name] = m
+                    meta.entries[metaKey] = m
                 }
             }
             try? fm.removeItem(at: sidecar)
@@ -1032,7 +1069,8 @@ struct StoreFS {
             try createLink(at: toolLinkPath(t, kind: src.isBundle ? .bundle : .skill, name: src.entryName), to: dest)
         }
         mutateMeta { meta in
-            meta.entries[src.entryName] = StoreMeta.EntryMeta(sourceUrl: src.url, autoUpdate: false, latest: nil)
+            meta.entries[typedId(src.isBundle ? .bundle : .skill, src.entryName)]
+                = StoreMeta.EntryMeta(sourceUrl: src.url, autoUpdate: false, latest: nil)
         }
     }
 
@@ -1044,22 +1082,22 @@ struct StoreFS {
         // 源式套装 = 平铺成员的集合，逐成员按独立条目移除
         if entry.bundleKind == .source {
             let metaNow = loadMeta()
-            let headMeta = metaNow.entries[entry.name]
+            let headMeta = metaNow.entries[entry.id]
             for cap in entry.children ?? [] {
                 for t in tools {
                     let link = toolLinkPath(t, kind: cap.layoutKind, name: cap.name)
                     if isSymlink(link) { try removeLink(at: link) }
                 }
                 // 快照成员 meta；缺 sourceUrl 时用套装源补上——恢复后仍能归拢/更新
-                var snap = metaNow.entries[cap.name] ?? StoreMeta.EntryMeta()
+                var snap = metaNow.entries[cap.id] ?? StoreMeta.EntryMeta()
                 if snap.sourceUrl == nil {
                     snap.sourceUrl = headMeta?.sourceUrl ?? entry.sourceUrl
                 }
                 try moveToTrash(cap.dirURL, metaSnapshot: snap)
             }
             mutateMeta { meta in
-                for cap in entry.children ?? [] { meta.entries.removeValue(forKey: cap.name) }
-                meta.entries.removeValue(forKey: entry.name)
+                for cap in entry.children ?? [] { meta.entries.removeValue(forKey: cap.id) }
+                meta.entries.removeValue(forKey: entry.id)
             }
             return
         }
@@ -1081,9 +1119,9 @@ struct StoreFS {
                 }
             }
         }
-        let snap = loadMeta().entries[entry.name]
+        let snap = loadMeta().entries[entry.id]
         try moveToTrash(entry.cap.dirURL, metaSnapshot: snap)
-        mutateMeta { meta in meta.entries.removeValue(forKey: entry.name) }
+        mutateMeta { meta in meta.entries.removeValue(forKey: entry.id) }
     }
 
     // ── 更新机制（v2.1，吸收 cc-switch 的内容哈希方案）─────
@@ -1148,13 +1186,13 @@ struct StoreFS {
 
     /// 跳过抑制（v2.15）：true = 该上游状态已被用户跳过，本次按「无更新」处理。
     /// 指纹变了（上游又出了新东西）自动清掉旧跳过——「跳过此版本」不是「永不提醒」。
-    func skipSuppressed(_ entryName: String, fingerprint: String) -> Bool {
-        guard let skip = loadMeta().entries[entryName]?.skipped, !skip.isEmpty else { return false }
+    func skipSuppressed(_ entryId: String, fingerprint: String) -> Bool {
+        guard let skip = loadMeta().entries[entryId]?.skipped, !skip.isEmpty else { return false }
         if skip == fingerprint { return true }
         mutateMeta { meta in
-            var m = meta.entries[entryName] ?? StoreMeta.EntryMeta()
+            var m = meta.entries[entryId] ?? StoreMeta.EntryMeta()
             m.skipped = nil
-            meta.entries[entryName] = m
+            meta.entries[entryId] = m
         }
         return false
     }
@@ -1162,27 +1200,27 @@ struct StoreFS {
     /// 「跳过此版本」：把当前亮着的更新按上游状态指纹记入 meta，徽标熄灭。
     /// 旧 meta（2.15 前检查出的徽标）没存指纹时退回 lastHead（github=sha / npm=版本号）；
     /// 都没有才存 latest 标签——那种源下次完整比对会重亮一次，再跳过就钉住了。
-    func skipLatest(_ entryName: String) {
+    func skipLatest(_ entryId: String) {
         mutateMeta { meta in
-            guard var m = meta.entries[entryName], m.latest != nil else { return }
+            guard var m = meta.entries[entryId], m.latest != nil else { return }
             m.skipped = m.latestFingerprint ?? m.lastHead ?? m.latest
             m.latest = nil
             m.changed = nil
             m.latestFingerprint = nil
-            meta.entries[entryName] = m
+            meta.entries[entryId] = m
         }
     }
 
     /// 恢复更新提醒：清跳过标记。检查点必须一起清——跳过期间被抑制的检查照常
     /// 落盘了 lastHead，不清的话 HEAD 短路会拿它直接判「最新」，徽标永远回不来。
     /// 调用方随后应对该源定向重查（强制完整比对），让徽标从真相重新推导。
-    func unskipLatest(_ entryName: String) {
+    func unskipLatest(_ entryId: String) {
         mutateMeta { meta in
-            guard var m = meta.entries[entryName] else { return }
+            guard var m = meta.entries[entryId] else { return }
             m.skipped = nil
             m.lastHead = nil
             m.localDigest = nil
-            meta.entries[entryName] = m
+            meta.entries[entryId] = m
         }
     }
 
@@ -1213,12 +1251,12 @@ struct StoreFS {
     }
 
     /// 完整比对后的检查点：上游 HEAD + 本地组合哈希一起落盘
-    func saveCheckpoint(_ entryName: String, head: String, localDigest: String) {
+    func saveCheckpoint(_ entryId: String, head: String, localDigest: String) {
         mutateMeta { meta in
-            var m = meta.entries[entryName] ?? StoreMeta.EntryMeta()
+            var m = meta.entries[entryId] ?? StoreMeta.EntryMeta()
             m.lastHead = head
             m.localDigest = localDigest
-            meta.entries[entryName] = m
+            meta.entries[entryId] = m
         }
     }
 
@@ -1256,7 +1294,7 @@ struct StoreFS {
         // 走完整比对才能重新解析出上游版本号、或在上游回退后熄灭徽标。
         // ls-remote 失败（断网等）不吞：落到下面的完整 resolve，让错误如实抛出
         if SourceKind.of(url) == .github,
-           let m = loadMeta().entries[entry.name],
+           let m = loadMeta().entries[entry.id],
            m.latest == nil,
            let last = m.lastHead, !last.isEmpty,
            m.localDigest == localDigest(entry),
@@ -1283,12 +1321,12 @@ struct StoreFS {
         let knownNames = Set(members.map(\.name)).union(topLevelSkillNames())
         let upstreamNew = upstreamOnlySkills(staging: resolved.stagingDir, knownNames: knownNames)
         // 无论有没有内容更新，上游新增名单都落 meta——toast 曾只报个数，用户装不了（v2.17）
-        saveUpstreamNew(entry.name, upstreamNew.isEmpty ? nil : upstreamNew)
-        if let sha = resolved.headSha { saveCheckpoint(entry.name, head: sha, localDigest: localDigest(entry)) }
+        saveUpstreamNew(entry.id, upstreamNew.isEmpty ? nil : upstreamNew)
+        if let sha = resolved.headSha { saveCheckpoint(entry.id, head: sha, localDigest: localDigest(entry)) }
         guard !changed.isEmpty else {
             // 完整比对确认与上游一致（如用户在终端手动同步过）：熄灭残留的更新徽标。
             // 只有这条路径能清——HEAD 短路的 nil 是「没变化」不是「已一致」
-            if loadMeta().entries[entry.name]?.latest != nil { saveLatest(entry.name, latest: nil) }
+            if loadMeta().entries[entry.id]?.latest != nil { saveLatest(entry.id, latest: nil) }
             // 仅有上游新增、无内容变更：仍返回检查结果，让 UI 亮「+N」而不亮更新徽标
             if !upstreamNew.isEmpty {
                 return UpdateCheck(entryId: entry.id, latest: "", changedMembers: [],
@@ -1303,7 +1341,7 @@ struct StoreFS {
         // 本地路径源退回变化内容组合哈希
         let fingerprint = resolved.headSha.map { "\($0)|\(changed.sorted().joined(separator: ","))" }
             ?? combinedFingerprint(changedPairs)
-        if skipSuppressed(entry.name, fingerprint: fingerprint) {
+        if skipSuppressed(entry.id, fingerprint: fingerprint) {
             // 跳过内容更新时仍暴露上游新增
             if !upstreamNew.isEmpty {
                 return UpdateCheck(entryId: entry.id, latest: "", changedMembers: [],
@@ -1322,11 +1360,11 @@ struct StoreFS {
     }
 
     /// 把上游新增名单写入 meta（空/nil = 清除）
-    func saveUpstreamNew(_ entryName: String, _ names: [String]?) {
+    func saveUpstreamNew(_ entryId: String, _ names: [String]?) {
         mutateMeta { meta in
-            var m = meta.entries[entryName] ?? StoreMeta.EntryMeta()
+            var m = meta.entries[entryId] ?? StoreMeta.EntryMeta()
             m.upstreamNew = (names?.isEmpty == false) ? names : nil
-            meta.entries[entryName] = m
+            meta.entries[entryId] = m
         }
     }
 
@@ -1379,9 +1417,9 @@ struct StoreFS {
         let knownNames = Set(members.map(\.name)).union(topLevelSkillNames())
         let upstreamNew = upstreamOnlySkills(staging: resolved.stagingDir, knownNames: knownNames)
         // 落盘后再算 digest——此刻本地已是新版内容
-        if let sha = resolved.headSha { saveCheckpoint(entry.name, head: sha, localDigest: localDigest(entry)) }
-        saveLatest(entry.name, latest: nil)
-        saveUpstreamNew(entry.name, upstreamNew.isEmpty ? nil : upstreamNew)
+        if let sha = resolved.headSha { saveCheckpoint(entry.id, head: sha, localDigest: localDigest(entry)) }
+        saveLatest(entry.id, latest: nil)
+        saveUpstreamNew(entry.id, upstreamNew.isEmpty ? nil : upstreamNew)
         return (updated, upstreamNew)
     }
 
@@ -1418,9 +1456,10 @@ struct StoreFS {
             do { try fm.copyItem(at: srcDir, to: dest) }
             catch { try? fm.removeItem(at: dest); throw error }
             mutateMeta { meta in
-                var m = meta.entries[name] ?? StoreMeta.EntryMeta()
+                let key = typedId(.skill, name)   // 上游新增永远装进 skills/
+                var m = meta.entries[key] ?? StoreMeta.EntryMeta()
                 m.sourceUrl = srcNorm
-                meta.entries[name] = m
+                meta.entries[key] = m
             }
             for t in linkTools {
                 try createLink(at: toolLinkPath(t, kind: .skill, name: name), to: dest)
@@ -1428,9 +1467,9 @@ struct StoreFS {
             installed.append(name)
         }
         // 从套装 upstreamNew 名单里扣掉已装；未找到的下次 check 会重算
-        let prev = loadMeta().entries[entry.name]?.upstreamNew ?? entry.upstreamNew ?? []
+        let prev = loadMeta().entries[entry.id]?.upstreamNew ?? entry.upstreamNew ?? []
         let remaining = prev.filter { !installed.contains($0) }
-        saveUpstreamNew(entry.name, remaining.isEmpty ? nil : remaining)
+        saveUpstreamNew(entry.id, remaining.isEmpty ? nil : remaining)
         return installed
     }
 
@@ -1441,13 +1480,13 @@ struct StoreFS {
         return StoreError.resolveFailed(L("已更新 \(done.count) 项（\(done.joined(separator: L("、")))）后失败：\(error.localizedDescription)"))
     }
 
-    func saveLatest(_ entryName: String, latest: String?, changed: [String]? = nil, fingerprint: String? = nil) {
+    func saveLatest(_ entryId: String, latest: String?, changed: [String]? = nil, fingerprint: String? = nil) {
         mutateMeta { meta in
-            var m = meta.entries[entryName] ?? StoreMeta.EntryMeta()
+            var m = meta.entries[entryId] ?? StoreMeta.EntryMeta()
             m.latest = latest
             m.changed = latest == nil ? nil : changed
             m.latestFingerprint = latest == nil ? nil : fingerprint
-            meta.entries[entryName] = m
+            meta.entries[entryId] = m
         }
     }
 
@@ -1474,14 +1513,16 @@ struct StoreFS {
 
     /// 扫描工具侧未托管的真实目录/文件（非 symlink 且 store 无同名）。
     /// v2.17 起覆盖 skills / agents / mcp / bin 四 kind（此前只扫 skills，agent 漏收）。
-    func scanUnmanaged(tools: [Tool], knownNames: Set<String>) -> [UnmanagedDir] {
+    /// v2.18：已知集合按类型化 id 匹配——skills/shared 已托管不该让同名 agents/shared
+    /// 永远躲过扫描（裸名去重曾把四个 kind 摁进一个命名空间）。
+    func scanUnmanaged(tools: [Tool], knownIds: Set<String>) -> [UnmanagedDir] {
         var out: [UnmanagedDir] = []
         let kinds: [CapType] = [.skill, .agent, .mcp, .cli]
         for t in tools {
             for kind in kinds {
                 let dir = t.root.appendingPathComponent(kind.dirName)
                 for name in ((try? fm.contentsOfDirectory(atPath: dir.path)) ?? []).sorted() where !name.hasPrefix(".") {
-                    guard !knownNames.contains(name) else { continue }
+                    guard !knownIds.contains(typedId(kind, name)) else { continue }
                     let url = dir.appendingPathComponent(name)
                     guard !isSymlink(url) else { continue }
                     var isDir: ObjCBool = false

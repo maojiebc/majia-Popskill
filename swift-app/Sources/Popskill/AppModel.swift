@@ -228,6 +228,10 @@ final class AppModel {
 
     func refresh() {
         guard !fake else { return }
+        // v2.18 身份类型化的一次性 meta 键迁移（幂等，快速路径零写盘）。
+        // 必须在 scanEntries 之前：扫描按新键读来源/自动更新/跳过状态；
+        // 也必须在 gcMeta 之前：旧格式键不迁就会被当孤儿清掉
+        fs.migrateMetaKeys()
         let meta = fs.loadMeta()
         tools = fs.scanTools(meta: meta)
         entries = fs.scanEntries(tools: tools, meta: meta)
@@ -239,7 +243,7 @@ final class AppModel {
             sayError(L("store 元数据曾损坏，已备份为 .popskill.json.corrupt——来源与自动更新设置可能需要重新配置"))
         }
         // 孤儿 meta 键随手清（终端删掉的条目残留的 sourceUrl/autoUpdate 会祸害重装的同名技能）
-        let keep = Set(entries.flatMap { [$0.name] + $0.allCaps.map(\.name) })
+        let keep = Set(entries.flatMap { e in [e.id] + e.allCaps.map { typedId($0.layoutKind, $0.name) } })
         let fsCopy = fs
         Task.detached { @Sendable [weak self] in
             fsCopy.gcMeta(keep: keep)
@@ -777,7 +781,7 @@ final class AppModel {
                             self.entries[i].changedMembers = check.changedMembers
                             self.entries[i].skippedUpdate = false
                             self.entries[i].upstreamNew = check.upstreamNew.isEmpty ? nil : check.upstreamNew
-                            self.fs.saveLatest(self.entries[i].name, latest: check.latest,
+                            self.fs.saveLatest(self.entries[i].id, latest: check.latest,
                                                changed: check.changedMembers, fingerprint: check.fingerprint)
                         }
                     }
@@ -791,7 +795,7 @@ final class AppModel {
                             self.entries[i].changedMembers = nil
                         }
                         // 完整比对无更新也无 upstreamNew 时 meta 已清；同步内存
-                        let metaNew = self.fs.loadMeta().entries[self.entries[i].name]?.upstreamNew
+                        let metaNew = self.fs.loadMeta().entries[self.entries[i].id]?.upstreamNew
                         self.entries[i].upstreamNew = metaNew
                     }
                 }
@@ -799,7 +803,7 @@ final class AppModel {
                 let metaAll = self.fs.loadMeta()
                 for e in candidates {
                     if let i = self.entries.firstIndex(where: { $0.id == e.id }) {
-                        if let u = metaAll.entries[self.entries[i].name]?.upstreamNew {
+                        if let u = metaAll.entries[self.entries[i].id]?.upstreamNew {
                             self.entries[i].upstreamNew = u
                         }
                     }
@@ -931,7 +935,7 @@ final class AppModel {
     /// 该上游状态不再提醒；上游再出新东西时 checkUpdate 里指纹不匹配自动重亮。
     func skipUpdate(_ entry: Entry) {
         guard entry.hasUpdate else { return }
-        if !fake { fs.skipLatest(entry.name) }
+        if !fake { fs.skipLatest(entry.id) }
         if let i = entries.firstIndex(where: { $0.id == entry.id }) {
             entries[i].latest = nil
             entries[i].changedMembers = nil
@@ -947,7 +951,7 @@ final class AppModel {
     func unskipUpdate(_ entry: Entry) {
         if let i = entries.firstIndex(where: { $0.id == entry.id }) { entries[i].skippedUpdate = false }
         guard !fake else { return }
-        fs.unskipLatest(entry.name)
+        fs.unskipLatest(entry.id)
         if checkingUpdates {
             pendingRecheck.insert(entry.id)
             say(L("已恢复 \(entry.name) 的更新提醒——当前检查结束后将复查此源"))
@@ -1120,7 +1124,8 @@ final class AppModel {
                         let tail = installed.count > 4 ? "…" : ""
                         let head = installed.prefix(4).joined(separator: L("、"))
                         self.say(L("已安装上游新增 \(installed.count) 个：\(head)\(tail)"))
-                        if let first = installed.first { self.flash(first) }
+                        // flash 按条目 id 定位；上游新增装进 skills/（v2.18 起 id 类型化）
+                        if let first = installed.first { self.flash(typedId(.skill, first)) }
                     }
                 case .failure(let err):
                     self.sayError(L("安装上游新增失败：\(err.localizedDescription)"))
@@ -1159,8 +1164,9 @@ final class AppModel {
 
     func importUnmanaged() {
         guard !fake else { say(L("原型数据模式不可导入")); return }
-        let known = Set(entries.flatMap { $0.allCaps.map(\.name) + [$0.name] })
-        let found = fs.scanUnmanaged(tools: tools, knownNames: known)
+        // 已知集合按类型化 id：skills/x 已托管不遮蔽未托管的 agents/x（v2.18）
+        let known = Set(entries.flatMap { e in [e.id] + e.allCaps.map { typedId($0.layoutKind, $0.name) } })
+        let found = fs.scanUnmanaged(tools: tools, knownIds: known)
         guard !found.isEmpty else { say(L("没有发现未托管的能力目录")); return }
         // 批量搬运是破坏性操作（原目录移进回收站），必须先让用户看清清单再确认——
         // 不能像过去那样点一下就静默把人家手装的技能都搬走
@@ -1200,7 +1206,7 @@ final class AppModel {
             say(L("扫描完成：发现 \(stats.total) 项能力"))
             return
         }
-        let found = fs.scanUnmanaged(tools: tools, knownNames: [])
+        let found = fs.scanUnmanaged(tools: tools, knownIds: [])
         guard !found.isEmpty else {
             say(L("store 为空，工具目录里也没有发现技能——点「+ 添加」装第一个"))
             return
@@ -1266,7 +1272,7 @@ final class AppModel {
                     plog.info("安装 \(src.entryName, privacy: .public) ← \(src.url, privacy: .public)，链 \(linkTools.count) 个工具")
                     self.refresh()
                     self.sheet = nil
-                    self.flash(src.entryName)
+                    self.flash(typedId(src.isBundle ? .bundle : .skill, src.entryName))
                     self.say(linkTools.isEmpty ? L("已保存 \(src.entryName) 到 store") : L("已安装 \(src.entryName) 并链接到 \(linkTools.count) 个工具"))
                 case .failure(let error):
                     // 驻留在计划页（v2.16：曾只有 6 秒 toast，消失后零线索）；同名冲突给出路
@@ -1321,14 +1327,14 @@ final class AppModel {
         entries[i].autoUpdate.toggle()
         guard !fake else { return }
         let on = entries[i].autoUpdate
-        // meta 键一律 entry.name（v2.16 修复：曾写 entry.id——源式套装的 id 是
-        // "src:github.com/owner/repo"，扫描回读用的却是 repoName，开关看似打开、
-        // 任何一次 refresh 就悄悄回落，主力套装的自动更新从来没真正生效过）
-        let name = entries[i].name
+        // meta 键一律 entry.id（v2.18）：v2.16 曾因「写 id 读 repoName」两头不一致
+        // 让套装自动更新从未生效，当时统一到 name；类型化身份后 id 成为唯一读写键，
+        // 源式套装头键即 "src:<归拢键>"，扫描回读同键，歧义根除
+        let id = entries[i].id
         fs.mutateMeta { meta in
-            var m = meta.entries[name] ?? StoreMeta.EntryMeta()
+            var m = meta.entries[id] ?? StoreMeta.EntryMeta()
             m.autoUpdate = on
-            meta.entries[name] = m
+            meta.entries[id] = m
         }
     }
 

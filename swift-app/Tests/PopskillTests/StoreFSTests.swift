@@ -1073,7 +1073,7 @@ final class StoreFSTests: XCTestCase {
         try "---\nname: wild-skill\ndescription: 散养的\n---\n".write(
             to: wild.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
 
-        let found = fs.scanUnmanaged(tools: tools, knownNames: [])
+        let found = fs.scanUnmanaged(tools: tools, knownIds: [])
         XCTAssertEqual(found.map(\.name), ["wild-skill"])
 
         let imported = try fs.importUnmanaged(found)
@@ -1335,9 +1335,10 @@ final class StoreFSTests: XCTestCase {
         try makeSkill("a1")
         try makeSkill("a2")
         fs.mutateMeta { meta in
-            meta.entries["a1"] = StoreMeta.EntryMeta(sourceUrl: "github.com/owner/repo")
-            meta.entries["a2"] = StoreMeta.EntryMeta(sourceUrl: "github.com/owner/repo")
-            meta.entries["owner/repo"] = StoreMeta.EntryMeta(
+            meta.entries["skill:a1"] = StoreMeta.EntryMeta(sourceUrl: "github.com/owner/repo")
+            meta.entries["skill:a2"] = StoreMeta.EntryMeta(sourceUrl: "github.com/owner/repo")
+            // 源式套装头键 = entry.id（"src:<归拢键>"，v2.18）
+            meta.entries["src:github.com/owner/repo"] = StoreMeta.EntryMeta(
                 sourceUrl: "github.com/owner/repo", upstreamNew: ["a3", "a4"])
         }
         let entries = scan()
@@ -1356,10 +1357,8 @@ final class StoreFSTests: XCTestCase {
         // store 只装 a1，同源
         try makeSkill("a1")
         fs.mutateMeta { meta in
-            meta.entries["a1"] = StoreMeta.EntryMeta(sourceUrl: monorepo.path)
-            meta.entries["a1"]?.sourceUrl = monorepo.path
-            // 独立条目源
-            meta.entries["a1"] = StoreMeta.EntryMeta(sourceUrl: monorepo.path, upstreamNew: ["a-new"])
+            // 独立条目源（键 = 类型化 id）
+            meta.entries["skill:a1"] = StoreMeta.EntryMeta(sourceUrl: monorepo.path, upstreamNew: ["a-new"])
         }
         // 再扫：单源只有一个成员不会归拢成套装
         var entries = scan()
@@ -1379,17 +1378,17 @@ final class StoreFSTests: XCTestCase {
     func testTrashRestoreRestoresMetaSourceUrl() throws {
         let dir = try makeSkill("keep-src")
         fs.mutateMeta { meta in
-            meta.entries["keep-src"] = StoreMeta.EntryMeta(
+            meta.entries["skill:keep-src"] = StoreMeta.EntryMeta(
                 sourceUrl: "github.com/owner/keep-src", autoUpdate: true)
         }
         let entry = try XCTUnwrap(scan().first(where: { $0.name == "keep-src" }))
         try fs.removeEntry(entry, tools: tools)
-        XCTAssertNil(fs.loadMeta().entries["keep-src"], "移除后 meta 键应清掉")
+        XCTAssertNil(fs.loadMeta().entries["skill:keep-src"], "移除后 meta 键应清掉")
         let item = try XCTUnwrap(fs.listTrash().first(where: { $0.name == "keep-src" }))
         // 快照应在回收站目录内
         XCTAssertTrue(fm.fileExists(atPath: item.url.appendingPathComponent(".popskill-meta.json").path))
         try fs.restoreFromTrash(item)
-        let restored = fs.loadMeta().entries["keep-src"]
+        let restored = fs.loadMeta().entries["skill:keep-src"]
         XCTAssertEqual(restored?.sourceUrl, "github.com/owner/keep-src")
         XCTAssertEqual(restored?.autoUpdate, true)
         XCTAssertNil(restored?.latest, "恢复后检查点清空，避免误亮徽标")
@@ -1418,7 +1417,7 @@ final class StoreFSTests: XCTestCase {
         try fm.createDirectory(at: bin, withIntermediateDirectories: true)
         try "#!/bin/sh\necho hi\n".write(to: bin.appendingPathComponent("wild-cli"), atomically: true, encoding: .utf8)
 
-        let found = fs.scanUnmanaged(tools: tools, knownNames: [])
+        let found = fs.scanUnmanaged(tools: tools, knownIds: [])
         let byKind = Dictionary(grouping: found, by: \.kind)
         XCTAssertEqual(byKind[.skill]?.map(\.name), ["wild-skill"])
         XCTAssertEqual(byKind[.agent]?.map(\.name), ["wild-agent"])
@@ -1444,5 +1443,78 @@ final class StoreFSTests: XCTestCase {
         XCTAssertTrue(e.hasUpdate)
         e.upstreamNew = ["n1"]
         XCTAssertEqual(e.upstreamNewCount, 1)
+    }
+
+    // ── v2.18：类型化身份（跨 kind 同名不再串号）─────────────
+
+    /// 四个 kind 各有一个同名 shared：必须是 4 个独立条目、4 个不同 id，
+    /// 且 meta（来源/自动更新/跳过）互不串——裸名当全局键时它们曾是同一个对象
+    func testCrossKindSameNameHaveDistinctIdentity() throws {
+        try makeSkill("shared")
+        for sub in ["agents", "mcp", "bin"] {
+            let dir = env.storeRoot.appendingPathComponent(sub).appendingPathComponent("shared")
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+        fs.mutateMeta { meta in
+            meta.entries["skill:shared"] = StoreMeta.EntryMeta(sourceUrl: "github.com/o/skill-repo", autoUpdate: true)
+            meta.entries["agent:shared"] = StoreMeta.EntryMeta(sourceUrl: "github.com/o/agent-repo", autoUpdate: false, latest: "新版")
+        }
+        let entries = scan()
+        XCTAssertEqual(entries.count, 4, "四个 kind 各一条")
+        XCTAssertEqual(Set(entries.map(\.id)).count, 4, "id 必须全局唯一")
+        XCTAssertEqual(Set(entries.map(\.id)), ["skill:shared", "agent:shared", "mcp:shared", "cli:shared"])
+        let skill = try XCTUnwrap(entries.first { $0.id == "skill:shared" })
+        let agent = try XCTUnwrap(entries.first { $0.id == "agent:shared" })
+        XCTAssertEqual(skill.sourceUrl, "github.com/o/skill-repo")
+        XCTAssertTrue(skill.autoUpdate)
+        XCTAssertFalse(skill.hasUpdate, "skill 侧不该串上 agent 的更新徽标")
+        XCTAssertEqual(agent.sourceUrl, "github.com/o/agent-repo")
+        XCTAssertFalse(agent.autoUpdate)
+        XCTAssertTrue(agent.hasUpdate)
+        // 跳过其中一个不影响另一个
+        fs.skipLatest("agent:shared")
+        XCTAssertNil(fs.loadMeta().entries["agent:shared"]?.latest)
+        XCTAssertEqual(fs.loadMeta().entries["skill:shared"]?.autoUpdate, true)
+    }
+
+    /// 旧裸名 meta 键一次性迁移：磁盘 kind 定位 > 源套装头键形态猜测 > 孤儿原样留给 gcMeta
+    func testMigrateMetaKeysToTypedIds() throws {
+        try makeSkill("mig-skill")
+        let agentDir = env.storeRoot.appendingPathComponent("agents").appendingPathComponent("mig-agent")
+        try fm.createDirectory(at: agentDir, withIntermediateDirectories: true)
+        fs.mutateMeta { meta in
+            meta.entries["mig-skill"] = StoreMeta.EntryMeta(sourceUrl: "github.com/o/r1", autoUpdate: true)
+            meta.entries["mig-agent"] = StoreMeta.EntryMeta(sourceUrl: "github.com/o/r2")
+            meta.entries["owner/repo"] = StoreMeta.EntryMeta(upstreamNew: ["x"])          // 源式套装头键
+            meta.entries["open.feishu.cn"] = StoreMeta.EntryMeta(latest: "3 项")          // well-known 头键
+            meta.entries["gone-orphan"] = StoreMeta.EntryMeta(sourceUrl: "github.com/o/r3") // 磁盘已删的孤儿
+            meta.entries["skill:already-new"] = StoreMeta.EntryMeta(sourceUrl: "github.com/o/r4")
+        }
+        fs.migrateMetaKeys()
+        let m = fs.loadMeta().entries
+        XCTAssertEqual(m["skill:mig-skill"]?.sourceUrl, "github.com/o/r1")
+        XCTAssertEqual(m["skill:mig-skill"]?.autoUpdate, true)
+        XCTAssertEqual(m["agent:mig-agent"]?.sourceUrl, "github.com/o/r2")
+        XCTAssertEqual(m["src:github.com/owner/repo"]?.upstreamNew, ["x"])
+        XCTAssertEqual(m["src:wk:open.feishu.cn"]?.latest, "3 项")
+        XCTAssertNil(m["mig-skill"]); XCTAssertNil(m["mig-agent"])
+        XCTAssertNil(m["owner/repo"]); XCTAssertNil(m["open.feishu.cn"])
+        XCTAssertEqual(m["gone-orphan"]?.sourceUrl, "github.com/o/r3", "孤儿不猜测，留给 gcMeta")
+        XCTAssertEqual(m["skill:already-new"]?.sourceUrl, "github.com/o/r4", "新格式键幂等不动")
+        // 幂等：再跑一遍不变
+        fs.migrateMetaKeys()
+        XCTAssertEqual(fs.loadMeta().entries.count, m.count)
+    }
+
+    /// store 托管了 skills/shared，工具侧另有真实目录 agents/shared——
+    /// 裸名 known 集合曾让后者永远躲过未托管扫描
+    func testScanUnmanagedCrossKindSameName() throws {
+        try makeSkill("shared")
+        let agents = env.toolRoots["claude"]!.appendingPathComponent("agents")
+        try fm.createDirectory(at: agents.appendingPathComponent("shared"), withIntermediateDirectories: true)
+        let known: Set<String> = ["skill:shared"]   // 已托管的 skill
+        let found = fs.scanUnmanaged(tools: tools, knownIds: known)
+        XCTAssertEqual(found.map { typedId($0.kind, $0.name) }, ["agent:shared"],
+                       "同名不同 kind 必须被发现")
     }
 }

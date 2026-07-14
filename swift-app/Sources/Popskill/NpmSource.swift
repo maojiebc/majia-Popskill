@@ -151,17 +151,17 @@ extension StoreFS {
         guard let pkg = npmPkgName(entry.sourceUrl) else { return nil }
         // 先查本地（无网络开销）：没装全局 CLI 就没有「CLI 更新」这回事
         guard let installed = npmGlobalVersion(pkg) else {
-            if loadMeta().entries[entry.name]?.latest != nil { saveLatest(entry.name, latest: nil) }
+            if loadMeta().entries[entry.id]?.latest != nil { saveLatest(entry.id, latest: nil) }
             return nil
         }
         let latest = try npmLatestVersion(pkg)
-        saveCheckpoint(entry.name, head: latest, localDigest: localDigest(entry))
+        saveCheckpoint(entry.id, head: latest, localDigest: localDigest(entry))
         guard latest != installed else {
-            if loadMeta().entries[entry.name]?.latest != nil { saveLatest(entry.name, latest: nil) }
+            if loadMeta().entries[entry.id]?.latest != nil { saveLatest(entry.id, latest: nil) }
             return nil
         }
         // npm 的上游状态指纹 = registry 版本号本身（跳过 1.2.3，出 1.2.4 自动重亮）
-        if skipSuppressed(entry.name, fingerprint: latest) { return nil }
+        if skipSuppressed(entry.id, fingerprint: latest) { return nil }
         return UpdateCheck(entryId: entry.id, latest: "CLI v\(latest)", changedMembers: [],
                            upstreamNew: [], fingerprint: latest)
     }
@@ -174,8 +174,8 @@ extension StoreFS {
         }
         let latest = try npmLatestVersion(pkg)
         try npmGlobalInstall(pkg, version: latest)
-        saveLatest(entry.name, latest: nil)
-        saveCheckpoint(entry.name, head: latest, localDigest: localDigest(entry))
+        saveLatest(entry.id, latest: nil)
+        saveCheckpoint(entry.id, head: latest, localDigest: localDigest(entry))
         return (updated: [pkg], upstreamNew: [])
     }
 }
