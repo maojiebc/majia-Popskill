@@ -59,7 +59,7 @@ L10N_BUNDLE="$ROOT_DIR/swift-app/.build/release/Popskill_Popskill.bundle"
 if [[ -d "$L10N_BUNDLE" ]]; then
   ditto "$L10N_BUNDLE" "$RESOURCES_DIR/Popskill_Popskill.bundle"
 else
-  echo "error: 找不到 $L10N_BUNDLE（资源 bundle 没构建出来？）" >&2
+  echo "error: 找不到 ${L10N_BUNDLE}（资源 bundle 没构建出来？）" >&2
   exit 70
 fi
 

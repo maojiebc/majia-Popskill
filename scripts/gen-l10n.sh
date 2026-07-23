@@ -36,7 +36,7 @@ if [[ "${1:-}" == "--check" ]]; then
   # 反向：产物里不许有 catalog 没有的语言
   for lproj in "$OUT_DIR"/*.lproj; do
     name="$(basename "$lproj")"
-    [[ -d "$TMP/$name" ]] || die "产物有多余语言 $name（catalog 里没有）"
+    [[ -d "$TMP/$name" ]] || die "产物有多余语言 ${name}（catalog 里没有）"
   done
   # 源码 L() ↔ catalog key 双向覆盖
   python3 "$ROOT_DIR/scripts/check-l10n-coverage.py"

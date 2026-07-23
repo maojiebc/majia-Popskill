@@ -42,7 +42,7 @@ BUILD="$(sed -n '2p' VERSION)"
 [[ -n "$VERSION" && -n "$BUILD" ]] || die "VERSION 文件不完整（第一行版本号，第二行 build）"
 [[ "$BUILD" =~ ^[0-9]+$ ]] || die "build 必须是纯数字，拿到 $BUILD"
 NOTES_MD="docs/release/v$VERSION.md"
-[[ -f "$NOTES_MD" ]] || die "缺少发版说明 $NOTES_MD（第一行 '# v$VERSION — 标题'）"
+[[ -f "$NOTES_MD" ]] || die "缺少发版说明 ${NOTES_MD}（第一行 '# v$VERSION — 标题'）"
 
 [[ "$(git branch --show-current)" == "main" ]] || die "必须在 main 分支发版"
 
@@ -61,7 +61,7 @@ if [[ "$RELEASED_COMMIT" == false ]]; then
   # 只允许 VERSION 与本版发版说明未提交（脚本会随发版 commit 一并提交）
   DIRTY="$(git status --porcelain | grep -vE ' (VERSION|docs/release/v[0-9.]+\.md)$' || true)"
   [[ -z "$DIRTY" ]] || die $'工作树有发版文件之外的改动：\n'"$DIRTY"
-  grep -q "<title>v$VERSION</title>" docs/appcast.xml && die "appcast 已有 v$VERSION（但发版 commit 不在 HEAD——状态不一致，人工检查）"
+  grep -q "<title>v$VERSION</title>" docs/appcast.xml && die "appcast 已有 v${VERSION}（但发版 commit 不在 HEAD——状态不一致，人工检查）"
   TOP_BUILD="$(grep -o 'sparkle:version="[0-9]*"' docs/appcast.xml | head -1 | grep -o '[0-9]*')"
   [[ -n "$TOP_BUILD" && "$BUILD" -gt "$TOP_BUILD" ]] \
     || die "build $BUILD 必须严格大于 appcast 顶部的 $TOP_BUILD"
@@ -79,7 +79,7 @@ echo "凭证就绪"
 
 DMG="build/Popskill-$VERSION.dmg"
 if [[ "$RELEASED_COMMIT" == true ]]; then
-  [[ -f "$DMG" ]] || die "续发模式需要现成的 $DMG——没有就 git reset 掉发版 commit 重新全跑"
+  [[ -f "$DMG" ]] || die "续发模式需要现成的 ${DMG}——没有就 git reset 掉发版 commit 重新全跑"
 else
 
 step "质量门：shell 语法 / l10n 漂移 / 全部单元测试"
@@ -97,13 +97,13 @@ scripts/package-dev-app.sh
 GOT_V="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' build/Popskill.app/Contents/Info.plist)"
 GOT_B="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' build/Popskill.app/Contents/Info.plist)"
 [[ "$GOT_V" == "$VERSION" && "$GOT_B" == "$BUILD" ]] \
-  || die "产物版本 $GOT_V/$GOT_B ≠ VERSION 文件 $VERSION/$BUILD（环境里残留 POPSKILL_APP_VERSION/BUILD？）"
+  || die "产物版本 $GOT_V/$GOT_B ≠ VERSION 文件 ${VERSION}/${BUILD}（环境里残留 POPSKILL_APP_VERSION/BUILD？）"
 
-step "Sparkle 版本断言（≥ $MIN_SPARKLE，审查 P1-01）"
+step "Sparkle 版本断言（≥ ${MIN_SPARKLE}，审查 P1-01）"
 SPARKLE_V="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
   build/Popskill.app/Contents/Frameworks/Sparkle.framework/Resources/Info.plist)"
 [[ "$(printf '%s\n%s\n' "$MIN_SPARKLE" "$SPARKLE_V" | sort -V | head -1)" == "$MIN_SPARKLE" ]] \
-  || die "打包内 Sparkle $SPARKLE_V 低于批准基线 $MIN_SPARKLE——先升级依赖再发版"
+  || die "打包内 Sparkle $SPARKLE_V 低于批准基线 ${MIN_SPARKLE}——先升级依赖再发版"
 echo "  ✓ Sparkle $SPARKLE_V"
 
 step "bundle 冷启动 smoke（干净机器复现，坑 #17）"
@@ -198,7 +198,7 @@ fi
 
 step "appcast 置顶插入（带断言）+ 上线"
 if grep -q "<title>v$VERSION</title>" docs/appcast.xml; then
-  echo "  appcast 已含 v$VERSION，跳过插入（续发）"
+  echo "  appcast 已含 v${VERSION}，跳过插入（续发）"
 else
   SIGN_OUT="$(scripts/sparkle-sign-update.sh "$DMG")"
   echo "$SIGN_OUT"
