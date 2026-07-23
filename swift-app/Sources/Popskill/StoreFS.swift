@@ -64,6 +64,7 @@ enum StoreError: LocalizedError {
     case sourceUnsupported(String)
     case resolveFailed(String)
     case unsafeName(String)
+    case storeBusy
 
     var errorDescription: String? {
         switch self {
@@ -72,6 +73,7 @@ enum StoreError: LocalizedError {
         case .sourceUnsupported(let m): m
         case .resolveFailed(let m): m
         case .unsafeName(let n): L("不安全的目录名：\(n)")
+        case .storeBusy: L("另一个 Popskill 正在修改 Store，请稍后重试")
         }
     }
 }
@@ -86,14 +88,28 @@ func sanitizeName(_ name: String) throws -> String {
     return name
 }
 
-// @unchecked 只为 fm：FileManager.default 按 Apple 文档是线程安全的共享单例，
-// 其余存储属性（env）全是值类型。StoreFS 本身无可变状态——meta 互斥走 metaLock。
+// @unchecked 只为 fm：FileManager.default 按 Apple 文档是线程安全的共享单例；
+// StoreProcessLock 自己提供进程内互斥与跨进程 flock。
 struct StoreFS: @unchecked Sendable {
     let env: StoreEnv
     let fm = FileManager.default
+    private let processLock: StoreProcessLock
+
+    init(env: StoreEnv, lockTimeout: TimeInterval = 15) {
+        self.env = env
+        processLock = StoreProcessLock(storeRoot: env.storeRoot, timeout: lockTimeout)
+    }
 
     var metaURL: URL { env.storeRoot.appendingPathComponent(".popskill.json") }
     var trashURL: URL { env.storeRoot.appendingPathComponent(".trash") }
+    var mutationLockURL: URL { processLock.lockURL }
+
+    func lockStoreMutation() throws { try processLock.lock() }
+    func unlockStoreMutation() { processLock.unlock() }
+
+    func withStoreMutation<T>(_ body: () throws -> T) throws -> T {
+        try processLock.withLock(body)
+    }
 
     // ── 元数据 ────────────────────────────────────────────
 
@@ -189,6 +205,8 @@ struct StoreFS: @unchecked Sendable {
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
         do {
+            try lockStoreMutation()
+            defer { unlockStoreMutation() }
             try enc.encode(meta).write(to: metaURL, options: .atomic)
             return true
         } catch {
@@ -197,16 +215,20 @@ struct StoreFS: @unchecked Sendable {
         }
     }
 
-    /// meta 的读-改-写必须走这里：checkUpdate 在 4 路并发的后台任务里写 meta，
-    /// 与主线程设置页的写互相覆盖会静默丢更新（.atomic 只保证不撕裂，不保证不丢）。
-    private static let metaLock = NSLock()
+    /// meta 的读-改-写必须走这里：锁覆盖不同线程与不同 Popskill 进程。
+    /// `.atomic` 只保证不撕裂；跨进程 flock 才保证 read-modify-write 不丢更新。
     @discardableResult
     func mutateMeta(_ body: (inout StoreMeta) -> Void) -> Bool {
-        StoreFS.metaLock.lock()
-        defer { StoreFS.metaLock.unlock() }
-        var meta = loadMeta()
-        body(&meta)
-        return saveMeta(meta)
+        do {
+            try lockStoreMutation()
+            defer { unlockStoreMutation() }
+            var meta = loadMeta()
+            body(&meta)
+            return saveMeta(meta)
+        } catch {
+            plog.error("meta 写锁获取失败：\(error.localizedDescription, privacy: .public)")
+            return false
+        }
     }
 
     // ── 扫描 ─────────────────────────────────────────────
@@ -670,6 +692,8 @@ struct StoreFS: @unchecked Sendable {
     // ── 链接写操作（防呆：只动 symlink，真目录只走回收站）──
 
     func createLink(at linkPath: URL, to target: URL) throws {
+        try lockStoreMutation()
+        defer { unlockStoreMutation() }
         try fm.createDirectory(at: linkPath.deletingLastPathComponent(), withIntermediateDirectories: true)
         if fm.fileExists(atPath: linkPath.path) || isSymlink(linkPath) {
             try removeLink(at: linkPath)
@@ -679,6 +703,8 @@ struct StoreFS: @unchecked Sendable {
 
     /// 只删除 symlink；真实文件/目录抛错（防呆核心）
     func removeLink(at linkPath: URL) throws {
+        try lockStoreMutation()
+        defer { unlockStoreMutation() }
         guard isSymlink(linkPath) else {
             if fm.fileExists(atPath: linkPath.path) { throw StoreError.notASymlink(linkPath.path) }
             return
@@ -700,6 +726,8 @@ struct StoreFS: @unchecked Sendable {
     /// 恢复时回填 sourceUrl/autoUpdate——更新链不会因进回收站而断。
     @discardableResult
     func moveToTrash(_ url: URL, metaSnapshot: StoreMeta.EntryMeta? = nil) throws -> URL {
+        try lockStoreMutation()
+        defer { unlockStoreMutation() }
         let parent = url.deletingLastPathComponent().lastPathComponent
         let bucket = StoreFS.trashBuckets.contains(parent) ? parent : CapType.skill.dirName
         let bucketURL = trashURL.appendingPathComponent(bucket)
@@ -747,6 +775,9 @@ struct StoreFS: @unchecked Sendable {
     /// 半年没改过的技能刚备份进来就会被当「最旧」误删。
     /// 上限 200：一次大套装更新会同时入站几十份，全局 20 一冲就把别人的备份清光。
     func pruneTrash(keep: Int = StoreFS.trashRetainCount) {
+        do { try lockStoreMutation() }
+        catch { return }
+        defer { unlockStoreMutation() }
         let items = trashEntryURLs().map(\.url)
         guard items.count > keep else { return }
         func stampKey(_ url: URL) -> String {
@@ -808,12 +839,16 @@ struct StoreFS: @unchecked Sendable {
 
     /// 清空回收站（v2.16：设置页此前只能去 Finder 手删）。不可逆，调用方必须先确认
     func emptyTrash() throws {
+        try lockStoreMutation()
+        defer { unlockStoreMutation() }
         for e in trashEntryURLs() { try fm.removeItem(at: e.url) }
     }
 
     /// 恢复到 store 的原 kind 目录；同名已存在则拒绝（先移走现有的再恢复）。
     /// v2.17：若回收站目录内有 `.popskill-meta.json` 快照，回填 meta（不覆盖已有键）。
     func restoreFromTrash(_ item: TrashItem) throws {
+        try lockStoreMutation()
+        defer { unlockStoreMutation() }
         let name = try sanitizeName(item.name)
         let kind = StoreFS.trashBuckets.contains(item.kindDir) ? item.kindDir : CapType.skill.dirName
         let dest = env.storeRoot.appendingPathComponent(kind).appendingPathComponent(name)
@@ -847,6 +882,8 @@ struct StoreFS: @unchecked Sendable {
 
     /// 独立能力 / 套装整体 开↔关
     func setLink(tool: Tool, kind: CapType, name: String, storeDir: URL, on: Bool) throws {
+        try lockStoreMutation()
+        defer { unlockStoreMutation() }
         let link = toolLinkPath(tool, kind: kind, name: name)
         if on {
             try createLink(at: link, to: storeDir)
@@ -857,6 +894,8 @@ struct StoreFS: @unchecked Sendable {
 
     /// 套装子项开关 — 整套 symlink 时先物化为逐子项链接目录
     func setBundleChildLink(tool: Tool, bundleName: String, bundleDir: URL, childName: String, allChildren: [String], on: Bool) throws {
+        try lockStoreMutation()
+        defer { unlockStoreMutation() }
         let bundleLink = toolLinkPath(tool, kind: .bundle, name: bundleName)
         if isSymlink(bundleLink) {
             // 物化：删除整链，重建目录，按当前(全 on)状态铺逐子项链接
@@ -891,6 +930,8 @@ struct StoreFS: @unchecked Sendable {
 
     /// 修复：本地副本（真实目录）→ 移入回收站后改建 symlink
     func replaceCopyWithLink(at linkPath: URL, target: URL) throws {
+        try lockStoreMutation()
+        defer { unlockStoreMutation() }
         if fm.fileExists(atPath: linkPath.path) && !isSymlink(linkPath) {
             try moveToTrash(linkPath)
         }
@@ -1173,6 +1214,8 @@ struct StoreFS: @unchecked Sendable {
     /// 任一步失败磁盘回到操作前——曾经「链接失败留 store 半成品，重试撞已存在」。
     /// 链接目标位的真实目录冲突在**动盘之前**就报错（不再让 createLink 半途拦）。
     func install(_ src: ResolvedSource, linkTools: [Tool]) throws {
+        try lockStoreMutation()
+        defer { unlockStoreMutation() }
         let name = try sanitizeName(src.entryName)
         let kindDir = env.storeRoot.appendingPathComponent(CapType.skill.dirName)
         let dest = kindDir.appendingPathComponent(name)
@@ -1224,6 +1267,8 @@ struct StoreFS: @unchecked Sendable {
     /// 磁盘回到操作前——曾经「旧版已进回收站、新版只装了一半」。
     /// 行为对齐旧 repull：旧 meta 键清除、新键记 sourceUrl（autoUpdate 归零）。
     func repullSwap(_ entry: Entry, resolved: ResolvedSource, relinkTools: [Tool], tools: [Tool]) throws {
+        try lockStoreMutation()
+        defer { unlockStoreMutation() }
         let name = try sanitizeName(resolved.entryName)
         let kindDir = env.storeRoot.appendingPathComponent(CapType.skill.dirName)
         let dest = kindDir.appendingPathComponent(name)
@@ -1299,6 +1344,8 @@ struct StoreFS: @unchecked Sendable {
 
     /// 移除条目：撤全部 symlink（含物化目录）→ store 副本移入回收站
     func removeEntry(_ entry: Entry, tools: [Tool]) throws {
+        try lockStoreMutation()
+        defer { unlockStoreMutation() }
         guard entry.bundleKind != .marketplace else {
             throw StoreError.sourceUnsupported(L("Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 卸载"))
         }
@@ -1618,6 +1665,8 @@ struct StoreFS: @unchecked Sendable {
         }
         let resolved = try resolve(url)
         defer { discardStaging(resolved) }
+        try lockStoreMutation()
+        defer { unlockStoreMutation() }
 
         let members = entry.isBundle && entry.bundleKind == .source ? (entry.children ?? []) : [entry.cap]
         var updated: [String] = []
@@ -1661,6 +1710,8 @@ struct StoreFS: @unchecked Sendable {
         }
         let resolved = try resolve(url)
         defer { discardStaging(resolved) }
+        try lockStoreMutation()
+        defer { unlockStoreMutation() }
         var installed: [String] = []
         let srcNorm = StoreFS.normalizeSource(url)
         for raw in names {
@@ -1791,6 +1842,8 @@ struct StoreFS: @unchecked Sendable {
     }
 
     func importUnmanaged(_ items: [UnmanagedDir]) throws -> ImportResult {
+        try lockStoreMutation()
+        defer { unlockStoreMutation() }
         var result = ImportResult()
         for item in items {
             let name = try sanitizeName(item.name)

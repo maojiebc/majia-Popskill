@@ -102,15 +102,27 @@ extension StoreFS {
     /// references/ 等附属文件原样保留——协议只分发单文件
     func applyWellKnownUpdate(_ entry: Entry, host: String) throws -> (updated: [String], upstreamNew: [String]) {
         let members = entry.isBundle ? (entry.children ?? []) : [entry.cap]
-        var updated: [String] = []
+        // 网络阶段不占 store 写锁；全部下载成功后才进入磁盘事务，避免慢 CDN
+        // 让另一个实例的开关/安装无谓超时，也把旧版“下到一半就已换掉前几项”
+        // 收敛为下载失败时零变更。
+        var pending: [(cap: Capability, remote: Data)] = []
         for cap in members where !isSymlink(cap.dirURL) {
             guard let url = wellKnownSkillURL(host: host, name: cap.name) else { continue }
             let localFile = cap.dirURL.appendingPathComponent("SKILL.md")
             guard let local = try? Data(contentsOf: localFile) else { continue }
-            let remote: Data
-            do { remote = try httpGet(url) }
-            catch { throw partialFailure(error, done: updated) }   // 中途失败：已换几项如实进错误文案
+            let remote = try httpGet(url)
             guard SHA256.hash(data: remote) != SHA256.hash(data: local) else { continue }
+            pending.append((cap, remote))
+        }
+
+        try lockStoreMutation()
+        defer { unlockStoreMutation() }
+        var updated: [String] = []
+        for (cap, remote) in pending {
+            let localFile = cap.dirURL.appendingPathComponent("SKILL.md")
+            // 等锁期间另一实例可能已经装了同一版本；进锁后重验，避免制造无意义备份。
+            if let current = try? Data(contentsOf: localFile),
+               SHA256.hash(data: remote) == SHA256.hash(data: current) { continue }
             // 原子换文件：先落临时名，成功后备份旧文件再换名——失败旧版无损
             let incoming = cap.dirURL.appendingPathComponent(".popskill-incoming-SKILL.md")
             try? fm.removeItem(at: incoming)

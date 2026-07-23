@@ -1,3 +1,4 @@
+import Darwin
 import XCTest
 @testable import Popskill
 
@@ -53,6 +54,7 @@ final class StoreFSTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
+        if let fs { try? fm.removeItem(at: fs.mutationLockURL) }
         try? fm.removeItem(at: sandbox)
     }
 
@@ -82,6 +84,55 @@ final class StoreFSTests: XCTestCase {
     func claudeLink(_ name: String) -> URL { env.toolRoots["claude"]!.appendingPathComponent("skills").appendingPathComponent(name) }
     /// 回收站全部条目名（v2.8 起按 kind 分桶 + 兼容历史平铺）
     func trashNames() -> [String] { fs.listTrash().map { $0.url.lastPathComponent } }
+
+    private func startLockHolder(
+        lockURL: URL,
+        readyURL: URL,
+        holdSeconds: TimeInterval,
+        metaURL: URL? = nil
+    ) throws -> Process {
+        let script = """
+        import fcntl, json, os, sys, time
+        lock_path, ready_path, seconds = sys.argv[1], sys.argv[2], float(sys.argv[3])
+        fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        meta = None
+        if len(sys.argv) > 4:
+            meta_path = sys.argv[4]
+            try:
+                with open(meta_path) as source:
+                    meta = json.load(source)
+            except FileNotFoundError:
+                meta = {"entries": {}, "tools": {}}
+        open(ready_path, "w").close()
+        time.sleep(seconds)
+        if meta is not None:
+            meta.setdefault("entries", {})["skill:external"] = {
+                "sourceUrl": "github.com/external/writer"
+            }
+            temporary = meta_path + ".external"
+            with open(temporary, "w") as output:
+                json.dump(meta, output)
+            os.replace(temporary, meta_path)
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+        """
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+        var arguments = ["-c", script, lockURL.path, readyURL.path, String(holdSeconds)]
+        if let metaURL { arguments.append(metaURL.path) }
+        process.arguments = arguments
+        try process.run()
+        let deadline = Date().addingTimeInterval(3)
+        while !fm.fileExists(atPath: readyURL.path), process.isRunning, Date() < deadline {
+            usleep(10_000)
+        }
+        guard fm.fileExists(atPath: readyURL.path) else {
+            process.terminate()
+            throw XCTSkip("跨进程锁测试 helper 未能启动")
+        }
+        return process
+    }
 
     // ── 扫描 ─────────────────────────────────────────────
 
@@ -1196,6 +1247,122 @@ final class StoreFSTests: XCTestCase {
         XCTAssertTrue(fs.metaCorruptBackupExists, "第一现场必须备份成 .corrupt")
         let backup = try String(contentsOf: fs.metaURL.appendingPathExtension("corrupt"), encoding: .utf8)
         XCTAssertTrue(backup.contains("git 冲突标记"), "备份保留损坏原文，人工可恢复")
+    }
+
+    func testStoreMutationLockIsReentrantWithinProcess() throws {
+        try fs.withStoreMutation {
+            XCTAssertTrue(fs.mutateMeta {
+                $0.entries["skill:nested"] = StoreMeta.EntryMeta(sourceUrl: "github.com/o/nested")
+            })
+            let dir = try makeSkill("nested")
+            try fs.setLink(tool: tools[0], kind: .skill, name: "nested", storeDir: dir, on: true)
+        }
+        XCTAssertEqual(fs.loadMeta().entries["skill:nested"]?.sourceUrl, "github.com/o/nested")
+        XCTAssertTrue(fs.isSymlink(claudeLink("nested")))
+    }
+
+    func testCrossProcessMetaMutationWaitsAndMerges() throws {
+        XCTAssertTrue(fs.mutateMeta {
+            $0.entries["skill:initial"] = StoreMeta.EntryMeta(sourceUrl: "github.com/o/initial")
+        })
+        let ready = sandbox.appendingPathComponent("external-lock-ready")
+        let holder = try startLockHolder(
+            lockURL: fs.mutationLockURL,
+            readyURL: ready,
+            holdSeconds: 0.35,
+            metaURL: fs.metaURL
+        )
+
+        let started = Date()
+        XCTAssertTrue(fs.mutateMeta {
+            $0.entries["skill:internal"] = StoreMeta.EntryMeta(sourceUrl: "github.com/internal/writer")
+        })
+        let waited = Date().timeIntervalSince(started)
+        holder.waitUntilExit()
+
+        XCTAssertGreaterThanOrEqual(waited, 0.25, "必须等外部进程释放 flock")
+        let meta = fs.loadMeta()
+        XCTAssertNotNil(meta.entries["skill:initial"])
+        XCTAssertNotNil(meta.entries["skill:external"], "外部进程先写入的键不能被本进程读改写覆盖")
+        XCTAssertNotNil(meta.entries["skill:internal"])
+    }
+
+    func testStoreMutationLockTimesOutInsteadOfHanging() throws {
+        let ready = sandbox.appendingPathComponent("timeout-lock-ready")
+        let holder = try startLockHolder(
+            lockURL: fs.mutationLockURL,
+            readyURL: ready,
+            holdSeconds: 0.6
+        )
+        defer {
+            if holder.isRunning { holder.terminate() }
+            holder.waitUntilExit()
+        }
+        let impatient = StoreFS(env: env, lockTimeout: 0.08)
+        XCTAssertThrowsError(try impatient.withStoreMutation {}) { error in
+            guard case StoreError.storeBusy = error else {
+                return XCTFail("应返回 storeBusy，实际为 \(error)")
+            }
+        }
+        XCTAssertFalse(impatient.mutateMeta { $0.entries["skill:lost"] = StoreMeta.EntryMeta() },
+                       "无法取锁时不能谎报 meta 已保存")
+        XCTAssertNil(fs.loadMeta().entries["skill:lost"])
+    }
+
+    func testInstallHonorsCrossProcessMutationLock() throws {
+        let stagingRoot = sandbox.appendingPathComponent("locked-install-source")
+        let staging = try makeSkill("locked-install", in: stagingRoot)
+        let source = StoreFS.ResolvedSource(
+            url: staging.path,
+            kind: .local,
+            entryName: "locked-install",
+            isBundle: false,
+            items: [],
+            stagingDir: staging,
+            version: nil
+        )
+        let ready = sandbox.appendingPathComponent("install-lock-ready")
+        let holder = try startLockHolder(
+            lockURL: fs.mutationLockURL,
+            readyURL: ready,
+            holdSeconds: 0.5
+        )
+        defer {
+            if holder.isRunning { holder.terminate() }
+            holder.waitUntilExit()
+        }
+
+        let impatient = StoreFS(env: env, lockTimeout: 0.08)
+        XCTAssertThrowsError(try impatient.install(source, linkTools: [])) { error in
+            guard case StoreError.storeBusy = error else {
+                return XCTFail("install 应返回 storeBusy，实际为 \(error)")
+            }
+        }
+        XCTAssertFalse(
+            fm.fileExists(atPath: env.storeRoot.appendingPathComponent("skills/locked-install").path),
+            "拿不到跨进程锁时 install 必须在写入任何 store 数据前退出"
+        )
+    }
+
+    func testStoreMutationLockReleasesWhenHolderCrashes() throws {
+        let ready = sandbox.appendingPathComponent("crash-lock-ready")
+        let holder = try startLockHolder(
+            lockURL: fs.mutationLockURL,
+            readyURL: ready,
+            holdSeconds: 10
+        )
+        kill(holder.processIdentifier, SIGKILL)
+        holder.waitUntilExit()
+
+        let recovered = StoreFS(env: env, lockTimeout: 0.5)
+        XCTAssertTrue(recovered.mutateMeta {
+            $0.entries["skill:after-crash"] = StoreMeta.EntryMeta(sourceUrl: "github.com/o/recovered")
+        })
+        XCTAssertEqual(
+            recovered.loadMeta().entries["skill:after-crash"]?.sourceUrl,
+            "github.com/o/recovered",
+            "持锁进程崩溃后内核应自动释放 flock，不留陈旧锁"
+        )
     }
 
     func testLinkStatusWrongTargetReportsBroken() throws {

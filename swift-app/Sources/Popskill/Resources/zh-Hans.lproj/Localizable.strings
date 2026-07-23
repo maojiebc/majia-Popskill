@@ -206,6 +206,8 @@ macOS: %@
 	<string>从 %@ 重新获取该项</string>
 	<key>从源重新拉取</key>
 	<string>从源重新拉取</string>
+	<key>仓库中发现多个同名 skill「%@」——请粘贴具体 skill 的本地目录</key>
+	<string>仓库中发现多个同名 skill「%@」——请粘贴具体 skill 的本地目录</string>
 	<key>作者</key>
 	<string>作者</string>
 	<key>保持现状</key>
@@ -280,6 +282,8 @@ macOS: %@
 	<string>发现 %lld 个源可更新；%lld 个源检查失败（网络或源不可达）</string>
 	<key>取消</key>
 	<string>取消</string>
+	<key>另一个 Popskill 正在修改 Store，请稍后重试</key>
+	<string>另一个 Popskill 正在修改 Store，请稍后重试</string>
 	<key>只有 GitHub / 本地路径来源支持安装上游新增技能</key>
 	<string>只有 GitHub / 本地路径来源支持安装上游新增技能</string>
 	<key>同步于%@</key>

@@ -3061,6 +3061,22 @@
         }
       }
     },
+    "另一个 Popskill 正在修改 Store，请稍后重试": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another Popskill instance is modifying the Store. Try again shortly."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "另一个 Popskill 正在修改 Store，请稍后重试"
+          }
+        }
+      }
+    },
     "工具（挂载目标）": {
       "localizations": {
         "en": {
@@ -5821,6 +5837,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "清空回收站？"
+          }
+        }
+      }
+    },
+    "仓库中发现多个同名 skill「%@」——请粘贴具体 skill 的本地目录": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The repository contains multiple skills named “%@”. Paste the local directory of the specific skill."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仓库中发现多个同名 skill「%@」——请粘贴具体 skill 的本地目录"
           }
         }
       }
