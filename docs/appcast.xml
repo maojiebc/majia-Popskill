@@ -8,6 +8,26 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.19.0</title>
+      <pubDate>Thu, 23 Jul 2026 11:01:23 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.19.0 — 多实例安全 + 嵌套技能目录兼容</h2>
+        <p>本版集中修复两类容易造成“偶发、难复现”问题的底层边界：多个 Popskill 实例同时修改 Store，以及 GitHub 仓库中的技能并不位于预期目录层级。</p>
+        <p><b>多个 Popskill 同时运行不再互相覆盖</b>：所有 Store 写操作现在使用同一把跨进程、可重入的文件锁串行化。安装、更新、删除、恢复、导入、软链接与元数据写入都处于受保护的事务边界内；第二个实例会等待正在执行的修改，超时后给出明确提示，而不是静默丢失其中一方的数据。进程崩溃或被强制结束时，内核会自动释放锁，不会遗留“永久锁死”的状态。</p>
+        <p><b>更新等待时间保持克制</b>：Git clone、下载等耗时网络操作继续在锁外完成，只在最终落盘和切换版本时短暂持锁。Well-known 来源会先把全部新文件下载到临时区，全部成功后再统一替换，因此断网或单文件下载失败不会留下半更新状态。</p>
+        <p><b>兼容仓库里的嵌套技能布局</b>：添加 GitHub 来源时，不再只认仓库根目录或固定一层结构。解析器会沿路径逐段识别真正包含 `SKILL.md` 的技能目录；遇到多个同名候选时会停止并要求用户粘贴具体目录，避免“猜中错误技能”。</p>
+        <p>新增跨进程竞争、等待合并、超时、崩溃释放和安装互斥等回归测试，并做了变异验证：临时禁用锁后测试会稳定暴露元数据丢失。完整测试 145 项通过。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.19.0/Popskill-2.19.0.dmg"
+        sparkle:version="285"
+        sparkle:shortVersionString="2.19.0"
+        sparkle:edSignature="JCsJSzM43Px2SzBbRsUXyOvpe+olHcQa2vRfIgtdR7tYwQ2w/KbvXI2eeya9QGiZl+z41rhhXJig0uUoEnq3DQ=="
+        length="2982026"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.18.1</title>
       <pubDate>Tue, 14 Jul 2026 07:57:38 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
