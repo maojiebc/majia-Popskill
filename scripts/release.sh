@@ -247,7 +247,9 @@ step "终检 appcast 与装机直链"
 APPCAST_URL="https://maojiebc.github.io/majia-Popskill/appcast.xml"
 ok=false
 for i in $(seq 1 20); do
-  if curl -sf "$APPCAST_URL" | grep -q "<title>v$VERSION</title>"; then
+  # 不能用 grep -q：命中后它会提前关管道，curl 收到 SIGPIPE 返回 23；
+  # 在本脚本的 pipefail 下反而被误判成失败，曾让每次终检都白等 10 分钟。
+  if curl -sf "$APPCAST_URL" | grep -F "<title>v$VERSION</title>" >/dev/null; then
     ok=true; break
   fi
   echo "  appcast 还没刷新（第 $i/20 次），30s 后重试——Pages 构建 + CDN 缓存最长 ~10 分钟"
