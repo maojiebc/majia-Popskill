@@ -917,6 +917,7 @@ struct StoreFS: @unchecked Sendable {
         let stagingDir: URL    // 待入 store 的目录（local 源 = 原地，github = 临时 clone）
         let version: String?
         var headSha: String? = nil   // github 源 clone 时的 HEAD（ls-remote 短路用）
+        var cleanupRoot: URL? = nil  // Popskill 自建的 staging 根；安装/取消/失败后整棵清理
     }
 
     /// 解析来源：local 直接扫描；github 浅 clone 到临时目录再扫描。
@@ -947,7 +948,7 @@ struct StoreFS: @unchecked Sendable {
             let dir = stageRoot.appendingPathComponent(name)
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)
             try data.write(to: dir.appendingPathComponent("SKILL.md"))
-            return try resolveDir(dir, url: "wk:\(host)", kind: .wellKnown)
+            return try resolveDir(dir, url: "wk:\(host)", kind: .wellKnown, cleanupRoot: stageRoot)
         case .github:
             try StoreFS.ensureGit()   // 新 Mac 没装 CLT 时,给人话引导而不是裸 git 系统弹窗
             let (cloneURL, repoName, norm) = try StoreFS.githubTarget(url)
@@ -964,7 +965,7 @@ struct StoreFS: @unchecked Sendable {
                 .out.trimmingCharacters(in: .whitespacesAndNewlines)
             try? fm.removeItem(at: tmp.appendingPathComponent(".git"))
             do {
-                var src = try resolveDir(tmp, url: norm, kind: .github)
+                var src = try resolveDir(tmp, url: norm, kind: .github, cleanupRoot: stageRoot)
                 src.headSha = sha.isEmpty ? nil : sha
                 return src
             } catch {
@@ -1042,51 +1043,130 @@ struct StoreFS: @unchecked Sendable {
     /// 丢弃 github 临时 staging（连同它的 popskill-stage-* 父目录）。
     /// local 源的 stagingDir 是用户原地目录，绝不能删——调用方自己 guard。
     func discardStagingDir(_ dir: URL) {
-        var root = dir
-        if root.deletingLastPathComponent().lastPathComponent.hasPrefix("popskill-stage-") {
-            root = root.deletingLastPathComponent()
+        let temp = fm.temporaryDirectory.standardizedFileURL.path
+        var cursor = dir.standardizedFileURL
+        var root = cursor
+        while cursor.path.hasPrefix(temp), cursor.path != temp {
+            if cursor.lastPathComponent.hasPrefix("popskill-stage-") {
+                root = cursor
+                break
+            }
+            let parent = cursor.deletingLastPathComponent()
+            if parent.path == cursor.path { break }
+            cursor = parent
         }
         try? fm.removeItem(at: root)
     }
 
     func discardStaging(_ src: ResolvedSource) {
-        // github/wellKnown 的 staging 都是我们自建的临时目录；local 是用户原地目录绝不能删
-        guard src.kind == .github || src.kind == .wellKnown else { return }
-        discardStagingDir(src.stagingDir)
+        // cleanupRoot 明确标注所有权；不能再按 kind 猜，否则本地多技能源规范化出的
+        // 临时 bundle 会泄漏，而嵌套 GitHub skill 又可能只删到 clone 内层、留下外壳。
+        guard let root = src.cleanupRoot else { return }
+        try? fm.removeItem(at: root)
     }
 
-    private func resolveDir(_ dir: URL, url: String, kind: SourceKind) throws -> ResolvedSource {
+    private func resolveDir(_ dir: URL, url: String, kind: SourceKind,
+                            cleanupRoot: URL? = nil) throws -> ResolvedSource {
         let name = dir.lastPathComponent
         let front = frontmatter(dir.appendingPathComponent("SKILL.md"))
         if hasManifest(dir) {
             let item = PlanItem(name: name, type: .skill, desc: front["description"] ?? "",
                                 version: front["version"], tokens: estimateTokens(dir))
             return ResolvedSource(url: url, kind: kind, entryName: name, isBundle: false,
-                                  items: [item], stagingDir: dir, version: front["version"])
+                                  items: [item], stagingDir: dir, version: front["version"],
+                                  cleanupRoot: cleanupRoot)
         }
-        // 套装：找带 SKILL.md 的子目录；直接子目录没有就按 monorepo 约定看 skills/
-        var base = dir
-        var subs = ((try? fm.contentsOfDirectory(atPath: base.path)) ?? []).sorted()
-            .filter { !$0.hasPrefix(".") && hasManifest(base.appendingPathComponent($0)) }
-        if subs.isEmpty {
-            let skillsDir = dir.appendingPathComponent("skills")
-            if fm.fileExists(atPath: skillsDir.path) {
-                base = skillsDir
-                subs = ((try? fm.contentsOfDirectory(atPath: base.path)) ?? []).sorted()
-                    .filter { !$0.hasPrefix(".") && hasManifest(base.appendingPathComponent($0)) }
-            }
-        }
-        guard !subs.isEmpty else {
+
+        // 以 SKILL.md 为真源，不再用同名目录猜 skill。先保留传统的直系套装布局，
+        // 再做有界递归，覆盖 plugin-wrapper/skills/foo 之类现实仓库。
+        let direct = skillDirectories(in: dir, recursive: false)
+        let discovered = direct.isEmpty ? skillDirectories(in: dir, recursive: true) : direct
+        guard !discovered.isEmpty else {
             throw StoreError.resolveFailed(L("未找到 SKILL.md — 该源不是 skill 也不是套装"))
         }
-        let items = subs.map { sub -> PlanItem in
-            let d = base.appendingPathComponent(sub)
+
+        if discovered.count == 1, let skillDir = discovered.first {
+            let skillName = skillDir.lastPathComponent
+            let skillFront = frontmatter(skillDir.appendingPathComponent("SKILL.md"))
+            let item = PlanItem(name: skillName, type: .skill,
+                                desc: skillFront["description"] ?? "",
+                                version: skillFront["version"], tokens: estimateTokens(skillDir))
+            return ResolvedSource(url: url, kind: kind, entryName: skillName, isBundle: false,
+                                  items: [item], stagingDir: skillDir,
+                                  version: skillFront["version"], cleanupRoot: cleanupRoot)
+        }
+
+        let grouped = Dictionary(grouping: discovered, by: \.lastPathComponent)
+        if let duplicate = grouped.first(where: { $0.value.count > 1 })?.key {
+            throw StoreError.resolveFailed(
+                L("仓库中发现多个同名 skill「\(duplicate)」——请粘贴具体 skill 的本地目录")
+            )
+        }
+
+        // Store 的目录型套装要求成员平铺在根下。仓库若把成员放在 skills/ 或
+        // plugin wrapper 深处，就规范化到自建 staging，避免安装后扫描成空套装。
+        let needsFlattening = discovered.contains {
+            $0.deletingLastPathComponent().standardizedFileURL != dir.standardizedFileURL
+        }
+        var bundleDir = dir
+        var ownedRoot = cleanupRoot
+        if needsFlattening {
+            let root = cleanupRoot
+                ?? fm.temporaryDirectory.appendingPathComponent("popskill-stage-\(UUID().uuidString.prefix(8))")
+            let normalized = root.appendingPathComponent("\(name)-normalized")
+            try fm.createDirectory(at: normalized, withIntermediateDirectories: true)
+            do {
+                for source in discovered {
+                    try fm.copyItem(at: source, to: normalized.appendingPathComponent(source.lastPathComponent))
+                }
+            } catch {
+                if cleanupRoot == nil { try? fm.removeItem(at: root) }
+                throw error
+            }
+            bundleDir = normalized
+            ownedRoot = root
+        }
+
+        let items = discovered.sorted { $0.lastPathComponent < $1.lastPathComponent }.map { d -> PlanItem in
             let f = frontmatter(d.appendingPathComponent("SKILL.md"))
-            return PlanItem(name: sub, type: .skill, desc: f["description"] ?? "",
+            return PlanItem(name: d.lastPathComponent, type: .skill, desc: f["description"] ?? "",
                             version: f["version"], tokens: estimateTokens(d))
         }
         return ResolvedSource(url: url, kind: kind, entryName: name, isBundle: true,
-                              items: items, stagingDir: dir, version: nil)
+                              items: items, stagingDir: bundleDir, version: nil,
+                              cleanupRoot: ownedRoot)
+    }
+
+    /// 查找含 SKILL.md 的目录。递归模式最多四层，且不进入隐藏目录、依赖缓存、
+    /// symlink 或已经命中的 skill 内部，避免扫到 .git/node_modules 与路径逃逸。
+    private func skillDirectories(in root: URL, recursive: Bool) -> [URL] {
+        let ignored: Set<String> = ["node_modules", "vendor", "Pods", ".build", "target"]
+        let maxDepth = recursive ? 4 : 1
+        var queue: [(URL, Int)] = [(root, 0)]
+        var found: [URL] = []
+
+        while !queue.isEmpty {
+            let (parent, depth) = queue.removeFirst()
+            guard depth < maxDepth,
+                  let children = try? fm.contentsOfDirectory(
+                    at: parent,
+                    includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
+                    options: [.skipsHiddenFiles]
+                  ) else { continue }
+
+            for child in children.sorted(by: { $0.path < $1.path }) {
+                let childName = child.lastPathComponent
+                guard !childName.hasPrefix("."), !ignored.contains(childName),
+                      let values = try? child.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey]),
+                      values.isDirectory == true, values.isSymbolicLink != true else { continue }
+                if hasManifest(child) {
+                    found.append(child)
+                } else if recursive {
+                    queue.append((child, depth + 1))
+                }
+            }
+        }
+        return found.sorted { $0.path < $1.path }
     }
 
     /// 安装事务（v2.18 重做）：预检 → 隐藏临时名 → 原子 rename → 记账建链 → meta。

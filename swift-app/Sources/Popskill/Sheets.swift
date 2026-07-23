@@ -325,13 +325,11 @@ struct AddSheet: View {
         }
     }
 
-    /// github / well-known 计划的临时 staging（连 stage 父目录）后台清掉；local 源原地目录不动。
-    /// v2.16：曾只认 github——well-known 计划取消会把单文件 staging 留在临时目录
+    /// 只清 Popskill 明确拥有的 staging；普通 local 源原地目录没有 cleanupRoot，绝不动。
     private func discardPlan(_ p: StoreFS.ResolvedSource?) {
-        guard let p, p.kind == .github || p.kind == .wellKnown, !model.fake else { return }
+        guard let p, p.cleanupRoot != nil, !model.fake else { return }
         let fsCopy = model.fs
-        let dir = p.stagingDir
-        Task.detached { fsCopy.discardStagingDir(dir) }
+        Task.detached { fsCopy.discardStaging(p) }
     }
 }
 

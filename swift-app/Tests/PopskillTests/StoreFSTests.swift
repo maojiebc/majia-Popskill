@@ -378,6 +378,74 @@ final class StoreFSTests: XCTestCase {
         XCTAssertTrue(fm.fileExists(atPath: src.path), "local 源安装是复制，原目录保留")
     }
 
+    func testResolveFindsNestedSkillByManifestAnchor() throws {
+        let repo = sandbox.appendingPathComponent("agent-skill")
+        let wrapper = repo.appendingPathComponent("ast-grep")
+        let actual = wrapper.appendingPathComponent("skills/ast-grep")
+        try fm.createDirectory(at: wrapper, withIntermediateDirectories: true)
+        try "plugin wrapper".write(
+            to: wrapper.appendingPathComponent("README.md"), atomically: true, encoding: .utf8)
+        try fm.createDirectory(at: actual, withIntermediateDirectories: true)
+        try "---\nname: ast-grep\ndescription: nested\n---\n".write(
+            to: actual.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+
+        let resolved = try fs.resolve(repo.path)
+        XCTAssertFalse(resolved.isBundle)
+        XCTAssertEqual(resolved.entryName, "ast-grep")
+        XCTAssertEqual(resolved.stagingDir.standardizedFileURL, actual.standardizedFileURL)
+
+        try fs.install(resolved, linkTools: tools.filter { $0.id == "claude" })
+        let installed = scan()
+        XCTAssertEqual(installed.map(\.name), ["ast-grep"])
+        XCTAssertEqual(installed[0].cap.status("claude"), .on)
+        XCTAssertTrue(fm.fileExists(atPath: repo.path), "本地源目录不能被 staging 清理误删")
+    }
+
+    func testResolveFlattensNestedBundleForStoreLayout() throws {
+        let repo = sandbox.appendingPathComponent("deep-suite")
+        let alpha = repo.appendingPathComponent("skills/category/alpha")
+        let beta = repo.appendingPathComponent("plugins/beta/skills/beta")
+        for (dir, name) in [(alpha, "alpha"), (beta, "beta")] {
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            try "---\nname: \(name)\n---\n".write(
+                to: dir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        }
+
+        let resolved = try fs.resolve(repo.path)
+        XCTAssertTrue(resolved.isBundle)
+        XCTAssertEqual(resolved.items.map(\.name), ["alpha", "beta"])
+        XCTAssertNotNil(resolved.cleanupRoot)
+        XCTAssertTrue(fm.fileExists(atPath: resolved.stagingDir.appendingPathComponent("alpha/SKILL.md").path))
+        XCTAssertTrue(fm.fileExists(atPath: resolved.stagingDir.appendingPathComponent("beta/SKILL.md").path))
+
+        try fs.install(resolved, linkTools: tools.filter { $0.id == "codex" })
+        let installed = scan()
+        XCTAssertEqual(installed.count, 1)
+        XCTAssertEqual(installed[0].children?.map(\.name), ["alpha", "beta"])
+        XCTAssertEqual(installed[0].children?.map { $0.status("codex") }, [.on, .on])
+        XCTAssertFalse(fm.fileExists(atPath: resolved.cleanupRoot!.path), "规范化 staging 安装后应整棵清理")
+    }
+
+    func testResolveSkipsHiddenDependencyAndSymlinkTrees() throws {
+        let repo = sandbox.appendingPathComponent("unsafe-layout")
+        let hidden = repo.appendingPathComponent(".hidden/secret")
+        let dependency = repo.appendingPathComponent("node_modules/pkg/skills/leak")
+        let outside = sandbox.appendingPathComponent("outside")
+        try fm.createDirectory(at: hidden, withIntermediateDirectories: true)
+        try fm.createDirectory(at: dependency, withIntermediateDirectories: true)
+        try fm.createDirectory(at: outside, withIntermediateDirectories: true)
+        for dir in [hidden, dependency, outside] {
+            try "---\nname: hidden\n---\n".write(
+                to: dir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        }
+        try fm.createDirectory(at: repo, withIntermediateDirectories: true)
+        try fm.createSymbolicLink(at: repo.appendingPathComponent("escape"), withDestinationURL: outside)
+
+        XCTAssertThrowsError(try fs.resolve(repo.path)) { error in
+            XCTAssertTrue(error.localizedDescription.contains("SKILL.md"))
+        }
+    }
+
     func testFreshMachineScanAndInstall() throws {
         // 新用户零基建：store 根本不存在 → 扫描得空表；首次安装自建全部目录
         let virgin = StoreEnv(storeRoot: sandbox.appendingPathComponent("virgin/.agents"),
