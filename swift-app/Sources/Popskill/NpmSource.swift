@@ -7,8 +7,8 @@ import Foundation
 // 所以 npm 源的更新语义 = registry 最新版 vs 全局已装版，更新 = npm i -g；
 // 绝不去动 store 里的技能目录（那是 install-skill 的产物，覆盖会打断 symlink 体系）。
 //
-// 全局 CLI 巡检：npm ls -g 一次拿全部全局包（claude-code / lark-cli / getnote 们），
-// 逐包比 registry——用户装的 CLI 从此进 Popskill 的更新雷达（吸收 cc-switch 工具版本矩阵）。
+// 全局 CLI 巡检（v2.20）：按前缀分别 `npm ls -g --prefix`，升级时打回同一前缀。
+// 启动只查常用白名单；打开面板才扫全部。见 CliInventory.swift。
 
 // ── 纯函数（单测覆盖，不碰网络/进程）─────────────────────
 
@@ -51,16 +51,6 @@ func parseNpmGlobalList(_ data: Data) -> [String: String] {
         if let d = info as? [String: Any], let v = d["version"] as? String { out[name] = v }
     }
     return out
-}
-
-// ── 全局 CLI 巡检模型 ────────────────────────────────────
-
-struct GlobalCli: Identifiable, Equatable {
-    let name: String        // npm 包名（@scope/pkg）
-    let installed: String
-    var latest: String?     // nil = registry 没查到（网络失败等），不算可升级
-    var id: String { name }
-    var hasUpdate: Bool { latest != nil && latest != installed }
 }
 
 // ── npm 环境探测（一次探测，进程生命周期内缓存）──────────
@@ -107,18 +97,67 @@ extension StoreFS {
 
     /// 全局已装版本。没装 npm / 没装这个包 → nil（不算错误：无从比较就不进更新雷达）
     func npmGlobalVersion(_ pkg: String) -> String? {
-        npmGlobalList()[pkg]
+        npmInstallFact(pkg)?.version
     }
 
-    /// 全局包全量清单（CLI 巡检入口）。npm ls 依赖树报错时仍吐 JSON，照常解析
+    /// 默认前缀的全量清单（兼容旧测试 / 单前缀路径）
     func npmGlobalList() -> [String: String] {
+        npmGlobalList(prefix: nil)
+    }
+
+    func npmGlobalList(prefix: String?) -> [String: String] {
         guard NpmEnv.npmBin() != nil else { return [:] }
-        let r = runProcess("/bin/zsh", ["-lc", "npm ls -g --json --depth=0 2>/dev/null"], timeout: 60)
+        let cmd: String
+        if let prefix, !prefix.isEmpty {
+            guard !prefix.contains("'") else { return [:] }
+            cmd = "npm ls -g --prefix '\(prefix)' --json --depth=0 2>/dev/null"
+        } else {
+            cmd = "npm ls -g --json --depth=0 2>/dev/null"
+        }
+        let r = runProcess("/bin/zsh", ["-lc", cmd], timeout: 60)
         return parseNpmGlobalList(Data(r.out.utf8))
     }
 
-    /// npm i -g 升级到指定版本。走 login shell 继承 node 环境；失败抛人话
-    func npmGlobalInstall(_ pkg: String, version: String) throws {
+    /// login shell 的 `npm prefix -g`，再并上 ~/.local 与 Homebrew 前缀（目录真实存在才收）
+    func npmPrefixes() -> [String] {
+        var defaultPrefix: String?
+        if NpmEnv.npmBin() != nil {
+            let r = runProcess("/bin/zsh", ["-lc", "npm prefix -g"], timeout: 20)
+            if r.status == 0 {
+                let p = r.out.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !p.isEmpty { defaultPrefix = p }
+            }
+        }
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        return candidateNpmPrefixes(home: home, defaultPrefix: defaultPrefix).filter(prefixHasNodeModules)
+    }
+
+    /// 这个包实际装在哪个前缀。优先 PATH 命中的那份。
+    func npmInstallFact(_ pkg: String) -> (prefix: String, version: String)? {
+        let prefixes = npmPrefixes()
+        let hit = loginWhich(cliBinName(pkg))
+        if let hit {
+            if let prefix = prefixes.first(where: { pathHitsPrefix(hit, prefix: $0) }),
+               let ver = npmGlobalList(prefix: prefix)[pkg] {
+                return (prefix, ver)
+            }
+        }
+        for prefix in prefixes {
+            if let ver = npmGlobalList(prefix: prefix)[pkg] { return (prefix, ver) }
+        }
+        return nil
+    }
+
+    func loginWhich(_ bin: String) -> String? {
+        guard !bin.contains("'"), !bin.contains(" ") else { return nil }
+        let r = runProcess("/bin/zsh", ["-lc", "command -v '\(bin)'"], timeout: 15)
+        guard r.status == 0 else { return nil }
+        let path = r.out.trimmingCharacters(in: .whitespacesAndNewlines)
+        return path.isEmpty ? nil : path
+    }
+
+    /// npm i -g 升级到指定版本。prefix 非空时打回那一份，避免升错副本。
+    func npmGlobalInstall(_ pkg: String, version: String, prefix: String? = nil) throws {
         guard NpmEnv.npmBin() != nil else {
             throw StoreError.resolveFailed(L("未检测到 npm——请先安装 Node.js。"))
         }
@@ -126,10 +165,15 @@ extension StoreFS {
         guard !pkg.contains("'"), !pkg.contains(" "), !version.contains("'"), !version.contains(" ") else {
             throw StoreError.unsafeName("\(pkg)@\(version)")
         }
-        let r = runProcess("/bin/zsh", ["-lc", "npm i -g '\(pkg)@\(version)' 2>&1"], timeout: 300)
+        if let prefix, prefix.contains("'") { throw StoreError.unsafeName(prefix) }
+        let prefixFlag = prefix.map { " --prefix '\($0)'" } ?? ""
+        let r = runProcess("/bin/zsh", ["-lc", "npm i -g\(prefixFlag) '\(pkg)@\(version)' 2>&1"], timeout: 300)
         guard r.status == 0 else {
             let tail = (r.out + r.err).trimmingCharacters(in: .whitespacesAndNewlines).suffix(200)
             throw StoreError.resolveFailed(tail.isEmpty ? L("npm 安装失败") : L("npm 安装失败：\(String(tail))"))
+        }
+        if let prefix, let hit = loginWhich(cliBinName(pkg)), !pathHitsPrefix(hit, prefix: prefix) {
+            throw StoreError.resolveFailed(L("已写入 \(abbrev(prefix))，但 PATH 仍命中 \(abbrev(hit))——命令行用的还是另一份"))
         }
     }
 
@@ -154,6 +198,22 @@ extension StoreFS {
                            upstreamNew: [], fingerprint: latest)
     }
 
+    func pypiLatestVersion(_ name: String) throws -> String {
+        guard let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+              let url = URL(string: "https://pypi.org/pypi/\(encoded)/json") else {
+            throw StoreError.resolveFailed(L("包名不合法：\(name)"))
+        }
+        let data: Data
+        do { data = try httpGet(url, accept: "application/json") }
+        catch { throw StoreError.resolveFailed(L("连不上 PyPI——检查网络后重试。")) }
+        guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let info = obj["info"] as? [String: Any],
+              let v = info["version"] as? String, !v.isEmpty else {
+            throw StoreError.resolveFailed(L("PyPI 响应异常：\(name)"))
+        }
+        return v
+    }
+
     /// npm 源 entry 的更新执行：升级全局 CLI，不碰 store 技能目录。
     /// 返回值对齐 applyUpdate 形状（updated = 包名）。
     func applyNpmUpdate(_ entry: Entry) throws -> (updated: [String], upstreamNew: [String]) {
@@ -161,9 +221,132 @@ extension StoreFS {
             throw StoreError.resolveFailed(L("该源没有记录 npm 包名，无法更新"))
         }
         let latest = try npmLatestVersion(pkg)
-        try npmGlobalInstall(pkg, version: latest)
+        try npmGlobalInstall(pkg, version: latest, prefix: npmInstallFact(pkg)?.prefix)
         saveLatest(entry.id, latest: nil)
         saveCheckpoint(entry.id, head: latest, localDigest: localDigest(entry))
         return (updated: [pkg], upstreamNew: [])
+    }
+
+    /// 扫本机维护型 CLI。full=false 只查白名单（启动 / 检查更新默认）。
+    func scanMaintainedClis(extraNpm: Set<String> = [], full: Bool = false) -> [GlobalCli] {
+        var out: [GlobalCli] = []
+        out += scanNpmClis(extra: extraNpm, full: full)
+        out += scanBrewClis()
+        out += scanPipxClis()
+        out += scanUvClis()
+        return out.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+    }
+
+    private func scanNpmClis(extra: Set<String>, full: Bool) -> [GlobalCli] {
+        let prefixes = npmPrefixes()
+        guard !prefixes.isEmpty else { return [] }
+        let wanted = Set(maintainedNpmPackages.keys).union(extra)
+        var rows: [GlobalCli] = []
+        for prefix in prefixes {
+            let installed = npmGlobalList(prefix: prefix)
+            let names = full ? Set(installed.keys) : Set(installed.keys).intersection(wanted)
+            for pkg in names.sorted() {
+                let ver = installed[pkg] ?? ""
+                let bin = cliBinName(pkg)
+                let hit = loginWhich(bin)
+                let allow = maintainedNpmPackages[pkg] != nil || extra.contains(pkg)
+                rows.append(GlobalCli(
+                    name: pkg, installed: ver, latest: nil,
+                    displayName: pkg, channel: .npm, prefix: prefix,
+                    pathHit: hit,
+                    pathMatchesPrefix: hit.map { pathHitsPrefix($0, prefix: prefix) } ?? true,
+                    excluded: isFoundationTool(pkg),
+                    allowlisted: allow
+                ))
+            }
+        }
+        return rows
+    }
+
+    private func scanBrewClis() -> [GlobalCli] {
+        let brew = loginWhich("brew")
+        guard brew != nil else { return [] }
+        var installed: [String: String] = [:]
+        for formula in maintainedBrewFormulae {
+            guard !formula.contains("'") else { continue }
+            let r = runProcess("/bin/zsh", ["-lc", "brew list --versions '\(formula)'"], timeout: 20)
+            guard r.status == 0 else { continue }
+            let parts = r.out.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+            if parts.count >= 2 { installed[formula] = parts[1] }
+        }
+        guard !installed.isEmpty else { return [] }
+        var latestByName: [String: String] = [:]
+        let outdated = runProcess("/bin/zsh", ["-lc", "brew outdated --json=v2"], timeout: 40)
+        if outdated.status == 0 {
+            for row in parseBrewOutdated(Data(outdated.out.utf8)) {
+                latestByName[row.name] = row.latest
+            }
+        }
+        return installed.keys.sorted().map { name in
+            let ver = installed[name] ?? ""
+            return GlobalCli(
+                name: name, installed: ver, latest: latestByName[name] ?? ver,
+                displayName: name, channel: .brew,
+                excluded: isFoundationTool(name), allowlisted: true
+            )
+        }
+    }
+
+    private func scanPipxClis() -> [GlobalCli] {
+        guard loginWhich("pipx") != nil else { return [] }
+        let r = runProcess("/bin/zsh", ["-lc", "pipx list --json"], timeout: 30)
+        guard r.status == 0 else { return [] }
+        let installed = parsePipxList(Data(r.out.utf8))
+        return maintainedPipxPackages.compactMap { name in
+            guard let ver = installed[name] else { return nil }
+            return GlobalCli(name: name, installed: ver, displayName: name,
+                             channel: .pipx, allowlisted: true)
+        }
+    }
+
+    private func scanUvClis() -> [GlobalCli] {
+        guard loginWhich("uv") != nil else { return [] }
+        let r = runProcess("/bin/zsh", ["-lc", "uv tool list"], timeout: 20)
+        guard r.status == 0 else { return [] }
+        var out: [GlobalCli] = []
+        for line in r.out.split(separator: "\n") {
+            let parts = line.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+            guard parts.count >= 2 else { continue }
+            let name = parts[0]
+            guard maintainedUvTools.contains(name) else { continue }
+            let ver = parts[1].trimmingCharacters(in: CharacterSet(charactersIn: "v"))
+            out.append(GlobalCli(name: name, installed: ver, displayName: name,
+                                 channel: .uv, allowlisted: true))
+        }
+        return out
+    }
+
+    func upgradeMaintainedCli(_ cli: GlobalCli) throws {
+        guard !cli.excluded else {
+            throw StoreError.resolveFailed(L("\(cli.name) 是基础工具，不在一键升级范围"))
+        }
+        guard let latest = cli.latest, latest != cli.installed else { return }
+        switch cli.channel {
+        case .npm:
+            try npmGlobalInstall(cli.name, version: latest, prefix: cli.prefix)
+        case .brew:
+            guard !cli.name.contains("'") else { throw StoreError.unsafeName(cli.name) }
+            let r = runProcess("/bin/zsh", ["-lc", "brew upgrade '\(cli.name)' 2>&1"], timeout: 300)
+            guard r.status == 0 else {
+                throw StoreError.resolveFailed(L("brew 升级失败：\(String((r.out + r.err).suffix(160)))"))
+            }
+        case .pipx:
+            guard !cli.name.contains("'") else { throw StoreError.unsafeName(cli.name) }
+            let r = runProcess("/bin/zsh", ["-lc", "pipx upgrade '\(cli.name)' 2>&1"], timeout: 300)
+            guard r.status == 0 else {
+                throw StoreError.resolveFailed(L("pipx 升级失败：\(String((r.out + r.err).suffix(160)))"))
+            }
+        case .uv:
+            guard !cli.name.contains("'") else { throw StoreError.unsafeName(cli.name) }
+            let r = runProcess("/bin/zsh", ["-lc", "uv tool upgrade '\(cli.name)' 2>&1"], timeout: 300)
+            guard r.status == 0 else {
+                throw StoreError.resolveFailed(L("uv 升级失败：\(String((r.out + r.err).suffix(160)))"))
+            }
+        }
     }
 }

@@ -15,7 +15,17 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CATALOG="$ROOT_DIR/swift-app/l10n/Localizable.xcstrings"
 OUT_DIR="$ROOT_DIR/swift-app/Sources/Popskill/Resources"
-XCRUN=(env DEVELOPER_DIR=/Applications/Xcode.app xcrun)   # CLT 没有 xcstringstool
+if [[ -z "${DEVELOPER_DIR:-}" ]]; then
+  if [[ -d /Applications/Xcode.app ]]; then
+    DEVELOPER_DIR=/Applications/Xcode.app
+  elif [[ -d /Applications/Xcode-beta.app ]]; then
+    DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
+  else
+    echo "error: 找不到 /Applications/Xcode.app（CLT 没有 xcstringstool）" >&2
+    exit 1
+  fi
+fi
+XCRUN=(env DEVELOPER_DIR="$DEVELOPER_DIR" xcrun)   # CLT 没有 xcstringstool
 
 die() { echo "error: $*" >&2; exit 1; }
 

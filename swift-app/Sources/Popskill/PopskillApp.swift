@@ -93,6 +93,8 @@ struct PopskillApp: App {
                 Button(L("定时任务…")) { if model.sheet == nil { model.sheet = .sched; model.reloadSched() } }
                 Button(L("CLI 巡检…")) { if model.sheet == nil { model.sheet = .cli } }   // 面板 onAppear 自会重扫（v2.16）
                     .keyboardShortcut("j", modifiers: .command)
+                Button(L("保存为工作模式…")) { model.promptSaveProfile() }
+                    .keyboardShortcut("p", modifiers: [.command, .shift])
             }
             CommandGroup(replacing: .help) {
                 Button(L("Popskill 帮助")) {

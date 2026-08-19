@@ -249,6 +249,42 @@ final class StoreFSTests: XCTestCase {
         XCTAssertEqual(check.latest, "3.1.0", "应解析出上游版本号而非笼统的「新版」")
     }
 
+    func testApplyUpdateSkipsLocalDriftUnlessForced() throws {
+        let upstream = sandbox.appendingPathComponent("up-drift")
+        let upSkill = upstream.appendingPathComponent("skills/drifty")
+        try fm.createDirectory(at: upSkill, withIntermediateDirectories: true)
+        try "---\nname: drifty\nversion: 1.0.0\n---\nupstream-v1\n".write(
+            to: upSkill.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let local = try makeSkill("drifty", version: "1.0.0")
+        try "---\nname: drifty\nversion: 1.0.0\n---\nupstream-v1\n".write(
+            to: local.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        let cap = Capability(id: "skill:drifty", name: "drifty", type: .skill, linkKind: .skill, desc: "",
+                             version: "1.0.0", author: nil, tokens: 0, dirURL: local)
+        let entry = Entry(id: "skill:drifty", cap: cap, children: nil, sourceUrl: upstream.path)
+        XCTAssertNil(try fs.checkUpdate(entry), "先与上游对齐，写入 appliedDigest")
+        XCTAssertNotNil(fs.loadMeta().entries["skill:drifty"]?.appliedDigest)
+
+        try "---\nname: drifty\nversion: 1.0.0\n---\n我改过的本地内容\n".write(
+            to: local.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        try "---\nname: drifty\nversion: 2.0.0\n---\nupstream-v2\n".write(
+            to: upSkill.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+        fs.recordDriftAgainstApplied(entry)
+        XCTAssertEqual(fs.loadMeta().entries["skill:drifty"]?.drifted, true)
+
+        XCTAssertThrowsError(try fs.applyUpdate(entry)) { err in
+            guard case StoreError.localDrift = err else {
+                return XCTFail("应抛 localDrift，实际 \(err)")
+            }
+        }
+        XCTAssertTrue(try String(contentsOf: local.appendingPathComponent("SKILL.md"), encoding: .utf8)
+            .contains("我改过的本地内容"), "默认更新不得覆盖本地修改")
+
+        _ = try fs.applyUpdate(entry, force: true)
+        XCTAssertTrue(try String(contentsOf: local.appendingPathComponent("SKILL.md"), encoding: .utf8)
+            .contains("upstream-v2"))
+        XCTAssertEqual(fs.loadMeta().entries["skill:drifty"]?.drifted, false)
+    }
+
     // ── 跳过此版本（v2.15）───────────────────────────────
 
     /// 上游 fixture + store 本地版 + entry 三件套（跳过场景共用）
@@ -1093,6 +1129,34 @@ final class StoreFSTests: XCTestCase {
         defer { NpmEnv._setForTest(nil) }
         XCTAssertThrowsError(try fs.npmGlobalInstall("a'; rm -rf ~", version: "1.0.0"))
         XCTAssertThrowsError(try fs.npmGlobalInstall("ok-pkg", version: "1.0.0 --evil"))
+        XCTAssertThrowsError(try fs.npmGlobalInstall("ok-pkg", version: "1.0.0", prefix: "/tmp/evil'prefix"))
+    }
+
+    func testCliInventoryPureHelpers() {
+        XCTAssertEqual(cliBinName("@openai/codex"), "codex")
+        XCTAssertEqual(cliBinName("clawhub"), "clawhub")
+        XCTAssertTrue(isFoundationTool("typescript"))
+        XCTAssertFalse(isFoundationTool("@openai/codex"))
+        let prefixes = candidateNpmPrefixes(home: "/Users/majia", defaultPrefix: "/Users/majia/.local")
+        XCTAssertEqual(prefixes.first, "/Users/majia/.local")
+        XCTAssertTrue(prefixes.contains("/opt/homebrew"))
+        XCTAssertTrue(pathHitsPrefix("/Users/majia/.local/bin/codex", prefix: "/Users/majia/.local"))
+        XCTAssertFalse(pathHitsPrefix("/opt/homebrew/bin/codex", prefix: "/Users/majia/.local"))
+        let brew = parseBrewOutdated(Data(#"{"formulae":[{"name":"gemini-cli","installed_versions":["0.46.0"],"current_version":"0.47.0"}],"casks":[]}"#.utf8))
+        XCTAssertEqual(brew.first?.name, "gemini-cli")
+        XCTAssertEqual(brew.first?.latest, "0.47.0")
+        let pipx = parsePipxList(Data(#"{"venvs":{"yt-dlp":{"metadata":{"main_package":{"package":"yt-dlp","package_version":"2026.1.1"}}}}}"#.utf8))
+        XCTAssertEqual(pipx["yt-dlp"], "2026.1.1")
+    }
+
+    func testOldMetaDecodesWithoutAppliedDigest() throws {
+        let url = env.storeRoot.appendingPathComponent(".popskill.json")
+        try #"{"entries":{"skill:foo":{"sourceUrl":"github.com/a/b"}},"tools":{}}"#
+            .write(to: url, atomically: true, encoding: .utf8)
+        let loaded = fs.loadMeta()
+        XCTAssertEqual(loaded.entries["skill:foo"]?.sourceUrl, "github.com/a/b")
+        XCTAssertNil(loaded.entries["skill:foo"]?.appliedDigest)
+        XCTAssertNil(loaded.entries["skill:foo"]?.drifted)
     }
 
     // ── well-known 源（v2.14）────────────────────────────
@@ -1868,5 +1932,41 @@ final class StoreFSTests: XCTestCase {
         let found = fs.scanUnmanaged(tools: tools, knownIds: known)
         XCTAssertEqual(found.map { typedId($0.kind, $0.name) }, ["agent:shared"],
                        "同名不同 kind 必须被发现")
+    }
+
+    func testScanToolsHidesOptionalUntilSkillsExist() throws {
+        var roots = env.toolRoots
+        roots["grok"] = sandbox.appendingPathComponent("grok")
+        roots["pi"] = sandbox.appendingPathComponent("pi-agent")
+        env = StoreEnv(storeRoot: env.storeRoot, toolRoots: roots)
+        fs = StoreFS(env: env)
+        XCTAssertEqual(Set(fs.scanTools(meta: StoreMeta()).map(\.id)), ["claude", "codex"])
+
+        try fm.createDirectory(at: roots["grok"]!.appendingPathComponent("skills"),
+                               withIntermediateDirectories: true)
+        XCTAssertEqual(Set(fs.scanTools(meta: StoreMeta()).map(\.id)), ["claude", "codex", "grok"])
+    }
+
+    func testOptionalToolDefaultTargetOff() throws {
+        var roots = env.toolRoots
+        roots["gemini"] = sandbox.appendingPathComponent("gemini")
+        env = StoreEnv(storeRoot: env.storeRoot, toolRoots: roots)
+        fs = StoreFS(env: env)
+        try fm.createDirectory(at: roots["gemini"]!.appendingPathComponent("skills"),
+                               withIntermediateDirectories: true)
+        let scanned = fs.scanTools(meta: StoreMeta())
+        XCTAssertEqual(scanned.first { $0.id == "gemini" }?.defaultTarget, false)
+        XCTAssertEqual(scanned.first { $0.id == "claude" }?.defaultTarget, true)
+    }
+
+    func testProfilesMetaRoundtrip() {
+        var meta = StoreMeta()
+        meta.profiles = [WorkProfile(id: "p1", name: "写作", note: nil, tools: ["claude": ["skill:a"]])]
+        meta.activeProfileId = "p1"
+        XCTAssertTrue(fs.saveMeta(meta))
+        let loaded = fs.loadMeta()
+        XCTAssertEqual(loaded.profiles?.first?.name, "写作")
+        XCTAssertEqual(loaded.profiles?.first?.tools["claude"], ["skill:a"])
+        XCTAssertEqual(loaded.activeProfileId, "p1")
     }
 }

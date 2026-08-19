@@ -23,10 +23,11 @@ Popskill runs **100% locally** on the user's Mac. It does **NOT** collect usage 
 |---|---|---|
 | GitHub — `git clone` / `git ls-remote` | Installing or update-checking a GitHub-sourced skill | The upstream repo URL of **your own skill** |
 | `registry.npmjs.org` | ① Update-checking an entry whose source is an npm package ② the **global CLI patrol** (see below) | The npm package name(s) being checked |
+| `pypi.org` | Version-checking allowlisted pipx / uv tools (agent-reach, yt-dlp, specify-cli) | The PyPI package name |
 | Well-known hosts (e.g. `open.feishu.cn`) | Installing or update-checking a skill distributed via the `/.well-known/skills/` protocol | HTTPS GET of that skill's `SKILL.md` |
 | `maojiebc.github.io` (GitHub Pages) | Sparkle app-update check (daily; toggle in Settings) | Standard Sparkle appcast request |
 
-**Global CLI patrol** enumerates every globally-installed npm package (`npm ls -g`) and queries the registry for each one's latest version — i.e. your global npm package **names** leave the machine. Since v2.18 this is **off by default**: it runs only if you enable it in Settings, or when you explicitly open the CLI panel (⌨). Upgrading a CLI from that panel runs `npm i -g`.
+**Global CLI patrol (v2.20):** every Check Updates run queries a small allowlist (Claude Code, Codex, Lark CLI, GetNote, guanskill, ClawHub, mcporter, plus Homebrew / pipx / uv tools Popskill already knows). Package names outside that list leave the machine only if you enable “巡检全部全局 npm CLI” in Settings, or open the CLI panel (⌨). Upgrades use the prefix/channel that actually owns the install (`npm i -g --prefix …`, `brew upgrade`, `pipx upgrade`, `uv tool upgrade`) — never a bare `npm i -g` that might write a second copy.
 
 At launch (2 s after start) Popskill runs one background update check against **the sources of skills you added**. Disable globally with `POPSKILL_NO_AUTOCHECK=1`.
 

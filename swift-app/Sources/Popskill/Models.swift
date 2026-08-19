@@ -104,6 +104,7 @@ struct Entry: Identifiable, Equatable {
     var upstreamNew: [String]? = nil    // 上游有、本地没装的成员名（v2.17：可一键安装）
     var autoUpdate: Bool = false
     var skippedUpdate: Bool = false     // 用户跳过了当前上游版本（v2.15，右键可恢复提醒）
+    var localDrifted: Bool = false      // 本地内容偏离上次成功更新（v2.20：默认不覆盖）
 
     var isBundle: Bool { children != nil }
     var isManagedExternally: Bool { bundleKind == .marketplace }

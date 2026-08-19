@@ -117,7 +117,7 @@ Popskill 的回答是把管理建立在一个最简单的事实上：**技能就
 App Store 的 sandbox 不允许应用管理 `~/.claude`、`~/.codex` 这些目录的 symlink。直接分发才能让它真正干活。签名 + 公证保证安全性等价。
 
 **Q：收集任何数据吗？**
-不。100% 本地运行、无统计、无遥测，也没有我方服务器。「本地」不等于「绝不联网」——它只访问四类端点，都对应你看得见的功能：① 检查/安装你添加的 GitHub 技能源（`git clone` / `ls-remote`）；② npm 源更新与 CLI 巡检查询 registry.npmjs.org（巡检会送出全局 npm 包名，v2.18 起默认关闭，设置里显式开启）；③ well-known 协议源拉取 SKILL.md；④ Sparkle 检查应用自身更新。完整端点与读写路径清单见 [SECURITY.md](./SECURITY.md)。
+不。100% 本地运行、无统计、无遥测，也没有我方服务器。「本地」不等于「绝不联网」——它只访问你看得见的功能对应的端点：① 检查/安装你添加的 GitHub 技能源（`git clone` / `ls-remote`）；② npm 源更新与 CLI 巡检查询 registry.npmjs.org（默认只查常用白名单；打开「巡检全部」或 CLI 面板才送出全部全局 npm 包名）；③ pipx / uv 工具查 PyPI；④ well-known 协议源拉取 SKILL.md；⑤ Sparkle 检查应用自身更新。完整端点与读写路径清单见 [SECURITY.md](./SECURITY.md)。
 
 **Q：数据存在哪？怎么卸载？**
 技能本体在 `~/.agents/`（这是你的数据，不是 Popskill 的）；应用自身的元数据只有一个 `~/.agents/.popskill.json`。卸载 = 把 Popskill.app 拖进废纸篓，你的技能和 symlink 原样保留。

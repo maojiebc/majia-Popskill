@@ -31,7 +31,7 @@ struct MainView: View {
             statStrip
             let envW = model.activeEnvWarnings()
             if !envW.isEmpty { envBanner(envW) }
-            if !model.issues.isEmpty || !model.updates.isEmpty || !model.cliUpdates.isEmpty
+            if !model.issues.isEmpty || !model.updates.isEmpty || !model.safeCliUpdates.isEmpty
                 || model.upstreamNewItemCount > 0 { banner }
             chipRow
             content
@@ -360,15 +360,15 @@ struct MainView: View {
                 .onHover { upstreamHovered = $0 }
                 .help(L("点击定位有上游新增技能的套装（循环）"))
             }
-            if !model.cliUpdates.isEmpty {
+            if !model.safeCliUpdates.isEmpty {
                 if !model.issues.isEmpty || !model.updates.isEmpty || model.upstreamNewItemCount > 0 {
                     Text("·").foregroundStyle(Color(hex: 0xD8CFAE))
                 }
-                // 全局 CLI 的更新提醒（v2.14）：点击打开 CLI 巡检矩阵
+                // 常用 CLI 的更新提醒（v2.20）：只数白名单，避免全量扫描把横幅撑爆
                 Button { model.sheet = .cli } label: {
                     HStack(spacing: 6) {
                         Text("⌨").font(.mono(12))
-                        Text(L("\(model.cliUpdates.count) 个 CLI 可升级"))
+                        Text(L("\(model.safeCliUpdates.count) 个 CLI 可升级"))
                             .underline(cliHovered)
                     }
                     .font(.ui(12, .semibold))
@@ -376,7 +376,7 @@ struct MainView: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { cliHovered = $0 }
-                .help(L("npm 全局安装的命令行工具有新版——点击查看版本矩阵"))
+                .help(L("常用命令行工具有新版——按真实安装位置升级，点击查看"))
             }
             Text(L("点击 ✕ / ◐ / ↑ / + 可逐项处理"))
                 .font(.ui(11.5))
@@ -391,9 +391,9 @@ struct MainView: View {
                 }
                 .buttonStyle(.plain)
             }
-            if !model.updates.isEmpty {
+            if model.updateAllCount > 0 {
                 Button { model.updateAll() } label: {
-                    Text(L("全部更新 (\(model.updateItemCount))"))
+                    Text(L("全部更新 (\(model.updateAllCount))"))
                         .font(.ui(11.5, .semibold)).foregroundStyle(Color(hex: 0x5A4A14))
                         .padding(.horizontal, 11).padding(.vertical, 4)
                         .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color(hex: 0xCDB878), lineWidth: 1))
@@ -1477,6 +1477,9 @@ func capContextMenu(_ cap: Capability, _ entry: Entry, fromBundle: String?, mode
     // 跳过作用于源级；套装成员行也给入口（类型过滤平铺时套装头行不可见，v2.16）
     if entry.hasUpdate {
         Button(L("跳过此版本")) { model.skipUpdate(entry) }
+        if entry.localDrifted {
+            Button(L("仍要覆盖本地修改")) { model.runUpdate(entry.id, force: true) }
+        }
     } else if entry.skippedUpdate {
         Button(L("恢复更新提醒")) { model.unskipUpdate(entry) }
     }
@@ -1498,6 +1501,9 @@ func bundleContextMenu(_ entry: Entry, model: AppModel) -> some View {
     Button(L("在访达中显示")) { model.openInEditor(entry.cap.dirURL) }
     if entry.hasUpdate {
         Button(L("跳过此版本")) { model.skipUpdate(entry) }
+        if entry.localDrifted {
+            Button(L("仍要覆盖本地修改")) { model.runUpdate(entry.id, force: true) }
+        }
     } else if entry.skippedUpdate {
         Button(L("恢复更新提醒")) { model.unskipUpdate(entry) }
     }

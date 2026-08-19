@@ -83,8 +83,12 @@ extension StoreFS {
         if failures > 0 && changed.isEmpty {
             throw StoreError.resolveFailed(L("\(failures) 个成员的 SKILL.md 拉取失败（\(host)）"))
         }
+        recordDriftAgainstApplied(entry)
         guard !changed.isEmpty else {
             if loadMeta().entries[entry.id]?.latest != nil { saveLatest(entry.id, latest: nil) }
+            if loadMeta().entries[entry.id]?.appliedDigest == nil {
+                saveAppliedDigest(entry.id, localDigest(entry))
+            }
             return nil
         }
         // 上游状态指纹 = 变化成员的远端内容组合哈希（协议无版本概念，内容即身份）

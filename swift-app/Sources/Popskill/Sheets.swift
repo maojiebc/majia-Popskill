@@ -349,6 +349,7 @@ struct SettingsSheet: View {
                     VStack(alignment: .leading, spacing: 22) {
                         sourcesSection
                         toolsSection
+                        profileSection
                         storeSection
                         trashSection
                         aboutSection
@@ -364,7 +365,7 @@ struct SettingsSheet: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(L("设置")).font(.ui(15.5, .bold)).foregroundStyle(Ink.ink)
-                Text(L("源、工具与 store — 全部配置都在这一页。"))
+                Text(L("源、工具、工作模式与 store — 全部配置都在这一页。"))
                     .font(.ui(11.5)).foregroundStyle(Ink.secondary)
             }
             Spacer()
@@ -464,7 +465,75 @@ struct SettingsSheet: View {
                     }
                 }
             }
+            Text(L("Claude / Codex 始终显示。Grok、Gemini、OpenCode、Pi 只有本机已有技能目录才出现，避免空列撑爆矩阵。"))
+                .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+                .padding(.top, 4)
         }
+    }
+
+    private var profileSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionLabel(text: L("工作模式（\(model.profiles.count)）"))
+            if model.profiles.isEmpty {
+                Text(L("空——把此刻的挂载组合存成「写作 / 画图 / 开发」，下次一键切回去。套装管来源，模式管场景。"))
+                    .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+            } else {
+                VStack(spacing: 6) {
+                    ForEach(model.profiles) { p in
+                        SheetRow {
+                            Circle()
+                                .fill(p.id == model.activeProfileId ? Ink.green : Ink.offDot)
+                                .frame(width: 7, height: 7)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(p.name).font(.ui(12.5, .semibold)).foregroundStyle(Ink.ink)
+                                Text(profileSub(p)).font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+                            }
+                            Spacer(minLength: 8)
+                            Button { model.applyProfile(p.id) } label: {
+                                Text(L("切换"))
+                                    .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
+                                    .padding(.horizontal, 8).frame(height: 24)
+                                    .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
+                            }
+                            .buttonStyle(.plain)
+                            HoverAction(symbol: "✕", danger: true, help: L("删除此工作模式")) {
+                                model.deleteProfile(p.id)
+                            }
+                        }
+                    }
+                }
+            }
+            HStack(spacing: 8) {
+                Button { model.promptSaveProfile() } label: {
+                    Text(L("+ 保存当前为新模式"))
+                        .font(.ui(11.5, .semibold)).foregroundStyle(Color(hex: 0x444444))
+                        .padding(.horizontal, 10).frame(height: 26)
+                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                if model.activeProfile != nil {
+                    Button { model.updateActiveProfile() } label: {
+                        Text(L("用当前盘面更新选中项"))
+                            .font(.ui(11.5, .semibold)).foregroundStyle(Color(hex: 0x444444))
+                            .padding(.horizontal, 10).frame(height: 26)
+                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!model.profileDirty)
+                    .help(L("盘面和选中模式不一致时才能更新"))
+                }
+            }
+            .padding(.top, 6)
+        }
+    }
+
+    private func profileSub(_ p: WorkProfile) -> String {
+        let n = p.tools.values.reduce(0) { $0 + $1.count }
+        var s = L("\(p.tools.count) 个工具 · \(n) 项已挂载")
+        if p.id == model.activeProfileId {
+            s += model.profileDirty ? L(" · 当前（已改动）") : L(" · 当前")
+        }
+        return s
     }
 
     private var storeSection: some View {
@@ -481,7 +550,7 @@ struct SettingsSheet: View {
                             .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
-                    .help(L("把 ~/.claude / ~/.codex 里的真实技能目录收编进 store 并换成 symlink"))
+                    .help(L("把各工具目录里的真实技能目录收编进 store 并换成 symlink"))
                     Button { model.openStore() } label: {
                         Text(L("↗ 在访达中显示"))
                             .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
@@ -634,10 +703,9 @@ struct SettingsSheet: View {
                 .padding(.top, 8)
                 .onAppear { sparkleAuto = model.sparkleAutoCheckGet?() ?? false }
             }
-            // 全局 CLI 巡检默认关（v2.18）：会把本机全部全局 npm 包名发给 registry，
-            // 超出「已添加源」的联网范围——必须用户点头
+            // v2.20：检查更新默认只查常用 CLI 白名单。此开关才扩到全部全局 npm 包。
             HStack(spacing: 10) {
-                Text(L("检查更新时巡检全局 npm CLI"))
+                Text(L("检查更新时巡检全部全局 npm CLI"))
                     .font(.ui(11.5)).foregroundStyle(Ink.secondary)
                 Spacer()
                 PsSwitch(on: cliPatrol) {
@@ -646,7 +714,7 @@ struct SettingsSheet: View {
                 }
             }
             .padding(.top, 8)
-            .help(L("开启后每次检查更新会把本机全局 npm 包名逐个发给 registry.npmjs.org 查询新版。默认关闭；CLI 面板（⌨）打开时始终会巡检。"))
+            .help(L("默认只查 Claude / Codex / 飞书 / GetNote 等常用工具。打开后才会把本机全部全局 npm 包名发给 registry。CLI 面板打开时始终全量扫描。"))
             .onAppear { cliPatrol = model.autoCliPatrol }
         }
         .padding(.bottom, 4)

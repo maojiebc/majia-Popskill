@@ -243,4 +243,61 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(e.localizedDesc(chinese: false), "English blurb")
         XCTAssertEqual(CatalogEntry(desc: "只有中文").localizedDesc(chinese: false), "只有中文", "缺英文落回中文")
     }
+
+    // ── v2.20：工作模式 ──────────────────────────────────
+
+    private func plantSkill(_ name: String) throws {
+        let dir = sandbox.appendingPathComponent("agents/skills/\(name)")
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        try "---\nname: \(name)\n---\n".write(
+            to: dir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+    }
+
+    func testWorkProfileCaptureDiffApply() throws {
+        try plantSkill("alpha")
+        try plantSkill("beta")
+        model.refresh()
+        let claude = model.tools.first { $0.id == "claude" }!
+        let alpha = try XCTUnwrap(model.entries.first { $0.name == "alpha" })
+        XCTAssertNil(model.applyCapLink(cap: alpha.cap, entry: alpha, tool: claude, on: true))
+        model.refresh()
+
+        model.saveProfile(name: "写作")
+        XCTAssertEqual(model.profiles.count, 1)
+        XCTAssertEqual(model.activeProfile?.name, "写作")
+        XCTAssertEqual(model.activeProfile?.tools["claude"], [typedId(.skill, "alpha")])
+        XCTAssertFalse(model.profileDirty)
+
+        let a2 = try XCTUnwrap(model.entries.first { $0.name == "alpha" })
+        let b2 = try XCTUnwrap(model.entries.first { $0.name == "beta" })
+        XCTAssertNil(model.applyCapLink(cap: a2.cap, entry: a2, tool: claude, on: false))
+        XCTAssertNil(model.applyCapLink(cap: b2.cap, entry: b2, tool: claude, on: true))
+        model.refresh()
+        XCTAssertTrue(model.profileDirty, "手动改盘后应变脏，不自动回写")
+
+        model.applyProfile(model.profiles[0].id, confirm: false)
+        XCTAssertEqual(model.entries.first { $0.name == "alpha" }?.cap.status("claude"), .on)
+        XCTAssertEqual(model.entries.first { $0.name == "beta" }?.cap.status("claude"), .off)
+        XCTAssertFalse(model.profileDirty)
+        XCTAssertEqual(model.fs.loadMeta().activeProfileId, model.profiles[0].id)
+    }
+
+    func testWorkProfileMissingToolKeyLeavesOthers() throws {
+        try plantSkill("alpha")
+        model.refresh()
+        let claude = model.tools.first { $0.id == "claude" }!
+        let codex = model.tools.first { $0.id == "codex" }!
+        let alpha = try XCTUnwrap(model.entries.first { $0.name == "alpha" })
+        XCTAssertNil(model.applyCapLink(cap: alpha.cap, entry: alpha, tool: claude, on: true))
+        XCTAssertNil(model.applyCapLink(cap: alpha.cap, entry: alpha, tool: codex, on: true))
+        model.refresh()
+
+        model.profiles = [WorkProfile(
+            id: "only-claude", name: "只动 Claude", note: nil,
+            tools: ["claude": []])]
+        model.applyProfile("only-claude", confirm: false)
+        XCTAssertEqual(model.entries.first { $0.name == "alpha" }?.cap.status("claude"), .off)
+        XCTAssertEqual(model.entries.first { $0.name == "alpha" }?.cap.status("codex"), .on,
+                       "模式没写的工具整列不动")
+    }
 }

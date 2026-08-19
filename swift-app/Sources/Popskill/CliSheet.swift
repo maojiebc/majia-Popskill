@@ -9,14 +9,14 @@ struct CliSheet: View {
     @State private var hoverRow: String?
 
     var body: some View {
-        SheetShell(width: 560, onDismiss: { model.sheet = nil }) {
+        SheetShell(width: 640, onDismiss: { model.sheet = nil }) {
             VStack(spacing: 0) {
                 head
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         if model.globalClis.isEmpty {
                             Text(model.checkingClis ? L("正在扫描全局 npm 包…")
-                                 : L("没有发现全局 npm 包（或未安装 Node.js/npm）"))
+                                 : L("没有发现可巡检的 CLI（或未安装 Node.js / Homebrew / pipx）"))
                                 .font(.ui(11.5)).foregroundStyle(Ink.tertiary)
                                 .padding(.vertical, 24)
                                 .frame(maxWidth: .infinity)
@@ -40,7 +40,7 @@ struct CliSheet: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(L("CLI 巡检")).font(.ui(15.5, .bold)).foregroundStyle(Ink.ink)
-                Text(L("npm 全局安装的命令行工具——已装版本对比 registry 最新版，一键升级。"))
+                Text(L("按真实安装位置升级：npm 多前缀、Homebrew、pipx、uv。基础工具只展示不升级。"))
                     .font(.ui(11.5)).foregroundStyle(Ink.secondary)
             }
             Spacer()
@@ -62,8 +62,9 @@ struct CliSheet: View {
     private var tableHead: some View {
         HStack(spacing: 10) {
             Text(L("包名")).frame(maxWidth: .infinity, alignment: .leading)
-            Text(L("已装")).frame(width: 84, alignment: .trailing)
-            Text(L("最新")).frame(width: 84, alignment: .trailing)
+            Text(L("位置")).frame(width: 88, alignment: .leading)
+            Text(L("已装")).frame(width: 72, alignment: .trailing)
+            Text(L("最新")).frame(width: 72, alignment: .trailing)
             Color.clear.frame(width: 74)
         }
         .font(.ui(9.5, .bold)).tracking(0.5)
@@ -74,24 +75,39 @@ struct CliSheet: View {
 
     private func row(_ cli: GlobalCli) -> some View {
         HStack(spacing: 10) {
-            Text(cli.name)
-                .font(.mono(11.5))
-                .foregroundStyle(Ink.ink)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(cli.displayName)
+                    .font(.mono(11.5))
+                    .foregroundStyle(Ink.ink)
+                    .lineLimit(1).truncationMode(.middle)
+                if !cli.pathMatchesPrefix {
+                    Text(L("PATH 命中另一份"))
+                        .font(.ui(9.5)).foregroundStyle(Ink.amberText)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(cli.prefix.map(abbrev) ?? cli.channel.label)
+                .font(.mono(10)).foregroundStyle(Ink.tertiary)
                 .lineLimit(1).truncationMode(.middle)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(width: 88, alignment: .leading)
+                .help(cli.pathHit.map { L("命令行命中 \(abbrev($0))") } ?? cli.channel.label)
             Text("v\(cli.installed)")
                 .font(.mono(11)).foregroundStyle(Ink.secondary2).monospacedDigit()
-                .frame(width: 84, alignment: .trailing)
+                .frame(width: 72, alignment: .trailing)
             Text(cli.latest.map { "v\($0)" } ?? "—")
                 .font(.mono(11)).monospacedDigit()
                 .foregroundStyle(cli.hasUpdate ? Ink.amberText : Ink.tertiary)
-                .frame(width: 84, alignment: .trailing)
-                .help(cli.latest == nil ? L("registry 查询失败（网络）——点右下重新扫描") : "")
+                .frame(width: 72, alignment: .trailing)
+                .help(cli.latest == nil ? L("版本查询失败（网络）——点右下重新扫描") : "")
             Group {
-                if model.upgradingClis.contains(cli.name) {
+                if model.upgradingClis.contains(cli.id) {
                     UpdatingDot()
+                } else if cli.excluded {
+                    Text(L("不自动升"))
+                        .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+                        .help(L("基础工具（node / npm / TypeScript 等）不在一键升级范围"))
                 } else if cli.hasUpdate {
-                    Button { model.upgradeCli(cli.name) } label: {
+                    Button { model.upgradeCli(cli) } label: {
                         Text(L("升级"))
                             .font(.ui(10.5, .semibold)).foregroundStyle(Color(hex: 0x5A4A14))
                             .padding(.horizontal, 9).padding(.vertical, 3)
@@ -99,9 +115,10 @@ struct CliSheet: View {
                             .overlay(RoundedRectangle(cornerRadius: 4).stroke(Ink.amberBadgeBorder, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
-                    .help(L("npm i -g \(cli.name)@\(cli.latest ?? "")"))
+                    .help(cli.channel == .npm
+                          ? L("npm i -g --prefix \(cli.prefix ?? "") \(cli.name)@\(cli.latest ?? "")")
+                          : L("升级 \(cli.displayName) → \(cli.latest ?? "")"))
                 } else {
-                    // 状态词与表头「最新」刻意分 key：英文一个是 Latest 一个是 Up to date
                     Text(cli.latest == nil ? "" : L("已最新"))
                         .font(.ui(10.5)).foregroundStyle(Ink.green)
                 }
@@ -109,16 +126,16 @@ struct CliSheet: View {
             .frame(width: 74, alignment: .trailing)
         }
         .padding(.horizontal, 8).padding(.vertical, 7)
-        .background(RoundedRectangle(cornerRadius: 6).fill(hoverRow == cli.name ? Ink.chrome : .clear))
-        .onHover { hoverRow = $0 ? cli.name : (hoverRow == cli.name ? nil : hoverRow) }
+        .background(RoundedRectangle(cornerRadius: 6).fill(hoverRow == cli.id ? Ink.chrome : .clear))
+        .onHover { hoverRow = $0 ? cli.id : (hoverRow == cli.id ? nil : hoverRow) }
         .overlay(alignment: .bottom) { Ink.tableHairline.frame(height: 1) }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(L("\(cli.name)，已装 \(cli.installed)") + (cli.hasUpdate ? L("，可升级到 \(cli.latest ?? "")") : ""))
+        .accessibilityLabel(L("\(cli.displayName)，已装 \(cli.installed)") + (cli.hasUpdate ? L("，可升级到 \(cli.latest ?? "")") : ""))
     }
 
     private var foot: some View {
         HStack {
-            Text(L("升级即在后台执行 npm i -g，与终端手动升级完全等价。"))
+            Text(L("升级打回这份 CLI 真正所在的前缀，避免升错副本。"))
                 .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
             Spacer()
             Button { model.checkCliUpdates() } label: {
@@ -130,14 +147,15 @@ struct CliSheet: View {
             }
             .buttonStyle(.plain)
             .disabled(model.checkingClis)
-            if !model.cliUpdates.isEmpty {
+            if !model.safeCliUpdates.isEmpty {
                 Button { model.upgradeAllClis() } label: {
-                    Text(L("全部升级 (\(model.cliUpdates.count))"))
+                    Text(L("全部升级 (\(model.safeCliUpdates.count))"))
                         .font(.ui(11.5, .semibold)).foregroundStyle(.white)
                         .padding(.horizontal, 11).padding(.vertical, 4)
                         .background(RoundedRectangle(cornerRadius: 5).fill(Ink.ink))
                 }
                 .buttonStyle(.plain)
+                .help(L("一键只升常用白名单；其它全局包装在行内点升级。"))
             }
         }
         .padding(EdgeInsets(top: 11, leading: 20, bottom: 13, trailing: 20))

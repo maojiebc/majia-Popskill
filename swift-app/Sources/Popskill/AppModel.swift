@@ -64,6 +64,8 @@ final class AppModel {
     var tools: [Tool] = []
     var entries: [Entry] = []
     var syncInfo = SyncInfo()
+    var profiles: [WorkProfile] = []
+    var activeProfileId: String?
 
     // UI 态
     var sheet: SheetKind?
@@ -87,11 +89,10 @@ final class AppModel {
     var checkingClis = false
     var upgradingClis: Set<String> = []
     var cliUpdates: [GlobalCli] { globalClis.filter(\.hasUpdate) }
+    var safeCliUpdates: [GlobalCli] { cliUpdates.filter { $0.allowlisted || $0.channel != .npm } }
 
-    /// 随「检查更新」自动巡检全局 CLI 的开关（v2.18，默认关）。
-    /// 巡检会枚举本机**全部**全局 npm 包并逐个向 registry.npmjs.org 查最新版——
-    /// 超出「已添加源」的范围，包名清单不该未经同意离开本机（SECURITY.md 披露口径）。
-    /// 打开 CLI 面板（⌨）始终会巡检：那是用户主动查看的动作。
+    /// 随「检查更新」把巡检范围从「常用白名单」扩到全部全局 npm 包（v2.18 默认关，v2.20 语义保留）。
+    /// 白名单巡检现在每次检查都会跑（只发常用包名）；打开 CLI 面板始终全量扫。
     var autoCliPatrol: Bool {
         get { UserDefaults.standard.bool(forKey: "autoCliPatrol") }
         set { UserDefaults.standard.set(newValue, forKey: "autoCliPatrol") }
@@ -143,10 +144,21 @@ final class AppModel {
     var updates: [Entry] { deriveUpdates(entries) }
     /// 待更新技能总数（用户视角）：套装逐成员计——横幅与「全部更新」按钮都用它
     var updateItemCount: Int { updates.reduce(0) { $0 + $1.updateCount } }
+    /// 「全部更新」带走的件数：未漂移技能 + 常用 CLI。面板里其它全局包要点行内升级。
+    var updateAllCount: Int {
+        updates.filter { !$0.localDrifted }.reduce(0) { $0 + $1.updateCount } + safeCliUpdates.count
+    }
     /// 上游 monorepo 新增未装技能总数（v2.17 横幅）
     var upstreamNewItemCount: Int { entries.reduce(0) { $0 + $1.upstreamNewCount } }
     var entriesWithUpstreamNew: [Entry] { entries.filter(\.hasUpstreamNew) }
     var isEmpty: Bool { entries.isEmpty }
+    var activeProfile: WorkProfile? { profiles.first { $0.id == activeProfileId } }
+    var profileDirty: Bool {
+        guard let p = activeProfile else { return false }
+        return !workSnapshotMatches(
+            desired: p.tools,
+            current: captureWorkSnapshot(entries: entries, tools: tools))
+    }
 
     // v2.17 环境探测 / 深链接
     var envWarnings: [EnvWarning] = []
@@ -244,6 +256,8 @@ final class AppModel {
         let meta = fs.loadMeta()
         tools = fs.scanTools(meta: meta)
         entries = fs.scanEntries(tools: tools, meta: meta)
+        profiles = meta.profiles ?? []
+        activeProfileId = meta.activeProfileId
         // 第二阶段：npm 等无形状源套装头键要等归拢结果才认得出——补搬后重扫一次，
         // autoUpdate/skipped 状态当场回位（一次性成本，幂等后零开销）
         if fs.adoptLegacyHeadKeys(entries) > 0 {
@@ -745,11 +759,16 @@ final class AppModel {
         let candidates = entries.filter {
             $0.sourceUrl != nil && !$0.isManagedExternally && (only?.contains($0.id) ?? true)
         }
-        guard !candidates.isEmpty else { say(L("没有可检查的源（需要 GitHub 或本地路径来源）")); return }
         checkingUpdates = true
-        // 全局 CLI 巡检只在显式开启后随检查跑（v2.18）——启动静默扫描全部
-        // npm -g 包名喂给 registry 超出披露，曾是「联网承诺与实际不符」主证之一
-        if only == nil, autoCliPatrol { checkCliUpdates() }
+        // v2.20：每次全量检查都扫常用 CLI 白名单（只发那几个包名）。
+        // autoCliPatrol = 扩到全部全局 npm 包。打开 CLI 面板始终全量。
+        if only == nil { checkCliUpdates(full: autoCliPatrol) }
+        guard !candidates.isEmpty else {
+            checkingUpdates = false
+            if only != nil { say(L("没有可检查的源")) }
+            else if !auto { say(L("没有可检查的技能源——正在核对常用 CLI")) }
+            return
+        }
         let fsCopy = fs
         Task { [weak self] in
             var found: [StoreFS.UpdateCheck] = []
@@ -830,7 +849,11 @@ final class AppModel {
                 let contentFound = found.filter { !$0.contentUnchanged }
                 let newOnlyCount = found.filter(\.contentUnchanged).reduce(0) { $0 + $1.upstreamNew.count }
                 let newOnlyNote = newOnlyCount > 0 ? L("；上游新增 \(newOnlyCount) 个未装技能") : ""
-                let autoTargets = auto ? self.entries.filter { $0.hasUpdate && $0.autoUpdate } : []
+                let metaFlags = self.fs.loadMeta()
+                for i in self.entries.indices {
+                    self.entries[i].localDrifted = metaFlags.entries[self.entries[i].id]?.drifted == true
+                }
+                let autoTargets = auto ? self.entries.filter { $0.hasUpdate && $0.autoUpdate && !$0.localDrifted } : []
                 if !autoTargets.isEmpty {
                     for e in autoTargets { self.runUpdate(e.id, quiet: true) }
                     self.say(L("自动更新 \(autoTargets.count) 个源"))
@@ -863,7 +886,7 @@ final class AppModel {
     }
 
     /// 一步更新：备份 → 拉上游 → 落盘（symlink 路径不变自动延续）
-    func runUpdate(_ entryId: String, quiet: Bool = false) {
+    func runUpdate(_ entryId: String, quiet: Bool = false, force: Bool = false) {
         guard let entry = entries.first(where: { $0.id == entryId }) else { return }
         if fake {
             if let i = entries.firstIndex(where: { $0.id == entryId }) {
@@ -879,7 +902,7 @@ final class AppModel {
         let fsCopy = fs
         Task { [weak self] in
             let result: Result<(updated: [String], upstreamNew: [String]), Error> = await Task.detached {
-                do { return .success(try fsCopy.applyUpdate(entry)) }
+                do { return .success(try fsCopy.applyUpdate(entry, force: force)) }
                 catch { return .failure(error) }
             }.value
             await MainActor.run { [weak self] in
@@ -940,11 +963,23 @@ final class AppModel {
 
     func updateAll() {
         // 已在更新中的条目 runUpdate 会直接跳过——不入账本，否则批次永远等不齐
-        let targets = updates.filter { !updatingIds.contains($0.id) }
-        guard !targets.isEmpty else { return }
-        updateBatch = UpdateBatch(remaining: Set(targets.map(\.id)))
-        for e in targets { runUpdate(e.id, quiet: true) }
-        say(L("正在更新 \(targets.count) 个源…"))
+        let drifted = updates.filter(\.localDrifted)
+        let targets = updates.filter { !updatingIds.contains($0.id) && !$0.localDrifted }
+        if !targets.isEmpty {
+            updateBatch = UpdateBatch(remaining: Set(targets.map(\.id)))
+            for e in targets { runUpdate(e.id, quiet: true) }
+        }
+        if !safeCliUpdates.isEmpty { upgradeAllClis() }
+        if targets.isEmpty && safeCliUpdates.isEmpty && drifted.isEmpty { return }
+        var msg = L("正在更新")
+        if !targets.isEmpty { msg += L(" \(targets.count) 个技能源") }
+        if !safeCliUpdates.isEmpty {
+            msg += targets.isEmpty
+                ? L(" \(safeCliUpdates.count) 个 CLI")
+                : L(" + \(safeCliUpdates.count) 个 CLI")
+        }
+        if !drifted.isEmpty { msg += L("；\(drifted.count) 个本地改过的技能已跳过") }
+        say(msg + (targets.isEmpty && safeCliUpdates.isEmpty ? "" : "…"))
     }
 
     /// 「跳过此版本」（v2.15，吸收 cc-switch dismissedVersion）：徽标熄灭，
@@ -988,16 +1023,26 @@ final class AppModel {
 
     /// npm ls -g 全量 → 逐包比 registry。entries 里 npm 源对应的包走 entry 更新链，
     /// 这里排除掉——同一个更新在横幅出现两处计数比漏报更糟。
-    func checkCliUpdates() {
+    func checkCliUpdates(full: Bool = true) {
         guard !fake, !checkingClis else { return }
         checkingClis = true
         let fsCopy = fs
         let entryPkgs = Set(entries.compactMap { npmPkgName($0.sourceUrl) })
         Task { [weak self] in
             let clis: [GlobalCli] = await Task.detached {
-                let installed = fsCopy.npmGlobalList().filter { !entryPkgs.contains($0.key) }
-                return installed.sorted { $0.key < $1.key }.map { pkg, ver in
-                    GlobalCli(name: pkg, installed: ver, latest: try? fsCopy.npmLatestVersion(pkg))
+                let rows = fsCopy.scanMaintainedClis(extraNpm: entryPkgs, full: full)
+                    .filter { !entryPkgs.contains($0.name) || $0.channel != .npm }
+                return rows.map { row in
+                    var cli = row
+                    switch cli.channel {
+                    case .npm:
+                        if !cli.excluded { cli.latest = try? fsCopy.npmLatestVersion(cli.name) }
+                    case .pipx, .uv:
+                        cli.latest = (try? fsCopy.pypiLatestVersion(cli.name)) ?? cli.latest
+                    case .brew:
+                        break
+                    }
+                    return cli
                 }
             }.value
             await MainActor.run { [weak self] in
@@ -1009,23 +1054,23 @@ final class AppModel {
     }
 
     /// 升级单个全局 CLI 到 registry 最新版（实际执行走串行队列）
-    func upgradeCli(_ pkg: String) {
-        enqueueCliUpgrades([pkg])
+    func upgradeCli(_ cli: GlobalCli) {
+        enqueueCliUpgrades([cli.id])
     }
 
     /// 「全部升级」：批量入队 + 收工汇总（v2.16：曾并发喷 N 个 npm i -g——
     /// 同一全局前缀无锁并发写会互相咬，且成功/失败 toast 互相覆盖只剩最后一条）
     func upgradeAllClis() {
-        let targets = cliUpdates.map(\.name)
+        let targets = safeCliUpdates.map(\.id)
         guard !targets.isEmpty else { return }
         if cliBatch == nil { cliBatch = (0, []) }
         enqueueCliUpgrades(targets)
     }
 
-    private func enqueueCliUpgrades(_ pkgs: [String]) {
-        let fresh = pkgs.filter { p in
-            globalClis.first(where: { $0.name == p })?.hasUpdate == true
-                && !upgradingClis.contains(p) && !cliQueue.contains(p)
+    private func enqueueCliUpgrades(_ ids: [String]) {
+        let fresh = ids.filter { id in
+            globalClis.first(where: { $0.id == id })?.hasUpdate == true
+                && !upgradingClis.contains(id) && !cliQueue.contains(id)
         }
         guard !fresh.isEmpty else { return }
         upgradingClis.formUnion(fresh)   // 排队即转 spinner——「点了没反应」是最迷惑的失败模式
@@ -1047,9 +1092,9 @@ final class AppModel {
             return
         }
         cliPumping = true
-        let pkg = cliQueue.removeFirst()
-        guard let cli = globalClis.first(where: { $0.name == pkg }), let latest = cli.latest else {
-            upgradingClis.remove(pkg)
+        let id = cliQueue.removeFirst()
+        guard let cli = globalClis.first(where: { $0.id == id }), let latest = cli.latest else {
+            upgradingClis.remove(id)
             cliPumping = false
             pumpCliQueue()
             return
@@ -1057,21 +1102,26 @@ final class AppModel {
         let fsCopy = fs
         Task { [weak self] in
             let result: Result<Void, Error> = await Task.detached {
-                do { try fsCopy.npmGlobalInstall(pkg, version: latest); return .success(()) }
+                do { try fsCopy.upgradeMaintainedCli(cli); return .success(()) }
                 catch { return .failure(error) }
             }.value
             await MainActor.run { [weak self] in
                 guard let self else { return }
-                self.upgradingClis.remove(pkg)
+                self.upgradingClis.remove(id)
                 switch result {
                 case .success:
-                    if let i = self.globalClis.firstIndex(where: { $0.name == pkg }) {
-                        self.globalClis[i] = GlobalCli(name: pkg, installed: latest, latest: latest)
+                    if let i = self.globalClis.firstIndex(where: { $0.id == id }) {
+                        self.globalClis[i] = GlobalCli(
+                            name: cli.name, installed: latest, latest: latest,
+                            displayName: cli.displayName, channel: cli.channel, prefix: cli.prefix,
+                            pathHit: cli.pathHit, pathMatchesPrefix: true,
+                            excluded: cli.excluded, allowlisted: cli.allowlisted
+                        )
                     }
-                    if self.cliBatch != nil { self.cliBatch!.ok += 1 } else { self.say(L("已升级 \(pkg) → v\(latest)")) }
+                    if self.cliBatch != nil { self.cliBatch!.ok += 1 } else { self.say(L("已升级 \(cli.displayName) → v\(latest)")) }
                 case .failure(let e):
-                    plog.error("升级 CLI \(pkg, privacy: .public) 失败：\(e.localizedDescription, privacy: .public)")
-                    if self.cliBatch != nil { self.cliBatch!.fail.append(pkg) } else { self.sayError(L("升级 \(pkg) 失败：\(e.localizedDescription)")) }
+                    plog.error("升级 CLI \(cli.name, privacy: .public) 失败：\(e.localizedDescription, privacy: .public)")
+                    if self.cliBatch != nil { self.cliBatch!.fail.append(cli.displayName) } else { self.sayError(L("升级 \(cli.displayName) 失败：\(e.localizedDescription)")) }
                 }
                 self.cliPumping = false
                 self.pumpCliQueue()
@@ -1341,6 +1391,176 @@ final class AppModel {
             }
         }
         say(L("store 副本与全部 symlink 已清理"))
+    }
+
+    // ── 工作模式（v2.20）──────────────────────────────────
+
+    func saveProfile(name: String, note: String? = nil) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let profile = WorkProfile(
+            id: UUID().uuidString, name: trimmed, note: note,
+            tools: captureWorkSnapshot(entries: entries, tools: tools))
+        let previous = profiles
+        let previousActive = activeProfileId
+        profiles.append(profile)
+        activeProfileId = profile.id
+        guard persistProfiles(
+            rollback: { profiles = previous; activeProfileId = previousActive },
+            failMsg: L("设置没能写入磁盘（检查磁盘空间/权限）——工作模式未保存")
+        ) else { return }
+        say(L("已保存工作模式「\(trimmed)」"))
+    }
+
+    func promptSaveProfile() {
+        guard let name = promptProfileName(defaultValue: "") else { return }
+        saveProfile(name: name)
+    }
+
+    func updateActiveProfile() {
+        guard let id = activeProfileId, let i = profiles.firstIndex(where: { $0.id == id }) else {
+            say(L("还没有选中的工作模式"))
+            return
+        }
+        let previous = profiles
+        profiles[i].tools = captureWorkSnapshot(entries: entries, tools: tools)
+        guard persistProfiles(
+            rollback: { profiles = previous },
+            failMsg: L("设置没能写入磁盘（检查磁盘空间/权限）——工作模式未更新")
+        ) else { return }
+        say(L("已用当前盘面更新「\(profiles[i].name)」"))
+    }
+
+    func deleteProfile(_ id: String) {
+        let previous = profiles
+        let previousActive = activeProfileId
+        let name = profiles.first { $0.id == id }?.name ?? id
+        profiles.removeAll { $0.id == id }
+        if activeProfileId == id { activeProfileId = nil }
+        guard persistProfiles(
+            rollback: { profiles = previous; activeProfileId = previousActive },
+            failMsg: L("设置没能写入磁盘（检查磁盘空间/权限）——工作模式未删除")
+        ) else { return }
+        say(L("已删除工作模式「\(name)」"))
+    }
+
+    func applyProfile(_ id: String, confirm: Bool = true) {
+        guard let profile = profiles.first(where: { $0.id == id }) else { return }
+        let changes = diffWorkSnapshot(desired: profile.tools, entries: entries, tools: tools)
+        if changes.isEmpty {
+            activeProfileId = id
+            _ = persistProfiles(rollback: {}, failMsg: L("设置没能写入磁盘（检查磁盘空间/权限）——当前模式未记住"))
+            say(L("已是「\(profile.name)」的盘面，无需切换"))
+            return
+        }
+        if confirm, !confirmApplyProfile(profile, changes: changes) { return }
+        let mountTools = Set(changes.filter { !$0.turnOn.isEmpty }.map(\.toolId))
+        for toolId in mountTools {
+            guard let tool = tools.first(where: { $0.id == toolId }), !tool.connected else { continue }
+            if !fake, !confirmMountUnconnected(tool) { return }
+        }
+        var okOn = 0, okOff = 0, skipped = 0, failed: [String] = []
+        for change in changes {
+            guard let tool = tools.first(where: { $0.id == change.toolId }) else { continue }
+            skipped += change.missing.count + change.blocked.count
+            let want = Set(profile.tools[change.toolId] ?? [])
+            let caps = entries.filter { !$0.isManagedExternally }.flatMap(\.allCaps)
+            for c in caps {
+                let should = want.contains(c.id)
+                let st = c.status(tool.id)
+                let needOn = should && st == .off
+                let needOff = !should && st == .on
+                guard needOn || needOff else { continue }
+                guard let entry = entries.first(where: { $0.allCaps.contains { $0.id == c.id } }) else { continue }
+                if let err = applyCapLink(cap: c, entry: entry, tool: tool, on: needOn) {
+                    failed.append(c.name)
+                    plog.error("工作模式切换 \(c.name, privacy: .public) → \(tool.id, privacy: .public)：\(err, privacy: .public)")
+                } else if needOn {
+                    okOn += 1
+                } else {
+                    okOff += 1
+                }
+            }
+        }
+        if !fake { refresh() }
+        let previousActive = activeProfileId
+        activeProfileId = id
+        _ = persistProfiles(
+            rollback: { activeProfileId = previousActive },
+            failMsg: L("盘面已切换，但当前模式没能写入磁盘"))
+        var parts: [String] = []
+        if okOn > 0 { parts.append(L("开 \(okOn)")) }
+        if okOff > 0 { parts.append(L("关 \(okOff)")) }
+        if skipped > 0 { parts.append(L("跳过 \(skipped)")) }
+        let nameSep = L("、")
+        if !failed.isEmpty { parts.append(L("失败 \(failed.joined(separator: nameSep))")) }
+        let detail = parts.isEmpty ? L("无变更") : parts.joined(separator: L("，"))
+        if failed.isEmpty {
+            say(L("已切换到「\(profile.name)」：\(detail)"))
+        } else {
+            sayError(L("「\(profile.name)」未完全套用：\(detail)"))
+        }
+    }
+
+    private func persistProfiles(rollback: () -> Void, failMsg: String) -> Bool {
+        if fake { return true }
+        let ok = fs.mutateMeta { meta in
+            meta.profiles = profiles
+            meta.activeProfileId = activeProfileId
+        }
+        if !ok {
+            rollback()
+            sayError(failMsg)
+        }
+        return ok
+    }
+
+    private func promptProfileName(defaultValue: String) -> String? {
+        if ProcessInfo.processInfo.environment["POPSKILL_AUTOCONFIRM"] == "1" {
+            return defaultValue.isEmpty ? "Test" : defaultValue
+        }
+        let alert = NSAlert()
+        alert.messageText = L("保存为工作模式")
+        alert.informativeText = L("记下此刻每个工具挂了哪些技能。切换时只改有差异的链接，不动没写进模式的工具。")
+        alert.addButton(withTitle: L("保存"))
+        alert.addButton(withTitle: L("取消"))
+        let field = NSTextField(string: defaultValue)
+        field.placeholderString = L("例如：写作 / 画图 / 开发")
+        field.frame = NSRect(x: 0, y: 0, width: 280, height: 24)
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+        let name = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? nil : name
+    }
+
+    private func confirmApplyProfile(_ profile: WorkProfile, changes: [ProfileChange]) -> Bool {
+        if ProcessInfo.processInfo.environment["POPSKILL_AUTOCONFIRM"] == "1" { return true }
+        let alert = NSAlert()
+        alert.messageText = L("切换到「\(profile.name)」？")
+        alert.informativeText = formatProfilePlan(changes)
+        alert.addButton(withTitle: L("切换"))
+        alert.addButton(withTitle: L("取消"))
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
+    func applyCapLink(cap: Capability, entry: Entry, tool: Tool, on: Bool) -> String? {
+        if fake {
+            mutateFake(capId: cap.id, toolId: tool.id, to: on ? .on : .off)
+            return nil
+        }
+        do {
+            if entry.bundleKind == .directory && cap.id != entry.cap.id {
+                try fs.setBundleChildLink(
+                    tool: tool, bundleName: entry.name, bundleDir: entry.cap.dirURL,
+                    childName: cap.name, allChildren: (entry.children ?? []).map(\.name), on: on)
+            } else {
+                try fs.setLink(tool: tool, kind: cap.layoutKind, name: cap.name, storeDir: cap.dirURL, on: on)
+            }
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
     }
 
     // ── 设置 ─────────────────────────────────────────────

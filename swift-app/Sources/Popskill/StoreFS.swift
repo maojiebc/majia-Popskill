@@ -17,13 +17,10 @@ struct StoreEnv {
         let store = pe["POPSKILL_STORE_ROOT"]
             .map { URL(fileURLWithPath: NSString(string: $0).expandingTildeInPath) }
             ?? home.appendingPathComponent(".agents")
-        // 沙盘钩子：POPSKILL_TOOLS_ROOT=<base> → <base>/.claude、<base>/.codex（新用户旅程测试用）
+        // 沙盘钩子：POPSKILL_TOOLS_ROOT=<base> → <base>/.claude、<base>/.pi/agent …
         let toolBase = pe["POPSKILL_TOOLS_ROOT"]
             .map { URL(fileURLWithPath: NSString(string: $0).expandingTildeInPath) } ?? home
-        return StoreEnv(storeRoot: store, toolRoots: [
-            "claude": toolBase.appendingPathComponent(".claude"),
-            "codex": toolBase.appendingPathComponent(".codex"),
-        ])
+        return StoreEnv(storeRoot: store, toolRoots: StoreEnv.toolRoots(at: toolBase))
     }
 }
 
@@ -40,6 +37,8 @@ struct StoreMeta: Codable {
         // 「跳过此版本」（v2.15，吸收 cc-switch dismissedVersion）：
         var latestFingerprint: String? // latest 对应的上游状态指纹（github=HEAD sha / npm=版本号 / wk=内容组合哈希）
         var skipped: String?           // 用户跳过的上游状态指纹；checkUpdate 命中它就不亮徽标，新状态自动清
+        var appliedDigest: String?     // 上次成功落盘的上游内容哈希（v2.20：本地改过就不再覆盖）
+        var drifted: Bool?             // 当前本地 ≠ appliedDigest；扫描时回填 Entry.localDrifted
     }
     struct ToolMeta: Codable {
         var defaultTarget: Bool?
@@ -49,6 +48,8 @@ struct StoreMeta: Codable {
     // 定时任务人话备注（label → 备注，v2.10）。Optional：旧 meta JSON 没有此 key，
     // 非 Optional 默认值不参与 Codable 合成解码，会让整个 loadMeta 抛错
     var schedNotes: [String: String]?
+    var profiles: [WorkProfile]?
+    var activeProfileId: String?
 }
 
 struct SyncInfo: Equatable {
@@ -65,6 +66,7 @@ enum StoreError: LocalizedError {
     case resolveFailed(String)
     case unsafeName(String)
     case storeBusy
+    case localDrift(String)
 
     var errorDescription: String? {
         switch self {
@@ -74,6 +76,7 @@ enum StoreError: LocalizedError {
         case .resolveFailed(let m): m
         case .unsafeName(let n): L("不安全的目录名：\(n)")
         case .storeBusy: L("另一个 Popskill 正在修改 Store，请稍后重试")
+        case .localDrift(let n): L("\(n) 本地改过，已跳过覆盖。要覆盖请选「仍要覆盖本地修改」。")
         }
     }
 }
@@ -234,13 +237,15 @@ struct StoreFS: @unchecked Sendable {
     // ── 扫描 ─────────────────────────────────────────────
 
     func scanTools(meta: StoreMeta) -> [Tool] {
-        let defs: [(String, String)] = [("claude", "Claude Code"), ("codex", "Codex CLI")]
-        return defs.compactMap { id, name in
-            guard let root = env.toolRoots[id] else { return nil }
+        ToolDef.builtins.compactMap { def in
+            guard let root = env.toolRoots[def.id] else { return nil }
+            let connected = fm.fileExists(atPath: root.path)
+            let skillsExist = fm.fileExists(atPath: root.appendingPathComponent("skills").path)
+            guard def.alwaysShow || skillsExist else { return nil }
             return Tool(
-                id: id, name: name, root: root,
-                connected: fm.fileExists(atPath: root.path),
-                defaultTarget: meta.tools[id]?.defaultTarget ?? true
+                id: def.id, name: def.name, root: root,
+                connected: connected,
+                defaultTarget: meta.tools[def.id]?.defaultTarget ?? def.alwaysShow
             )
         }
     }
@@ -502,7 +507,8 @@ struct StoreFS: @unchecked Sendable {
                                       latest: m?.latest, changedMembers: m?.changed,
                                       upstreamNew: m?.upstreamNew,
                                       autoUpdate: m?.autoUpdate ?? false,
-                                      skippedUpdate: m?.skipped != nil)
+                                      skippedUpdate: m?.skipped != nil,
+                                      localDrifted: m?.drifted == true)
             idxs.forEach { grouped.insert($0) }
         }
         var out: [Entry] = []
@@ -538,7 +544,8 @@ struct StoreFS: @unchecked Sendable {
         return Entry(id: id, cap: cap, children: nil,
                      sourceUrl: source, latest: m?.latest, changedMembers: m?.changed,
                      upstreamNew: m?.upstreamNew,
-                     autoUpdate: m?.autoUpdate ?? false, skippedUpdate: m?.skipped != nil)
+                     autoUpdate: m?.autoUpdate ?? false, skippedUpdate: m?.skipped != nil,
+                     localDrifted: m?.drifted == true)
     }
 
     private func makeBundle(name: String, dir: URL, tools: [Tool], meta: StoreMeta) -> Entry {
@@ -566,7 +573,8 @@ struct StoreFS: @unchecked Sendable {
         return Entry(id: id, cap: head, children: children, bundleKind: .directory,
                      sourceUrl: source, latest: m?.latest, changedMembers: m?.changed,
                      upstreamNew: m?.upstreamNew,
-                     autoUpdate: m?.autoUpdate ?? false, skippedUpdate: m?.skipped != nil)
+                     autoUpdate: m?.autoUpdate ?? false, skippedUpdate: m?.skipped != nil,
+                     localDrifted: m?.drifted == true)
     }
 
     private func makeCap(name: String, type: CapType, dir: URL, id: String? = nil) -> Capability {
@@ -1595,10 +1603,15 @@ struct StoreFS: @unchecked Sendable {
         // 无论有没有内容更新，上游新增名单都落 meta——toast 曾只报个数，用户装不了（v2.17）
         saveUpstreamNew(entry.id, upstreamNew.isEmpty ? nil : upstreamNew)
         if let sha = resolved.headSha { saveCheckpoint(entry.id, head: sha, localDigest: localDigest(entry)) }
+        recordDriftAgainstApplied(entry)
         guard !changed.isEmpty else {
             // 完整比对确认与上游一致（如用户在终端手动同步过）：熄灭残留的更新徽标。
             // 只有这条路径能清——HEAD 短路的 nil 是「没变化」不是「已一致」
             if loadMeta().entries[entry.id]?.latest != nil { saveLatest(entry.id, latest: nil) }
+            // 与上游一致且还没有 appliedDigest：把当前内容记成基线，之后本地改过就能识别
+            if loadMeta().entries[entry.id]?.appliedDigest == nil {
+                saveAppliedDigest(entry.id, localDigest(entry))
+            }
             // 仅有上游新增、无内容变更：仍返回检查结果，让 UI 亮「+N」而不亮更新徽标
             if !upstreamNew.isEmpty {
                 return UpdateCheck(entryId: entry.id, latest: "", changedMembers: [],
@@ -1657,11 +1670,15 @@ struct StoreFS: @unchecked Sendable {
     /// 执行更新：clone 一次，只换有变化的成员；每个被换的成员先备份进回收站。
     /// symlink 路径不变自动延续。返回 (更新了哪些, 上游新增未装)。
     @discardableResult
-    func applyUpdate(_ entry: Entry) throws -> (updated: [String], upstreamNew: [String]) {
+    func applyUpdate(_ entry: Entry, force: Bool = false) throws -> (updated: [String], upstreamNew: [String]) {
         guard let url = entry.sourceUrl else { throw StoreError.resolveFailed(L("该源没有记录 URL，无法更新")) }
         if SourceKind.of(url) == .npm { return try applyNpmUpdate(entry) }   // 升级全局 CLI（v2.14）
+        if !force { try assertNotDrifted(entry) }
         if SourceKind.of(url) == .wellKnown, url.hasPrefix("wk:") {          // 换 SKILL.md 单文件（v2.14）
-            return try applyWellKnownUpdate(entry, host: String(url.dropFirst(3)))
+            let result = try applyWellKnownUpdate(entry, host: String(url.dropFirst(3)))
+            saveAppliedDigest(entry.id, localDigest(entry))
+            saveDrifted(entry.id, false)
+            return result
         }
         let resolved = try resolve(url)
         defer { discardStaging(resolved) }
@@ -1694,7 +1711,39 @@ struct StoreFS: @unchecked Sendable {
         if let sha = resolved.headSha { saveCheckpoint(entry.id, head: sha, localDigest: localDigest(entry)) }
         saveLatest(entry.id, latest: nil)
         saveUpstreamNew(entry.id, upstreamNew.isEmpty ? nil : upstreamNew)
+        saveAppliedDigest(entry.id, localDigest(entry))
+        saveDrifted(entry.id, false)
         return (updated, upstreamNew)
+    }
+
+    func assertNotDrifted(_ entry: Entry) throws {
+        let applied = loadMeta().entries[entry.id]?.appliedDigest
+        guard let applied, !applied.isEmpty else { return }
+        if applied != localDigest(entry) { throw StoreError.localDrift(entry.name) }
+    }
+
+    func saveAppliedDigest(_ entryId: String, _ digest: String) {
+        mutateMeta { meta in
+            var m = meta.entries[entryId] ?? StoreMeta.EntryMeta()
+            m.appliedDigest = digest
+            m.drifted = false
+            meta.entries[entryId] = m
+        }
+    }
+
+    func saveDrifted(_ entryId: String, _ drifted: Bool) {
+        mutateMeta { meta in
+            var m = meta.entries[entryId] ?? StoreMeta.EntryMeta()
+            m.drifted = drifted
+            meta.entries[entryId] = m
+        }
+    }
+
+    /// 有 appliedDigest 且当前内容对不上 → 标漂移，更新时默认跳过
+    func recordDriftAgainstApplied(_ entry: Entry) {
+        let applied = loadMeta().entries[entry.id]?.appliedDigest
+        guard let applied, !applied.isEmpty else { return }
+        saveDrifted(entry.id, applied != localDigest(entry))
     }
 
     /// 安装上游 monorepo 里本地还没有的技能（v2.17）。

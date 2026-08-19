@@ -35,6 +35,7 @@ struct Titlebar: View {
                 Text("Popskill").font(.ui(12.5, .semibold)).foregroundStyle(Ink.ink)
             }
             Spacer()
+            profileChip
             syncChip
             Button { model.sheet = .sched; model.reloadSched() } label: {
                 Text("◷")
@@ -61,6 +62,51 @@ struct Titlebar: View {
         .frame(height: 38)
         .background(Ink.chrome)
         .overlay(alignment: .bottom) { Ink.hairline.frame(height: 1) }
+    }
+
+    @ViewBuilder
+    private var profileChip: some View {
+        Menu {
+            if model.profiles.isEmpty {
+                Button(L("还没有工作模式")) {}
+                    .disabled(true)
+            } else {
+                ForEach(model.profiles) { p in
+                    Button {
+                        model.applyProfile(p.id)
+                    } label: {
+                        if p.id == model.activeProfileId {
+                            Label(model.profileDirty ? L("\(p.name)（已改动）") : p.name, systemImage: "checkmark")
+                        } else {
+                            Text(p.name)
+                        }
+                    }
+                }
+            }
+            Divider()
+            Button(L("保存当前为新模式…")) { model.promptSaveProfile() }
+            if model.activeProfile != nil {
+                Button(L("用当前盘面更新此模式")) { model.updateActiveProfile() }
+                    .disabled(!model.profileDirty)
+                Button(L("删除此模式"), role: .destructive) {
+                    if let id = model.activeProfileId { model.deleteProfile(id) }
+                }
+            }
+            Button(L("在设置里管理…")) { model.sheet = .settings }
+        } label: {
+            let label = model.activeProfile.map { model.profileDirty ? L("\($0.name)·改") : $0.name } ?? L("工作模式")
+            HStack(spacing: 5) {
+                Text("☰").font(.ui(10))
+                Text(label).font(.ui(11, .medium)).lineLimit(1)
+            }
+            .foregroundStyle(model.activeProfile == nil ? Ink.tertiary : Ink.ink)
+            .padding(.leading, 8).padding(.trailing, 9).padding(.vertical, 2)
+            .background(Capsule().fill(Ink.window))
+            .overlay(Capsule().stroke(Ink.control2, lineWidth: 1))
+        }
+        .menuStyle(.borderlessButton)
+        .help(L("工作模式：一键切换某类任务该挂哪些技能"))
+        .accessibilityLabel(L("工作模式"))
     }
 
     @ViewBuilder

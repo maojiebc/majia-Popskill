@@ -34,6 +34,10 @@ swift-app/Sources/Popskill/
 ├── SchedSheet.swift    定时任务弹层（◷ / ⌘J；行为分组/倒计时排序/人话备注；写操作 NSAlert 确认）
 ├── Localization.swift  L() 取词 + 显式语言协商 + l10nLocale（v2.12，详见「本地化」节）
 ├── StoreWatch.swift    FSEvents 监听器（v2.15：store/工具目录外部变更秒级自动重扫）
+├── CliInventory.swift  CLI 白名单 / 多前缀 / brew·pipx·uv 纯函数（v2.20）
+├── NpmSource.swift     npm 源 + 按前缀升级全局 CLI
+├── ToolRegistry.swift  工具列注册表（Claude/Codex 常显，其余有 skills 才露）
+├── WorkMode.swift      工作模式快照 / 最小差异切换（v2.20）
 ├── Resources/          {zh-Hans,en}.lproj（gen-l10n.sh 从 l10n/ 目录预编译，提交进库）
 └── Fixtures.swift      原型样例数据（POPSKILL_FAKE_DATA=1）
 swift-app/l10n/Localizable.xcstrings     本地化权威源（人/AI 只编辑这一个文件）
@@ -41,13 +45,14 @@ Tests/PopskillTests/StoreFSTests.swift   引擎测试 + RealEnvSmoke 只读冒�
 Tests/PopskillTests/AppModelTests.swift  纯逻辑测试（修复推荐矩阵/键盘状态机）
 Tests/PopskillTests/SchedTests.swift     定时任务解析测试（plist/cron/launchctl 全 fixture，不碰真系统）
 Tests/PopskillTests/StoreWatchTests.swift FSEvents 触发/幂等 + AppModel 全链集成（外部进程写）
+Tests/PopskillTests/WorkModeTests.swift  工作模式快照/差异纯函数
 ```
 
 ### 关键架构事实
 
 - **文件系统就是数据库**。无 GRDB、无 sidecar、无 cc-switch submodule。唯一持久化元数据是 `~/.agents/.popskill.json`（源 URL / 自动更新 / 工具默认挂载），随 store 同步。
 - **SSOT = `~/.agents/`**（v1 的 `~/.cc-switch/skills` 已废弃）。`~/.claude/skills`、`~/.codex/skills` 里是指向 store 的裸 symlink。
-- **工具注册表**：唯一定义点 = `scanTools` 的 defs 数组 + `StoreEnv.real()` 的 toolRoots，UI 列全部数据驱动。曾实现过第三工具 CodeBuddy（腾讯，~/.codebuddy/skills，标准 Agent Skills）后按用户决定撤下（2026-06-13）——如重启：linkStatus 的 relativeTo 解析已兼容 skills.sh CLI 的相对 symlink；~/.local 前缀旧版 guancli 有 copyDirectory 写 ~/.codebuddy 的潜在污染源。
+- **工具注册表（v2.20 = `ToolRegistry.swift`）**：`ToolDef.builtins` + `StoreEnv.toolRoots(at:)` 是唯一列定义。Claude / Codex `alwaysShow`；Grok / Gemini / OpenCode / Pi 只有本机已有 `skills/` 才露列，避免空列撑爆矩阵。CodeBuddy 曾实现后按用户决定撤下（2026-06-13），不要加回。
 - **LinkStatus 四态**：`on`=symlink 有效 / `off`=未链接 / `stub`=**真实目录占位（本地副本，未托管）** / `broken`=symlink 目标丢失。注意 stub 的真实语义和原型（占位待校验）不同。
 - **套装双形态**：工具侧既可能是「整套一条 symlink」（全部子项 on），也可能是「物化目录 + 逐子项 symlink」。单独关某个子项时 `setBundleChildLink` 自动物化。移除套装时物化目录会被清理。
 - **防呆三条**：`removeLink` 只删 symlink、真实目录一律走 store 回收站（`~/.agents/.trash/`，带时间戳）、store 目录绝不被开关动到。改 StoreFS 必须跑测试。
@@ -61,7 +66,7 @@ Tests/PopskillTests/StoreWatchTests.swift FSEvents 触发/幂等 + AppModel 全�
 - **源式套装（v2.1）**：同一 github 来源 ≥2 个平铺成员归拢成 `BundleKind.source` 套装（id `src:<repo>`），磁盘平铺、symlink 逐成员（与 `.directory` 形态的整链/物化区分，toggle/linkPath 按 bundleKind 路由）。实测：72 平铺 → 26 条目（baoyu 22 / lark 26 各一张卡）。store 内软链成员（私有开发）不归拢、更新跳过。
 - **更新机制（v2.1，吸收 cc-switch）**：不靠 semver，对目录算 SHA-256 内容哈希（`computeDirHash`），`checkUpdate` 一次 clone 逐成员比对（lock 的 skillPath 定位 monorepo 子目录，兜底 skills/<name> 约定），还报告上游新增未安装项；`applyUpdate` 只换有变化的成员、原子换版（先拷隐藏临时名再换名，失败回滚）、每个先备份进回收站（保留 200 份，按入站时间 FIFO）。v2.8 起 `ls-remote` HEAD 短路：上游 commit 没动**且本地未漂移**（meta.localDigest 比对）**且没亮更新徽标**（meta.latest 为 nil）才跳过整仓 clone——只比 HEAD 会让终端里改坏的技能永远检不出；亮徽标的要完整比对才能解析上游版本号、或在手动同步后熄灭残留徽标（确认一致时 checkUpdate 自动清 latest）。回收站按 kind 分桶（.trash/skills|agents|mcp|bin/），恢复回原位。启动 2s 后后台自动检查，`autoUpdate=true` 的源直接更。
 - **更新计数语义（v2.14）**：横幅/按钮计数一律 `Entry.updateCount`（套装按 changedMembers 逐成员计，独立项 1）——用户视角是「几个技能」不是「几个源」。横幅「N 个技能可更新」可点击：`jumpToNextUpdate()` 循环跳转+展开套装+闪烁，跳转优先于过滤（清 query/typeFilter）。hero 右侧常驻手动「检查更新」按钮。表格视图三种行都有更新徽标（v2.13 引入表格时漏了整套）。
-- **npm 源（v2.14，NpmSource.swift）**：npm 包发布的是 CLI 本体（tarball 里没有 SKILL.md，技能目录是 CLI 的 install-skill 生成的），所以更新语义 = registry `/latest` vs `npm ls -g` 已装版，`applyNpmUpdate` = `npm i -g`，**绝不碰 store 技能目录**。npm 探测走 `zsh -lc`（GUI app 的 PATH 没有 ~/.local/nvm）缓存在 NpmEnv；「添加」流程仍拒绝 npm 源（装不出技能）。**全局 CLI 巡检**：`checkCliUpdates()` 对 npm -g 全部包逐个比 registry（排除 entries 里 npm 源对应的包防双计），CliSheet 版本矩阵一键升级，入口=横幅「⌨」+设置页+应用菜单。
+- **npm 源（v2.14，NpmSource.swift）**：npm 包发布的是 CLI 本体（tarball 里没有 SKILL.md，技能目录是 CLI 的 install-skill 生成的），所以更新语义 = registry `/latest` vs 该包真实前缀里的已装版，`applyNpmUpdate` = `npm i -g --prefix <那份>`，**绝不碰 store 技能目录**。npm 探测走 `zsh -lc`（GUI app 的 PATH 没有 ~/.local/nvm）缓存在 NpmEnv；「添加」流程仍拒绝 npm 源（装不出技能）。CLI 巡检见上条 v2.20。
 - **well-known 源（v2.14，WellKnownSource.swift）**：skills.sh 生态的单文件分发协议（lark 系 24+ 技能 2026-06 起 lock 全改写成 `open.feishu.cn/.well-known/skills/<名>/SKILL.md`）。归拢键 = `wk:<host>`（曾被 prefix(3) 截成 `.well-known/skills` 当 github 源，套装名难看+checkUpdate 去 clone 必失败）；检查=逐成员 GET SKILL.md 比哈希，更新=原子换 SKILL.md 保留 references/（协议只分发单文件，附属文件变化检不出是已知局限）；「添加」框粘 well-known 地址可直装。
 - **实时刷新（v2.15）**：`StoreWatcher` 封装 FSEventStream（IgnoreSelf + 1s 合并窗口），监听 store 根 + connected 工具的 skills/agents/mcp/bin；**刻意不监听 ~/.claude 整棵树**（projects/ 每个 Claude 会话都在写，噪音百倍）。AppModel.startWatching（RootView onAppear 调）→ 回调 350ms 尾去抖 → refresh；updatingIds 非空时让位（换版收尾自带 refresh）。refresh() 末尾 `syncWatchPaths` 幂等对齐监听集（工具目录挂载后才出现）。⌘R/切前台重扫保留兜底；`POPSKILL_NO_WATCH=1` 关闭。测试写文件必须走外部进程（/usr/bin/touch）——本进程的写被 IgnoreSelf 滤掉。
 - **跳过此版本（v2.15，吸收 cc-switch dismissedVersion）**：`UpdateCheck.fingerprint` = 上游状态指纹（github=HEAD sha / npm=registry 版本号 / well-known 与本地路径=变化成员内容组合哈希）；meta 存 `latestFingerprint`（亮徽标时随 saveLatest 落）与 `skipped`（skipLatest 时拷入）。checkUpdate 三条路径返回前 `skipSuppressed`：同指纹→按无更新返回 nil，新指纹→自动清 skipped 重新亮。**unskipLatest 必须连 lastHead/localDigest 检查点一起清**——跳过期间被抑制的检查照常落了检查点，不清的话 HEAD 短路会把「最新」钉死；恢复后走 `checkUpdates(only:)` 定向重查。UI 入口=卡片/表格右键菜单（跳过此版本/恢复更新提醒），套装挂头行不挂子项。
@@ -84,7 +89,9 @@ Tests/PopskillTests/StoreWatchTests.swift FSEvents 触发/幂等 + AppModel 全�
 - **安装/重拉事务（v2.18，审查 P1-03）**：install = 预检全部链接位（真实目录冲突动盘前报错）→ 同卷 `.popskill-incoming-*` → 原子 rename（并发同名靠 rename 竞争，输家绝不删赢家）→ 记账建链（失败只撤本次对象）；`repullSwap` 取代 removeEntry+install 裸序，撤链/让位/换名/建链四段全记账可回滚——任一步失败磁盘回到操作前。故障注入测试盯着（testInstall*/testRepullSwap*）。
 - **跨进程写锁（vNext）**：所有 meta read-modify-write 与 store/link/trash 变更走 `StoreProcessLock`。锁文件按标准化 store 路径哈希落用户临时目录，不随 store 删除失效；POSIX `flock` 在进程崩溃/被杀后由内核自动释放；同进程共享 `NSRecursiveLock` Gate 支持 install→mutateMeta 等同步重入。GitHub/local resolve 与 well-known 下载在锁外，磁盘提交阶段才占锁；15 秒超时返回 `storeBusy`，不无限卡 UI。双进程测试覆盖等待合并、超时、SIGKILL 自动释放。
 - **meta 写盘可见（v2.18）**：saveMeta/mutateMeta 返回 Bool；自动更新/默认挂载/跳过/恢复提醒/任务备注五个用户动作写失败必须回滚内存态 + sayError，不许谎报「已保存」。
-- **CLI 巡检开关（v2.18，审查 P1-04）**：`autoCliPatrol`（UserDefaults，默认关）——启动/手动检查更新不再静默把全局 npm 包名喂给 registry；打开 CLI 面板（⌨）始终巡检。联网披露单一真相源在 SECURITY.md「Network access (complete list)」。
+- **CLI 巡检（v2.20，改写 v2.18）**：每次「检查更新」默认只查常用白名单（Claude Code / Codex / lark-cli / GetNote / guanskill / pi / clawhub / mcporter + brew `gemini-cli` `aliyun-cli` + pipx `agent-reach` `yt-dlp` + uv `specify-cli`）。`autoCliPatrol` 打开才把**全部**全局 npm 包名发给 registry；打开 CLI 面板始终全量扫。升级打回真实前缀（`npm i -g --prefix` / `brew upgrade` / `pipx upgrade` / `uv tool upgrade`），PATH 仍命中另一份就报人话错。node / npm / TypeScript 等基础工具只展示不升级。横幅「全部更新」只带走白名单。详见 `CliInventory.swift`。联网披露在 SECURITY.md。
+- **技能本地漂移（v2.20）**：`EntryMeta.appliedDigest` 记上次成功落盘的内容哈希。本地改过就默认不覆盖（`StoreError.localDrift`），「全部更新」跳过并 toast；右键「仍要覆盖本地修改」才 `applyUpdate(force:)`。旧 meta 无此字段仍能解码——第一次与上游对齐的检查会补基线。
+- **工作模式（v2.20）**：`WorkProfile` 快照「此刻各工具挂了哪些」。缺 toolId 键 = 切换时不动该列；键在数组空 = 明确全断。套装管来源，模式管场景。
 - **严格并发零警告（v2.18）**：同步桥（httpGet/runProcess 管道）一律走带锁 `ResultBox`（semaphore 超时后迟到回调只写盒子）；StoreFS/SchedEngine 标 `@unchecked Sendable`（唯一非值成员 FileManager.default 官方线程安全）；NpmEnv.cached 用 `nonisolated(unsafe)`+既有锁。CI 的 release build 是严格并发模式且零 warning 门，别引入新警告。
 - **安全校验（v2.1）**：`sanitizeName` 拒绝空名 / `/` / `..` / 隐藏名，install 与导入都走它。
 - **未托管导入（v2.1）**：设置 → Store「导入未托管目录」，把工具目录里的真实技能目录收编进 store 并换 symlink。
@@ -116,10 +123,12 @@ POPSKILL_L10N_PROBE=1           # 打印真实语言协商结果后退出（v2.1
 
 ```bash
 swift build --package-path swift-app
-scripts/test.sh        # 封装了 DEVELOPER_DIR=/Applications/Xcode.app（CLT 没有 XCTest）
+scripts/test.sh        # 封装了 DEVELOPER_DIR=/Applications/Xcode.app（CLT 没有 XCTest / SwiftUI macro）
 scripts/ci-local.sh    # 全链本地 CI：语法/构建/测试/启动冒烟/bundle 冒烟/截图/发布工件
-# 基线：134 个测试（StoreFSTests + AppModelTests + SchedTests + StoreWatchTests）+ 真实环境只读冒烟 POPSKILL_REAL_SMOKE=1（v2.16 起带链接状态分布，验 linkStatus 零误判）
+# 基线：约 145 + v2.20 新增（CLI 纯函数 / appliedDigest 解码 / 漂移不覆盖 / 工作模式）
 # 云 CI（v2.18 起）：shell 语法 + l10n 漂移 + 严格并发 release build（零 warning 门）+ 测试
+# 2026-08-20：本机现有 Xcode 27.0 beta（/Applications/Xcode-beta.app）。scripts/test.sh / gen-l10n.sh 会回退到它。
+# Xcode 27 的 SwiftPM 测试包 rpath 找不到 Sparkle——test.sh 会补 PackageFrameworks 软链。不要用 CLT swift test 当绿。
 ```
 
 ## 凭证 / 路径（设了一次终生有效）
@@ -177,9 +186,11 @@ scripts/release.sh
 21. **SwiftPM 把 lproj 目录名小写化 → 别拿协商结果跟 "zh-Hans" 裸比** — 仓库源是 `zh-Hans.lproj`，**SwiftPM 复制进 `Popskill_Popskill.bundle` 时小写成 `zh-hans.lproj`**（打包只是 ditto 忠实搬运）。`Bundle.localizations` 返回磁盘真实名 → 协商结果 = `"zh-hans"` → `l10nIsChinese = (lang == "zh-Hans")` 判 **false**，中文界面下 Catalog 精选目录（80+411 条）整片走英文面。**v2.14 潜伏到 v2.18.0 三个版本**没被发现，因为 macOS 文件系统大小写不敏感（`path(forResource:)` 照样命中 → L() 全中文）——**「界面是中文」永远不能证明协商正确**：key 就是中文原文，协商彻底失败退回 main bundle 也照样显示中文。处方：判定走 `l10nLangIsChinese()`（大小写/后缀无关），`POPSKILL_L10N_PROBE=1` 在打包 .app 上自检。**测试陷阱**：测试进程里 resourceBundle 找不到资源会走兜底 `return ("zh-Hans", module)`，断言全局 `l10nIsChinese` 是**结构性假绿**（拿 bug 版代码也照过）——只有喂真实形态（`available: ["zh-hans","en"]`）的纯函数测试抓得住，写完必须做变异验证（注入 bug 版确认测试会红）
 22. **CI 编译器小版本 ≠ 本地——零警告门可能拦到本地不报的警告** — v2.18.0 首轮发版实撞：runner 的 Xcode 16 旧小版本对 `attr[range].backgroundColor =`（AttributedString 动态成员）报「cannot form key path…non-sendable」`<unknown>:0` 两条，本地新编译器零警告。处方：`gh run view <id> --log-failed | grep warning:` 定位 → 改等价写法规避（显式 attribute 类型下标 `attr[range][AttributeScopes.SwiftUIAttributes.BackgroundColorAttribute.self] =`，不构造 keypath）。发布门此刻的价值：CI 红时 tag/DMG/appcast 零泄漏，修好重跑即续发
 
-## 当前状态（2026-07-14）
+## 当前状态（2026-08-20）
 
-- **Latest = v2.18.1「中文界面精选目录显英文」已发版上线**（2026-07-14，build 284；CI 门一次过 run 29316233382；appcast 又是轮询超时后 CDN 自刷（第三次，同 v2.15/2.16，非坑 #8）；**实下载正式包验收**：codesign/spctl/staple/2.18.1·284/Sparkle 2.9.4 + `POPSKILL_L10N_PROBE=1` 实证 `l10nLang=zh-hans isChinese=true locale=zh_CN catalog[guancli]=观远 BI 全能查询…` + 沙盘冷启存活）：用户实机截图发现 guanskill/lark 套装子项简介全英文。根因=**SwiftPM 把 `zh-Hans.lproj` 小写成 `zh-hans`** → 协商结果 "zh-hans" → `l10nIsChinese` 裸比 "zh-Hans" 判 false → Catalog 双语整片走英文面（**v2.14 潜伏三版**，坑 #21 详录）。修：`l10nLangIsChinese()` 大小写/后缀无关 + `l10nLocale` 跟同一判断 + 协商抽纯函数 `l10nLangCandidates()`。**验证三层**：①纯函数回归测试（喂真实形态 `["zh-hans","en"]`）+ **变异验证**（注入 bug 版确认测试真会红——第一版测试断言全局 l10nIsChinese 是结构性假绿，bug 版照过，已废弃重写）②CatalogEntry.localizedDesc(chinese:) 注入式挑面测试 ③`POPSKILL_L10N_PROBE=1` 打包 .app 实测：`l10nLang=zh-hans isChinese=true locale=zh_CN catalog[guancli]=观远 BI 全能查询…`。测试 134→137。
+- **公开 Latest = v2.19.0 / build 285**（2026-07-23）。开发以本目录 `/Users/majia/projects/majia-Popskill-release-v2.19.0` 为准；`/Users/majia/projects/popskill` 停在 v2.18.1，不要当正式工程。
+- **v2.20 进行中，未发版**：主线是更新通道——技能本地改过默认不覆盖 + CLI 按真实前缀/渠道升级，目标是打开 App / 点「检查更新」就能处理常用 CLI，Codex 每日任务变成可选。顺带落地工作模式与按需工具列。大版本直接推正式通道（main + Release + Sparkle），不走草稿。**2026-08-20：Xcode 27.0 beta 下 `scripts/test.sh` 160 绿（1 skip 真实环境冒烟）+ l10n coverage 绿。** 未 bump VERSION，未跑 release.sh。稳定版 `Xcode.app` 仍不在，脚本已回退到 `Xcode-beta.app`。
+- **v2.18.1「中文界面精选目录显英文」已发版上线**（2026-07-14，build 284；CI 门一次过 run 29316233382；appcast 又是轮询超时后 CDN 自刷（第三次，同 v2.15/2.16，非坑 #8）；**实下载正式包验收**：codesign/spctl/staple/2.18.1·284/Sparkle 2.9.4 + `POPSKILL_L10N_PROBE=1` 实证 `l10nLang=zh-hans isChinese=true locale=zh_CN catalog[guancli]=观远 BI 全能查询…` + 沙盘冷启存活）：用户实机截图发现 guanskill/lark 套装子项简介全英文。根因=**SwiftPM 把 `zh-Hans.lproj` 小写成 `zh-hans`** → 协商结果 "zh-hans" → `l10nIsChinese` 裸比 "zh-Hans" 判 false → Catalog 双语整片走英文面（**v2.14 潜伏三版**，坑 #21 详录）。修：`l10nLangIsChinese()` 大小写/后缀无关 + `l10nLocale` 跟同一判断 + 协商抽纯函数 `l10nLangCandidates()`。**验证三层**：①纯函数回归测试（喂真实形态 `["zh-hans","en"]`）+ **变异验证**（注入 bug 版确认测试真会红——第一版测试断言全局 l10nIsChinese 是结构性假绿，bug 版照过，已废弃重写）②CatalogEntry.localizedDesc(chinese:) 注入式挑面测试 ③`POPSKILL_L10N_PROBE=1` 打包 .app 实测：`l10nLang=zh-hans isChinese=true locale=zh_CN catalog[guancli]=观远 BI 全能查询…`。测试 134→137。
 - **v2.18.0「审查修复」已发版上线**（2026-07-14，build 283；**发布门首轮实战拦截**：云 CI 零警告门抓到 runner 旧编译器对 AttributedString 动态成员 keypath 的 2 条 `<unknown>:0` 误报（本地新编译器不报）——按新序 tag/DMG/appcast 全未公开，改显式 attribute 下标后续发全绿，坑 #21；appcast 又是轮询超时后 CDN 自刷（同 v2.15/16，非坑 #8，Pages status=built）；实下载 DMG 五连验证：codesign/spctl/staple/2.18.0·283/**Sparkle 2.9.4 实证** + 沙盘冷启存活）：外部代码审查（基线 v2.17.0@1241146，报告存 ~/Downloads/majia-Popskill-代码审查报告-2026-07-14.md）5 项 P1 全收口 + 4 项 P2 + 1 项 P3——①Sparkle 2.9.1→2.9.4 安全热修（发版链加版本断言）②类型化身份 kind:name + meta 两阶段迁移（真实 meta 影子验证过：14 磁盘键/2 形状头键/1 npm 头键 guanskill 全有归宿）③install/repullSwap 事务化 + 批量同名竞态 ④联网披露对齐 + CLI 巡检默认关 ⑤发布门改序（CI 绿才公开资产）⑥meta 写失败可见 ⑦严格并发 17→0 warning + CI 零警告门 ⑧云 CI 扩容 ⑨GitHub 仓库开 Dependabot/secret scanning/push protection + protect-main ruleset（禁 force-push/删除；刻意不开 required PR——会挡死单人 direct-push 发版流）。测试 126→134；真实环境冒烟 94on/70on/0broken 零误判；打包 .app 内 Sparkle 2.9.4 实证 + bundle 冷启 smoke 过。**升级兼容**：老 meta 首启自动迁移；回退旧版 app 会读不到新键（表现为来源/自动更新需重配，数据本体无损）。
 - **Latest = v2.17.0「上游新增一键装 + 深链接」已发版上线**（2026-07-11，build 282；appcast/GitHub Release/实下载 DMG 冷启全过，正式发布包上实测深链接全链路：CFBundleURLTypes 注入确认 + LaunchServices 路由 + 日志证据）：主体收编自 `~/Documents/majia-Popskill` 独立预研工作区（一份带未提交 735 行改动的 checkout，patch 经 `git apply --3way` 搬入）。内容 = v2.16 裁掉的 roadmap 欠账全部还清：①upstreamNew 一键装（徽标+横幅+全部安装）②popskill:// 深链接（LaunchServices 实测过）③回收站恢复回填 meta ④scanUnmanaged 四 kind ⑤watcher 根降级听父目录 ⑥git/npm 环境自检横幅。收编时修三处：探测主线程 login shell 冻窗口→后台单飞；detached 并行阻塞 NSLock 饿死协作线程池（坑 #20，watcher 集成测试实测复现）；installUpstreamNew 死代码。l10n +35 key（408 总）。测试 116→126。**注意：~/Documents/majia-Popskill 副本已收编完毕可废弃**（其 skill-cli/ 只剩 Rust 构建缓存无源码、cc-switch/ 是参考 clone，均未收编）。
 - **v2.16.0「存量功能大扫除」已发版上线**（VERSION 2.16.0/281，release note 在 docs/release/v2.16.0.md，等用户确认后跑 scripts/release.sh）：不加新功能，四视角审计（更新链/主界面/弹层流程/引擎数据，40 发现）修 30 条。三真 bug：源式套装 autoUpdate 写读键不同从未生效（P0）/sched 停用重启复活（unload 无 override）/promoteExpanded 键盘顺序脱节。加固：meta GC+损坏备份、linkStatus 指对才 on、物化收敛、批量收工账本、npm 串行队列、跳过态全 UI 回显、修复弹层键盘、添加流程后台化+驻留错误、回收站清空+撞名解析、Esc 分层退。测试 106→116；真实环境只读冒烟状态分布 90on/66on/0broken 零误判。裁掉记 roadmap：upstreamNew 安装入口/恢复回填 meta/scanUnmanaged 四 kind/store 根重建监听。
@@ -193,10 +204,11 @@ scripts/release.sh
 
 ## 下一步候选（设计稿里刻意没做的）
 
-1. **白卡 SaaS 皮肤**（设计 chat 里「保留观望」的另一版方向，账本皮肤的替代选项；做的话是全局换色大改，单独立项）
-2. **well-known 附属文件**：协议只分发 SKILL.md，references/ 变化检不出——若 skills.sh 生态出清单协议再跟进
-3. **cc-switch 参考清单里最后一项**：拖拽排序（价值存疑，矩阵有固定排序语义）（报告存 docs/dev/cc-switch-reference.md；dismiss v2.15 / 深链接+环境警告 v2.17 均已做掉）
-4. **README「一键装进 Popskill」深链接徽章**：深链接已上线（v2.17），README/官网可挂 `popskill://install?src=…` 引导链接——涉及对外文案，单独定夺
+1. **bump 2.20.0 / build 286 → `scripts/release.sh`**（测试已绿）。发版后本机 09:45 Codex `skill-cli` 每日 CLI 任务可降为兜底。
+2. **白卡 SaaS 皮肤**（设计 chat 里「保留观望」的另一版方向，账本皮肤的替代选项；做的话是全局换色大改，单独立项）
+3. **well-known 附属文件**：协议只分发 SKILL.md，references/ 变化检不出——若 skills.sh 生态出清单协议再跟进
+4. **cc-switch 参考清单里最后一项**：拖拽排序（价值存疑，矩阵有固定排序语义）（报告存 docs/dev/cc-switch-reference.md；dismiss v2.15 / 深链接+环境警告 v2.17 均已做掉）
+5. **README「一键装进 Popskill」深链接徽章**：深链接已上线（v2.17），README/官网可挂 `popskill://install?src=…` 引导链接——涉及对外文案，单独定夺
 
 ## 沟通偏好（来自 user memory）
 

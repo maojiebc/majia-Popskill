@@ -434,22 +434,6 @@
 			<string>Provides %lld items</string>
 		</dict>
 	</dict>
-	<key>正在更新 %lld 个源…</key>
-	<dict>
-		<key>NSStringLocalizedFormatKey</key>
-		<string>%#@value@</string>
-		<key>value</key>
-		<dict>
-			<key>NSStringFormatSpecTypeKey</key>
-			<string>NSStringPluralRuleType</string>
-			<key>NSStringFormatValueTypeKey</key>
-			<string>lld</string>
-			<key>one</key>
-			<string>Updating %lld source…</string>
-			<key>other</key>
-			<string>Updating %lld sources…</string>
-		</dict>
-	</dict>
 	<key>每 %lld 分钟</key>
 	<dict>
 		<key>NSStringLocalizedFormatKey</key>

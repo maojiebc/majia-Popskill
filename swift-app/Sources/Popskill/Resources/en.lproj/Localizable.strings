@@ -2,18 +2,36 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key> %lld 个 CLI</key>
+	<string> %lld CLIs</string>
+	<key> %lld 个技能源</key>
+	<string> %lld skill sources</string>
+	<key> + %lld 个 CLI</key>
+	<string> + %lld CLIs</string>
+	<key> · 当前</key>
+	<string> · current</string>
+	<key> · 当前（已改动）</key>
+	<string> · current (edited)</string>
 	<key>%@ — 空</key>
 	<string>%@ — empty</string>
 	<key>%@ 不是 popskill 管理的 symlink，已跳过</key>
 	<string>%@ is not a popskill-managed symlink — skipped</string>
 	<key>%@ 似乎还没安装</key>
 	<string>%@ doesn’t seem to be installed</string>
+	<key>%@ 是基础工具，不在一键升级范围</key>
+	<string>%@ is a foundation tool and is not one-click upgraded</string>
+	<key>%@ 本地改过，已跳过覆盖。要覆盖请选「仍要覆盖本地修改」。</key>
+	<string>%@ was edited locally and was not overwritten. Choose “Overwrite local edits anyway” to replace it.</string>
 	<key>%@ 正在更新中，稍候再操作</key>
 	<string>%@ is updating — try again in a moment</string>
 	<key>%@ 等</key>
 	<string>%@ and more</string>
 	<key>%@ 等 %lld 个</key>
 	<string>%@ and %lld more</string>
+	<key>%@·改</key>
+	<string>%@·edited</string>
+	<key>%@（已改动）</key>
+	<string>%@ (edited)</string>
 	<key>%@，已装 %@</key>
 	<string>%@, installed %@</string>
 	<key>%@：%@</key>
@@ -22,6 +40,8 @@
 	<string>%@: %@. Click to toggle / fix</string>
 	<key>%lld 个 CLI 可升级</key>
 	<string>%lld CLIs can upgrade</string>
+	<key>%lld 个工具 · %lld 项已挂载</key>
+	<string>%lld tools · %lld mounted</string>
 	<key>%lld 个成员的 SKILL.md 拉取失败（%@）</key>
 	<string>Failed to fetch SKILL.md for %lld members (%@)</string>
 	<key>%lld 个技能可更新</key>
@@ -32,6 +52,8 @@
 	<string>day %lld</string>
 	<key>%lld 项中 %lld 项已激活</key>
 	<string>%2$lld of %1$lld active</string>
+	<key>+ 保存当前为新模式</key>
+	<string>+ Save current as new mode</string>
 	<key>+ 添加</key>
 	<string>+ Add</string>
 	<key>+ 粘贴 URL 添加</key>
@@ -56,6 +78,8 @@ macOS: %2$@
 	<string>CLI Checkup</string>
 	<key>CLI 巡检…</key>
 	<string>CLI Checkup…</string>
+	<key>Claude / Codex 始终显示。Grok、Gemini、OpenCode、Pi 只有本机已有技能目录才出现，避免空列撑爆矩阵。</key>
+	<string>Claude and Codex always appear. Grok, Gemini, OpenCode and Pi only show up when their skills folder already exists, so empty columns don't crowd the matrix.</string>
 	<key>Claude Code Marketplace 插件——只读展示，操作用 /plugin</key>
 	<string>Claude Code Marketplace plugin — read-only here; manage with /plugin</string>
 	<key>Git · 已同步</key>
@@ -68,6 +92,8 @@ macOS: %2$@
 	<string>Marketplace plugins are managed by Claude Code — use /plugin inside Claude Code</string>
 	<key>Marketplace 插件（%@）· 由 Claude Code 管理，操作用 /plugin</key>
 	<string>Marketplace plugin (%@) · Managed by Claude Code — use /plugin</string>
+	<key>PATH 命中另一份</key>
+	<string>PATH hits another copy</string>
 	<key>PID %lld</key>
 	<string>PID %lld</string>
 	<key>Popskill 帮你把一份 AI 技能装一次，同时挂给 Claude Code 和 Codex 等工具。
@@ -76,10 +102,14 @@ macOS: %2$@
 Paste a GitHub repo or a local folder to get started.</string>
 	<key>Popskill 帮助</key>
 	<string>Popskill Help</string>
+	<key>PyPI 响应异常：%@</key>
+	<string>Unexpected PyPI response: %@</string>
 	<key>SKILL.MD · 文档摘要</key>
 	<string>SKILL.MD · DOC EXCERPT</string>
 	<key>Store 与同步</key>
 	<string>Store &amp; Sync</string>
+	<key>brew 升级失败：%@</key>
+	<string>brew upgrade failed: %@</string>
 	<key>cron 任务请在终端手动执行</key>
 	<string>Run cron jobs manually in a terminal</string>
 	<key>cron 条目在终端用 crontab -e 管理，这里只看不动。</key>
@@ -96,20 +126,16 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>launchctl exited with code %lld</string>
 	<key>npm 全局 CLI 的版本矩阵与一键升级</key>
 	<string>Version matrix and one-click upgrades for global npm CLIs</string>
-	<key>npm 全局安装的命令行工具——已装版本对比 registry 最新版，一键升级。</key>
-	<string>Global npm CLIs — installed versions vs registry latest, one-click upgrade.</string>
-	<key>npm 全局安装的命令行工具有新版——点击查看版本矩阵</key>
-	<string>Global npm CLIs have updates — click for the version matrix</string>
 	<key>npm 包装的是 CLI 本体，装技能请用 GitHub 仓库或本地路径；已装的 npm 源 CLI 会自动纳入更新检查</key>
 	<string>npm packages ship the CLI itself; install skills from a GitHub repo or local path. Installed npm CLIs are checked for updates automatically.</string>
 	<key>npm 安装失败</key>
 	<string>npm install failed</string>
 	<key>npm 安装失败：%@</key>
 	<string>npm install failed: %@</string>
+	<key>pipx 升级失败：%@</key>
+	<string>pipx upgrade failed: %@</string>
 	<key>registry 响应异常：%@</key>
 	<string>Unexpected registry response: %@</string>
-	<key>registry 查询失败（网络）——点右下重新扫描</key>
-	<string>Registry lookup failed (network) — rescan from the bottom right</string>
 	<key>store 中已存在 %@</key>
 	<string>%@ already exists in the store</string>
 	<key>store 为空</key>
@@ -126,6 +152,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>The store syncs across devices; symlinks are per-machine state and never sync.</string>
 	<key>store 已有同名条目「%@」。想换新版：回主界面对它「检查更新」；确要重装：先移除旧的（会进回收站）再回来安装。</key>
 	<string>The store already has an entry named “%@”. For the newer version, run “Check Updates” on it from the main screen; to reinstall, remove the old one first (it goes to the recycle bin), then come back.</string>
+	<key>uv 升级失败：%@</key>
+	<string>uv tool upgrade failed: %@</string>
 	<key>well-known 地址需要形如 https://域名/.well-known/skills/名称/SKILL.md</key>
 	<string>A well-known address must look like https://host/.well-known/skills/name/SKILL.md</string>
 	<key>”。试试别的关键词，或 + 添加。</key>
@@ -142,6 +170,10 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>✗ code %lld</string>
 	<key>、</key>
 	<string>, </string>
+	<key>「%@」未完全套用：%@</key>
+	<string>"%@" applied only in part: %@</string>
+	<key>一键只升常用白名单；其它全局包装在行内点升级。</key>
+	<string>One-click upgrades only the common allowlist; upgrade other global packages from the row.</string>
 	<key>上次 %@ %@</key>
 	<string>Last run %1$@ %2$@</string>
 	<key>上次退出码 %lld</key>
@@ -158,6 +190,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Don't Ask Again</string>
 	<key>不安全的目录名：%@</key>
 	<string>Unsafe directory name: %@</string>
+	<key>不自动升</key>
+	<string>No auto-upgrade</string>
 	<key>二进制 CLI，无 SKILL.md。</key>
 	<string>Binary CLI — no SKILL.md. </string>
 	<key>人话备注，留空恢复默认</key>
@@ -170,6 +204,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>today %@</string>
 	<key>仍然挂载</key>
 	<string>Link anyway</string>
+	<key>仍要覆盖本地修改</key>
+	<string>Overwrite local edits anyway</string>
 	<key>从 %@ 拉取新版，重链 symlink</key>
 	<string>Pulls the new version from %@ and relinks the symlink</string>
 	<key>从 %@ 重新获取该项</key>
@@ -178,8 +214,20 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Re-pull from source</string>
 	<key>仓库中发现多个同名 skill「%@」——请粘贴具体 skill 的本地目录</key>
 	<string>The repository contains multiple skills named “%@”. Paste the local directory of the specific skill.</string>
+	<key>位置</key>
+	<string>Location</string>
 	<key>作者</key>
 	<string>Author</string>
+	<key>例如：写作 / 画图 / 开发</key>
+	<string>e.g. Writing / Drawing / Dev</string>
+	<key>保存</key>
+	<string>Save</string>
+	<key>保存为工作模式</key>
+	<string>Save as work mode</string>
+	<key>保存为工作模式…</key>
+	<string>Save as work mode…</string>
+	<key>保存当前为新模式…</key>
+	<string>Save current as new mode…</string>
 	<key>保持现状</key>
 	<string>Keep as is</string>
 	<key>保留本地副本，popskill 不接管</key>
@@ -212,10 +260,20 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>All sources are up to date</string>
 	<key>关</key>
 	<string>Off</string>
+	<key>关 %lld</key>
+	<string>Off %lld</string>
 	<key>关于</key>
 	<string>About</string>
 	<key>内容已是最新</key>
 	<string>Content is up to date</string>
+	<key>切换</key>
+	<string>Switch</string>
+	<key>切换到「%@」？</key>
+	<string>Switch to "%@"?</string>
+	<key>删除此工作模式</key>
+	<string>Delete this work mode</string>
+	<key>删除此模式</key>
+	<string>Delete this mode</string>
 	<key>刷新</key>
 	<string>Refresh</string>
 	<key>包名</key>
@@ -226,8 +284,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Upgrade</string>
 	<key>升级 %@ 失败：%@</key>
 	<string>Failed to upgrade %@: %@</string>
-	<key>升级即在后台执行 npm i -g，与终端手动升级完全等价。</key>
-	<string>Upgrades run npm i -g in the background — identical to a manual terminal upgrade.</string>
+	<key>升级打回这份 CLI 真正所在的前缀，避免升错副本。</key>
+	<string>Upgrades write back to the prefix that actually owns this CLI, so a second copy isn't created.</string>
 	<key>占位</key>
 	<string>Stub</string>
 	<key>占位 (stub)</key>
@@ -284,6 +342,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Thu</string>
 	<key>周日</key>
 	<string>Sun</string>
+	<key>命令行命中 %@</key>
+	<string>Shell resolves %@</string>
 	<key>命令超时且输出管道无法排空，已放弃：%@</key>
 	<string>Command timed out and output pipes could not be drained — giving up: %@</string>
 	<key>命令超时（%lld s）已终止：%@ %@</key>
@@ -296,8 +356,14 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Legend</string>
 	<key>在 Claude / Codex 的 %@ 目录里发现现有能力（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。</key>
 	<string>Found existing capabilities in Claude / Codex %@ folders (e.g. %@…). Import them into the store and replace in place with symlinks? Originals go to the store recycle bin, restorable.</string>
+	<key>在设置里管理…</key>
+	<string>Manage in Settings…</string>
 	<key>在访达中显示</key>
 	<string>Reveal in Finder</string>
+	<key>基础工具（node / npm / TypeScript 等）不在一键升级范围</key>
+	<string>Foundation tools (node / npm / TypeScript, etc.) are not one-click upgraded</string>
+	<key>失败 %@</key>
+	<string>Failed: %@</string>
 	<key>安装</key>
 	<string>Install</string>
 	<key>安装 %@ 失败：%@</key>
@@ -332,6 +398,16 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Import unmanaged dirs</string>
 	<key>将写入</key>
 	<string>Will write</string>
+	<key>将挂载 %@</key>
+	<string>Will mount %@</string>
+	<key>将断开 %@</key>
+	<string>Will unmount %@</string>
+	<key>工作模式</key>
+	<string>Work mode</string>
+	<key>工作模式（%lld）</key>
+	<string>Work modes (%lld)</string>
+	<key>工作模式：一键切换某类任务该挂哪些技能</key>
+	<string>Work modes: switch which skills a task scene should mount</string>
 	<key>工具（挂载目标）</key>
 	<string>Tools (link targets)</string>
 	<key>已从源重新拉取 %@</key>
@@ -340,6 +416,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Opened the add flow from the link</string>
 	<key>已保存 %@ 到 store</key>
 	<string>Saved %@ to the store</string>
+	<key>已保存工作模式「%@」</key>
+	<string>Saved work mode "%@"</string>
 	<key>已修复 %lld 个，跳过 %lld 个（正在更新中）</key>
 	<string>Repaired %1$lld, skipped %2$lld (currently updating)</string>
 	<key>已停摆</key>
@@ -348,6 +426,14 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Disabled</string>
 	<key>已停用 %@</key>
 	<string>Disabled %@</string>
+	<key>已写入 %@，但 PATH 仍命中 %@——命令行用的还是另一份</key>
+	<string>Wrote to %@, but PATH still hits %@ — the shell is still using the other copy</string>
+	<key>已切换到「%@」：%@</key>
+	<string>Switched to "%@": %@</string>
+	<key>已删除 %lld 项，跳过</key>
+	<string>Skip %lld deleted items</string>
+	<key>已删除工作模式「%@」</key>
+	<string>Deleted work mode "%@"</string>
 	<key>已加载，上次运行失败（退出码 %lld）</key>
 	<string>Loaded; last run failed (exit code %lld)</string>
 	<key>已加载，上次运行正常</key>
@@ -378,6 +464,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Replaced %1$@ · %2$@ with a store link</string>
 	<key>已断开 %@ → %@</key>
 	<string>Unlinked %1$@ → %2$@</string>
+	<key>已是「%@」的盘面，无需切换</key>
+	<string>Already on "%@" — nothing to switch</string>
 	<key>已更新 %@ → %@</key>
 	<string>Updated %1$@ → %2$@</string>
 	<key>已更新 %@ 并修复链接</key>
@@ -394,6 +482,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Sources (%lld)</string>
 	<key>已激活</key>
 	<string>Active</string>
+	<key>已用当前盘面更新「%@」</key>
+	<string>Updated "%@" from the current layout</string>
 	<key>已移除 %@ 在 %@ 侧的副本</key>
 	<string>Removed the copy of %1$@ on the %2$@ side</string>
 	<key>已移除 %@ 在 %@ 侧的链接</key>
@@ -416,6 +506,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Relinked %1$@ · %2$@</string>
 	<key>已链接 %@ → %@</key>
 	<string>Linked %1$@ → %2$@</string>
+	<key>常用命令行工具有新版——按真实安装位置升级，点击查看</key>
+	<string>Common CLI tools have updates — upgrade at the real install location</string>
 	<key>常驻 daemon</key>
 	<string>Resident daemon</string>
 	<key>常驻任务在册但没有进程——停摆了</key>
@@ -424,10 +516,10 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Background daemons (%lld)</string>
 	<key>开</key>
 	<string>On</string>
+	<key>开 %lld</key>
+	<string>On %lld</string>
 	<key>开关 = 自动更新。移除源会同时卸载它提供的能力与 symlink。</key>
 	<string>Switch = auto-update. Removing a source also uninstalls its capabilities and symlinks.</string>
-	<key>开启后每次检查更新会把本机全局 npm 包名逐个发给 registry.npmjs.org 查询新版。默认关闭；CLI 面板（⌨）打开时始终会巡检。</key>
-	<string>When on, every update check sends each of your global npm package names to registry.npmjs.org to look up the latest version. Off by default; opening the CLI panel (⌨) always patrols.</string>
 	<key>恢复 %@ 失败：%@</key>
 	<string>Failed to restore %1$@: %2$@</string>
 	<key>恢复到 store</key>
@@ -450,8 +542,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>skills / agents / MCP / CLI</string>
 	<key>把 store（~/.agents）做成 git 仓库即可在多台 Mac 间同步——这是可选项，不影响本机使用。</key>
 	<string>Make the store (~/.agents) a git repo to sync across Macs — this is optional and doesn’t affect local use.</string>
-	<key>把 ~/.claude / ~/.codex 里的真实技能目录收编进 store 并换成 symlink</key>
-	<string>Adopt real skill directories in ~/.claude / ~/.codex into the store and replace them with symlinks</string>
+	<key>把各工具目录里的真实技能目录收编进 store 并换成 symlink</key>
+	<string>Adopt real skill folders from each tool into the store and replace them with symlinks</string>
 	<key>把检查到的上游新增技能全部装进 store 并按默认工具挂载</key>
 	<string>Install every detected new upstream skill into the store and mount to your default tools</string>
 	<key>报告问题…</key>
@@ -468,6 +560,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Points back to the directory that still exists in the store</string>
 	<key>按时间跑（%lld）· 按下次运行排序</key>
 	<string>Scheduled (%lld) · sorted by next run</string>
+	<key>按真实安装位置升级：npm 多前缀、Homebrew、pipx、uv。基础工具只展示不升级。</key>
+	<string>Upgrade at the real install location: npm prefixes, Homebrew, pipx, uv. Foundation tools are listed but not one-click upgraded.</string>
 	<key>推荐</key>
 	<string>Recommended</string>
 	<key>提供 %@</key>
@@ -484,12 +578,16 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Failed to unlink %1$@: %2$@</string>
 	<key>断链</key>
 	<string>Broken link</string>
+	<key>断链/本地副本 %@，需先修复</key>
+	<string>Broken/local copies need fixing first: %@</string>
 	<key>新安装默认挂载</key>
 	<string>Default for new installs</string>
 	<key>新版</key>
 	<string>new version</string>
 	<key>无匹配结果</key>
 	<string>No matches</string>
+	<key>无变更</key>
+	<string>No changes</string>
 	<key>无法打开来源链接：%@</key>
 	<string>Can’t open source link: %@</string>
 	<key>无法识别 GitHub 仓库：%@</key>
@@ -572,12 +670,14 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Check Updates</string>
 	<key>检查更新…</key>
 	<string>Check for Updates…</string>
-	<key>检查更新时巡检全局 npm CLI</key>
-	<string>Patrol global npm CLIs during update checks</string>
+	<key>检查更新时巡检全部全局 npm CLI</key>
+	<string>Also inspect every global npm CLI when checking updates</string>
 	<key>正在从源重新拉取 %@…</key>
 	<string>Re-pulling %@ from its source…</string>
 	<key>正在扫描全局 npm 包…</key>
 	<string>Scanning global npm packages…</string>
+	<key>正在更新</key>
+	<string>Updating</string>
 	<key>每 %lld 小时的第 %lld 分</key>
 	<string>Every %1$lld hours at minute %2$lld</string>
 	<key>每周一</key>
@@ -612,14 +712,16 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>No %@ capabilities. Click + Add, or switch back to “All”.</string>
 	<key>没有 plist 路径</key>
 	<string>No plist path</string>
-	<key>没有发现全局 npm 包（或未安装 Node.js/npm）</key>
-	<string>No global npm packages found (or Node.js/npm not installed)</string>
+	<key>没有发现可巡检的 CLI（或未安装 Node.js / Homebrew / pipx）</key>
+	<string>No CLIs found to inspect (or Node.js / Homebrew / pipx isn't installed)</string>
 	<key>没有发现未托管的能力目录</key>
 	<string>No unmanaged capability folders found</string>
 	<key>没有可显示的任务</key>
 	<string>No tasks to show</string>
-	<key>没有可检查的源（需要 GitHub 或本地路径来源）</key>
-	<string>No checkable sources (a GitHub or local-path source is required)</string>
+	<key>没有可检查的技能源——正在核对常用 CLI</key>
+	<string>No skill sources to check — verifying common CLIs</string>
+	<key>没有可检查的源</key>
+	<string>No sources to check</string>
 	<key>没有能力匹配 “</key>
 	<string>No capabilities match “</string>
 	<key>添加能力</key>
@@ -634,8 +736,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Empty the recycle bin?</string>
 	<key>源</key>
 	<string>the source</string>
-	<key>源、工具与 store — 全部配置都在这一页。</key>
-	<string>Sources, tools, and the store — every setting on this one page.</string>
+	<key>源、工具、工作模式与 store — 全部配置都在这一页。</key>
+	<string>Sources, tools, work modes and the store — all on this page.</string>
 	<key>点击 ✕ / ◐ / ↑ / + 可逐项处理</key>
 	<string>Click ✕ / ◐ / ↑ / + to handle items one by one</string>
 	<key>点击切换 / 处理</key>
@@ -652,10 +754,20 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Click to locate skills pending update, one by one (cycles)</string>
 	<key>版本</key>
 	<string>Version</string>
+	<key>版本查询失败（网络）——点右下重新扫描</key>
+	<string>Version lookup failed (network) — rescan from the lower right</string>
+	<key>用当前盘面更新此模式</key>
+	<string>Update this mode from current layout</string>
+	<key>用当前盘面更新选中项</key>
+	<string>Update selected from current layout</string>
 	<key>登录自启</key>
 	<string>Launches at login</string>
 	<key>登录自启（%lld）</key>
 	<string>Login items (%lld)</string>
+	<key>盘面和选中模式不一致时才能更新</key>
+	<string>Enabled only when the layout no longer matches the selected mode</string>
+	<key>盘面已切换，但当前模式没能写入磁盘</key>
+	<string>Layout switched, but the current mode couldn't be saved</string>
 	<key>目录移入 store 回收站，不建链接</key>
 	<string>Moves the directory to the store trash without creating a link</string>
 	<key>知道了</key>
@@ -678,6 +790,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Remove this side's link</string>
 	<key>移除该源（含其能力）</key>
 	<string>Remove this source and its capabilities</string>
+	<key>空——把此刻的挂载组合存成「写作 / 画图 / 开发」，下次一键切回去。套装管来源，模式管场景。</key>
+	<string>Empty — save today's mounts as Writing / Drawing / Dev and switch back in one click. Bundles are where skills come from; modes are the task scene.</string>
 	<key>空——移除能力和更新换版时，旧目录会进这里（最多留 %lld 份，先进先出）。</key>
 	<string>Empty — old directories land here when capabilities are removed or updated (keeps up to %lld, first in first out).</string>
 	<key>立刻跑一次（launchctl kickstart）</key>
@@ -712,6 +826,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Resolve →</string>
 	<key>解析中…</key>
 	<string>Resolving…</string>
+	<key>记下此刻每个工具挂了哪些技能。切换时只改有差异的链接，不动没写进模式的工具。</key>
+	<string>Snapshot which skills are mounted on each tool. Switching only changes the diffs and leaves tools not in the mode untouched.</string>
 	<key>设置</key>
 	<string>Settings</string>
 	<key>设置…</key>
@@ -722,6 +838,14 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Setting couldn't be written to disk (check disk space/permissions) — "Skip This Version" not saved</string>
 	<key>设置没能写入磁盘（检查磁盘空间/权限）——备注未保存</key>
 	<string>Setting couldn't be written to disk (check disk space/permissions) — note not saved</string>
+	<key>设置没能写入磁盘（检查磁盘空间/权限）——工作模式未保存</key>
+	<string>Couldn't write settings (check disk space/permissions) — work mode not saved</string>
+	<key>设置没能写入磁盘（检查磁盘空间/权限）——工作模式未删除</key>
+	<string>Couldn't write settings (check disk space/permissions) — work mode not deleted</string>
+	<key>设置没能写入磁盘（检查磁盘空间/权限）——工作模式未更新</key>
+	<string>Couldn't write settings (check disk space/permissions) — work mode not updated</string>
+	<key>设置没能写入磁盘（检查磁盘空间/权限）——当前模式未记住</key>
+	<string>Couldn't write settings (check disk space/permissions) — current mode not remembered</string>
 	<key>设置没能写入磁盘（检查磁盘空间/权限）——自动更新开关未保存</key>
 	<string>Setting couldn't be written to disk (check disk space/permissions) — auto-update toggle not saved</string>
 	<key>设置没能写入磁盘（检查磁盘空间/权限）——默认挂载开关未保存</key>
@@ -740,14 +864,22 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Run once</string>
 	<key>路径不存在：%@</key>
 	<string>Path not found: %@</string>
+	<key>跳过 %lld</key>
+	<string>Skipped %lld</string>
 	<key>跳过此版本</key>
 	<string>Skip This Version</string>
 	<key>运行中</key>
 	<string>Running</string>
 	<key>还没有任何能力</key>
 	<string>No capabilities yet</string>
+	<key>还没有工作模式</key>
+	<string>No work modes yet</string>
+	<key>还没有选中的工作模式</key>
+	<string>No work mode selected</string>
 	<key>这个仓库需要登录（可能是私有仓库）——Popskill 暂时只支持公开仓库。</key>
 	<string>This repository needs sign-in (it may be private) — Popskill supports public repositories only for now.</string>
+	<key>连不上 PyPI——检查网络后重试。</key>
+	<string>Can't reach PyPI — check the network and retry.</string>
 	<key>连不上 npm registry——检查网络后重试。</key>
 	<string>Can't reach the npm registry — check your network and retry.</string>
 	<key>连不上网络，没法获取这个仓库——检查网络后重试。</key>
@@ -770,10 +902,18 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Failed to link %1$@: %2$@</string>
 	<key>错误：%@</key>
 	<string>Error: %@</string>
+	<key>默认只查 Claude / Codex / 飞书 / GetNote 等常用工具。打开后才会把本机全部全局 npm 包名发给 registry。CLI 面板打开时始终全量扫描。</key>
+	<string>By default only common tools (Claude / Codex / Lark / GetNote, etc.) are queried. Turn this on to send every global npm package name to the registry. Opening the CLI panel always does a full scan.</string>
+	<key>，</key>
+	<string>, </string>
 	<key>，%lld 项断链</key>
 	<string>, %lld broken</string>
+	<key>；</key>
+	<string>; </string>
 	<key>；%lld 个因同名跳过</key>
 	<string>; %lld skipped (same name)</string>
+	<key>；%lld 个本地改过的技能已跳过</key>
+	<string>; skipped %lld locally edited skill(s)</string>
 	<key>；上游新增 %lld 个未装技能</key>
 	<string>; upstream has %lld new uninstalled skills</string>
 	<key>；另有 %lld 个套装成员没查成（网络抖动）</key>
