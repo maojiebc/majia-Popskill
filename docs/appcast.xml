@@ -8,6 +8,27 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.20.0</title>
+      <pubDate>Thu, 20 Aug 2026 02:59:49 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.20.0 — 技能本地改过不覆盖 + CLI 按真实位置升级</h2>
+        <p>打开 App 或点「检查更新」，就能处理技能和常用命令行工具。不必再另跑一套每日任务当主更新通道。</p>
+        <p><b>CLI 升到你真正在用的那一份</b>：本机同时有 `~/.local` 和 Homebrew 两份全局包时，旧版 `npm i -g` 会升错副本——看起来成功，命令还是旧的。现在按真实前缀/渠道升级（`npm i -g --prefix`、`brew upgrade`、`pipx upgrade`、`uv tool upgrade`）；PATH 仍指向另一份会直接报错。每次检查默认只查常用白名单（Claude Code、Codex、lark-cli、GetNote、guanskill 等），node / npm / TypeScript 只展示不升级。打开「巡检全部」或 CLI 面板，才把本机全部全局 npm 包名发给 registry。</p>
+        <p><b>技能本地改过默认不覆盖</b>：记下上次成功落盘的内容哈希，本地改过的技能「全部更新」会跳过并提示；要盖掉，右键「仍要覆盖本地修改」。</p>
+        <p><b>工作模式</b>：把此刻各工具挂了哪些技能存成「写作 / 画图 / 开发」，下次一键切回去。模式里没写的工具列不会被改动。</p>
+        <p><b>按需工具列</b>：Claude / Codex 始终显示；Grok / Gemini / OpenCode / Pi 只有本机已经有技能目录才出现，避免空列撑爆矩阵。</p>
+        <p>测试 160 项通过。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.20.0/Popskill-2.20.0.dmg"
+        sparkle:version="286"
+        sparkle:shortVersionString="2.20.0"
+        sparkle:edSignature="uWVVaJhloNbb5/iXrGDn56i6kf+RipNDiZ8oY2NrFAl8agYuZeozsoBOxQDbmALNebSXl9Bb/PUcw0MCaXiaCA=="
+        length="3077646"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.19.0</title>
       <pubDate>Thu, 23 Jul 2026 11:01:23 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
