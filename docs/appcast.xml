@@ -8,6 +8,23 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.20.1</title>
+      <pubDate>Thu, 20 Aug 2026 03:42:08 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.20.1 — 折叠套装卡不再被工具列挤成竖排字母</h2>
+        <p>v2.20.0 起，本机已有技能目录的 Grok / Gemini / OpenCode / Pi 会在矩阵里占列。折叠套装卡右侧分数条没有固定列宽，六列挤在半宽卡片里时，SwiftUI 把 `CLAUDE` 拆成竖排字母、和 0/1 叠在一起。</p>
+        <p>现在每列固定宽度、标签强制单行（OpenCode 写成 OPEN），空间不够只截左侧名称。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.20.1/Popskill-2.20.1.dmg"
+        sparkle:version="287"
+        sparkle:shortVersionString="2.20.1"
+        sparkle:edSignature="54c6029vq1O+B1Plz0fpshFXAMyzuPJd7bzd32KCg8LR/O35EwaxHK/hUlRFFmELblV+NJ5hP4wnX/CDDr5XBw=="
+        length="3085718"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.20.0</title>
       <pubDate>Thu, 20 Aug 2026 02:59:49 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
