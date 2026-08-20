@@ -7,6 +7,7 @@ APP_DIR="$ROOT_DIR/build/Popskill.app"
 APP_BIN="$APP_DIR/Contents/MacOS/Popskill"
 BUNDLED_SPARKLE="$APP_DIR/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle"
 WINDOW_CHECKER="$(mktemp "${TMPDIR:-/tmp}/popskill-window-check.XXXXXX.swift")"
+SMOKE_STAMP="$(mktemp "${TMPDIR:-/tmp}/popskill-smoke-stamp.XXXXXX")"
 APP_PID=""
 
 running_app_pids() {
@@ -37,7 +38,7 @@ cleanup() {
     wait "$APP_PID" 2> /dev/null || true
   fi
   restore_build_bundles
-  rm -f "$WINDOW_CHECKER"
+  rm -f "$WINDOW_CHECKER" "$SMOKE_STAMP"
 }
 trap cleanup EXIT
 
@@ -93,6 +94,7 @@ func numericValue(_ value: Any?) -> Double? {
 }
 
 let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+let owners = Set(windows.compactMap { $0[kCGWindowOwnerName as String] as? String })
 let hasMainWindow = windows.contains { window in
     guard
         (window[kCGWindowOwnerName as String] as? String) == "Popskill",
@@ -106,10 +108,24 @@ let hasMainWindow = windows.contains { window in
     return width >= 600 && height >= 400
 }
 
-exit(hasMainWindow ? 0 : 1)
+if hasMainWindow {
+    exit(0)
+}
+
+// 坑 #19：无屏幕录制时 CGWindowList 只能看到宿主自己和少量系统窗。
+// 访达几乎总在屏上；看不到访达 = 枚举被 TCC 裁掉，不能据此判「没有主窗口」。
+let canSeeDesktop = owners.contains("Finder") || owners.contains("访达")
+if !canSeeDesktop {
+    let listed = owners.sorted().joined(separator: ",")
+    FileHandle.standardError.write(Data("window-list-restricted owners=\(listed)\n".utf8))
+    exit(2)
+}
+
+exit(1)
 SWIFT
 
 hide_build_bundles   # 复现干净机器：.app 不能靠 .build 绝对路径找资源
+touch "$SMOKE_STAMP"
 open -n "$APP_DIR"
 
 for _ in {1..50}; do
@@ -132,9 +148,37 @@ if ! kill -0 "$APP_PID" 2> /dev/null; then
   exit 1
 fi
 
-if ! swift "$WINDOW_CHECKER"; then
-  echo "Popskill bundle did not create a visible main window" >&2
-  exit 1
+set +e
+swift "$WINDOW_CHECKER"
+window_status=$?
+set -e
+
+recent_crash() {
+  local dir crash
+  for dir in "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports; do
+    [[ -d "$dir" ]] || continue
+    while IFS= read -r crash; do
+      [[ -n "$crash" ]] || continue
+      echo "$crash"
+      return 0
+    done < <(find "$dir" -maxdepth 1 \( -name 'Popskill-*.ips' -o -name 'Popskill-*.crash' \) -newer "$SMOKE_STAMP" 2> /dev/null)
+  done
+  return 1
+}
+
+if [[ "$window_status" -eq 0 ]]; then
+  echo "Popskill bundle smoke ok"
+  exit 0
 fi
 
-echo "Popskill bundle smoke ok"
+if [[ "$window_status" -eq 2 ]]; then
+  if crash="$(recent_crash)"; then
+    echo "Popskill bundle crashed during launch smoke: $crash" >&2
+    exit 1
+  fi
+  echo "Popskill bundle smoke ok（无屏幕录制，窗口枚举跳过；进程存活无崩溃，坑 #19）"
+  exit 0
+fi
+
+echo "Popskill bundle did not create a visible main window" >&2
+exit 1
