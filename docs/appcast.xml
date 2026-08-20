@@ -8,6 +8,24 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.20.2</title>
+      <pubDate>Thu, 20 Aug 2026 17:14:26 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.20.2 — 首页默认 Claude / Codex / Cursor</h2>
+        <p>矩阵默认只留 Claude Code、Codex、Cursor 三列。Grok、Gemini、OpenCode、Pi 本机有 App 或 CLI 之后，才在设置里出现「首页显示」开关，默认关闭。</p>
+        <p>折叠套装仍是两列卡片，不拉成通栏条。独立卡在三列及以上时，挂载 pill 改到底栏。</p>
+        <p>pipx 从 GitHub / 本地装的包（例如 agent-reach 1.5.0）不再跟 PyPI 同名旧包比版本，避免把 0.1.0 当成可升级。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.20.2/Popskill-2.20.2.dmg"
+        sparkle:version="288"
+        sparkle:shortVersionString="2.20.2"
+        sparkle:edSignature="342xJmpcAZ6mAezuXf0Ce+r53lKCdnMM3wDTluCn2mL96u/olSxmft7XR6pwWsdPyQQJ2G+XHvNKsBCv9amYDg=="
+        length="3129260"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.20.1</title>
       <pubDate>Thu, 20 Aug 2026 03:42:08 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
