@@ -22,7 +22,7 @@
 
 ## 下载安装
 
-[**↓ 下载 Popskill（2.9 MB，已签名 + 已公证）**](https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-2.20.1.dmg)
+[**↓ 下载 Popskill（3.0 MB，已签名 + 已公证）**](https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-2.20.2.dmg)
 
 要求 macOS 14 (Sonoma) 及以上。装完之后新版本走 Sparkle 应用内更新，不用再来 GitHub。
 
@@ -135,7 +135,7 @@ App Store 的 sandbox 不允许应用管理 `~/.claude`、`~/.codex` 这些目�
 
 ## 版本
 
-当前 [v2.20.1](https://github.com/maojiebc/majia-Popskill/releases/tag/v2.20.1) · 全部版本见 [Releases](https://github.com/maojiebc/majia-Popskill/releases) · 更新日志在 `docs/release/`
+当前 [v2.20.2](https://github.com/maojiebc/majia-Popskill/releases/tag/v2.20.2) · 全部版本见 [Releases](https://github.com/maojiebc/majia-Popskill/releases) · 更新日志在 `docs/release/`
 
 v2 是一次按第一性原理的重写（一个屏幕、文件系统即数据库）。v1.x（sidecar 架构）已下线，设计过程归档在 `docs/design/`。
 
