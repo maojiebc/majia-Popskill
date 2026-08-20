@@ -242,6 +242,8 @@ macOS: %@
 	<string>从 %@ 拉取新版，重链 symlink</string>
 	<key>从 %@ 重新获取该项</key>
 	<string>从 %@ 重新获取该项</string>
+	<key>从 GitHub / 本地安装，不跟 PyPI 同名包比版本</key>
+	<string>从 GitHub / 本地安装，不跟 PyPI 同名包比版本</string>
 	<key>从源重新拉取</key>
 	<string>从源重新拉取</string>
 	<key>仓库中发现多个同名 skill「%@」——请粘贴具体 skill 的本地目录</key>

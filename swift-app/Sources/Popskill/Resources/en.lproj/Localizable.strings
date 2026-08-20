@@ -212,6 +212,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Pulls the new version from %@ and relinks the symlink</string>
 	<key>从 %@ 重新获取该项</key>
 	<string>Fetches this item again from %@</string>
+	<key>从 GitHub / 本地安装，不跟 PyPI 同名包比版本</key>
+	<string>Installed from GitHub / a local path — not compared with the PyPI package of the same name</string>
 	<key>从源重新拉取</key>
 	<string>Re-pull from source</string>
 	<key>仓库中发现多个同名 skill「%@」——请粘贴具体 skill 的本地目录</key>
