@@ -1145,8 +1145,25 @@ final class StoreFSTests: XCTestCase {
         let brew = parseBrewOutdated(Data(#"{"formulae":[{"name":"gemini-cli","installed_versions":["0.46.0"],"current_version":"0.47.0"}],"casks":[]}"#.utf8))
         XCTAssertEqual(brew.first?.name, "gemini-cli")
         XCTAssertEqual(brew.first?.latest, "0.47.0")
-        let pipx = parsePipxList(Data(#"{"venvs":{"yt-dlp":{"metadata":{"main_package":{"package":"yt-dlp","package_version":"2026.1.1"}}}}}"#.utf8))
-        XCTAssertEqual(pipx["yt-dlp"], "2026.1.1")
+        let pipx = parsePipxList(Data(#"{"venvs":{"yt-dlp":{"metadata":{"main_package":{"package":"yt-dlp","package_version":"2026.1.1","package_or_url":"yt-dlp"}}}}}"#.utf8))
+        XCTAssertEqual(pipx["yt-dlp"]?.version, "2026.1.1")
+        XCTAssertTrue(pipxTracksIndex(pipx["yt-dlp"]?.packageOrUrl ?? ""))
+        let git = parsePipxList(Data(#"{"venvs":{"agent-reach":{"metadata":{"main_package":{"package":"agent-reach","package_version":"1.5.0","package_or_url":"https://github.com/Panniantong/agent-reach/archive/main.zip"}}}}}"#.utf8))
+        XCTAssertEqual(git["agent-reach"]?.version, "1.5.0")
+        XCTAssertFalse(pipxTracksIndex(git["agent-reach"]!.packageOrUrl))
+        XCTAssertFalse(pipxTracksIndex("git+https://github.com/x/y.git"))
+        XCTAssertTrue(pipxTracksIndex("agent-reach"))
+        XCTAssertTrue(cliVersionIsNewer("1.6.0", than: "1.5.0"))
+        XCTAssertFalse(cliVersionIsNewer("0.1.0", than: "1.5.0"))
+        XCTAssertFalse(cliVersionIsNewer("1.5.0", than: "1.5.0"))
+        XCTAssertTrue(cliVersionIsNewer("2026.8.19", than: "2026.8.18"))
+        var gitCli = GlobalCli(name: "agent-reach", installed: "1.5.0", latest: "0.1.0",
+                               channel: .pipx, allowlisted: true, tracksIndex: false)
+        XCTAssertFalse(gitCli.hasUpdate, "GitHub 安装不拿 PyPI 0.1.0 当升级")
+        gitCli.tracksIndex = true
+        XCTAssertFalse(gitCli.hasUpdate, "0.1.0 < 1.5.0 不是升级")
+        gitCli.latest = "1.6.0"
+        XCTAssertTrue(gitCli.hasUpdate)
     }
 
     func testOldMetaDecodesWithoutAppliedDigest() throws {
@@ -1578,12 +1595,15 @@ final class StoreFSTests: XCTestCase {
         var meta = StoreMeta()
         meta.entries["foo"] = StoreMeta.EntryMeta(sourceUrl: "github.com/a/b", autoUpdate: true, latest: "2 项", changed: ["x", "y"])
         meta.tools["claude"] = StoreMeta.ToolMeta(defaultTarget: false)
+        meta.tools["grok"] = StoreMeta.ToolMeta(showOnHome: true)
         fs.saveMeta(meta)
         let loaded = fs.loadMeta()
         XCTAssertEqual(loaded.entries["foo"]?.sourceUrl, "github.com/a/b")
         XCTAssertEqual(loaded.entries["foo"]?.autoUpdate, true)
         XCTAssertEqual(loaded.entries["foo"]?.changed, ["x", "y"], "变更成员名要能持久化往返")
         XCTAssertEqual(loaded.tools["claude"]?.defaultTarget, false)
+        XCTAssertEqual(loaded.tools["grok"]?.showOnHome, true)
+        XCTAssertNil(loaded.tools["claude"]?.showOnHome, "缺字段 = 关，不迁成开")
     }
 
     // ── 派生统计 ──────────────────────────────────────────
@@ -1934,7 +1954,7 @@ final class StoreFSTests: XCTestCase {
                        "同名不同 kind 必须被发现")
     }
 
-    func testScanToolsHidesOptionalUntilSkillsExist() throws {
+    func testScanToolsHidesOptionalUntilShowOnHome() throws {
         var roots = env.toolRoots
         roots["grok"] = sandbox.appendingPathComponent("grok")
         roots["pi"] = sandbox.appendingPathComponent("pi-agent")
@@ -1944,7 +1964,12 @@ final class StoreFSTests: XCTestCase {
 
         try fm.createDirectory(at: roots["grok"]!.appendingPathComponent("skills"),
                                withIntermediateDirectories: true)
-        XCTAssertEqual(Set(fs.scanTools(meta: StoreMeta()).map(\.id)), ["claude", "codex", "grok"])
+        XCTAssertEqual(Set(fs.scanTools(meta: StoreMeta()).map(\.id)), ["claude", "codex"],
+                       "技能目录不再让可选列进首页")
+
+        var meta = StoreMeta()
+        meta.tools["grok"] = StoreMeta.ToolMeta(showOnHome: true)
+        XCTAssertEqual(Set(fs.scanTools(meta: meta).map(\.id)), ["claude", "codex", "grok"])
     }
 
     func testOptionalToolDefaultTargetOff() throws {
@@ -1952,11 +1977,58 @@ final class StoreFSTests: XCTestCase {
         roots["gemini"] = sandbox.appendingPathComponent("gemini")
         env = StoreEnv(storeRoot: env.storeRoot, toolRoots: roots)
         fs = StoreFS(env: env)
-        try fm.createDirectory(at: roots["gemini"]!.appendingPathComponent("skills"),
-                               withIntermediateDirectories: true)
-        let scanned = fs.scanTools(meta: StoreMeta())
+        var meta = StoreMeta()
+        meta.tools["gemini"] = StoreMeta.ToolMeta(showOnHome: true)
+        let scanned = fs.scanTools(meta: meta)
         XCTAssertEqual(scanned.first { $0.id == "gemini" }?.defaultTarget, false)
         XCTAssertEqual(scanned.first { $0.id == "claude" }?.defaultTarget, true)
+        XCTAssertNil(scanned.first { $0.id == "cursor" }, "测试 env 没塞 cursor 根，scanTools 跳过缺根定义")
+    }
+
+    func testScanDetectedOptionals() throws {
+        var roots = env.toolRoots
+        roots["grok"] = sandbox.appendingPathComponent("grok")
+        roots["gemini"] = sandbox.appendingPathComponent("gemini")
+        env = StoreEnv(storeRoot: env.storeRoot, toolRoots: roots)
+        fs = StoreFS(env: env)
+        let blind: (String) -> Bool = { _ in false }
+        XCTAssertTrue(fs.scanDetectedOptionals(
+            meta: StoreMeta(), fileExists: blind, isExecutable: blind, pathEnv: "").isEmpty)
+
+        try fm.createDirectory(at: roots["grok"]!.appendingPathComponent("skills"),
+                               withIntermediateDirectories: true)
+        XCTAssertTrue(fs.scanDetectedOptionals(
+            meta: StoreMeta(), fileExists: blind, isExecutable: blind, pathEnv: "").isEmpty,
+                      "技能目录不是发现门槛")
+
+        let found = fs.scanDetectedOptionals(
+            meta: StoreMeta(),
+            fileExists: blind,
+            isExecutable: { $0.hasSuffix("/.local/bin/grok") },
+            home: "/Users/tester",
+            pathEnv: "")
+        XCTAssertEqual(found.map(\.id), ["grok"])
+        XCTAssertEqual(found.first?.showOnHome, false)
+        XCTAssertEqual(found.first?.presence, .cli("/Users/tester/.local/bin/grok"))
+
+        var meta = StoreMeta()
+        meta.tools["gemini"] = StoreMeta.ToolMeta(showOnHome: true)
+        let opted = fs.scanDetectedOptionals(
+            meta: meta, fileExists: blind, isExecutable: blind, pathEnv: "")
+        XCTAssertEqual(opted.map(\.id), ["gemini"])
+        XCTAssertTrue(opted[0].showOnHome)
+        XCTAssertNil(opted[0].presence)
+    }
+
+    func testCursorAlwaysShowWhenRootPresent() {
+        var roots = env.toolRoots
+        roots["cursor"] = sandbox.appendingPathComponent("cursor")
+        env = StoreEnv(storeRoot: env.storeRoot, toolRoots: roots)
+        fs = StoreFS(env: env)
+        let scanned = fs.scanTools(meta: StoreMeta())
+        XCTAssertEqual(Set(scanned.map(\.id)), ["claude", "codex", "cursor"])
+        XCTAssertEqual(scanned.first { $0.id == "cursor" }?.defaultTarget, true)
+        XCTAssertEqual(scanned.first { $0.id == "cursor" }?.connected, false)
     }
 
     func testProfilesMetaRoundtrip() {

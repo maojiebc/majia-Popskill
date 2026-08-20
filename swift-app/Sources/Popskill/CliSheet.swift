@@ -98,7 +98,7 @@ struct CliSheet: View {
                 .font(.mono(11)).monospacedDigit()
                 .foregroundStyle(cli.hasUpdate ? Ink.amberText : Ink.tertiary)
                 .frame(width: 72, alignment: .trailing)
-                .help(cli.latest == nil ? L("版本查询失败（网络）——点右下重新扫描") : "")
+                .help(cliLatestHelp(cli))
             Group {
                 if model.upgradingClis.contains(cli.id) {
                     UpdatingDot()
@@ -161,5 +161,15 @@ struct CliSheet: View {
         .padding(EdgeInsets(top: 11, leading: 20, bottom: 13, trailing: 20))
         .background(Ink.chrome)
         .overlay(alignment: .top) { Ink.hairline.frame(height: 1) }
+    }
+
+    private func cliLatestHelp(_ cli: GlobalCli) -> String {
+        if !cli.tracksIndex {
+            return L("从 GitHub / 本地安装，不跟 PyPI 同名包比版本")
+        }
+        if cli.latest == nil {
+            return L("版本查询失败（网络）——点右下重新扫描")
+        }
+        return ""
     }
 }

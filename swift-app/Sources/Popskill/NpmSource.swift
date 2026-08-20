@@ -298,9 +298,10 @@ extension StoreFS {
         guard r.status == 0 else { return [] }
         let installed = parsePipxList(Data(r.out.utf8))
         return maintainedPipxPackages.compactMap { name in
-            guard let ver = installed[name] else { return nil }
-            return GlobalCli(name: name, installed: ver, displayName: name,
-                             channel: .pipx, allowlisted: true)
+            guard let pkg = installed[name] else { return nil }
+            let tracks = pipxTracksIndex(pkg.packageOrUrl)
+            return GlobalCli(name: name, installed: pkg.version, latest: tracks ? nil : pkg.version,
+                             displayName: name, channel: .pipx, allowlisted: true, tracksIndex: tracks)
         }
     }
 

@@ -260,6 +260,7 @@ struct StatusCell: View {
 struct TogglePill: View {
     let status: LinkStatus
     let label: String
+    var compact: Bool = false
     let action: () -> Void
     @State private var hovered = false
 
@@ -270,16 +271,17 @@ struct TogglePill: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
-                Text(status.pillGlyph).font(.mono(11)).frame(width: 12)
-                Text(label)
+            HStack(spacing: compact ? 4 : 6) {
+                Text(status.pillGlyph).font(.mono(compact ? 10 : 11)).frame(width: 12)
+                Text(label).lineLimit(1).minimumScaleFactor(0.7)
                 if showState {
-                    Text(status.stateLabel).font(.ui(10, .medium)).opacity(0.75)
+                    Text(status.stateLabel).font(.ui(10, .medium)).opacity(0.75).lineLimit(1)
                 }
             }
-            .font(.ui(11, .semibold))
+            .font(.ui(compact ? 10 : 11, .semibold))
             .foregroundStyle(status.pillText)
-            .padding(.horizontal, 9).padding(.vertical, 4)
+            .padding(.horizontal, compact ? 6 : 9).padding(.vertical, compact ? 3 : 4)
+            .frame(maxWidth: compact ? .infinity : nil)
             .background(Capsule().fill(status.pillBg))
             .overlay(Capsule().stroke(status.pillBorder, lineWidth: 1))
             .shadow(color: hovered ? .black.opacity(0.04) : .clear, radius: 0, x: 0, y: 0)

@@ -88,6 +88,8 @@
 	<string>+%lld 未装</string>
 	<key>/plugin 管理</key>
 	<string>/plugin 管理</string>
+	<key>App</key>
+	<string>App</string>
 	<key>App: Popskill v%@
 macOS: %@
 
@@ -104,8 +106,8 @@ macOS: %@
 	<string>CLI 巡检</string>
 	<key>CLI 巡检…</key>
 	<string>CLI 巡检…</string>
-	<key>Claude / Codex 始终显示。Grok、Gemini、OpenCode、Pi 只有本机已有技能目录才出现，避免空列撑爆矩阵。</key>
-	<string>Claude / Codex 始终显示。Grok、Gemini、OpenCode、Pi 只有本机已有技能目录才出现，避免空列撑爆矩阵。</string>
+	<key>Claude / Codex / Cursor 始终占一列。其余工具本机有 App 或 CLI 才出现开关，默认不进首页。</key>
+	<string>Claude / Codex / Cursor 始终占一列。其余工具本机有 App 或 CLI 才出现开关，默认不进首页。</string>
 	<key>Claude Code Marketplace 插件——只读展示，操作用 /plugin</key>
 	<string>Claude Code Marketplace 插件——只读展示，操作用 /plugin</string>
 	<key>Git · 已同步</key>
@@ -706,6 +708,8 @@ macOS: %@
 	<string>未链接</string>
 	<key>本地副本</key>
 	<string>本地副本</string>
+	<key>本机已发现</key>
+	<string>本机已发现</string>
 	<key>来源</key>
 	<string>来源</string>
 	<key>来源 URL</key>
@@ -912,6 +916,8 @@ macOS: %@
 	<string>设置没能写入磁盘（检查磁盘空间/权限）——当前模式未记住</string>
 	<key>设置没能写入磁盘（检查磁盘空间/权限）——自动更新开关未保存</key>
 	<string>设置没能写入磁盘（检查磁盘空间/权限）——自动更新开关未保存</string>
+	<key>设置没能写入磁盘（检查磁盘空间/权限）——首页显示开关未保存</key>
+	<string>设置没能写入磁盘（检查磁盘空间/权限）——首页显示开关未保存</string>
 	<key>设置没能写入磁盘（检查磁盘空间/权限）——默认挂载开关未保存</key>
 	<string>设置没能写入磁盘（检查磁盘空间/权限）——默认挂载开关未保存</string>
 	<key>该工具目录不存在——挂载会创建它，安装时会先跟你确认</key>
@@ -966,6 +972,10 @@ macOS: %@
 	<string>链接 %@ 失败：%@</string>
 	<key>错误：%@</key>
 	<string>错误：%@</string>
+	<key>首页列</key>
+	<string>首页列</string>
+	<key>首页显示</key>
+	<string>首页显示</string>
 	<key>默认只查 Claude / Codex / 飞书 / GetNote 等常用工具。打开后才会把本机全部全局 npm 包名发给 registry。CLI 面板打开时始终全量扫描。</key>
 	<string>默认只查 Claude / Codex / 飞书 / GetNote 等常用工具。打开后才会把本机全部全局 npm 包名发给 registry。CLI 面板打开时始终全量扫描。</string>
 	<key>，</key>

@@ -453,6 +453,7 @@ struct SettingsSheet: View {
     private var toolsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionLabel(text: L("工具（挂载目标）"))
+            SectionLabel(text: L("首页列"))
             VStack(spacing: 6) {
                 ForEach(model.tools) { t in
                     SheetRow {
@@ -465,7 +466,24 @@ struct SettingsSheet: View {
                     }
                 }
             }
-            Text(L("Claude / Codex 始终显示。Grok、Gemini、OpenCode、Pi 只有本机已有技能目录才出现，避免空列撑爆矩阵。"))
+            if !model.detectedOptionals.isEmpty {
+                SectionLabel(text: L("本机已发现"))
+                    .padding(.top, 14)
+                VStack(spacing: 6) {
+                    ForEach(model.detectedOptionals) { d in
+                        SheetRow {
+                            Text(d.name).font(.ui(12.5, .semibold)).foregroundStyle(Ink.ink)
+                            if !d.hint.isEmpty {
+                                Text(d.hint).font(.mono(10.5)).foregroundStyle(Ink.tertiary)
+                            }
+                            Spacer()
+                            Text(L("首页显示")).font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+                            PsSwitch(on: d.showOnHome) { model.toggleShowOnHome(d.id) }
+                        }
+                    }
+                }
+            }
+            Text(L("Claude / Codex / Cursor 始终占一列。其余工具本机有 App 或 CLI 才出现开关，默认不进首页。"))
                 .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
                 .padding(.top, 4)
         }

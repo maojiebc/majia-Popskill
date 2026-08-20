@@ -36,7 +36,7 @@ swift-app/Sources/Popskill/
 ├── StoreWatch.swift    FSEvents 监听器（v2.15：store/工具目录外部变更秒级自动重扫）
 ├── CliInventory.swift  CLI 白名单 / 多前缀 / brew·pipx·uv 纯函数（v2.20）
 ├── NpmSource.swift     npm 源 + 按前缀升级全局 CLI
-├── ToolRegistry.swift  工具列注册表（Claude/Codex 常显，其余有 skills 才露）
+├── ToolRegistry.swift  工具列注册表（Claude/Codex/Cursor 常显，其余设置里开）
 ├── WorkMode.swift      工作模式快照 / 最小差异切换（v2.20）
 ├── Resources/          {zh-Hans,en}.lproj（gen-l10n.sh 从 l10n/ 目录预编译，提交进库）
 └── Fixtures.swift      原型样例数据（POPSKILL_FAKE_DATA=1）
@@ -46,13 +46,14 @@ Tests/PopskillTests/AppModelTests.swift  纯逻辑测试（修复推荐矩阵/�
 Tests/PopskillTests/SchedTests.swift     定时任务解析测试（plist/cron/launchctl 全 fixture，不碰真系统）
 Tests/PopskillTests/StoreWatchTests.swift FSEvents 触发/幂等 + AppModel 全链集成（外部进程写）
 Tests/PopskillTests/WorkModeTests.swift  工作模式快照/差异纯函数
+Tests/PopskillTests/MatrixLayoutTests.swift  折叠套装网格打包（展开才通栏）
 ```
 
 ### 关键架构事实
 
 - **文件系统就是数据库**。无 GRDB、无 sidecar、无 cc-switch submodule。唯一持久化元数据是 `~/.agents/.popskill.json`（源 URL / 自动更新 / 工具默认挂载），随 store 同步。
 - **SSOT = `~/.agents/`**（v1 的 `~/.cc-switch/skills` 已废弃）。`~/.claude/skills`、`~/.codex/skills` 里是指向 store 的裸 symlink。
-- **工具注册表（v2.20 = `ToolRegistry.swift`）**：`ToolDef.builtins` + `StoreEnv.toolRoots(at:)` 是唯一列定义。Claude / Codex `alwaysShow`；Grok / Gemini / OpenCode / Pi 只有本机已有 `skills/` 才露列，避免空列撑爆矩阵。CodeBuddy 曾实现后按用户决定撤下（2026-06-13），不要加回。
+- **工具注册表（v2.20 = `ToolRegistry.swift`）**：`ToolDef.builtins` + `StoreEnv.toolRoots(at:)` 是唯一列定义。Claude / Codex / Cursor `alwaysShow`（Cursor 挂 `~/.cursor/skills`，不碰 `skills-cursor`）；Grok / Gemini / OpenCode / Pi 本机有 App 或 CLI 才在设置里出「首页显示」开关（`tools.<id>.showOnHome`，缺省关）。技能目录存在不再当露列门槛。CodeBuddy 曾实现后按用户决定撤下（2026-06-13），不要加回。
 - **LinkStatus 四态**：`on`=symlink 有效 / `off`=未链接 / `stub`=**真实目录占位（本地副本，未托管）** / `broken`=symlink 目标丢失。注意 stub 的真实语义和原型（占位待校验）不同。
 - **套装双形态**：工具侧既可能是「整套一条 symlink」（全部子项 on），也可能是「物化目录 + 逐子项 symlink」。单独关某个子项时 `setBundleChildLink` 自动物化。移除套装时物化目录会被清理。
 - **防呆三条**：`removeLink` 只删 symlink、真实目录一律走 store 回收站（`~/.agents/.trash/`，带时间戳）、store 目录绝不被开关动到。改 StoreFS 必须跑测试。
@@ -89,7 +90,7 @@ Tests/PopskillTests/WorkModeTests.swift  工作模式快照/差异纯函数
 - **安装/重拉事务（v2.18，审查 P1-03）**：install = 预检全部链接位（真实目录冲突动盘前报错）→ 同卷 `.popskill-incoming-*` → 原子 rename（并发同名靠 rename 竞争，输家绝不删赢家）→ 记账建链（失败只撤本次对象）；`repullSwap` 取代 removeEntry+install 裸序，撤链/让位/换名/建链四段全记账可回滚——任一步失败磁盘回到操作前。故障注入测试盯着（testInstall*/testRepullSwap*）。
 - **跨进程写锁（vNext）**：所有 meta read-modify-write 与 store/link/trash 变更走 `StoreProcessLock`。锁文件按标准化 store 路径哈希落用户临时目录，不随 store 删除失效；POSIX `flock` 在进程崩溃/被杀后由内核自动释放；同进程共享 `NSRecursiveLock` Gate 支持 install→mutateMeta 等同步重入。GitHub/local resolve 与 well-known 下载在锁外，磁盘提交阶段才占锁；15 秒超时返回 `storeBusy`，不无限卡 UI。双进程测试覆盖等待合并、超时、SIGKILL 自动释放。
 - **meta 写盘可见（v2.18）**：saveMeta/mutateMeta 返回 Bool；自动更新/默认挂载/跳过/恢复提醒/任务备注五个用户动作写失败必须回滚内存态 + sayError，不许谎报「已保存」。
-- **CLI 巡检（v2.20，改写 v2.18）**：每次「检查更新」默认只查常用白名单（Claude Code / Codex / lark-cli / GetNote / guanskill / pi / clawhub / mcporter + brew `gemini-cli` `aliyun-cli` + pipx `agent-reach` `yt-dlp` + uv `specify-cli`）。`autoCliPatrol` 打开才把**全部**全局 npm 包名发给 registry；打开 CLI 面板始终全量扫。升级打回真实前缀（`npm i -g --prefix` / `brew upgrade` / `pipx upgrade` / `uv tool upgrade`），PATH 仍命中另一份就报人话错。node / npm / TypeScript 等基础工具只展示不升级。横幅「全部更新」只带走白名单。详见 `CliInventory.swift`。联网披露在 SECURITY.md。
+- **CLI 巡检（v2.20，改写 v2.18）**：每次「检查更新」默认只查常用白名单（Claude Code / Codex / lark-cli / GetNote / guanskill / pi / clawhub / mcporter + brew `gemini-cli` `aliyun-cli` + pipx `agent-reach` `yt-dlp` + uv `specify-cli`）。`autoCliPatrol` 打开才把**全部**全局 npm 包名发给 registry；打开 CLI 面板始终全量扫。升级打回真实前缀（`npm i -g --prefix` / `brew upgrade` / `pipx upgrade` / `uv tool upgrade`），PATH 仍命中另一份就报人话错。node / npm / TypeScript 等基础工具只展示不升级。横幅「全部更新」只带走白名单。pipx 从 GitHub zip / 本地装的不跟 PyPI 同名包比版本；升级按钮只在远端版本更新时出现。详见 `CliInventory.swift`。联网披露在 SECURITY.md。
 - **技能本地漂移（v2.20）**：`EntryMeta.appliedDigest` 记上次成功落盘的内容哈希。本地改过就默认不覆盖（`StoreError.localDrift`），「全部更新」跳过并 toast；右键「仍要覆盖本地修改」才 `applyUpdate(force:)`。旧 meta 无此字段仍能解码——第一次与上游对齐的检查会补基线。
 - **工作模式（v2.20）**：`WorkProfile` 快照「此刻各工具挂了哪些」。缺 toolId 键 = 切换时不动该列；键在数组空 = 明确全断。套装管来源，模式管场景。
 - **严格并发零警告（v2.18）**：同步桥（httpGet/runProcess 管道）一律走带锁 `ResultBox`（semaphore 超时后迟到回调只写盒子）；StoreFS/SchedEngine 标 `@unchecked Sendable`（唯一非值成员 FileManager.default 官方线程安全）；NpmEnv.cached 用 `nonisolated(unsafe)`+既有锁。CI 的 release build 是严格并发模式且零 warning 门，别引入新警告。

@@ -42,6 +42,8 @@ struct StoreMeta: Codable {
     }
     struct ToolMeta: Codable {
         var defaultTarget: Bool?
+        /// 可选工具是否进首页列。缺省 / 缺字段 = 关。不把旧的「有 skills 目录就露列」迁成开。
+        var showOnHome: Bool?
     }
     var entries: [String: EntryMeta] = [:]
     var tools: [String: ToolMeta] = [:]
@@ -240,13 +242,31 @@ struct StoreFS: @unchecked Sendable {
         ToolDef.builtins.compactMap { def in
             guard let root = env.toolRoots[def.id] else { return nil }
             let connected = fm.fileExists(atPath: root.path)
-            let skillsExist = fm.fileExists(atPath: root.appendingPathComponent("skills").path)
-            guard def.alwaysShow || skillsExist else { return nil }
+            guard def.alwaysShow || (meta.tools[def.id]?.showOnHome == true) else { return nil }
             return Tool(
                 id: def.id, name: def.name, root: root,
                 connected: connected,
                 defaultTarget: meta.tools[def.id]?.defaultTarget ?? def.alwaysShow
             )
+        }
+    }
+
+    /// 设置「本机已发现」：可选工具在探测到 App/CLI、或已经 `showOnHome` 时列出（关掉开关用）。
+    /// 不要求 skills 目录；不把 alwaysShow 工具放进来。探测闭包可注入，默认只 stat 磁盘、不跑 shell。
+    func scanDetectedOptionals(
+        meta: StoreMeta,
+        fileExists: (String) -> Bool = { FileManager.default.fileExists(atPath: $0) },
+        isExecutable: (String) -> Bool = { FileManager.default.isExecutableFile(atPath: $0) },
+        home: String = FileManager.default.homeDirectoryForCurrentUser.path,
+        pathEnv: String = ProcessInfo.processInfo.environment["PATH"] ?? ""
+    ) -> [DetectedOptional] {
+        ToolDef.builtins.compactMap { def in
+            guard !def.alwaysShow, env.toolRoots[def.id] != nil else { return nil }
+            let presence = def.presence(
+                fileExists: fileExists, isExecutable: isExecutable, home: home, pathEnv: pathEnv)
+            let show = meta.tools[def.id]?.showOnHome == true
+            guard presence != nil || show else { return nil }
+            return DetectedOptional(id: def.id, name: def.name, presence: presence, showOnHome: show)
         }
     }
 

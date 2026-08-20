@@ -3029,6 +3029,70 @@
         }
       }
     },
+    "首页列": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home columns"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首页列"
+          }
+        }
+      }
+    },
+    "本机已发现": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detected on this Mac"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本机已发现"
+          }
+        }
+      }
+    },
+    "首页显示": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show on home"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首页显示"
+          }
+        }
+      }
+    },
+    "App": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App"
+          }
+        }
+      }
+    },
     "已从源重新拉取 %@": {
       "localizations": {
         "en": {
@@ -6449,6 +6513,22 @@
         }
       }
     },
+    "设置没能写入磁盘（检查磁盘空间/权限）——首页显示开关未保存": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setting couldn't be written to disk (check disk space/permissions) — home-column toggle not saved"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置没能写入磁盘（检查磁盘空间/权限）——首页显示开关未保存"
+          }
+        }
+      }
+    },
     "该工具目录不存在——挂载会创建它，安装时会先跟你确认": {
       "localizations": {
         "en": {
@@ -7341,18 +7421,18 @@
         }
       }
     },
-    "Claude / Codex 始终显示。Grok、Gemini、OpenCode、Pi 只有本机已有技能目录才出现，避免空列撑爆矩阵。": {
+    "Claude / Codex / Cursor 始终占一列。其余工具本机有 App 或 CLI 才出现开关，默认不进首页。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claude and Codex always appear. Grok, Gemini, OpenCode and Pi only show up when their skills folder already exists, so empty columns don't crowd the matrix."
+            "value": "Claude, Codex and Cursor always get a column. Other tools only get a toggle when their app or CLI is on this Mac, and stay off the home page until you turn them on."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claude / Codex 始终显示。Grok、Gemini、OpenCode、Pi 只有本机已有技能目录才出现，避免空列撑爆矩阵。"
+            "value": "Claude / Codex / Cursor 始终占一列。其余工具本机有 App 或 CLI 才出现开关，默认不进首页。"
           }
         }
       }
@@ -7865,6 +7945,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "版本查询失败（网络）——点右下重新扫描"
+          }
+        }
+      }
+    },
+    "从 GitHub / 本地安装，不跟 PyPI 同名包比版本": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installed from GitHub / a local path — not compared with the PyPI package of the same name"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从 GitHub / 本地安装，不跟 PyPI 同名包比版本"
           }
         }
       }

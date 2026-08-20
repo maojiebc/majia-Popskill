@@ -84,8 +84,65 @@ final class WorkModeTests: XCTestCase {
     func testToolRegistryPaths() {
         let roots = StoreEnv.toolRoots(at: URL(fileURLWithPath: "/tmp/base"))
         XCTAssertEqual(roots["claude"]?.path, "/tmp/base/.claude")
+        XCTAssertEqual(roots["cursor"]?.path, "/tmp/base/.cursor")
         XCTAssertEqual(roots["pi"]?.path, "/tmp/base/.pi/agent")
         XCTAssertEqual(roots["opencode"]?.path, "/tmp/base/.config/opencode")
-        XCTAssertEqual(ToolDef.builtins.filter(\.alwaysShow).map(\.id), ["claude", "codex"])
+        XCTAssertEqual(ToolDef.builtins.filter(\.alwaysShow).map(\.id), ["claude", "codex", "cursor"])
+        XCTAssertFalse(ToolDef.builtins.contains { $0.id == "codebuddy" })
+    }
+
+    func testToolDefDetectedAppBundle() {
+        let cursor = ToolDef.builtins.first { $0.id == "cursor" }!
+        XCTAssertTrue(cursor.detected(
+            fileExists: { $0 == "/Applications/Cursor.app" },
+            isExecutable: { _ in false },
+            pathEnv: ""))
+        XCTAssertEqual(
+            cursor.presence(
+                fileExists: { $0 == "/Applications/Cursor.app" },
+                isExecutable: { _ in false },
+                pathEnv: ""),
+            .app("Cursor.app"))
+    }
+
+    func testToolDefDetectedCliFromExtras() {
+        let grok = ToolDef.builtins.first { $0.id == "grok" }!
+        let home = "/Users/tester"
+        let hit = "\(home)/.local/bin/grok"
+        XCTAssertEqual(
+            grok.presence(
+                fileExists: { _ in false },
+                isExecutable: { $0 == hit },
+                home: home,
+                pathEnv: ""),
+            .cli(hit))
+        XCTAssertFalse(grok.detected(
+            fileExists: { _ in false },
+            isExecutable: { _ in false },
+            home: home,
+            pathEnv: "\(home)/.local/bin"))
+    }
+
+    func testToolDefDetectedCliFromPathEnvAndCursorBundleBin() {
+        let gemini = ToolDef.builtins.first { $0.id == "gemini" }!
+        XCTAssertEqual(
+            gemini.presence(
+                fileExists: { _ in false },
+                isExecutable: { $0 == "/custom/bins/gemini" },
+                pathEnv: "/custom/bins"),
+            .cli("/custom/bins/gemini"))
+        let cursor = ToolDef.builtins.first { $0.id == "cursor" }!
+        let p = "/Applications/Cursor.app/Contents/Resources/app/bin/cursor"
+        XCTAssertEqual(
+            cursor.presence(fileExists: { _ in false }, isExecutable: { $0 == p }, pathEnv: ""),
+            .cli(p))
+    }
+
+    func testToolDefDetectedIgnoresSkillsDirOnly() {
+        let grok = ToolDef.builtins.first { $0.id == "grok" }!
+        XCTAssertFalse(grok.detected(
+            fileExists: { $0.contains("skills") || $0.hasSuffix("/.grok") },
+            isExecutable: { _ in false },
+            pathEnv: ""))
     }
 }

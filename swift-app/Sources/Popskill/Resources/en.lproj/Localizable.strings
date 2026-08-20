@@ -62,6 +62,8 @@
 	<string>+%lld new</string>
 	<key>/plugin 管理</key>
 	<string>Managed by /plugin</string>
+	<key>App</key>
+	<string>App</string>
 	<key>App: Popskill v%@
 macOS: %@
 
@@ -78,8 +80,8 @@ macOS: %2$@
 	<string>CLI Checkup</string>
 	<key>CLI 巡检…</key>
 	<string>CLI Checkup…</string>
-	<key>Claude / Codex 始终显示。Grok、Gemini、OpenCode、Pi 只有本机已有技能目录才出现，避免空列撑爆矩阵。</key>
-	<string>Claude and Codex always appear. Grok, Gemini, OpenCode and Pi only show up when their skills folder already exists, so empty columns don't crowd the matrix.</string>
+	<key>Claude / Codex / Cursor 始终占一列。其余工具本机有 App 或 CLI 才出现开关，默认不进首页。</key>
+	<string>Claude, Codex and Cursor always get a column. Other tools only get a toggle when their app or CLI is on this Mac, and stay off the home page until you turn them on.</string>
 	<key>Claude Code Marketplace 插件——只读展示，操作用 /plugin</key>
 	<string>Claude Code Marketplace plugin — read-only here; manage with /plugin</string>
 	<key>Git · 已同步</key>
@@ -652,6 +654,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Not linked</string>
 	<key>本地副本</key>
 	<string>Local copy</string>
+	<key>本机已发现</key>
+	<string>Detected on this Mac</string>
 	<key>来源</key>
 	<string>Source</string>
 	<key>来源 URL</key>
@@ -848,6 +852,8 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Couldn't write settings (check disk space/permissions) — current mode not remembered</string>
 	<key>设置没能写入磁盘（检查磁盘空间/权限）——自动更新开关未保存</key>
 	<string>Setting couldn't be written to disk (check disk space/permissions) — auto-update toggle not saved</string>
+	<key>设置没能写入磁盘（检查磁盘空间/权限）——首页显示开关未保存</key>
+	<string>Setting couldn't be written to disk (check disk space/permissions) — home-column toggle not saved</string>
 	<key>设置没能写入磁盘（检查磁盘空间/权限）——默认挂载开关未保存</key>
 	<string>Setting couldn't be written to disk (check disk space/permissions) — default-mount toggle not saved</string>
 	<key>该工具目录不存在——挂载会创建它，安装时会先跟你确认</key>
@@ -902,6 +908,10 @@ Paste a GitHub repo or a local folder to get started.</string>
 	<string>Failed to link %1$@: %2$@</string>
 	<key>错误：%@</key>
 	<string>Error: %@</string>
+	<key>首页列</key>
+	<string>Home columns</string>
+	<key>首页显示</key>
+	<string>Show on home</string>
 	<key>默认只查 Claude / Codex / 飞书 / GetNote 等常用工具。打开后才会把本机全部全局 npm 包名发给 registry。CLI 面板打开时始终全量扫描。</key>
 	<string>By default only common tools (Claude / Codex / Lark / GetNote, etc.) are queried. Turn this on to send every global npm package name to the registry. Opening the CLI panel always does a full scan.</string>
 	<key>，</key>

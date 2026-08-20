@@ -62,6 +62,8 @@ final class AppModel {
     var fake = false
 
     var tools: [Tool] = []
+    /// 设置「本机已发现」：探测到的可选工具（含已打开首页显示、方便关掉）
+    var detectedOptionals: [DetectedOptional] = []
     var entries: [Entry] = []
     var syncInfo = SyncInfo()
     var profiles: [WorkProfile] = []
@@ -111,6 +113,8 @@ final class AppModel {
     var kbFocusList: [KbItem] = []           // MainView 按可见顺序回填
     var kbFocusFrame: CGRect = .zero         // 聚焦行的窗口坐标（修复弹层锚点用）
     var winSize: CGSize = .zero
+    /// ≥3 工具列启用双密度账本；2 列机型仍是 PATCH-02 双列折叠卡 + 右侧 pill
+    var wideMatrix: Bool { MatrixLayout.wide(toolCount: tools.count) }
 
     @ObservationIgnored private var toastTask: Task<Void, Never>?
     // store 实时监听（v2.15）：终端动了 ~/.agents / 工具链接目录，秒级自动跟上
@@ -255,6 +259,8 @@ final class AppModel {
         fs.migrateMetaKeys()
         let meta = fs.loadMeta()
         tools = fs.scanTools(meta: meta)
+        if kbToolIdx >= tools.count { kbToolIdx = max(0, tools.count - 1) }
+        detectedOptionals = fs.scanDetectedOptionals(meta: meta)
         entries = fs.scanEntries(tools: tools, meta: meta)
         profiles = meta.profiles ?? []
         activeProfileId = meta.activeProfileId
@@ -1038,7 +1044,9 @@ final class AppModel {
                     case .npm:
                         if !cli.excluded { cli.latest = try? fsCopy.npmLatestVersion(cli.name) }
                     case .pipx, .uv:
-                        cli.latest = (try? fsCopy.pypiLatestVersion(cli.name)) ?? cli.latest
+                        if cli.tracksIndex {
+                            cli.latest = (try? fsCopy.pypiLatestVersion(cli.name)) ?? cli.latest
+                        }
                     case .brew:
                         break
                     }
@@ -1600,6 +1608,24 @@ final class AppModel {
             tools[i].defaultTarget.toggle()
             sayError(L("设置没能写入磁盘（检查磁盘空间/权限）——默认挂载开关未保存"))
         }
+    }
+
+    func toggleShowOnHome(_ toolId: String) {
+        guard let i = detectedOptionals.firstIndex(where: { $0.id == toolId }) else { return }
+        detectedOptionals[i].showOnHome.toggle()
+        guard !fake else { return }
+        let on = detectedOptionals[i].showOnHome
+        let ok = fs.mutateMeta { meta in
+            var m = meta.tools[toolId] ?? StoreMeta.ToolMeta()
+            m.showOnHome = on
+            meta.tools[toolId] = m
+        }
+        if !ok {
+            detectedOptionals[i].showOnHome.toggle()
+            sayError(L("设置没能写入磁盘（检查磁盘空间/权限）——首页显示开关未保存"))
+            return
+        }
+        refresh()
     }
 
     // ── 回收站（v2.8）─────────────────────────────────────

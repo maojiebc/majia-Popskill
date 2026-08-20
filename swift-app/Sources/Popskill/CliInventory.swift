@@ -33,14 +33,20 @@ struct GlobalCli: Identifiable, Equatable {
     var pathMatchesPrefix: Bool = true
     var excluded: Bool = false
     var allowlisted: Bool = false
+    /// pipx 从 GitHub zip / 本地路径装的，不跟 PyPI 同名包比版本。
+    var tracksIndex: Bool = true
 
     var id: String { "\(channel.rawValue)|\(name)|\(prefix ?? "")" }
-    var hasUpdate: Bool { !excluded && latest != nil && latest != installed }
+    var hasUpdate: Bool {
+        guard !excluded, tracksIndex, let latest else { return false }
+        return cliVersionIsNewer(latest, than: installed)
+    }
 
     init(name: String, installed: String, latest: String? = nil,
          displayName: String? = nil, channel: CliChannel = .npm, prefix: String? = nil,
          pathHit: String? = nil, pathMatchesPrefix: Bool = true,
-         excluded: Bool = false, allowlisted: Bool = false) {
+         excluded: Bool = false, allowlisted: Bool = false,
+         tracksIndex: Bool = true) {
         self.name = name
         self.displayName = displayName ?? name
         self.installed = installed
@@ -51,6 +57,7 @@ struct GlobalCli: Identifiable, Equatable {
         self.pathMatchesPrefix = pathMatchesPrefix
         self.excluded = excluded
         self.allowlisted = allowlisted
+        self.tracksIndex = tracksIndex
     }
 }
 
@@ -136,17 +143,68 @@ func parseBrewOutdated(_ data: Data) -> [(name: String, installed: String, lates
     return out
 }
 
-/// `pipx list --json` → {name: version}
-func parsePipxList(_ data: Data) -> [String: String] {
+struct PipxPackage: Equatable {
+    var version: String
+    var packageOrUrl: String
+}
+
+/// pipx 的 `package_or_url` 是 PyPI 包名才跟仓库比；GitHub zip / git+ / 本地路径不算。
+func pipxTracksIndex(_ packageOrUrl: String) -> Bool {
+    let s = packageOrUrl.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !s.isEmpty else { return true }
+    let lower = s.lowercased()
+    if lower.hasPrefix("git+") || lower.hasPrefix("file:") { return false }
+    if lower.contains("://") { return false }
+    if s.hasPrefix("/") || s.hasPrefix(".") { return false }
+    return true
+}
+
+/// 只认「远端更新」：1.5.0 相对 PyPI 0.1.0 不是升级。
+func cliVersionIsNewer(_ candidate: String, than installed: String) -> Bool {
+    let a = cliVersionComponents(candidate)
+    let b = cliVersionComponents(installed)
+    guard !a.isEmpty, !b.isEmpty else { return candidate != installed }
+    let n = max(a.count, b.count)
+    for i in 0..<n {
+        let x = i < a.count ? a[i] : 0
+        let y = i < b.count ? b[i] : 0
+        if x != y { return x > y }
+    }
+    return false
+}
+
+func cliVersionComponents(_ raw: String) -> [Int] {
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        .trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
+    var nums: [Int] = []
+    var cur = ""
+    for ch in trimmed {
+        if ch.isNumber { cur.append(ch) }
+        else if ch == "." {
+            nums.append(Int(cur) ?? 0)
+            cur = ""
+        } else {
+            break
+        }
+    }
+    if !cur.isEmpty { nums.append(Int(cur) ?? 0) }
+    return nums
+}
+
+/// `pipx list --json` → {venv 名: 已装版 + 来源}
+func parsePipxList(_ data: Data) -> [String: PipxPackage] {
     guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
           let venvs = obj["venvs"] as? [String: Any] else { return [:] }
-    var out: [String: String] = [:]
+    var out: [String: PipxPackage] = [:]
     for (name, raw) in venvs {
         guard let info = raw as? [String: Any],
               let meta = info["metadata"] as? [String: Any],
               let main = meta["main_package"] as? [String: Any],
               let ver = main["package_version"] as? String else { continue }
-        out[name] = ver
+        let src = (main["package_or_url"] as? String)
+            ?? (main["package"] as? String)
+            ?? name
+        out[name] = PipxPackage(version: ver, packageOrUrl: src)
     }
     return out
 }

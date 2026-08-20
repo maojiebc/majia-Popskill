@@ -231,6 +231,13 @@ func deriveUpdates(_ entries: [Entry]) -> [Entry] {
     entries.filter(\.hasUpdate)
 }
 
+/// 双密度账本：工具列 ≥ 此数才启用独立卡底横条 / 统计条图例一次。
+/// 折叠套装始终与独立卡混排成网格（PATCH-02）；只有展开的套装通栏。
+enum MatrixLayout {
+    static let wideToolCount = 3
+    static func wide(toolCount: Int) -> Bool { toolCount >= wideToolCount }
+}
+
 func aggregate(_ children: [Capability], toolId: String) -> ToolAgg {
     var a = ToolAgg(total: children.count)
     for c in children {

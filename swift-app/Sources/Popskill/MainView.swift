@@ -15,6 +15,33 @@ enum DisplayItem: Identifiable {
     }
 }
 
+extension MatrixLayout {
+    /// 只有展开的套装通栏。折叠套装与独立卡同宽混排，省纵向空间。
+    static func isFullWidthBundle(_ row: [DisplayItem]) -> Bool {
+        guard row.count == 1, case .bundle(_, let kids) = row[0] else { return false }
+        return kids != nil
+    }
+
+    static func pack(_ list: [DisplayItem], columns: Int) -> [[DisplayItem]] {
+        var rows: [[DisplayItem]] = []
+        var pending: [DisplayItem] = []
+        func flush() {
+            if !pending.isEmpty { rows.append(pending); pending = [] }
+        }
+        for it in list {
+            if case .bundle(_, let kids) = it, kids != nil {
+                flush()
+                rows.append([it])
+            } else {
+                pending.append(it)
+                if pending.count == columns { flush() }
+            }
+        }
+        flush()
+        return rows
+    }
+}
+
 /// 主区视图形态（v2.13）：卡片矩阵 / 账本表格——同一份数据、共享键盘导航
 enum ViewMode: String { case grid, list }
 
@@ -115,14 +142,16 @@ struct MainView: View {
 
     private var statStrip: some View {
         let s = model.stats
+        let wide = model.wideMatrix
         return HStack(spacing: 0) {
             ForEach(CapType.allCases) { t in
                 typeCell(t, s.byType[t] ?? 0)
             }
             ForEach(Array(model.tools.enumerated()), id: \.element.id) { i, t in
                 toolCell(t, on: s.activeByTool[t.id] ?? 0, off: s.inactiveByTool[t.id] ?? 0,
-                         last: i == model.tools.count - 1)
+                         last: !wide && i == model.tools.count - 1, compact: wide)
             }
+            if wide { statLegend }
         }
         .fixedSize(horizontal: false, vertical: true)   // 只取内容高度，别让内部边框把条撑高
         .frame(maxWidth: .infinity)
@@ -157,19 +186,26 @@ struct MainView: View {
         .overlay(alignment: .trailing) { cellDivider(true) }
     }
 
-    private func toolCell(_ t: Tool, on: Int, off: Int, last: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+    private func toolCell(_ t: Tool, on: Int, off: Int, last: Bool, compact: Bool) -> some View {
+        let a11y = t.connected
+            ? "\(t.name)，\(on) \(L("已激活"))，\(off) \(L("未挂载"))"
+            : L("\(t.name) 似乎还没安装")
+        return VStack(alignment: .leading, spacing: 3) {
             statKey(nil, t.name)
             if t.connected {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: compact ? 8 : 10) {
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
                         Text("\(on)").font(.ui(20, .bold)).foregroundStyle(Ink.green).monospacedDigit()
-                        Text(L("已激活")).font(.ui(10, .semibold)).foregroundStyle(Ink.statOnLabel)
+                        if !compact {
+                            Text(L("已激活")).font(.ui(10, .semibold)).foregroundStyle(Ink.statOnLabel)
+                        }
                     }
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
                         // 未挂载是有意义的统计数（不是装饰），用 secondary2 过 AA（曾用 offGlyph 仅 2.55:1）
                         Text("\(off)").font(.ui(14, .semibold)).foregroundStyle(Ink.secondary2).monospacedDigit()
-                        Text(L("未挂载")).font(.ui(10)).foregroundStyle(Ink.secondary2)
+                        if !compact {
+                            Text(L("未挂载")).font(.ui(10)).foregroundStyle(Ink.secondary2)
+                        }
                     }
                 }
             } else {
@@ -179,9 +215,30 @@ struct MainView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14).padding(.vertical, 9)
+        .padding(.horizontal, compact ? 10 : 14).padding(.vertical, 9)
         .opacity(t.connected ? 1 : 0.6)
         .overlay(alignment: .trailing) { cellDivider(!last) }
+        .help(a11y)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(a11y)
+    }
+
+    /// ≥3 列时「已激活 / 未挂载」只在条尾出现一次（Fable 双密度账本）
+    private var statLegend: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                Circle().fill(Ink.green).frame(width: 6, height: 6)
+                Text(L("已激活")).font(.ui(10, .semibold)).foregroundStyle(Ink.statOnLabel)
+            }
+            HStack(spacing: 4) {
+                Circle().fill(Ink.secondary2).frame(width: 6, height: 6)
+                Text(L("未挂载")).font(.ui(10)).foregroundStyle(Ink.secondary2)
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 9)
+        .fixedSize(horizontal: true, vertical: false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L("已激活") + " / " + L("未挂载"))
     }
 
     // ── 主区：卡片矩阵 / 账本表格 ──
@@ -573,8 +630,8 @@ struct MainView: View {
                         // 这个量级（几十张卡）全量构建成本可接受。
                         VStack(spacing: 10) {
                             ForEach(rows(list, columns: cols), id: \.first!.id) { row in
-                                if row.count == 1, case .bundle(_, let kids) = row[0], kids != nil {
-                                    itemView(row[0])   // 展开的套装才通栏
+                                if MatrixLayout.isFullWidthBundle(row) {
+                                    itemView(row[0])   // 展开套装通栏；折叠套装走下面的网格
                                 } else {
                                     HStack(alignment: .top, spacing: 10) {
                                         ForEach(row) { itemView($0).frame(maxWidth: .infinity, alignment: .top) }
@@ -635,21 +692,9 @@ struct MainView: View {
         model.kbValidate()
     }
 
-    /// v2.7 布局：只有「展开的」套装通栏；折叠套装与独立卡一起按列数打包进网格
+    /// v2.7 布局：只有「展开的」套装通栏；折叠套装与独立卡一起按列数打包进网格。
     private func rows(_ list: [DisplayItem], columns: Int) -> [[DisplayItem]] {
-        var rows: [[DisplayItem]] = []
-        var pending: [DisplayItem] = []
-        for it in list {
-            if case .bundle(_, let kids) = it, kids != nil {
-                if !pending.isEmpty { rows.append(pending); pending = [] }
-                rows.append([it])
-            } else {
-                pending.append(it)
-                if pending.count == columns { rows.append(pending); pending = [] }
-            }
-        }
-        if !pending.isEmpty { rows.append(pending) }
-        return rows
+        MatrixLayout.pack(list, columns: columns)
     }
 
     @ViewBuilder
@@ -735,7 +780,12 @@ struct BundleCompactCard: View {
                 .monospacedDigit()
             }
             .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-            BundleToolFractions(tools: model.tools, children: entry.children ?? [])
+            BundleToolFractions(
+                tools: model.tools,
+                children: entry.children ?? [],
+                colWidth: 48,
+                labelSize: 8.5,
+                kerning: 0.3)
                 .padding(.top, 2)
                 .layoutPriority(1)
         }
@@ -784,48 +834,8 @@ struct CapCard: View {
 
     var body: some View {
         let flashing = model.flashId == entry.id
-        HStack(alignment: .top, spacing: 12) {
-            Text(String(cap.name.prefix(1)).uppercased())
-                .font(.ui(15, .bold))
-                .foregroundStyle(broken ? Ink.red : Ink.monoDim)
-                .frame(width: 38, height: 38)
-                .background(RoundedRectangle(cornerRadius: 9).fill(broken ? Ink.brokenBadgeBg : Ink.chrome))
-                .overlay(RoundedRectangle(cornerRadius: 9).stroke(broken ? Ink.brokenBadgeBorder : Ink.hairline, lineWidth: 1))
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    PeekableName(cap: cap, entry: entry, font: .ui(13.5, .bold), color: broken ? Ink.red : Ink.ink, query: query)
-                    TypeTag(type: cap.type)
-                    if broken { BrokenBadge(cause: brokenCause) }
-                    Spacer(minLength: 0)
-                    if hovered {
-                        HoverAction(symbol: "↗", danger: false, help: L("在访达中显示")) { model.openInEditor(cap.dirURL) }
-                        if fromBundle == nil {
-                            HoverAction(symbol: "✕", danger: true, help: L("移除")) { model.removeEntry(entry) }
-                        }
-                    }
-                }
-                .frame(height: 22)
-                Text(highlight(cap.desc.isEmpty ? "—" : cap.desc, query))
-                    .font(.ui(11.5))
-                    .foregroundStyle(broken ? Ink.brokenDesc : Ink.secondary)
-                    .lineLimit(2)
-                metaRow
-            }
-            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-            // v2.11：pill 自适应内容宽、整列右对齐——省出的宽度还给左侧信息区
-            VStack(alignment: .trailing, spacing: 5) {
-                ForEach(Array(model.tools.enumerated()), id: \.element.id) { i, t in
-                    TogglePill(status: cap.status(t.id), label: pillLabel(t)) {
-                        cellTap(tool: t)
-                    }
-                    .kbCellRing(focused && model.kbToolIdx == i)
-                    .opacity(t.connected ? 1 : 0.5)   // 没装的工具淡显，点了会先确认
-                    .help(t.connected ? "" : L("\(t.name) 似乎还没安装"))
-                }
-            }
-            .fixedSize(horizontal: true, vertical: false)
-            .layoutPriority(1)
-            .frame(minWidth: 64, alignment: .trailing)
+        Group {
+            if model.wideMatrix { wideBody } else { classicBody }
         }
         .padding(EdgeInsets(top: 13, leading: 15, bottom: 13, trailing: 15))
         .background(RoundedRectangle(cornerRadius: 10).fill(flashing ? Ink.flashBg : (broken ? Ink.brokenCardBg : Ink.card)))
@@ -840,12 +850,90 @@ struct CapCard: View {
         .id(cap.id)
     }
 
+    /// PATCH-02：头像 + 文案 + 右侧竖排 pill（仅 2 工具列）
+    private var classicBody: some View {
+        HStack(alignment: .top, spacing: 12) {
+            avatar
+            infoColumn
+            VStack(alignment: .trailing, spacing: 5) {
+                ForEach(Array(model.tools.enumerated()), id: \.element.id) { i, t in
+                    pill(t, index: i, compact: false)
+                }
+            }
+            .fixedSize(horizontal: true, vertical: false)
+            .layoutPriority(1)
+            .frame(minWidth: 64, alignment: .trailing)
+        }
+    }
+
+    /// ≥3 列：文案占满宽度，pill 改卡底横条（约 74pt 槽位）
+    private var wideBody: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 12) {
+                avatar
+                infoColumn
+            }
+            HStack(spacing: 6) {
+                ForEach(Array(model.tools.enumerated()), id: \.element.id) { i, t in
+                    pill(t, index: i, compact: true)
+                        .frame(maxWidth: 74)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private var avatar: some View {
+        Text(String(cap.name.prefix(1)).uppercased())
+            .font(.ui(15, .bold))
+            .foregroundStyle(broken ? Ink.red : Ink.monoDim)
+            .frame(width: 38, height: 38)
+            .background(RoundedRectangle(cornerRadius: 9).fill(broken ? Ink.brokenBadgeBg : Ink.chrome))
+            .overlay(RoundedRectangle(cornerRadius: 9).stroke(broken ? Ink.brokenBadgeBorder : Ink.hairline, lineWidth: 1))
+    }
+
+    private var infoColumn: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                PeekableName(cap: cap, entry: entry, font: .ui(13.5, .bold), color: broken ? Ink.red : Ink.ink, query: query)
+                TypeTag(type: cap.type)
+                if broken { BrokenBadge(cause: brokenCause) }
+                Spacer(minLength: 0)
+                if hovered {
+                    HoverAction(symbol: "↗", danger: false, help: L("在访达中显示")) { model.openInEditor(cap.dirURL) }
+                    if fromBundle == nil {
+                        HoverAction(symbol: "✕", danger: true, help: L("移除")) { model.removeEntry(entry) }
+                    }
+                }
+            }
+            .frame(height: 22)
+            Text(highlight(cap.desc.isEmpty ? "—" : cap.desc, query))
+                .font(.ui(11.5))
+                .foregroundStyle(broken ? Ink.brokenDesc : Ink.secondary)
+                .lineLimit(2)
+            metaRow
+        }
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func pill(_ t: Tool, index i: Int, compact: Bool) -> some View {
+        TogglePill(status: cap.status(t.id), label: pillLabel(t), compact: compact) {
+            cellTap(tool: t)
+        }
+        .kbCellRing(focused && model.kbToolIdx == i)
+        .opacity(t.connected ? 1 : 0.5)
+        .help(t.connected ? "" : L("\(t.name) 似乎还没安装"))
+    }
+
     private var focused: Bool { model.kbFocusId == cap.id }
     private var broken: Bool { cap.isBroken(model.tools) }
     private var brokenCause: String { cap.firstBrokenCause(model.tools) }
 
     private func pillLabel(_ t: Tool) -> String {
-        String(t.name.split(separator: " ").first ?? "")
+        switch t.id {
+        case "opencode": return "Open"
+        default: return String(t.name.split(separator: " ").first ?? "")
+        }
     }
 
     private var metaRow: some View {
