@@ -734,18 +734,10 @@ struct BundleCompactCard: View {
                 .foregroundStyle(Ink.tertiary)
                 .monospacedDigit()
             }
-            HStack(spacing: 10) {
-                ForEach(model.tools) { t in
-                    VStack(spacing: 3) {
-                        Text(String(t.name.split(separator: " ").first ?? "").uppercased())
-                            .font(.ui(8.5, .bold)).kerning(0.6)
-                            .foregroundStyle(Ink.tertiary)
-                        FractionCell(agg: aggregate(entry.children ?? [], toolId: t.id))
-                    }
-                }
-            }
-            .frame(minWidth: 100)
-            .padding(.top, 2)
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            BundleToolFractions(tools: model.tools, children: entry.children ?? [])
+                .padding(.top, 2)
+                .layoutPriority(1)
         }
         .padding(EdgeInsets(top: 13, leading: 15, bottom: 13, trailing: 15))
         .background(RoundedRectangle(cornerRadius: 10).fill(Ink.bundleBody))
@@ -819,6 +811,7 @@ struct CapCard: View {
                     .lineLimit(2)
                 metaRow
             }
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             // v2.11：pill 自适应内容宽、整列右对齐——省出的宽度还给左侧信息区
             VStack(alignment: .trailing, spacing: 5) {
                 ForEach(Array(model.tools.enumerated()), id: \.element.id) { i, t in
@@ -830,6 +823,8 @@ struct CapCard: View {
                     .help(t.connected ? "" : L("\(t.name) 似乎还没安装"))
                 }
             }
+            .fixedSize(horizontal: true, vertical: false)
+            .layoutPriority(1)
             .frame(minWidth: 64, alignment: .trailing)
         }
         .padding(EdgeInsets(top: 13, leading: 15, bottom: 13, trailing: 15))
@@ -971,16 +966,9 @@ struct BundleCard: View {
                 }
             }
             Spacer(minLength: 12)
-            // PATCH-02：固定列宽，与子项清单列对齐
-            ForEach(model.tools) { t in
-                VStack(spacing: 3) {
-                    Text(String(t.name.split(separator: " ").first ?? "").uppercased())
-                        .font(.ui(9, .bold)).kerning(0.7)
-                        .foregroundStyle(Ink.tertiary)
-                    FractionCell(agg: aggregate(entry.children ?? [], toolId: t.id))
-                }
-                .frame(width: 52)
-            }
+            // PATCH-02：固定列宽，与子项清单列对齐。v2.20 列数可变，标签必须单行。
+            BundleToolFractions(tools: model.tools, children: entry.children ?? [],
+                                colWidth: 52, labelSize: 9, kerning: 0.5)
             HStack(spacing: 4) {
                 Spacer(minLength: 0)
                 if let v = entry.cap.version { Text("v\(v)").lineLimit(1).fixedSize() }
@@ -1037,7 +1025,9 @@ struct BundleCard: View {
                 HStack(spacing: 10) {
                     Spacer()
                     ForEach(model.tools) { t in
-                        Text(String(t.name.split(separator: " ").first ?? "").uppercased())
+                        Text(toolColLabel(t))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
                             .frame(width: 52)
                     }
                     Text(L("版本")).frame(width: 96, alignment: .trailing)
@@ -1254,8 +1244,43 @@ enum TableCols {
 
 /// 工具列短名（"Claude Code" → "Claude"）
 private func toolShort(_ t: Tool) -> String { String(t.name.split(separator: " ").first ?? "") }
+/// 折叠套装卡 / 套装头的列标签。必须单行：列一多 SwiftUI 会把 CLAUDE 竖着拆字母。
+private func toolColLabel(_ t: Tool) -> String {
+    switch t.id {
+    case "opencode": return "OPEN"
+    default: return toolShort(t).uppercased()
+    }
+}
 /// 表格用紧凑 token（"220.5k"，不带 " tokens"）
 private func tokenK(_ n: Int) -> String { n > 0 ? String(format: "%.1fk", Double(n) / 1000) : "—" }
+
+/// 套装卡右侧「工具名 + 分数条」。固定列宽、禁止压缩，挤占时让左侧名称截断。
+private struct BundleToolFractions: View {
+    let tools: [Tool]
+    let children: [Capability]
+    var colWidth: CGFloat = 48
+    var labelSize: CGFloat = 8.5
+    var kerning: CGFloat = 0.3
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(tools) { t in
+                VStack(spacing: 3) {
+                    Text(toolColLabel(t))
+                        .font(.ui(labelSize, .bold))
+                        .kerning(kerning)
+                        .foregroundStyle(Ink.tertiary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    FractionCell(agg: aggregate(children, toolId: t.id))
+                }
+                .frame(width: colWidth)
+                .help(t.name)
+            }
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+}
 
 struct TableHeader: View {
     let tools: [Tool]
@@ -1264,7 +1289,7 @@ struct TableHeader: View {
             th(L("名称")).frame(maxWidth: .infinity, alignment: .leading)
             th(L("类型")).frame(width: TableCols.type, alignment: .leading)
             th(L("作者")).frame(width: TableCols.author, alignment: .leading)
-            ForEach(tools) { t in th(toolShort(t)).frame(width: TableCols.tool) }
+            ForEach(tools) { t in th(toolColLabel(t)).frame(width: TableCols.tool) }
             th(L("版本")).frame(width: TableCols.version, alignment: .trailing)
             th("Tokens").frame(width: TableCols.tokens, alignment: .trailing)
         }
@@ -1274,7 +1299,7 @@ struct TableHeader: View {
     }
     private func th(_ s: String) -> some View {
         Text(s.uppercased()).font(.ui(9.5, .bold)).tracking(0.5)
-            .foregroundStyle(Ink.tertiary).lineLimit(1)
+            .foregroundStyle(Ink.tertiary).lineLimit(1).minimumScaleFactor(0.7)
     }
 }
 
