@@ -41,6 +41,23 @@ final class MaintenanceAutomationTests: XCTestCase {
         XCTAssertTrue(maintenanceRunIsDue(policy: policy, status: recent, now: now))
     }
 
+    func testInterruptedRunIsRecoveredInsteadOfBlockingForever() {
+        let now = Date(timeIntervalSince1970: 20_000)
+        var running = MaintenanceRunStatus(outcome: .running)
+        running.startedAt = now.addingTimeInterval(-120)
+        running.checkedSources = 3
+
+        let recovered = recoveredInterruptedMaintenanceStatus(running, now: now)
+        XCTAssertEqual(recovered.outcome, .partial)
+        XCTAssertEqual(recovered.finishedAt, now)
+        XCTAssertEqual(recovered.checkedSources, 3)
+        XCTAssertNotNil(recovered.error)
+        XCTAssertTrue(recovered.summary.contains("中断") || recovered.summary.lowercased().contains("interrupted"))
+
+        let stable = MaintenanceRunStatus(outcome: .success, finishedAt: now)
+        XCTAssertEqual(recoveredInterruptedMaintenanceStatus(stable, now: now), stable)
+    }
+
     func testRemoteSourceInheritanceOnlyTouchesNewIds() {
         let current: Set<String> = ["skill:a", "src:github.com/x/y", "skill:new"]
         let known: Set<String> = ["skill:a", "src:github.com/x/y"]
