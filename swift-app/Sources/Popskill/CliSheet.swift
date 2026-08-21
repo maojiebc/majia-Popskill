@@ -31,12 +31,14 @@ struct CliSheet: View {
     private var head: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
+                Text(L("CLI 巡检"))
+                    .font(.ui(9.5, .bold)).kerning(0.6).foregroundStyle(Ink.tertiary)
                 Text(maintenanceText("维护中心", "Maintenance Center"))
                     .font(.ui(15.5, .bold)).foregroundStyle(Ink.ink)
                 Text(maintenanceText(
-                    "统一管理技能源自动更新与本机 Agent CLI：先识别真实安装位置，再决定检查和升级。",
-                    "Manage source auto-updates and local agent CLIs in one place: detect the real installation first, then check and upgrade."
-                ))
+                    "统一管理技能源自动更新与本机 Agent CLI。",
+                    "Manage source auto-updates and local agent CLIs in one place."
+                ) + " " + L("按真实安装位置升级：npm 多前缀、Homebrew、pipx、uv。基础工具只展示不升级。"))
                 .font(.ui(11.5)).foregroundStyle(Ink.secondary)
             }
             Spacer()
@@ -213,21 +215,19 @@ struct CliSheet: View {
     }
 
     private var emptyMessage: String {
-        if model.checkingClis {
-            return maintenanceText("正在扫描 npm / Homebrew / pipx / uv…", "Scanning npm, Homebrew, pipx, and uv…")
-        }
+        if model.checkingClis { return L("正在扫描全局 npm 包…") }
         return showAll
-            ? maintenanceText("没有发现可巡检的全局 CLI。", "No globally installed CLI was found.")
+            ? L("没有发现可巡检的 CLI（或未安装 Node.js / Homebrew / pipx）")
             : maintenanceText("没有发现 Agent CLI；切到“全部”可查看其它工具。", "No agent CLI was found; switch to All to inspect other tools.")
     }
 
     private var tableHead: some View {
         HStack(spacing: 10) {
-            Text(maintenanceText("工具与说明", "TOOL & DESCRIPTION"))
+            Text(L("包名") + " / " + maintenanceText("说明", "DESCRIPTION"))
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text(maintenanceText("类型", "ROLE")).frame(width: 86, alignment: .leading)
-            Text(maintenanceText("安装位置", "INSTALL")).frame(width: 92, alignment: .leading)
-            Text(maintenanceText("版本", "VERSION")).frame(width: 104, alignment: .trailing)
+            Text(L("位置")).frame(width: 92, alignment: .leading)
+            Text(L("已装") + " / " + L("最新")).frame(width: 104, alignment: .trailing)
             Color.clear.frame(width: 70)
         }
         .font(.ui(9.5, .bold)).tracking(0.5)
@@ -253,8 +253,7 @@ struct CliSheet: View {
                     .font(.ui(9.8)).foregroundStyle(Ink.tertiary)
                     .lineLimit(2)
                 if !cli.pathMatchesPrefix {
-                    Text(maintenanceText("PATH 命中另一份：\(abbrev(cli.pathHit ?? ""))",
-                                         "PATH resolves another copy: \(abbrev(cli.pathHit ?? ""))"))
+                    Text(L("PATH 命中另一份") + "：" + abbrev(cli.pathHit ?? ""))
                         .font(.ui(9.3)).foregroundStyle(Ink.amberText)
                         .lineLimit(1).truncationMode(.middle)
                 }
@@ -275,8 +274,7 @@ struct CliSheet: View {
                     .lineLimit(1).truncationMode(.middle)
             }
             .frame(width: 92, alignment: .leading)
-            .help(cli.pathHit.map { maintenanceText("命令行命中 \(abbrev($0))", "Command resolves to \(abbrev($0))") }
-                ?? cli.channel.label)
+            .help(cli.pathHit.map { L("命令行命中 \(abbrev($0))") } ?? cli.channel.label)
 
             VStack(alignment: .trailing, spacing: 1) {
                 Text("v\(cli.installed)")
@@ -292,12 +290,12 @@ struct CliSheet: View {
                 if model.upgradingClis.contains(cli.id) {
                     UpdatingDot()
                 } else if cli.excluded {
-                    Text(maintenanceText("不自动升", "manual"))
+                    Text(L("不自动升"))
                         .font(.ui(9.5)).foregroundStyle(Ink.tertiary)
-                        .help(maintenanceText("基础工具不在一键升级范围", "Foundation tools are excluded from one-click upgrades"))
+                        .help(L("基础工具（node / npm / TypeScript 等）不在一键升级范围"))
                 } else if cli.hasUpdate {
                     Button { model.upgradeCli(cli) } label: {
-                        Text(maintenanceText("升级", "Upgrade"))
+                        Text(L("升级"))
                             .font(.ui(10.5, .semibold)).foregroundStyle(Color(hex: 0x5A4A14))
                             .padding(.horizontal, 9).padding(.vertical, 3)
                             .background(RoundedRectangle(cornerRadius: 4).fill(Ink.amberBadgeBg))
@@ -306,7 +304,7 @@ struct CliSheet: View {
                     .buttonStyle(.plain)
                     .help(upgradeCommandHelp(cli))
                 } else {
-                    Text(cli.latest == nil ? "" : maintenanceText("已最新", "Current"))
+                    Text(cli.latest == nil ? "" : L("已最新"))
                         .font(.ui(10)).foregroundStyle(Ink.green)
                 }
             }
@@ -317,23 +315,18 @@ struct CliSheet: View {
         .onHover { hoverRow = $0 ? cli.id : (hoverRow == cli.id ? nil : hoverRow) }
         .overlay(alignment: .bottom) { Ink.tableHairline.frame(height: 1) }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(cli.maintenanceName), v\(cli.installed)")
+        .accessibilityLabel(L("\(cli.maintenanceName)，已装 \(cli.installed)"))
     }
 
     // ── 底部操作 ──────────────────────────────────────────
 
     private var foot: some View {
         HStack {
-            Text(maintenanceText(
-                "升级会写回当前命令真正所在的渠道与前缀，不另装第二份。",
-                "Upgrades are written back to the channel and prefix the command actually uses—no duplicate copy is installed."
-            ))
+            Text(L("升级打回这份 CLI 真正所在的前缀，避免升错副本。"))
             .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
             Spacer()
             Button { model.checkUpdates() } label: {
-                Text(model.checkingUpdates || model.checkingClis
-                     ? maintenanceText("检查中…", "Checking…")
-                     : maintenanceText("检查来源与 CLI", "Check sources & CLIs"))
+                Text(model.checkingUpdates || model.checkingClis ? L("检查中…") : L("重新扫描"))
                     .font(.ui(11.5, .semibold)).foregroundStyle(Ink.secondary2)
                     .padding(.horizontal, 11).padding(.vertical, 4)
                     .background(RoundedRectangle(cornerRadius: 5).fill(.white))
@@ -344,15 +337,13 @@ struct CliSheet: View {
 
             if !recognizedAgentUpdates.isEmpty {
                 Button { upgradeRecognizedAgents() } label: {
-                    Text(maintenanceText("升级已识别 Agent (\(recognizedAgentUpdates.count))",
-                                         "Upgrade agents (\(recognizedAgentUpdates.count))"))
+                    Text(L("全部升级 (\(recognizedAgentUpdates.count))"))
                         .font(.ui(11.5, .semibold)).foregroundStyle(.white)
                         .padding(.horizontal, 11).padding(.vertical, 4)
                         .background(RoundedRectangle(cornerRadius: 5).fill(Ink.ink))
                 }
                 .buttonStyle(.plain)
-                .help(maintenanceText("只批量升级精确识别、列入安全目录的 Agent CLI",
-                                      "Bulk-upgrade only exactly recognized agent CLIs in the safe catalog"))
+                .help(L("一键只升常用白名单；其它全局包装在行内点升级。"))
             }
         }
         .padding(EdgeInsets(top: 11, leading: 20, bottom: 13, trailing: 20))
@@ -368,12 +359,10 @@ struct CliSheet: View {
 
     private func cliLatestHelp(_ cli: GlobalCli) -> String {
         if !cli.tracksIndex {
-            return maintenanceText("从 GitHub / 本地安装，不跟 PyPI 同名包比版本",
-                                   "Installed from GitHub or a local path; not compared with a PyPI namesake")
+            return L("从 GitHub / 本地安装，不跟 PyPI 同名包比版本")
         }
         if cli.latest == nil {
-            return maintenanceText("版本查询失败或尚未完成——重新检查即可重试",
-                                   "Version lookup failed or is still pending—run Check again to retry")
+            return L("版本查询失败（网络）——点右下重新扫描")
         }
         return ""
     }
