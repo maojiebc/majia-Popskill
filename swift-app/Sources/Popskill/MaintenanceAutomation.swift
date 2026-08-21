@@ -65,6 +65,7 @@ struct MaintenanceRunStatus: Codable, Equatable, Sendable {
             if uncertain > 0 {
                 parts.append(maintenanceText("异常/未确认 \(uncertain)", "\(uncertain) unresolved"))
             }
+            if let error, !error.isEmpty { parts.append(error) }
             return parts.joined(separator: maintenanceText(" · ", " · "))
         }
     }
@@ -117,6 +118,23 @@ func maintenanceRunIsDue(
     guard policy.periodicCheckEnabled, status.outcome != .running else { return false }
     guard let last = status.finishedAt ?? status.startedAt else { return true }
     return now.timeIntervalSince(last) >= TimeInterval(policy.intervalHours * 3600)
+}
+
+/// 进程在维护中退出时，UserDefaults 会留下 `.running`。不收口的话下次启动会被
+/// “已有任务运行中”的守卫永久挡住。恢复成可解释的 partial，并由调度器立即补跑一次。
+func recoveredInterruptedMaintenanceStatus(
+    _ status: MaintenanceRunStatus,
+    now: Date = Date()
+) -> MaintenanceRunStatus {
+    guard status.outcome == .running else { return status }
+    var recovered = status
+    recovered.outcome = .partial
+    recovered.finishedAt = now
+    recovered.error = maintenanceText(
+        "上次维护被中断；现有版本已保留，本次启动会重新检查。",
+        "The previous maintenance run was interrupted. Existing versions were kept and will be checked again on this launch."
+    )
+    return recovered
 }
 
 func remoteSourceIDsToInherit(
@@ -232,15 +250,31 @@ extension AppModel {
         let id = ObjectIdentifier(self)
         guard MaintenanceAutomationRegistry.tasks[id] == nil else { return }
         _ = reconcileRemoteSourceDefaults()
+
+        let stored = MaintenancePolicyStore.loadStatus()
+        let recovered = recoveredInterruptedMaintenanceStatus(stored)
+        let shouldRetryInterruptedRun = recovered != stored
+        if shouldRetryInterruptedRun {
+            MaintenancePolicyStore.saveStatus(recovered)
+            plog.warning("检测到上次维护中断，已收口状态并准备补跑")
+        }
+
         let task = Task { @MainActor [weak self] in
             defer { MaintenanceAutomationRegistry.tasks.removeValue(forKey: id) }
+            var retryInterruptedRun = shouldRetryInterruptedRun
             while !Task.isCancelled {
                 guard let self else { return }
                 _ = self.reconcileRemoteSourceDefaults()
                 let policy = MaintenancePolicyStore.loadPolicy()
                 let status = MaintenancePolicyStore.loadStatus()
-                if maintenanceRunIsDue(policy: policy, status: status) {
-                    await self.performMaintenance(policy: policy, showFeedback: false)
+                if retryInterruptedRun, policy.periodicCheckEnabled {
+                    retryInterruptedRun = false
+                    await self.performMaintenance(policy: policy, showFeedback: false, force: true)
+                } else {
+                    retryInterruptedRun = false
+                    if maintenanceRunIsDue(policy: policy, status: status) {
+                        await self.performMaintenance(policy: policy, showFeedback: false)
+                    }
                 }
                 do { try await Task.sleep(for: .seconds(15)) }
                 catch { return }
