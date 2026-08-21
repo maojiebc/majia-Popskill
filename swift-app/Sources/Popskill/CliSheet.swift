@@ -1,12 +1,14 @@
 import SwiftUI
 
 // 维护中心（v2.21）：把来源自动更新、Agent CLI 识别、版本检查与升级收成一个闭环。
-// npm 全量扫描只在打开本页时发生；启动检查仍只发送内置白名单包名。
+// npm 全量扫描只在打开本页时发生；定时巡检仍只发送内置白名单包名。
 
 struct CliSheet: View {
     @Environment(AppModel.self) private var model
     @State private var hoverRow: String?
     @State private var showAll = false
+    @State private var policy = MaintenancePolicyStore.loadPolicy()
+    @State private var runStatus = MaintenancePolicyStore.loadStatus()
 
     var body: some View {
         SheetShell(width: 720, onDismiss: { model.sheet = nil }) {
@@ -20,11 +22,24 @@ struct CliSheet: View {
                     }
                     .padding(EdgeInsets(top: 14, leading: 20, bottom: 16, trailing: 20))
                 }
-                .frame(maxHeight: 560)
+                .frame(maxHeight: 580)
                 foot
             }
-            // 旧表先显示，后台重新扫。打开面板才全量看 npm；日常自动检查仍是低泄露白名单。
-            .onAppear { model.checkCliUpdates() }
+            // 旧表先显示，后台重新扫。打开面板才全量看 npm；日常定时检查仍是低泄露白名单。
+            .onAppear {
+                policy = MaintenancePolicyStore.loadPolicy()
+                runStatus = MaintenancePolicyStore.loadStatus()
+                _ = model.reconcileRemoteSourceDefaults()
+                model.checkCliUpdates()
+            }
+            .task {
+                while !Task.isCancelled {
+                    policy = MaintenancePolicyStore.loadPolicy()
+                    runStatus = MaintenancePolicyStore.loadStatus()
+                    do { try await Task.sleep(for: .seconds(1)) }
+                    catch { return }
+                }
+            }
         }
     }
 
@@ -63,6 +78,7 @@ struct CliSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(maintenanceText("自动更新", "AUTOMATIC UPDATES"))
                 .font(.ui(10.5, .bold)).kerning(0.6).foregroundStyle(Ink.tertiary)
+
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
@@ -76,20 +92,80 @@ struct CliSheet: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 12)
-                PsSwitch(on: sourceAutoAll) { setAllSourceAutoUpdate(!sourceAutoAll) }
-                    .help(maintenanceText(
-                        "一次打开或关闭所有 GitHub / npm / well-known 来源的自动更新",
-                        "Enable or disable auto-update for every GitHub, npm, and well-known source"
-                    ))
+                PsSwitch(on: sourceAutoAll && policy.inheritRemoteAutoUpdate) {
+                    setAllSourceAutoUpdate(!(sourceAutoAll && policy.inheritRemoteAutoUpdate))
+                }
+                .help(maintenanceText(
+                    "一次覆盖当前全部 GitHub / npm / well-known 来源，并作为未来新来源的默认值",
+                    "Cover all current GitHub, npm, and well-known sources and use the choice as the default for new sources"
+                ))
+            }
+            .padding(12)
+            .background(RoundedRectangle(cornerRadius: 8).fill(.white))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Ink.hairline, lineWidth: 1))
+
+            VStack(spacing: 8) {
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(maintenanceText("定时维护巡检", "Scheduled maintenance"))
+                            .font(.ui(12.5, .semibold)).foregroundStyle(Ink.ink)
+                        Text(maintenanceText(
+                            "应用运行时按节奏检查已开启的技能源与内置 Agent 白名单。",
+                            "While Popskill is running, periodically check enabled skill sources and the built-in agent allowlist."
+                        ))
+                        .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+                    }
+                    Spacer(minLength: 12)
+                    PsSwitch(on: policy.periodicCheckEnabled) { togglePeriodicCheck() }
+                }
+
+                if policy.periodicCheckEnabled {
+                    HStack(spacing: 8) {
+                        Text(maintenanceText("间隔", "Interval"))
+                            .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+                        ForEach(MaintenancePolicy.allowedIntervals, id: \.self) { hours in
+                            intervalButton(hours)
+                        }
+                        Spacer()
+                        Text(maintenanceText("安全 Agent 自动升级", "Auto-upgrade safe agents"))
+                            .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+                        PsSwitch(on: policy.autoUpgradeRecognizedAgents) { toggleAgentAutoUpgrade() }
+                    }
+                    .padding(.top, 2)
+                }
             }
             .padding(12)
             .background(RoundedRectangle(cornerRadius: 8).fill(.white))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Ink.hairline, lineWidth: 1))
 
             HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(runStatus.summary)
+                        .font(.ui(10.5, .medium))
+                        .foregroundStyle(runStatus.outcome == .partial || runStatus.outcome == .failed ? Ink.amberText : Ink.secondary2)
+                    if let date = runStatus.finishedAt ?? runStatus.startedAt {
+                        Text(maintenanceText("最近运行：", "Last run: ") + relativeMaintenanceDate(date))
+                            .font(.ui(9.5)).foregroundStyle(Ink.tertiary)
+                    }
+                }
+                Spacer()
+                Button { model.runMaintenanceNow() } label: {
+                    Text(runStatus.outcome == .running
+                         ? maintenanceText("运行中…", "Running…")
+                         : maintenanceText("立即运行", "Run now"))
+                        .font(.ui(10.5, .semibold)).foregroundStyle(Color(hex: 0x444444))
+                        .padding(.horizontal, 9).frame(height: 25)
+                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Ink.control2, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .disabled(runStatus.outcome == .running || model.checkingUpdates || model.checkingClis)
+            }
+            .padding(.horizontal, 4)
+
+            HStack(spacing: 8) {
                 Text(maintenanceText(
-                    "安全边界：更新前仍检查本地改动；改过的技能、Marketplace 插件和本地路径不会被批量覆盖。",
-                    "Safety boundary: local edits are still checked; modified skills, Marketplace plugins, and local paths are never bulk-overwritten."
+                    "安全边界：更新前仍检查本地改动；改过的技能、Marketplace 插件、本地路径和 PATH 冲突 CLI 不会被批量覆盖。",
+                    "Safety boundary: local edits are checked; modified skills, Marketplace plugins, local paths, and PATH-conflicted CLIs are never bulk-overwritten."
                 ))
                 .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
                 Spacer()
@@ -118,24 +194,62 @@ struct CliSheet: View {
 
     private var sourcePolicyDescription: String {
         guard !sourceCandidates.isEmpty else {
-            return maintenanceText("还没有可自动更新的远端来源。", "No remote source is eligible for auto-update yet.")
+            return policy.inheritRemoteAutoUpdate
+                ? maintenanceText("当前没有远端来源；以后新添加的来源会默认开启。", "No remote source yet; newly added remote sources will default to on.")
+                : maintenanceText("还没有可自动更新的远端来源。", "No remote source is eligible for auto-update yet.")
         }
-        if sourceAutoAll {
-            return maintenanceText("启动后自动检查，有新版就更新；失败会保留旧版。", "Check on launch and update when a new version exists; failures keep the old version intact.")
+        if sourceAutoAll && policy.inheritRemoteAutoUpdate {
+            return maintenanceText("当前来源全部开启，未来新增远端来源也会自动继承。", "All current sources are enabled and future remote sources will inherit the policy.")
         }
         if enabledSourceCount > 0 {
-            return maintenanceText("已有 \(enabledSourceCount) 个开启；点右侧可一次覆盖全部。", "\(enabledSourceCount) sources are enabled; use the switch to cover all of them.")
+            return maintenanceText("已有 \(enabledSourceCount) 个开启；右侧开关会同时覆盖当前与未来来源。", "\(enabledSourceCount) sources are enabled; the switch covers both current and future sources.")
         }
-        return maintenanceText("不再逐个进来源开关，一次覆盖当前全部来源。", "Turn on every current source at once instead of enabling them one by one.")
+        return maintenanceText("一次开启当前全部来源，并记住为未来新来源的默认值。", "Enable every current source and remember the choice for future sources.")
     }
 
     private func setAllSourceAutoUpdate(_ on: Bool) {
-        guard !sourceCandidates.isEmpty else { return }
-        let targets = sourceCandidates.filter { $0.autoUpdate != on }
-        for entry in targets { model.toggleAutoUpdate(entry.id) }
-        model.say(on
-            ? maintenanceText("已为 \(targets.count) 个来源开启自动更新", "Auto-update enabled for \(targets.count) sources")
-            : maintenanceText("已关闭 \(targets.count) 个来源的自动更新", "Auto-update disabled for \(targets.count) sources"))
+        if model.setAllRemoteSourceAutoUpdate(on) {
+            policy = MaintenancePolicyStore.loadPolicy()
+        }
+    }
+
+    private func togglePeriodicCheck() {
+        var next = policy
+        next.periodicCheckEnabled.toggle()
+        if !next.periodicCheckEnabled { next.autoUpgradeRecognizedAgents = false }
+        savePolicy(next)
+    }
+
+    private func toggleAgentAutoUpgrade() {
+        var next = policy
+        next.autoUpgradeRecognizedAgents.toggle()
+        if next.autoUpgradeRecognizedAgents { next.periodicCheckEnabled = true }
+        savePolicy(next)
+    }
+
+    private func savePolicy(_ next: MaintenancePolicy) {
+        policy = next.normalized
+        MaintenancePolicyStore.savePolicy(policy)
+        model.startMaintenanceAutomation()
+    }
+
+    private func intervalButton(_ hours: Int) -> some View {
+        Button { var next = policy; next.intervalHours = hours; savePolicy(next) } label: {
+            Text(hours == 72 ? maintenanceText("3 天", "3d") : "\(hours)h")
+                .font(.mono(9.5, .semibold))
+                .foregroundStyle(policy.intervalHours == hours ? .white : Ink.secondary2)
+                .padding(.horizontal, 7).padding(.vertical, 3)
+                .background(Capsule().fill(policy.intervalHours == hours ? Ink.ink : Ink.chrome))
+                .overlay(Capsule().stroke(Ink.hairline, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func relativeMaintenanceDate(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = l10nLocale
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 
     // ── CLI 清单 ──────────────────────────────────────────
@@ -208,7 +322,9 @@ struct CliSheet: View {
         model.globalClis.filter { $0.agentDefinition != nil }.count
     }
     private var recognizedAgentUpdates: [GlobalCli] {
-        model.globalClis.filter(\.safeRecognizedAgentUpdate)
+        model.globalClis.filter {
+            $0.safeRecognizedAgentUpdate && $0.pathMatchesPrefix && !$0.excluded && $0.tracksIndex
+        }
     }
     private var pathConflictCount: Int {
         model.globalClis.filter { !$0.pathMatchesPrefix }.count
@@ -323,7 +439,7 @@ struct CliSheet: View {
     private var foot: some View {
         HStack {
             Text(L("升级打回这份 CLI 真正所在的前缀，避免升错副本。"))
-            .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+                .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
             Spacer()
             Button { model.checkUpdates() } label: {
                 Text(model.checkingUpdates || model.checkingClis ? L("检查中…") : L("重新扫描"))
