@@ -13,7 +13,7 @@ struct ToolDef: Equatable {
     /// 相对工具根（`~` 或 `POPSKILL_TOOLS_ROOT`）的目录，如 `.claude`、`.pi/agent`
     var rootRelative: String
     var alwaysShow: Bool
-    /// `/Applications` 下的 bundle 名，如 `Cursor.app`；未知则 nil（不猜）
+    /// 系统或用户 Applications 目录里的 bundle 名，如 `Cursor.app`；未知则 nil（不猜）
     var appBundle: String? = nil
     /// PATH / 常见 bin 里查找的可执行文件名
     var cliNames: [String] = []
@@ -53,6 +53,14 @@ extension ToolDef {
         ToolDef(id: "pi", name: "Pi", rootRelative: ".pi/agent", alwaysShow: false, cliNames: ["pi"]),
     ]
 
+    /// 系统级与当前用户级 Applications 都是 macOS 的合法安装位置。
+    static func appSearchDirs(home: String) -> [String] {
+        [
+            "/Applications",
+            URL(fileURLWithPath: home).appendingPathComponent("Applications").path,
+        ]
+    }
+
     /// 常见 bin 优先，再拼进程 PATH。不跑 `zsh -lc`（GUI PATH 瘦、login shell 会冻窗）。
     static func cliSearchDirs(home: String, pathEnv: String) -> [String] {
         var dirs: [String] = []
@@ -80,8 +88,11 @@ extension ToolDef {
         home: String = FileManager.default.homeDirectoryForCurrentUser.path,
         pathEnv: String = ProcessInfo.processInfo.environment["PATH"] ?? ""
     ) -> ToolPresence? {
-        if let app = appBundle, fileExists("/Applications/\(app)") {
-            return .app(app)
+        if let app = appBundle {
+            for dir in Self.appSearchDirs(home: home) {
+                let candidate = URL(fileURLWithPath: dir).appendingPathComponent(app).path
+                if fileExists(candidate) { return .app(app) }
+            }
         }
         for dir in Self.cliSearchDirs(home: home, pathEnv: pathEnv) {
             for name in cliNames {

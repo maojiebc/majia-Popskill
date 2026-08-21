@@ -17,12 +17,18 @@ final class StoreWatcher {
     private var stream: FSEventStreamRef?
     private(set) var watchedPaths: [String] = []
     private let latency: TimeInterval
+    private let startStream: (FSEventStreamRef) -> Bool
     private let onChange: () -> Void
     private let queue = DispatchQueue(label: "popskill.fsevents")
 
     /// latency = FSEvents 侧的合并窗口：终端一串 mv/ln 只触发一次（测试注入小值）
-    init(latency: TimeInterval = 1.0, onChange: @escaping () -> Void) {
+    init(
+        latency: TimeInterval = 1.0,
+        startStream: @escaping (FSEventStreamRef) -> Bool = { FSEventStreamStart($0) },
+        onChange: @escaping () -> Void
+    ) {
         self.latency = latency
+        self.startStream = startStream
         self.onChange = onChange
     }
 
@@ -46,10 +52,14 @@ final class StoreWatcher {
             FSEventStreamEventId(kFSEventStreamEventIdSinceNow), latency,
             FSEventStreamCreateFlags(kFSEventStreamCreateFlagUseCFTypes | kFSEventStreamCreateFlagIgnoreSelf)
         ) else { return }
+        FSEventStreamSetDispatchQueue(s, queue)
+        guard startStream(s) else {
+            FSEventStreamInvalidate(s)
+            FSEventStreamRelease(s)
+            return
+        }
         stream = s
         watchedPaths = existing
-        FSEventStreamSetDispatchQueue(s, queue)
-        FSEventStreamStart(s)
     }
 
     func stop() {

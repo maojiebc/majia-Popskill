@@ -20,9 +20,12 @@ func npmPkgName(_ sourceUrl: String?) -> String? {
         return pkg.isEmpty ? nil : pkg
     }
     if let r = s.range(of: "npmjs.com/package/") {
-        // 截到查询串/锚点为止；scoped 包路径里的 @scope/name 原样保留
-        let tail = s[r.upperBound...].split(separator: "?")[0].split(separator: "#")[0]
-        let pkg = tail.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
+        // 截到查询串/锚点为止；scoped 包路径里的 @scope/name 原样保留。
+        // 不用 split(...)[0]：用户粘贴裸 /package/ 或 /package/?tab 时，
+        // 空切片会触发越界并直接崩溃。
+        let tail = s[r.upperBound...]
+        let end = tail.firstIndex(where: { $0 == "?" || $0 == "#" }) ?? tail.endIndex
+        let pkg = String(tail[..<end]).trimmingCharacters(in: CharacterSet(charactersIn: "/ "))
         return pkg.isEmpty ? nil : pkg
     }
     return nil
