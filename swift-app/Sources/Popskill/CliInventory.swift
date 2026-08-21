@@ -62,9 +62,15 @@ struct GlobalCli: Identifiable, Equatable {
 }
 
 /// 自动巡检 / 横幅「全部更新」会带走的常用 CLI。包名才离开本机。
+///
+/// v2.21 扩到主流终端 Agent：打开维护中心时仍会扫描全部 npm 全局包；这里的
+/// 精确名单决定「启动时低泄露巡检」与「允许批量升级」的边界。
 let maintainedNpmPackages: [String: String] = [
     "@anthropic-ai/claude-code": "claude",
     "@openai/codex": "codex",
+    "@google/gemini-cli": "gemini",
+    "@qwen-code/qwen-code": "qwen",
+    "opencode": "opencode",
     "@larksuite/cli": "lark-cli",
     "@getnote/cli": "getnote",
     "@guandata/guanskill": "guanskill",
@@ -73,9 +79,9 @@ let maintainedNpmPackages: [String: String] = [
     "mcporter": "mcporter",
 ]
 
-let maintainedBrewFormulae: [String] = ["gemini-cli", "aliyun-cli"]
-let maintainedPipxPackages: [String] = ["agent-reach", "yt-dlp"]
-let maintainedUvTools: [String] = ["specify-cli"]
+let maintainedBrewFormulae: [String] = ["gemini-cli", "opencode", "aliyun-cli"]
+let maintainedPipxPackages: [String] = ["agent-reach", "aider-chat", "open-interpreter", "yt-dlp"]
+let maintainedUvTools: [String] = ["aider-chat", "open-interpreter", "specify-cli"]
 
 /// 基础工具：能看见，但不能一键升级（误升 node 会拆掉整机工具链）
 let excludedFoundationTools: Set<String> = [
