@@ -22,7 +22,7 @@
 
 ## Install
 
-[**↓ Download Popskill (3.0 MB, signed + notarized)**](https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-2.20.2.dmg)
+[**↓ Download Popskill (3.1 MB, signed + notarized)**](https://github.com/maojiebc/majia-Popskill/releases/latest/download/Popskill-2.21.0.dmg)
 
 Requires macOS 14 (Sonoma) or newer. After first install, updates arrive in-app via Sparkle.
 
@@ -137,7 +137,7 @@ No. Pure SwiftUI, Mac only.
 
 ## Releases
 
-Current: [v2.20.2](https://github.com/maojiebc/majia-Popskill/releases/tag/v2.20.2) · all versions on [Releases](https://github.com/maojiebc/majia-Popskill/releases) · changelogs in `docs/release/`
+Current: [v2.21.0](https://github.com/maojiebc/majia-Popskill/releases/tag/v2.21.0) · all versions on [Releases](https://github.com/maojiebc/majia-Popskill/releases) · changelogs in `docs/release/`
 
 v2 is a first-principles rewrite (one screen, filesystem as database). v1.x (sidecar architecture) has been retired; design history is archived in `docs/design/`.
 
