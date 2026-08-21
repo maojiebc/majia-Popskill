@@ -2,21 +2,25 @@ import AppKit
 import SwiftUI
 
 // 详情 peek（PATCH-01）— 点击能力名称弹出，看完即走；深读走「在编辑器中打开」。
-// 380 宽，锚定点击位置水平居中，下半屏向上翻转。与修复弹层互斥。
+// v2.21：不再只丢一段原文，而是本地提炼「是什么 / 何时用 / 能做什么」。
+// 420 宽，锚定点击位置水平居中，下半屏向上翻转。与修复弹层互斥。
 
 struct DetailPeekView: View {
     @Environment(AppModel.self) private var model
     let target: PeekTarget
     let winSize: CGSize
 
-    private let width: CGFloat = 380
+    private let width: CGFloat = 420
 
     private var fromBundle: Bool { target.entry.id != target.cap.id }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             head
-            peekBody
+            ScrollView {
+                peekBody
+            }
+            .frame(maxHeight: max(260, min(500, winSize.height - 180)))
             foot
         }
         .frame(width: width)
@@ -77,45 +81,70 @@ struct DetailPeekView: View {
         return parts.joined(separator: " · ")
     }
 
-    // 2. 主体：完整描述 + 文档摘要引文块 + 两侧链接状态 + 来源 URL
+    // 2. 主体：人话说明 + 场景/能力 + 链接状态 + 更新与来源
     private var peekBody: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // 真实 description 可能很长（设计假设单行）——限 6 行防溢出，全文走编辑器
-            Text(target.cap.desc.isEmpty ? "—" : target.cap.desc)
+        let detail = SkillInsight.load(for: target.cap)
+        return VStack(alignment: .leading, spacing: 0) {
+            PeekSectionTitle(maintenanceText("一句话说明", "IN PLAIN LANGUAGE"))
+            Text(detail.summary)
                 .font(.ui(12))
                 .foregroundStyle(Color(hex: 0x444444))
                 .lineSpacing(3)
-                .lineLimit(6)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if !detail.useCases.isEmpty {
+                InsightList(
+                    title: maintenanceText("适合什么时候用", "WHEN TO USE"),
+                    items: detail.useCases
+                )
+                .padding(.top, 12)
+            }
+            if !detail.capabilities.isEmpty {
+                InsightList(
+                    title: maintenanceText("它能做什么", "WHAT IT DOES"),
+                    items: detail.capabilities
+                )
+                .padding(.top, 12)
+            }
+            if !detail.keywords.isEmpty {
+                Text(detail.keywords.joined(separator: " · "))
+                    .font(.mono(9.5))
+                    .foregroundStyle(Ink.tertiary)
+                    .lineLimit(2)
+                    .padding(.top, 9)
+            }
+
             if let readme = target.cap.readme {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(L("SKILL.MD · 文档摘要"))
-                        .font(.ui(9.5, .bold)).kerning(0.7)
-                        .foregroundStyle(Color(hex: 0xB3AE9E))
+                    PeekSectionTitle(L("SKILL.MD · 文档摘要"))
                     Text(readme)
                         .font(.ui(11.5))
                         .foregroundStyle(Ink.monoDim)
                         .lineSpacing(4)
+                        .lineLimit(7)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 10).padding(.vertical, 8)
                         .background(RoundedRectangle(cornerRadius: 6).fill(Ink.bundleBody))
                         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Ink.hairline2, lineWidth: 1))
                 }
-                .padding(.top, 9)
+                .padding(.top, 12)
             }
-            HStack(spacing: 14) {
+
+            PeekSectionTitle(maintenanceText("挂载状态", "MOUNT STATUS"))
+                .padding(.top, 12)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 118), spacing: 8)], alignment: .leading, spacing: 7) {
                 ForEach(model.tools) { t in statRow(t) }
             }
-            .padding(.top, 10)
+
             // v2.16：peek 补更新态——「看完即走」的卡此前回答不了「有没有新版 / 是不是被我跳过了」
             if model.updatingIds.contains(target.entry.id) {
-                UpdatingDot().padding(.top, 8)
+                UpdatingDot().padding(.top, 10)
             } else if target.entry.hasUpdate, let latest = target.entry.latest {
                 UpdateBadge(latest: latest, help: target.entry.updateHelp) { model.runUpdate(target.entry.id) }
-                    .padding(.top, 8)
+                    .padding(.top, 10)
             } else if target.entry.skippedUpdate {
-                SkippedTag { model.unskipUpdate(target.entry) }.padding(.top, 8)
+                SkippedTag { model.unskipUpdate(target.entry) }.padding(.top, 10)
             }
             if target.entry.hasUpstreamNew {
                 VStack(alignment: .leading, spacing: 6) {
@@ -136,10 +165,10 @@ struct DetailPeekView: View {
                 PeekLink(text: "↗ \(url)", font: .mono(10.5), base: Ink.secondary) {
                     model.openSourceLink(url)
                 }
-                .padding(.top, 8)
+                .padding(.top, 10)
             }
         }
-        .padding(EdgeInsets(top: 11, leading: 14, bottom: 11, trailing: 14))
+        .padding(EdgeInsets(top: 11, leading: 14, bottom: 12, trailing: 14))
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -150,11 +179,12 @@ struct DetailPeekView: View {
         return HStack(spacing: 6) {
             Text(st.glyph).font(.mono(12))
             Text(String(tool.name.split(separator: " ").first ?? ""))
-            Text(stateText).font(.ui(11.5, .medium)).opacity(0.85)
+            Text(stateText).font(.ui(10.5, .medium)).opacity(0.85)
         }
-        .font(.ui(11.5, .semibold))
+        .font(.ui(11, .semibold))
         .foregroundStyle(st == .off ? Ink.tertiary : st.pillText)
         .lineLimit(1)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // 3. 底部：编辑器按钮 + 文档直开
@@ -186,11 +216,50 @@ struct DetailPeekView: View {
         .overlay(alignment: .top) { Ink.hairline2.frame(height: 1) }
     }
 
-    /// 完整文档文件：CLI 是 README.md，其余 SKILL.md；不存在就不给入口
+    /// 完整文档文件：CLI 优先 README.md，其余优先 SKILL.md；不存在就不给入口
     private var docURL: URL? {
-        let name = target.cap.linkKind == .cli ? "README.md" : "SKILL.md"
-        let u = target.cap.dirURL.appendingPathComponent(name)
-        return FileManager.default.fileExists(atPath: u.path) ? u : nil
+        let names = target.cap.linkKind == .cli
+            ? ["README.md", "SKILL.md"]
+            : ["SKILL.md", "README.md"]
+        return names
+            .map { target.cap.dirURL.appendingPathComponent($0) }
+            .first { FileManager.default.fileExists(atPath: $0.path) }
+    }
+}
+
+private struct PeekSectionTitle: View {
+    let text: String
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        Text(text)
+            .font(.ui(9.5, .bold)).kerning(0.7)
+            .foregroundStyle(Color(hex: 0xB3AE9E))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, 4)
+    }
+}
+
+private struct InsightList: View {
+    let title: String
+    let items: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            PeekSectionTitle(title)
+            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                HStack(alignment: .firstTextBaseline, spacing: 7) {
+                    Text("·")
+                        .font(.ui(12, .bold))
+                        .foregroundStyle(Ink.blue)
+                    Text(item)
+                        .font(.ui(11.5))
+                        .foregroundStyle(Ink.secondary2)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
     }
 }
 
