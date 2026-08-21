@@ -2,17 +2,17 @@ import Combine
 import SwiftUI
 import Sparkle
 
-/// 退出保护：后台换版（applyUpdate/repull）进行中时延迟退出，等收尾再走——
+/// 退出保护：后台换版（applyUpdate/repull/CLI upgrade）进行中时延迟退出，等收尾再走——
 /// 原子换版保证中断也不丢数据，但没必要把一次更新切成「备份完成、新版没落盘」。
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var model: AppModel?
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard let model, !model.updatingIds.isEmpty else { return .terminateNow }
+        guard let model, model.maintenanceMutationBusy else { return .terminateNow }
         Task { @MainActor in
             let deadline = ContinuousClock.now + .seconds(30)
-            while let m = self.model, !m.updatingIds.isEmpty, ContinuousClock.now < deadline {
+            while let m = self.model, m.maintenanceMutationBusy, ContinuousClock.now < deadline {
                 try? await Task.sleep(for: .milliseconds(200))
             }
             sender.reply(toApplicationShouldTerminate: true)
@@ -59,8 +59,9 @@ struct PopskillApp: App {
                 .environment(model)
                 .onAppear {
                     appDelegate.model = model
-                    model.startWatching()        // FSEvents 实时刷新（v2.15）
-                    model.launchEnvProbeOnce()   // git/npm 环境探测（v2.17）
+                    model.startWatching()              // FSEvents 实时刷新（v2.15）
+                    model.launchEnvProbeOnce()         // git/npm 环境探测（v2.17）
+                    model.startMaintenanceAutomation() // 新来源继承 + 应用运行时定时维护（v2.21）
                     if updaterController.updater.canCheckForUpdates || Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") != nil {
                         model.checkAppUpdate = { [weak updaterController = updaterController] in
                             updaterController?.checkForUpdates(nil)
@@ -190,11 +191,13 @@ struct RootView: View {
         .onAppear { installKeyMonitor() }
         .onDisappear {
             if let m = keyMonitor { NSEvent.removeMonitor(m) }
+            model.stopMaintenanceAutomation()
         }
         // 回到前台自动重扫——目标用户天天在终端直接动 ~/.agents，
         // 「文件系统即数据库」的界面不能和磁盘脱节到要重启 app
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             model.refresh()
+            _ = model.reconcileRemoteSourceDefaults()
         }
     }
 
