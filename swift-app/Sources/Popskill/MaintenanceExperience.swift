@@ -169,9 +169,14 @@ extension GlobalCli {
         agentDefinition?.role.label
             ?? (looksLikeAgent ? maintenanceText("待确认 Agent", "Unverified agent") : maintenanceText("其它工具", "Other tool"))
     }
-    /// 批量升级只接收目录精确命中且明确允许的 Agent；猜中的未知包留给用户逐行确认。
+    /// 批量升级只接收目录精确命中、真实 PATH 对齐且明确允许的 Agent；
+    /// 猜中的未知包或命中另一份副本的 CLI 留给用户逐行确认。
     var safeRecognizedAgentUpdate: Bool {
-        hasUpdate && agentDefinition?.safeAutomaticUpgrade == true
+        hasUpdate
+            && !excluded
+            && tracksIndex
+            && pathMatchesPrefix
+            && agentDefinition?.safeAutomaticUpgrade == true
     }
 }
 
