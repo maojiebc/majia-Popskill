@@ -189,7 +189,9 @@ struct CliSheet: View {
     private var enabledSourceCount: Int { sourceCandidates.filter(\.autoUpdate).count }
     private var driftedSourceCount: Int { sourceCandidates.filter(\.localDrifted).count }
     private var sourceAutoAll: Bool {
-        !sourceCandidates.isEmpty && enabledSourceCount == sourceCandidates.count
+        sourceCandidates.isEmpty
+            ? policy.inheritRemoteAutoUpdate
+            : enabledSourceCount == sourceCandidates.count
     }
 
     private var sourcePolicyDescription: String {
