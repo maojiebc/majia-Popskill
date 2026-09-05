@@ -17,16 +17,24 @@ struct OperationItem: Codable, Equatable, Identifiable, Sendable {
 struct OperationReport: Codable, Equatable, Sendable {
     var items: [OperationItem] = []
     var startedAt: Date?
+    // Optional for decoding receipts saved before explicit multi-phase batches.
+    var batchOpen: Bool?
     var isActive: Bool { items.contains { $0.phase.isActive } }
     var completedCount: Int { items.filter { !$0.phase.isActive }.count }
     var runningName: String? { items.first { $0.phase == .running }?.name }
     var queuedCount: Int { items.filter { $0.phase == .queued }.count }
 
     mutating func enqueue(id: String, name: String, kind: MaintenanceObject) {
-        if !isActive { items = []; startedAt = Date() }
+        if !isActive && batchOpen != true { items = []; startedAt = Date() }
         guard !items.contains(where: { $0.id == id }) else { return }
         items.append(OperationItem(id: id, name: name, kind: kind))
     }
+    mutating func beginBatch() {
+        items = []
+        startedAt = Date()
+        batchOpen = true
+    }
+    mutating func endBatch() { batchOpen = false }
     mutating func setPhase(_ id: String, _ phase: OperationPhase, detail: String? = nil) {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         items[i].phase = phase
@@ -34,6 +42,7 @@ struct OperationReport: Codable, Equatable, Sendable {
         items[i].finishedAt = phase.isActive ? nil : Date()
     }
     mutating func recoverInterrupted() {
+        batchOpen = false
         for i in items.indices where items[i].phase.isActive {
             items[i].phase = .unverified
             items[i].detail = nil

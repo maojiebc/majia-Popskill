@@ -47,4 +47,41 @@ final class OperationReportTests: XCTestCase {
         XCTAssertEqual(verifiedUpgradePhase(observed: "1.0.0", target: "2.0.0"), .unverified)
         XCTAssertEqual(verifiedUpgradePhase(observed: "2.0.0", target: "2.0.0"), .succeeded)
     }
+    func testUnifiedBatchKeepsCompletedSourcesWhenCliPhaseBegins() throws {
+        // A decoded batch models the persisted boundary while source work is done.
+        let json = #"{"items":[],"batchOpen":true}"#.data(using: .utf8)!
+        var r = try JSONDecoder().decode(OperationReport.self, from: json)
+        r.enqueue(id: "source-ok", name: "Source OK", kind: .source)
+        r.enqueue(id: "source-failed", name: "Source Failed", kind: .source)
+        r.setPhase("source-ok", .succeeded)
+        r.setPhase("source-failed", .failed, detail: "network unavailable")
+        r.enqueue(id: "agent", name: "Agent", kind: .cli)
+        XCTAssertEqual(r.items.map(\.id), ["source-ok", "source-failed", "agent"])
+        XCTAssertEqual(r.failedIDs(kind: .source), ["source-failed"])
+        XCTAssertEqual(r.completedCount, 2)
+    }
+    func testExplicitBatchEndAllowsNextIndependentOperationToReplaceReport() {
+        var r = OperationReport()
+        r.beginBatch()
+        r.enqueue(id: "source", name: "Source", kind: .source)
+        r.setPhase("source", .succeeded)
+        r.enqueue(id: "cli", name: "CLI", kind: .cli)
+        XCTAssertEqual(r.items.count, 2)
+        r.setPhase("cli", .failed)
+        r.endBatch()
+        r.enqueue(id: "next", name: "Next", kind: .source)
+        XCTAssertEqual(r.items.map(\.id), ["next"])
+    }
+    func testInterruptedBatchClosesBoundaryAndOldReceiptsStillDecode() throws {
+        var r = OperationReport()
+        r.beginBatch()
+        r.enqueue(id: "source", name: "Source", kind: .source)
+        r.recoverInterrupted()
+        XCTAssertEqual(r.items.first?.phase, .unverified)
+        r.enqueue(id: "next", name: "Next", kind: .cli)
+        XCTAssertEqual(r.items.map(\.id), ["next"])
+        let legacy = try JSONDecoder().decode(OperationReport.self,
+            from: Data(#"{"items":[]}"#.utf8))
+        XCTAssertNil(legacy.batchOpen)
+    }
 }

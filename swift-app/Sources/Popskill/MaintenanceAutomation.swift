@@ -304,6 +304,11 @@ extension AppModel {
             say(maintenanceText("正在检查技能源与 Agent CLI…", "Checking skill sources and agent CLIs…"))
         }
 
+        // One scheduled run owns one report across source and CLI phases. An idle
+        // gap between those phases is not a new batch; all exit paths close it.
+        maintenance.report.beginBatch()
+        defer { maintenance.report.endBatch() }
+
         // 复用现有完整更新链：源内容哈希、漂移保护、回收站与低泄露 CLI 白名单都保持不变。
         checkUpdates(auto: true)
         let checkDeadline = Date().addingTimeInterval(240)
