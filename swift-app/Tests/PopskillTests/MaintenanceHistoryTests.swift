@@ -1,4 +1,7 @@
 import XCTest
+#if canImport(Combine)
+import Combine
+#endif
 @testable import Popskill
 
 final class MaintenanceHistoryTests: XCTestCase {
@@ -46,4 +49,32 @@ final class MaintenanceHistoryTests: XCTestCase {
             ).isEmpty)
         }
     }
+    #if canImport(Combine)
+    func testSavedPolicyAndStatusReachMainRunLoopObservers() throws {
+        try withDefaults { defaults in
+            let refreshed = expectation(description: "Saved maintenance state reaches the UI notification path")
+            let policy = MaintenancePolicy(inheritRemoteAutoUpdate: true)
+            let status = MaintenanceRunStatus(outcome: .success)
+            // Exercise real UserDefaults notifications, not a manually posted event.
+            let subscription = NotificationCenter.default.publisher(
+                for: UserDefaults.didChangeNotification, object: defaults
+            )
+            .receive(on: RunLoop.main)
+            .filter { _ in
+                MaintenancePolicyStore.loadPolicy(defaults: defaults) == policy
+                    && MaintenancePolicyStore.loadStatus(defaults: defaults) == status
+            }
+            .prefix(1)
+            .sink { _ in
+                XCTAssertTrue(Thread.isMainThread)
+                refreshed.fulfill()
+            }
+            defer { subscription.cancel() }
+
+            MaintenancePolicyStore.savePolicy(policy, defaults: defaults)
+            MaintenancePolicyStore.saveStatus(status, defaults: defaults)
+            wait(for: [refreshed], timeout: 3)
+        }
+    }
+    #endif
 }
