@@ -1,0 +1,19 @@
+name: UI workspace snapshot
+on:
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/ui-workspace.yml']
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Archive tracked sources for the isolated editing environment
+        run: git archive --format=tar HEAD > /tmp/popskill-source.tar
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: popskill-source
+          path: /tmp/popskill-source.tar
+          retention-days: 1
