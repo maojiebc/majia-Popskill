@@ -8,6 +8,27 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.22.0</title>
+      <pubDate>Sat, 05 Sep 2026 06:41:47 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.22.0 — 原生设置与可回看的维护中心</h2>
+        <p>设置现在使用独立的 macOS 原生窗口，分为工具、自动维护、数据与恢复、关于四组。按 ⌘, 打开设置；维护中心移入主窗口，按 ⌘J 进入，技能来源和 Agent CLI 各有自己的搜索、筛选与展开状态。</p>
+        <p>检查和更新明确分开。打开维护中心只读取本地清单；全量 npm 联网检查需要授权，本次会话授权不会扩大后台检查范围。“更新当前结果”只处理筛选后符合条件的对象。</p>
+        <p>更新队列分别显示排队、执行、成功、失败和版本待确认，最近批次结果可以回看，失败项可在仍符合条件时重试。CLI 执行前复核安装位置与来源，执行后重新读取版本；仅命令退出成功不会标成已确认升级。定时维护跨技能与 CLI 两个阶段时保留完整回执。</p>
+        <p>新来源自动更新默认值与“应用到现有来源”分开，保留已有来源的选择。回收站展示全部可搜索备份，同名冲突时拒绝覆盖恢复。添加安装进行中不能关闭窗口或退回，避免提前清理安装文件。</p>
+        <p>沿用现有本地改动保护、原子换版、软链接防呆与跨进程写锁。技能数据和配置格式保持兼容，无需迁移。支持 macOS 14 及以上的 Apple Silicon Mac。</p>
+        <p>发布核验包括本地全量测试、中英文原生页面渲染、隔离环境安装包冷启动、GitHub CI，以及 Developer ID 签名和 Apple 公证。真实第三方 CLI 升级与长时间后台运行不包含在本次隔离验收中。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.22.0/Popskill-2.22.0.dmg"
+        sparkle:version="290"
+        sparkle:shortVersionString="2.22.0"
+        sparkle:edSignature="uBnMpDRHCXlvzneJZHt9x/ax6VDI077Qn2M7Hy54a+at5SC3wwihhTdCVXSxhVP0MZaXqWFFiYYwhsQ3yQNiDw=="
+        length="3404704"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.21.0</title>
       <pubDate>Fri, 21 Aug 2026 05:42:17 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
