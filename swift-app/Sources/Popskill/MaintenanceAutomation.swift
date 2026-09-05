@@ -93,12 +93,7 @@ enum MaintenancePolicyStore {
     }
 
     static func saveKnownSourceIDs(_ ids: Set<String>, defaults: UserDefaults = .standard) {
-        // This is history, not the latest inventory. A missing source may return with
-        // an explicit opt-out; forgetting it would silently enable auto-update again.
-        let known = loadKnownSourceIDs(defaults: defaults)
-        let remembered = known.union(ids)
-        guard remembered != known else { return }
-        defaults.set(remembered.sorted(), forKey: knownSourcesKey)
+        defaults.set(ids.sorted(), forKey: knownSourcesKey)
     }
 
     static func loadStatus(defaults: UserDefaults = .standard) -> MaintenanceRunStatus {
