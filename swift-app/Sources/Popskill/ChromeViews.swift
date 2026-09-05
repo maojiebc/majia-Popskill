@@ -37,26 +37,17 @@ struct Titlebar: View {
             Spacer()
             profileChip
             syncChip
+            Button { model.openMaintenance() } label: {
+                Label(L("维护中心"), systemImage: "arrow.triangle.2.circlepath")
+                if model.maintenance.report.isActive {
+                    Text("\(model.maintenance.report.completedCount)/\(model.maintenance.report.items.count)")
+                }
+            }.buttonStyle(.bordered).controlSize(.regular)
             Button { model.sheet = .sched; model.reloadSched() } label: {
-                Text("◷")
-                    .font(.ui(11))
-                    .foregroundStyle(Color(hex: 0x666666))
-                    .padding(.horizontal, 8).padding(.vertical, 2)
-                    .background(RoundedRectangle(cornerRadius: 4).fill(.white))
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Ink.control2, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .help(L("定时任务（launchd / crontab）"))
-            Button { model.sheet = .settings } label: {
-                Text("⚙")
-                    .font(.ui(11))
-                    .foregroundStyle(Color(hex: 0x666666))
-                    .padding(.horizontal, 8).padding(.vertical, 2)
-                    .background(RoundedRectangle(cornerRadius: 4).fill(.white))
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Ink.control2, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .help(L("设置"))
+                Label(L("系统后台任务"), systemImage: "clock")
+            }.buttonStyle(.bordered).controlSize(.regular)
+            SettingsLink { Label(L("设置"), systemImage: "gearshape") }
+                .buttonStyle(.bordered).controlSize(.regular)
         }
         .padding(.horizontal, 14)
         .frame(height: 38)
@@ -92,7 +83,6 @@ struct Titlebar: View {
                     if let id = model.activeProfileId { model.deleteProfile(id) }
                 }
             }
-            Button(L("在设置里管理…")) { model.sheet = .settings }
         } label: {
             let label = model.activeProfile.map { model.profileDirty ? L("\($0.name)·改") : $0.name } ?? L("工作模式")
             HStack(spacing: 5) {

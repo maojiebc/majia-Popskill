@@ -422,7 +422,7 @@ struct MainView: View {
                     Text("·").foregroundStyle(Color(hex: 0xD8CFAE))
                 }
                 // 常用 CLI 的更新提醒（v2.20）：只数白名单，避免全量扫描把横幅撑爆
-                Button { model.sheet = .cli } label: {
+                Button { model.openMaintenance(.clis) } label: {
                     HStack(spacing: 6) {
                         Text("⌨").font(.mono(12))
                         Text(L("\(model.safeCliUpdates.count) 个 CLI 可升级"))
@@ -1583,6 +1583,7 @@ struct TableBundleRow: View {
 
 @MainActor @ViewBuilder
 func capContextMenu(_ cap: Capability, _ entry: Entry, fromBundle: String?, model: AppModel) -> some View {
+    Button(L("在维护中心查看")) { model.openMaintenance(.sources, sourceID: entry.id) }
     Button(L("查看详情")) {
         model.openPeek(cap: cap, entry: entry, anchor: currentClickPoint(), flip: shouldFlip(threshold: 0.52))
     }
@@ -1607,6 +1608,7 @@ func capContextMenu(_ cap: Capability, _ entry: Entry, fromBundle: String?, mode
 
 @MainActor @ViewBuilder
 func bundleContextMenu(_ entry: Entry, model: AppModel) -> some View {
+    Button(L("在维护中心查看")) { model.openMaintenance(.sources, sourceID: entry.id) }
     // 套装头行曾没有任何「查看详情」入口——能力名可 peek、套装名不可（v2.16）
     Button(L("查看详情")) {
         model.openPeek(cap: entry.cap, entry: entry, anchor: currentClickPoint(), flip: shouldFlip(threshold: 0.52))

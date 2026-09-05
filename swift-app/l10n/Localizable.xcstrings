@@ -1,6 +1,54 @@
 {
   "sourceLanguage": "zh-Hans",
   "strings": {
+    " %lld 个 CLI": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " %lld CLIs"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " %lld 个 CLI"
+          }
+        }
+      }
+    },
+    " %lld 个技能源": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " %lld skill sources"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " %lld 个技能源"
+          }
+        }
+      }
+    },
+    " + %lld 个 CLI": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " + %lld CLIs"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " + %lld 个 CLI"
+          }
+        }
+      }
+    },
     " · 上游另有 %lld 个未安装技能": {
       "localizations": {
         "en": {
@@ -105,6 +153,38 @@
         }
       }
     },
+    "%@ 是基础工具，不在一键升级范围": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is a foundation tool and is not one-click upgraded"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 是基础工具，不在一键升级范围"
+          }
+        }
+      }
+    },
+    "%@ 本地改过，已跳过覆盖。要覆盖请选「仍要覆盖本地修改」。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ was edited locally and was not overwritten. Choose “Overwrite local edits anyway” to replace it."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 本地改过，已跳过覆盖。要覆盖请选「仍要覆盖本地修改」。"
+          }
+        }
+      }
+    },
     "%@ 正在更新中，稍候再操作": {
       "localizations": {
         "en": {
@@ -153,18 +233,34 @@
         }
       }
     },
-    "%@，已装 %@": {
+    "%@·改": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@, installed %@"
+            "value": "%@·edited"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@，已装 %@"
+            "value": "%@·改"
+          }
+        }
+      }
+    },
+    "%@（已改动）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (edited)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（已改动）"
           }
         }
       }
@@ -273,6 +369,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 个技能可更新"
+          }
+        }
+      }
+    },
+    "%lld 个来源检查失败，请查看维护中心。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld source checks failed. See Maintenance Center."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 个来源检查失败，请查看维护中心。"
           }
         }
       }
@@ -429,6 +541,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 套装 · %lld 独立能力 · %@ 已激活"
+          }
+        }
+      }
+    },
+    "%lld 小时": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld hours"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 小时"
           }
         }
       }
@@ -605,6 +733,38 @@
         }
       }
     },
+    "%lld 项排队": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld queued"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 项排队"
+          }
+        }
+      }
+    },
+    "%lld 项能力": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld capabilities"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 项能力"
+          }
+        }
+      }
+    },
     "+ 添加": {
       "localizations": {
         "en": {
@@ -653,18 +813,34 @@
         }
       }
     },
-    "/plugin 管理": {
+    "Agent CLI": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Managed by /plugin"
+            "value": "Agent CLI"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "/plugin 管理"
+            "value": "Agent CLI"
+          }
+        }
+      }
+    },
+    "App": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App"
           }
         }
       }
@@ -685,54 +861,6 @@
         }
       }
     },
-    "CLI 升级收工：%lld 个成功，%lld 个失败（%@）": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CLI upgrades finished: %lld succeeded, %lld failed (%@)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CLI 升级收工：%lld 个成功，%lld 个失败（%@）"
-          }
-        }
-      }
-    },
-    "CLI 巡检": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CLI Checkup"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CLI 巡检"
-          }
-        }
-      }
-    },
-    "CLI 巡检…": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CLI Checkup…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CLI 巡检…"
-          }
-        }
-      }
-    },
     "Claude Code Marketplace 插件——只读展示，操作用 /plugin": {
       "localizations": {
         "en": {
@@ -749,34 +877,18 @@
         }
       }
     },
-    "Git · 已同步": {
+    "Homebrew 检查失败，请重试。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Git · synced"
+            "value": "Homebrew inspection failed. Try again."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Git · 已同步"
-          }
-        }
-      }
-    },
-    "Git · 有未提交改动": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Git · uncommitted changes"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Git · 有未提交改动"
+            "value": "Homebrew 检查失败，请重试。"
           }
         }
       }
@@ -877,6 +989,22 @@
         }
       }
     },
+    "PyPI 响应异常：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unexpected PyPI response: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PyPI 响应异常：%@"
+          }
+        }
+      }
+    },
     "SKILL.MD · 文档摘要": {
       "localizations": {
         "en": {
@@ -893,18 +1021,18 @@
         }
       }
     },
-    "Store 与同步": {
+    "brew 升级失败：%@": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Store & Sync"
+            "value": "brew upgrade failed: %@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Store 与同步"
+            "value": "brew 升级失败：%@"
           }
         }
       }
@@ -1021,22 +1149,6 @@
         }
       }
     },
-    "npm 全局 CLI 的版本矩阵与一键升级": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Version matrix and one-click upgrades for global npm CLIs"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "npm 全局 CLI 的版本矩阵与一键升级"
-          }
-        }
-      }
-    },
     "npm 包装的是 CLI 本体，装技能请用 GitHub 仓库或本地路径；已装的 npm 源 CLI 会自动纳入更新检查": {
       "localizations": {
         "en": {
@@ -1081,6 +1193,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "npm 安装失败：%@"
+          }
+        }
+      }
+    },
+    "pipx 升级失败：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pipx upgrade failed: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pipx 升级失败：%@"
           }
         }
       }
@@ -1197,22 +1325,6 @@
         }
       }
     },
-    "store 在设备间同步；symlink 是各机本地状态，不参与同步。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The store syncs across devices; symlinks are per-machine state and never sync."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "store 在设备间同步；symlink 是各机本地状态，不参与同步。"
-          }
-        }
-      }
-    },
     "store 已有同名条目「%@」。想换新版：回主界面对它「检查更新」；确要重装：先移除旧的（会进回收站）再回来安装。": {
       "localizations": {
         "en": {
@@ -1225,6 +1337,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "store 已有同名条目「%@」。想换新版：回主界面对它「检查更新」；确要重装：先移除旧的（会进回收站）再回来安装。"
+          }
+        }
+      }
+    },
+    "uv 升级失败：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "uv tool upgrade failed: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "uv 升级失败：%@"
           }
         }
       }
@@ -1309,22 +1437,6 @@
         }
       }
     },
-    "↗ 打开回收站文件夹": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "↗ Open trash folder"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "↗ 打开回收站文件夹"
-          }
-        }
-      }
-    },
     "✗ 码 %lld": {
       "localizations": {
         "en": {
@@ -1357,6 +1469,22 @@
         }
       }
     },
+    "「%@」未完全套用：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\"%@\" applied only in part: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」未完全套用：%@"
+          }
+        }
+      }
+    },
     "上次 %@ %@": {
       "localizations": {
         "en": {
@@ -1369,6 +1497,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "上次 %@ %@"
+          }
+        }
+      }
+    },
+    "上次检查": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last checked"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上次检查"
           }
         }
       }
@@ -1497,6 +1641,22 @@
         }
       }
     },
+    "不在批量升级范围；单独更新前会再次确认目标。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not eligible for batch updates. An individual update asks you to confirm the target."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不在批量升级范围；单独更新前会再次确认目标。"
+          }
+        }
+      }
+    },
     "不安全的目录名：%@": {
       "localizations": {
         "en": {
@@ -1561,22 +1721,6 @@
         }
       }
     },
-    "仅列最近 5 项，其余在文件夹里": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Showing the latest 5; the rest are in the folder"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "仅列最近 5 项，其余在文件夹里"
-          }
-        }
-      }
-    },
     "今天 %@": {
       "localizations": {
         "en": {
@@ -1637,6 +1781,22 @@
         }
       }
     },
+    "仍要覆盖本地修改": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overwrite local edits anyway"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仍要覆盖本地修改"
+          }
+        }
+      }
+    },
     "从 %@ 拉取新版，重链 symlink": {
       "localizations": {
         "en": {
@@ -1685,6 +1845,22 @@
         }
       }
     },
+    "仓库中发现多个同名 skill「%@」——请粘贴具体 skill 的本地目录": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The repository contains multiple skills named “%@”. Paste the local directory of the specific skill."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仓库中发现多个同名 skill「%@」——请粘贴具体 skill 的本地目录"
+          }
+        }
+      }
+    },
     "作者": {
       "localizations": {
         "en": {
@@ -1697,6 +1873,102 @@
           "stringUnit": {
             "state": "translated",
             "value": "作者"
+          }
+        }
+      }
+    },
+    "使用帮助": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Help"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用帮助"
+          }
+        }
+      }
+    },
+    "例如：写作 / 画图 / 开发": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e.g. Writing / Drawing / Dev"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：写作 / 画图 / 开发"
+          }
+        }
+      }
+    },
+    "保存": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        }
+      }
+    },
+    "保存为工作模式": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save as work mode"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存为工作模式"
+          }
+        }
+      }
+    },
+    "保存为工作模式…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save as work mode…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存为工作模式…"
+          }
+        }
+      }
+    },
+    "保存当前为新模式…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save current as new mode…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存当前为新模式…"
           }
         }
       }
@@ -1786,7 +2058,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Disable"
+            "value": "Off"
           }
         },
         "zh-Hans": {
@@ -1829,6 +2101,70 @@
         }
       }
     },
+    "允许后续检查": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow Future Checks"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许后续检查"
+          }
+        }
+      }
+    },
+    "允许已识别的 Agent 自动升级": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow recognized agents to auto-upgrade"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许已识别的 Agent 自动升级"
+          }
+        }
+      }
+    },
+    "允许本次会话": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow for This Session"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许本次会话"
+          }
+        }
+      }
+    },
+    "允许检查全部全局 CLI？": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow checks for all global CLIs?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许检查全部全局 CLI？"
+          }
+        }
+      }
+    },
     "全部": {
       "localizations": {
         "en": {
@@ -1861,18 +2197,18 @@
         }
       }
     },
-    "全部升级 (%lld)": {
+    "全部全局 CLI": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Upgrade All (%lld)"
+            "value": "All Global CLIs"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "全部升级 (%lld)"
+            "value": "全部全局 CLI"
           }
         }
       }
@@ -1941,18 +2277,18 @@
         }
       }
     },
-    "关": {
+    "关 %lld": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Off"
+            "value": "Off %lld"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "关"
+            "value": "关 %lld"
           }
         }
       }
@@ -1973,6 +2309,22 @@
         }
       }
     },
+    "关闭": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭"
+          }
+        }
+      }
+    },
     "内容已是最新": {
       "localizations": {
         "en": {
@@ -1985,6 +2337,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "内容已是最新"
+          }
+        }
+      }
+    },
+    "切换": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切换"
+          }
+        }
+      }
+    },
+    "切换到「%@」？": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch to \"%@\"?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切换到「%@」？"
+          }
+        }
+      }
+    },
+    "删除此模式": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this mode"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除此模式"
           }
         }
       }
@@ -2005,22 +2405,6 @@
         }
       }
     },
-    "包名": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Package"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "包名"
-          }
-        }
-      }
-    },
     "包名不合法：%@": {
       "localizations": {
         "en": {
@@ -2037,34 +2421,18 @@
         }
       }
     },
-    "升级": {
+    "包名：%@": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Upgrade"
+            "value": "Package: %@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "升级"
-          }
-        }
-      }
-    },
-    "升级 %@ 失败：%@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Failed to upgrade %@: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "升级 %@ 失败：%@"
+            "value": "包名：%@"
           }
         }
       }
@@ -2129,6 +2497,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "卡片视图"
+          }
+        }
+      }
+    },
+    "卸载来源 %@？": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uninstall source %@?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卸载来源 %@？"
+          }
+        }
+      }
+    },
+    "卸载此来源…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uninstall Source…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卸载此来源…"
+          }
+        }
+      }
+    },
+    "原位置为空时可恢复；同名仍存在时不覆盖。CLI 包管理器升级不提供这里的文件夹回滚。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore only when the original location is empty. Existing content is never overwritten. CLI package upgrades do not support folder rollback here."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原位置为空时可恢复；同名仍存在时不覆盖。CLI 包管理器升级不提供这里的文件夹回滚。"
+          }
+        }
+      }
+    },
+    "原位置已有同名内容；保留现状，请先查看备份。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An item already exists at the original location. Review the backup; existing content is preserved."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原位置已有同名内容；保留现状，请先查看备份。"
           }
         }
       }
@@ -2285,6 +2717,54 @@
         }
       }
     },
+    "另一个 Popskill 正在修改 Store，请稍后重试": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another Popskill instance is modifying the Store. Try again shortly."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "另一个 Popskill 正在修改 Store，请稍后重试"
+          }
+        }
+      }
+    },
+    "只在 Popskill 运行时执行。自动升级仅限明确识别且安装渠道、路径符合条件的 Agent；不保证上游新版没有问题。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Runs only while Popskill is open. Automatic upgrades require recognized agents with eligible channels and paths; upstream releases are not guaranteed to be problem-free."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只在 Popskill 运行时执行。自动升级仅限明确识别且安装渠道、路径符合条件的 Agent；不保证上游新版没有问题。"
+          }
+        }
+      }
+    },
+    "只影响以后新添加的来源，不覆盖现有来源的选择。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applies only to newly added sources. Existing choices stay unchanged."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只影响以后新添加的来源，不覆盖现有来源的选择。"
+          }
+        }
+      }
+    },
     "只有 GitHub / 本地路径来源支持安装上游新增技能": {
       "localizations": {
         "en": {
@@ -2301,6 +2781,38 @@
         }
       }
     },
+    "可更新": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updates"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可更新"
+          }
+        }
+      }
+    },
+    "可清除搜索或筛选后再检查；首次读取失败时也可能没有清单。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear the search or filter and check again. An initial inventory failure may also leave this list empty."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可清除搜索或筛选后再检查；首次读取失败时也可能没有清单。"
+          }
+        }
+      }
+    },
     "同步于%@": {
       "localizations": {
         "en": {
@@ -2313,22 +2825,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "同步于%@"
-          }
-        }
-      }
-    },
-    "同步后端": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sync backend"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同步后端"
           }
         }
       }
@@ -2421,6 +2917,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "后天"
+          }
+        }
+      }
+    },
+    "后续检查包含全部全局 npm CLI": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Include all global npm CLIs in future checks"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "后续检查包含全部全局 npm CLI"
           }
         }
       }
@@ -2633,18 +3145,18 @@
         }
       }
     },
-    "回收站（%lld）": {
+    "固定显示": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Trash (%lld)"
+            "value": "Always Shown"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "回收站（%lld）"
+            "value": "固定显示"
           }
         }
       }
@@ -2681,6 +3193,22 @@
         }
       }
     },
+    "在维护中心查看": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View in Maintenance Center"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在维护中心查看"
+          }
+        }
+      }
+    },
     "在访达中显示": {
       "localizations": {
         "en": {
@@ -2693,6 +3221,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "在访达中显示"
+          }
+        }
+      }
+    },
+    "备份与回收站（%lld）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backups & Trash (%lld)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "备份与回收站（%lld）"
+          }
+        }
+      }
+    },
+    "失败 %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "失败 %@"
           }
         }
       }
@@ -2853,6 +3413,38 @@
         }
       }
     },
+    "安装位置：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装位置：%@"
+          }
+        }
+      }
+    },
+    "安装信息已变化，请重新检查。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The installation has changed. Check again before updating."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装信息已变化，请重新检查。"
+          }
+        }
+      }
+    },
     "安装并链接 (%lld)": {
       "localizations": {
         "en": {
@@ -2869,50 +3461,34 @@
         }
       }
     },
-    "定时任务": {
+    "安装渠道：%@": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scheduled Tasks"
+            "value": "Channel: %@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "定时任务"
+            "value": "安装渠道：%@"
           }
         }
       }
     },
-    "定时任务…": {
+    "定期检查未开启；已授权的来源仍可能在启动时更新。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scheduled Tasks…"
+            "value": "Periodic checks are off; permitted sources may still update at launch."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "定时任务…"
-          }
-        }
-      }
-    },
-    "定时任务（launchd / crontab）": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scheduled tasks (launchd / crontab)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "定时任务（launchd / crontab）"
+            "value": "定期检查未开启；已授权的来源仍可能在启动时更新。"
           }
         }
       }
@@ -2981,6 +3557,22 @@
         }
       }
     },
+    "将修改 %lld 个现有远端来源；不改变新来源默认值，本地改动保护仍然有效。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change %lld existing remote sources. The default for new sources stays unchanged, and local-edit protection remains active."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将修改 %lld 个现有远端来源；不改变新来源默认值，本地改动保护仍然有效。"
+          }
+        }
+      }
+    },
     "将写入": {
       "localizations": {
         "en": {
@@ -2997,98 +3589,114 @@
         }
       }
     },
-    "另一个 Popskill 正在修改 Store，请稍后重试": {
+    "将挂载 %@": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Another Popskill instance is modifying the Store. Try again shortly."
+            "value": "Will mount %@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "另一个 Popskill 正在修改 Store，请稍后重试"
+            "value": "将挂载 %@"
           }
         }
       }
     },
-    "工具（挂载目标）": {
+    "将断开 %@": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tools (link targets)"
+            "value": "Will unmount %@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "工具（挂载目标）"
+            "value": "将断开 %@"
           }
         }
       }
     },
-    "首页列": {
+    "将更新 %@，位置：%@。这不是符合批量条件的 Agent，请确认安装渠道和路径。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Home columns"
+            "value": "Update %@ at %@. This installation is not eligible for batch updates. Confirm the channel and path before continuing."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "首页列"
+            "value": "将更新 %@，位置：%@。这不是符合批量条件的 Agent，请确认安装渠道和路径。"
           }
         }
       }
     },
-    "本机已发现": {
+    "尚未检查": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Detected on this Mac"
+            "value": "Not Checked"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "本机已发现"
+            "value": "尚未检查"
           }
         }
       }
     },
-    "首页显示": {
+    "工作模式": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show on home"
+            "value": "Work mode"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "首页显示"
+            "value": "工作模式"
           }
         }
       }
     },
-    "App": {
+    "工作模式：一键切换某类任务该挂哪些技能": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "App"
+            "value": "Work modes: switch which skills a task scene should mount"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "App"
+            "value": "工作模式：一键切换某类任务该挂哪些技能"
+          }
+        }
+      }
+    },
+    "工具": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tools"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工具"
           }
         }
       }
@@ -3137,6 +3745,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "已保存 %@ 到 store"
+          }
+        }
+      }
+    },
+    "已保存工作模式「%@」": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved work mode \"%@\""
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已保存工作模式「%@」"
           }
         }
       }
@@ -3233,6 +3857,70 @@
         }
       }
     },
+    "已写入 %@，但 PATH 仍命中 %@——命令行用的还是另一份": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wrote to %@, but PATH still hits %@ — the shell is still using the other copy"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已写入 %@，但 PATH 仍命中 %@——命令行用的还是另一份"
+          }
+        }
+      }
+    },
+    "已切换到「%@」：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switched to \"%@\": %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已切换到「%@」：%@"
+          }
+        }
+      }
+    },
+    "已删除 %lld 项，跳过": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip %lld deleted items"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已删除 %lld 项，跳过"
+          }
+        }
+      }
+    },
+    "已删除工作模式「%@」": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleted work mode \"%@\""
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已删除工作模式「%@」"
+          }
+        }
+      }
+    },
     "已加载，上次运行失败（退出码 %lld）": {
       "localizations": {
         "en": {
@@ -3261,66 +3949,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "已加载，上次运行正常"
-          }
-        }
-      }
-    },
-    "已升级 %@ → v%@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Upgraded %@ → v%@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已升级 %@ → v%@"
-          }
-        }
-      }
-    },
-    "已升级 %lld 个 CLI": {
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Upgraded %lld CLI"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Upgraded %lld CLIs"
-                }
-              }
-            }
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已升级 %lld 个 CLI"
-          }
-        }
-      }
-    },
-    "已升级全局 CLI %@（npm i -g）": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Upgraded global CLI %@ (npm i -g)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已升级全局 CLI %@（npm i -g）"
           }
         }
       }
@@ -3489,6 +4117,22 @@
         }
       }
     },
+    "已应用到 %lld 个现有来源。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applied to %lld existing sources."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已应用到 %lld 个现有来源。"
+          }
+        }
+      }
+    },
     "已恢复 %@ 到 store——按需重新链接工具": {
       "localizations": {
         "en": {
@@ -3581,6 +4225,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "已断开 %@ → %@"
+          }
+        }
+      }
+    },
+    "已是「%@」的盘面，无需切换": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already on \"%@\" — nothing to switch"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已是「%@」的盘面，无需切换"
           }
         }
       }
@@ -3709,22 +4369,6 @@
         }
       }
     },
-    "已添加的源（%lld）": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sources (%lld)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已添加的源（%lld）"
-          }
-        }
-      }
-    },
     "已激活": {
       "localizations": {
         "en": {
@@ -3737,6 +4381,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "已激活"
+          }
+        }
+      }
+    },
+    "已用当前盘面更新「%@」": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updated \"%@\" from the current layout"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已用当前盘面更新「%@」"
           }
         }
       }
@@ -3769,22 +4429,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "已移除 %@ 在 %@ 侧的链接"
-          }
-        }
-      }
-    },
-    "已装": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Installed"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已装"
           }
         }
       }
@@ -3869,6 +4513,22 @@
         }
       }
     },
+    "已配置 Git；提交状态不代表远端已同步。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Git is configured. Local commit status does not confirm remote synchronization."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已配置 Git；提交状态不代表远端已同步。"
+          }
+        }
+      }
+    },
     "已重新扫描 store 与工具目录": {
       "localizations": {
         "en": {
@@ -3913,6 +4573,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "已链接 %@ → %@"
+          }
+        }
+      }
+    },
+    "常用 AI 工具": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Common AI Tools"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "常用 AI 工具"
+          }
+        }
+      }
+    },
+    "常用命令行工具有新版——按真实安装位置升级，点击查看": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Common CLI tools have updates — upgrade at the real install location"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "常用命令行工具有新版——按真实安装位置升级，点击查看"
           }
         }
       }
@@ -3965,7 +4657,87 @@
         }
       }
     },
-    "开": {
+    "应用到现有来源…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply to Existing…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用到现有来源…"
+          }
+        }
+      }
+    },
+    "应用到现有来源？": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply to existing sources?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用到现有来源？"
+          }
+        }
+      }
+    },
+    "应用设置": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply Settings"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用设置"
+          }
+        }
+      }
+    },
+    "应用运行时定期检查": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check periodically while Popskill is running"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用运行时定期检查"
+          }
+        }
+      }
+    },
+    "开 %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开 %lld"
+          }
+        }
+      }
+    },
+    "开启": {
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3976,23 +4748,23 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "开"
+            "value": "开启"
           }
         }
       }
     },
-    "开关 = 自动更新。移除源会同时卸载它提供的能力与 symlink。": {
+    "恢复": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Switch = auto-update. Removing a source also uninstalls its capabilities and symlinks."
+            "value": "Restore"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "开关 = 自动更新。移除源会同时卸载它提供的能力与 symlink。"
+            "value": "恢复"
           }
         }
       }
@@ -4013,22 +4785,6 @@
         }
       }
     },
-    "恢复到 store": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Restore to store"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "恢复到 store"
-          }
-        }
-      }
-    },
     "恢复更新提醒": {
       "localizations": {
         "en": {
@@ -4045,18 +4801,34 @@
         }
       }
     },
-    "打开 GitHub issue，自动带上 app 与 macOS 版本": {
+    "手动和自动检查将向 npm registry 发送全部待查全局包名。不需要全量检查时，请保持常用工具范围。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open a GitHub issue with app and macOS versions pre-filled"
+            "value": "Manual and automatic checks will send all inspected global package names to the npm registry. Keep the common-tools scope unless full inspection is needed."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "打开 GitHub issue，自动带上 app 与 macOS 版本"
+            "value": "手动和自动检查将向 npm registry 发送全部待查全局包名。不需要全量检查时，请保持常用工具范围。"
+          }
+        }
+      }
+    },
+    "打开文件夹": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Folder"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开文件夹"
           }
         }
       }
@@ -4073,6 +4845,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "打开日志"
+          }
+        }
+      }
+    },
+    "打开来源": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Source"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开来源"
           }
         }
       }
@@ -4137,6 +4925,22 @@
         }
       }
     },
+    "批量设置": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batch setting"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "批量设置"
+          }
+        }
+      }
+    },
     "找不到这个仓库——检查地址是否写对、是否为公开仓库。": {
       "localizations": {
         "en": {
@@ -4181,6 +4985,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "技能 / Agent / MCP / CLI"
+          }
+        }
+      }
+    },
+    "技能来源": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skill Sources"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "技能来源"
+          }
+        }
+      }
+    },
+    "技能源自动更新": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skill Source Auto-Updates"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "技能源自动更新"
+          }
+        }
+      }
+    },
+    "技能目录": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skill Folder"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "技能目录"
           }
         }
       }
@@ -4281,6 +5133,22 @@
         }
       }
     },
+    "挂载到 %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use with %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "挂载到 %@"
+          }
+        }
+      }
+    },
     "指向别处：%@": {
       "localizations": {
         "en": {
@@ -4329,6 +5197,22 @@
         }
       }
     },
+    "排队中": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Queued"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排队中"
+          }
+        }
+      }
+    },
     "推荐": {
       "localizations": {
         "en": {
@@ -4341,38 +5225,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "推荐"
-          }
-        }
-      }
-    },
-    "提供 %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Provides %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "提供 %@"
-          }
-        }
-      }
-    },
-    "提供 %@ 等 %lld 项": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Provides %2$lld items incl. %1$@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "提供 %@ 等 %lld 项"
           }
         }
       }
@@ -4405,6 +5257,22 @@
         }
       }
     },
+    "搜索全部备份": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search all backups"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索全部备份"
+          }
+        }
+      }
+    },
     "搜索名称 / 描述 / 作者…": {
       "localizations": {
         "en": {
@@ -4417,6 +5285,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "搜索名称 / 描述 / 作者…"
+          }
+        }
+      }
+    },
+    "搜索名称或来源": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search names or sources"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索名称或来源"
           }
         }
       }
@@ -4453,6 +5337,22 @@
         }
       }
     },
+    "数据与恢复": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data & Recovery"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "数据与恢复"
+          }
+        }
+      }
+    },
     "断开 %@ 失败：%@": {
       "localizations": {
         "en": {
@@ -4485,18 +5385,34 @@
         }
       }
     },
-    "新安装默认挂载": {
+    "断链/本地副本 %@，需先修复": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Default for new installs"
+            "value": "Broken/local copies need fixing first: %@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "新安装默认挂载"
+            "value": "断链/本地副本 %@，需先修复"
+          }
+        }
+      }
+    },
+    "新来源默认允许自动更新": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow auto-update by default for new sources"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新来源默认允许自动更新"
           }
         }
       }
@@ -4529,6 +5445,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "无匹配结果"
+          }
+        }
+      }
+    },
+    "无变更": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No changes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无变更"
           }
         }
       }
@@ -4613,6 +5545,22 @@
         }
       }
     },
+    "显示厂商任务": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show vendor tasks"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示厂商任务"
+          }
+        }
+      }
+    },
     "显示系统/第三方任务（%lld）": {
       "localizations": {
         "en": {
@@ -4641,6 +5589,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "暂不"
+          }
+        }
+      }
+    },
+    "暂无备份": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No backups yet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无备份"
+          }
+        }
+      }
+    },
+    "更多": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更多"
           }
         }
       }
@@ -4725,6 +5705,70 @@
         }
       }
     },
+    "更新命令完成；请检查版本以确认结果。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The update command finished. Check the version to confirm the result."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新命令完成；请检查版本以确认结果。"
+          }
+        }
+      }
+    },
+    "更新失败": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update Failed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新失败"
+          }
+        }
+      }
+    },
+    "更新完成": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updated"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新完成"
+          }
+        }
+      }
+    },
+    "更新当前结果（%lld）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update Shown (%lld)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新当前结果（%lld）"
+          }
+        }
+      }
+    },
     "更新收工：%lld 个成功，%lld 个失败（%@）": {
       "localizations": {
         "en": {
@@ -4757,18 +5801,50 @@
         }
       }
     },
-    "最新": {
+    "更新此工具": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Latest"
+            "value": "Update Tool"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "最新"
+            "value": "更新此工具"
+          }
+        }
+      }
+    },
+    "更新此来源": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update Source"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新此来源"
+          }
+        }
+      }
+    },
+    "更新这份安装？": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update this installation?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新这份安装？"
           }
         }
       }
@@ -4833,6 +5909,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "未加载（已停用）"
+          }
+        }
+      }
+    },
+    "未发现工具目录": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tool folder not found"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未发现工具目录"
           }
         }
       }
@@ -4965,22 +6057,6 @@
         }
       }
     },
-    "未配置": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not set up"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未配置"
-          }
-        }
-      }
-    },
     "未配置调度": {
       "localizations": {
         "en": {
@@ -5013,6 +6089,22 @@
         }
       }
     },
+    "未配置跨设备同步，不影响本机使用。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cross-device sync is not configured. Local use is unaffected."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未配置跨设备同步，不影响本机使用。"
+          }
+        }
+      }
+    },
     "未链接": {
       "localizations": {
         "en": {
@@ -5029,6 +6121,22 @@
         }
       }
     },
+    "本地 AI 能力管理器": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local AI Capability Manager"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本地 AI 能力管理器"
+          }
+        }
+      }
+    },
     "本地副本": {
       "localizations": {
         "en": {
@@ -5041,6 +6149,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "本地副本"
+          }
+        }
+      }
+    },
+    "本批结果：已完成 %lld/%lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batch result: %lld/%lld finished"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本批结果：已完成 %lld/%lld"
+          }
+        }
+      }
+    },
+    "本机 launchd / cron 任务，与 Popskill 应用内自动维护分开管理。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local launchd / cron jobs, managed separately from in-app maintenance."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本机 launchd / cron 任务，与 Popskill 应用内自动维护分开管理。"
+          }
+        }
+      }
+    },
+    "本机已发现": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detected on this Mac"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本机已发现"
           }
         }
       }
@@ -5077,6 +6233,22 @@
         }
       }
     },
+    "来源待确认": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source not identified"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来源待确认"
+          }
+        }
+      }
+    },
     "来自 %@：%@%@。将写入 store 并按默认工具挂载。": {
       "localizations": {
         "en": {
@@ -5109,6 +6281,22 @@
         }
       }
     },
+    "查看备份": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View Backup"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看备份"
+          }
+        }
+      }
+    },
     "查看详情": {
       "localizations": {
         "en": {
@@ -5125,18 +6313,34 @@
         }
       }
     },
-    "检查 App 更新…": {
+    "检查 Popskill 更新…": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check for App Updates…"
+            "value": "Check for Popskill Updates…"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "检查 App 更新…"
+            "value": "检查 Popskill 更新…"
+          }
+        }
+      }
+    },
+    "检查与自动升级": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checks & Automatic Upgrades"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检查与自动升级"
           }
         }
       }
@@ -5157,6 +6361,38 @@
         }
       }
     },
+    "检查全部全局 CLI？": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check all global CLIs?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检查全部全局 CLI？"
+          }
+        }
+      }
+    },
+    "检查失败": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check Failed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检查失败"
+          }
+        }
+      }
+    },
     "检查更新": {
       "localizations": {
         "en": {
@@ -5173,18 +6409,66 @@
         }
       }
     },
-    "检查更新…": {
+    "检查此来源": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check for Updates…"
+            "value": "Check Source"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "检查更新…"
+            "value": "检查此来源"
+          }
+        }
+      }
+    },
+    "检查范围": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inspection scope"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检查范围"
+          }
+        }
+      }
+    },
+    "检查间隔": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check interval"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检查间隔"
+          }
+        }
+      }
+    },
+    "检测到本地改动，已阻止覆盖。请先处理或备份本地版本。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local changes detected. Overwriting is blocked; review or back up the local version first."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检测到本地改动，已阻止覆盖。请先处理或备份本地版本。"
           }
         }
       }
@@ -5205,18 +6489,50 @@
         }
       }
     },
-    "正在扫描全局 npm 包…": {
+    "正在处理 %@": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scanning global npm packages…"
+            "value": "Updating %@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "正在扫描全局 npm 包…"
+            "value": "正在处理 %@"
+          }
+        }
+      }
+    },
+    "正在更新": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updating"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在更新"
+          }
+        }
+      }
+    },
+    "此来源允许自动更新": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow auto-update for this source"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此来源允许自动更新"
           }
         }
       }
@@ -5273,6 +6589,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "每 %lld 小时"
+          }
+        }
+      }
+    },
+    "每 %lld 小时检查；自动更新按已授权策略执行。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check every %lld hours; updates follow your permissions."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每 %lld 小时检查；自动更新按已授权策略执行。"
           }
         }
       }
@@ -5557,18 +6889,18 @@
         }
       }
     },
-    "永久删除全部回收站备份——此前只能去 Finder 手删": {
+    "永久删除全部备份": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Permanently delete every backup in the recycle bin"
+            "value": "Permanently Delete All Backups"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "永久删除全部回收站备份——此前只能去 Finder 手删"
+            "value": "永久删除全部备份"
           }
         }
       }
@@ -5605,6 +6937,22 @@
         }
       }
     },
+    "没有匹配的项目": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matching items"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有匹配的项目"
+          }
+        }
+      }
+    },
     "没有发现未托管的能力目录": {
       "localizations": {
         "en": {
@@ -5637,6 +6985,38 @@
         }
       }
     },
+    "没有可检查的技能源——正在核对常用 CLI": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No skill sources to check — verifying common CLIs"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有可检查的技能源——正在核对常用 CLI"
+          }
+        }
+      }
+    },
+    "没有可检查的源": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No sources to check"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有可检查的源"
+          }
+        }
+      }
+    },
     "没有能力匹配 “": {
       "localizations": {
         "en": {
@@ -5649,6 +7029,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有能力匹配 “"
+          }
+        }
+      }
+    },
+    "添加来源…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Source…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加来源…"
           }
         }
       }
@@ -5669,50 +7065,18 @@
         }
       }
     },
-    "清空": {
+    "清空回收站…": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Empty"
+            "value": "Empty Trash…"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "清空"
-          }
-        }
-      }
-    },
-    "清空…": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Empty…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "清空…"
-          }
-        }
-      }
-    },
-    "清空回收站失败：%@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Failed to empty the recycle bin: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "清空回收站失败：%@"
+            "value": "清空回收站…"
           }
         }
       }
@@ -5729,22 +7093,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "清空回收站？"
-          }
-        }
-      }
-    },
-    "仓库中发现多个同名 skill「%@」——请粘贴具体 skill 的本地目录": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The repository contains multiple skills named “%@”. Paste the local directory of the specific skill."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "仓库中发现多个同名 skill「%@」——请粘贴具体 skill 的本地目录"
           }
         }
       }
@@ -5861,6 +7209,22 @@
         }
       }
     },
+    "点击检查时会向 npm registry 发送全部待查全局包名。这里只授权本次会话，不改变自动检查范围。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking sends the global package names being inspected to the npm registry. This permission is for this session only and does not change automatic checks."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击检查时会向 npm registry 发送全部待查全局包名。这里只授权本次会话，不改变自动检查范围。"
+          }
+        }
+      }
+    },
     "点击逐个定位待更新的技能（循环）": {
       "localizations": {
         "en": {
@@ -5889,6 +7253,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "版本"
+          }
+        }
+      }
+    },
+    "版本待确认": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verify Version"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本待确认"
+          }
+        }
+      }
+    },
+    "状态筛选": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status filter"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "状态筛选"
+          }
+        }
+      }
+    },
+    "现有来源已开启 %lld/%lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Existing sources enabled: %lld/%lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "现有来源已开启 %lld/%lld"
+          }
+        }
+      }
+    },
+    "用当前盘面更新此模式": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update this mode from current layout"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用当前盘面更新此模式"
+          }
+        }
+      }
+    },
+    "由原渠道管理": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Managed Externally"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由原渠道管理"
           }
         }
       }
@@ -5925,6 +7369,22 @@
         }
       }
     },
+    "盘面已切换，但当前模式没能写入磁盘": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Layout switched, but the current mode couldn't be saved"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "盘面已切换，但当前模式没能写入磁盘"
+          }
+        }
+      }
+    },
     "目录移入 store 回收站，不建链接": {
       "localizations": {
         "en": {
@@ -5957,22 +7417,6 @@
         }
       }
     },
-    "移回 store 原目录（%@/）——同名能力已存在时会拒绝": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Move back to its store directory (%@/) — refused if a same-named capability exists"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "移回 store 原目录（%@/）——同名能力已存在时会拒绝"
-          }
-        }
-      }
-    },
     "移除": {
       "localizations": {
         "en": {
@@ -6001,22 +7445,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "移除 %@ 失败：%@"
-          }
-        }
-      }
-    },
-    "移除 %@？": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove %@?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "移除 %@？"
           }
         }
       }
@@ -6085,38 +7513,6 @@
         }
       }
     },
-    "移除该源（含其能力）": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove this source and its capabilities"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "移除该源（含其能力）"
-          }
-        }
-      }
-    },
-    "空——移除能力和更新换版时，旧目录会进这里（最多留 %lld 份，先进先出）。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Empty — old directories land here when capabilities are removed or updated (keeps up to %lld, first in first out)."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "空——移除能力和更新换版时，旧目录会进这里（最多留 %lld 份，先进先出）。"
-          }
-        }
-      }
-    },
     "立刻跑一次（launchctl kickstart）": {
       "localizations": {
         "en": {
@@ -6149,22 +7545,6 @@
         }
       }
     },
-    "立即向更新源询问新版本": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ask the update feed for a new version now"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "立即向更新源询问新版本"
-          }
-        }
-      }
-    },
     "等价于 launchctl kickstart -k——不等下次调度时间，现在就跑一遍。任务输出看它自己的日志。": {
       "localizations": {
         "en": {
@@ -6193,6 +7573,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "等价于 launchctl kickstart -k——杀掉旧进程重新拉起。任务输出看它自己的日志。"
+          }
+        }
+      }
+    },
+    "管理自动维护…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automation Settings…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "管理自动维护…"
           }
         }
       }
@@ -6241,6 +7637,118 @@
           "stringUnit": {
             "state": "translated",
             "value": "粘贴一个 GitHub 仓库或本地文件夹，安装进 store 并挂载到所选工具"
+          }
+        }
+      }
+    },
+    "系统后台任务": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System Background Tasks"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系统后台任务"
+          }
+        }
+      }
+    },
+    "系统后台任务…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System Background Tasks…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系统后台任务…"
+          }
+        }
+      }
+    },
+    "终端命中：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminal resolves to: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "终端命中：%@"
+          }
+        }
+      }
+    },
+    "终端正在使用另一份安装：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The terminal uses another installation: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "终端正在使用另一份安装：%@"
+          }
+        }
+      }
+    },
+    "维护中心": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maintenance Center"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "维护中心"
+          }
+        }
+      }
+    },
+    "维护中心…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maintenance Center…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "维护中心…"
+          }
+        }
+      }
+    },
+    "维护对象": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maintain"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "维护对象"
           }
         }
       }
@@ -6305,18 +7813,34 @@
         }
       }
     },
-    "自动检查 App 更新（每天一次）": {
+    "自动检查 Popskill 更新": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatically check for app updates (daily)"
+            "value": "Automatically check for Popskill updates"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "自动检查 App 更新（每天一次）"
+            "value": "自动检查 Popskill 更新"
+          }
+        }
+      }
+    },
+    "自动维护": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automation"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动维护"
           }
         }
       }
@@ -6401,6 +7925,22 @@
         }
       }
     },
+    "记下此刻每个工具挂了哪些技能。切换时只改有差异的链接，不动没写进模式的工具。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapshot which skills are mounted on each tool. Switching only changes the diffs and leaves tools not in the mode untouched."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "记下此刻每个工具挂了哪些技能。切换时只改有差异的链接，不动没写进模式的工具。"
+          }
+        }
+      }
+    },
     "设置": {
       "localizations": {
         "en": {
@@ -6417,18 +7957,18 @@
         }
       }
     },
-    "设置…": {
+    "设置未保存，请检查目录权限和磁盘空间。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Settings…"
+            "value": "Settings were not saved. Check folder permissions and free disk space."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "设置…"
+            "value": "设置未保存，请检查目录权限和磁盘空间。"
           }
         }
       }
@@ -6481,6 +8021,70 @@
         }
       }
     },
+    "设置没能写入磁盘（检查磁盘空间/权限）——工作模式未保存": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't write settings (check disk space/permissions) — work mode not saved"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置没能写入磁盘（检查磁盘空间/权限）——工作模式未保存"
+          }
+        }
+      }
+    },
+    "设置没能写入磁盘（检查磁盘空间/权限）——工作模式未删除": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't write settings (check disk space/permissions) — work mode not deleted"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置没能写入磁盘（检查磁盘空间/权限）——工作模式未删除"
+          }
+        }
+      }
+    },
+    "设置没能写入磁盘（检查磁盘空间/权限）——工作模式未更新": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't write settings (check disk space/permissions) — work mode not updated"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置没能写入磁盘（检查磁盘空间/权限）——工作模式未更新"
+          }
+        }
+      }
+    },
+    "设置没能写入磁盘（检查磁盘空间/权限）——当前模式未记住": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't write settings (check disk space/permissions) — current mode not remembered"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置没能写入磁盘（检查磁盘空间/权限）——当前模式未记住"
+          }
+        }
+      }
+    },
     "设置没能写入磁盘（检查磁盘空间/权限）——自动更新开关未保存": {
       "localizations": {
         "en": {
@@ -6497,22 +8101,6 @@
         }
       }
     },
-    "设置没能写入磁盘（检查磁盘空间/权限）——默认挂载开关未保存": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Setting couldn't be written to disk (check disk space/permissions) — default-mount toggle not saved"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "设置没能写入磁盘（检查磁盘空间/权限）——默认挂载开关未保存"
-          }
-        }
-      }
-    },
     "设置没能写入磁盘（检查磁盘空间/权限）——首页显示开关未保存": {
       "localizations": {
         "en": {
@@ -6525,6 +8113,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "设置没能写入磁盘（检查磁盘空间/权限）——首页显示开关未保存"
+          }
+        }
+      }
+    },
+    "设置没能写入磁盘（检查磁盘空间/权限）——默认挂载开关未保存": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setting couldn't be written to disk (check disk space/permissions) — default-mount toggle not saved"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置没能写入磁盘（检查磁盘空间/权限）——默认挂载开关未保存"
           }
         }
       }
@@ -6593,18 +8197,18 @@
         }
       }
     },
-    "谁在跑、下次什么时候跑、上次结果如何。点名字旁的 ✎ 加人话备注。": {
+    "请先授权全部全局 CLI 的检查范围。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "What runs, when it runs next, and how the last run went. Click ✎ by a name to add a friendly note."
+            "value": "Authorize the all-global-CLI scope before checking."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "谁在跑、下次什么时候跑、上次结果如何。点名字旁的 ✎ 加人话备注。"
+            "value": "请先授权全部全局 CLI 的检查范围。"
           }
         }
       }
@@ -6641,6 +8245,22 @@
         }
       }
     },
+    "跳过 %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipped %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳过 %lld"
+          }
+        }
+      }
+    },
     "跳过此版本": {
       "localizations": {
         "en": {
@@ -6673,6 +8293,22 @@
         }
       }
     },
+    "返回能力矩阵": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to Skills"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返回能力矩阵"
+          }
+        }
+      }
+    },
     "还没有任何能力": {
       "localizations": {
         "en": {
@@ -6689,6 +8325,38 @@
         }
       }
     },
+    "还没有工作模式": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No work modes yet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有工作模式"
+          }
+        }
+      }
+    },
+    "还没有选中的工作模式": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No work mode selected"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有选中的工作模式"
+          }
+        }
+      }
+    },
     "这个仓库需要登录（可能是私有仓库）——Popskill 暂时只支持公开仓库。": {
       "localizations": {
         "en": {
@@ -6701,6 +8369,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "这个仓库需要登录（可能是私有仓库）——Popskill 暂时只支持公开仓库。"
+          }
+        }
+      }
+    },
+    "连不上 PyPI——检查网络后重试。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't reach PyPI — check the network and retry."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连不上 PyPI——检查网络后重试。"
           }
         }
       }
@@ -6753,6 +8437,22 @@
         }
       }
     },
+    "部分成员未能检查，请重试。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some members could not be checked. Try again."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分成员未能检查，请重试。"
+          }
+        }
+      }
+    },
     "重启": {
       "localizations": {
         "en": {
@@ -6801,22 +8501,6 @@
         }
       }
     },
-    "重新扫描": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rescan"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重新扫描"
-          }
-        }
-      }
-    },
     "重新拉取 %@ 失败：%@": {
       "localizations": {
         "en": {
@@ -6829,6 +8513,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新拉取 %@ 失败：%@"
+          }
+        }
+      }
+    },
+    "重试本批失败项（%lld）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retry Failed (%lld)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重试本批失败项（%lld）"
           }
         }
       }
@@ -6881,6 +8581,86 @@
         }
       }
     },
+    "需处理": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needs Attention"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需处理"
+          }
+        }
+      }
+    },
+    "首页显示": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show on home"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首页显示"
+          }
+        }
+      }
+    },
+    "首页显示只影响界面；默认挂载只影响以后安装。这里不会改动已有技能链接或创建工具目录。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visibility changes only the interface. Default targets apply to future installations. These settings do not change existing links or create tool folders."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首页显示只影响界面；默认挂载只影响以后安装。这里不会改动已有技能链接或创建工具目录。"
+          }
+        }
+      }
+    },
+    "默认挂载": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default target"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "默认挂载"
+          }
+        }
+      }
+    },
+    "，": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", "
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "，"
+          }
+        }
+      }
+    },
     "，%lld 项占位": {
       "localizations": {
         "en": {
@@ -6925,6 +8705,22 @@
         }
       }
     },
+    "；": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "; "
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "；"
+          }
+        }
+      }
+    },
     "；%lld 个因同名跳过": {
       "localizations": {
         "en": {
@@ -6937,6 +8733,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "；%lld 个因同名跳过"
+          }
+        }
+      }
+    },
+    "；%lld 个本地改过的技能已跳过": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "; skipped %lld locally edited skill(s)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "；%lld 个本地改过的技能已跳过"
           }
         }
       }
@@ -6969,1302 +8781,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "；另有 %lld 个套装成员没查成（网络抖动）"
-          }
-        }
-      }
-    },
-    "已删除 %lld 项，跳过": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skip %lld deleted items"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已删除 %lld 项，跳过"
-          }
-        }
-      }
-    },
-    "断链/本地副本 %@，需先修复": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Broken/local copies need fixing first: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "断链/本地副本 %@，需先修复"
-          }
-        }
-      }
-    },
-    "；": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "; "
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "；"
-          }
-        }
-      }
-    },
-    "，": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": ", "
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "，"
-          }
-        }
-      }
-    },
-    "设置没能写入磁盘（检查磁盘空间/权限）——工作模式未保存": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn't write settings (check disk space/permissions) — work mode not saved"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "设置没能写入磁盘（检查磁盘空间/权限）——工作模式未保存"
-          }
-        }
-      }
-    },
-    "已保存工作模式「%@」": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saved work mode \"%@\""
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已保存工作模式「%@」"
-          }
-        }
-      }
-    },
-    "还没有选中的工作模式": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No work mode selected"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "还没有选中的工作模式"
-          }
-        }
-      }
-    },
-    "设置没能写入磁盘（检查磁盘空间/权限）——工作模式未更新": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn't write settings (check disk space/permissions) — work mode not updated"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "设置没能写入磁盘（检查磁盘空间/权限）——工作模式未更新"
-          }
-        }
-      }
-    },
-    "已用当前盘面更新「%@」": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Updated \"%@\" from the current layout"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已用当前盘面更新「%@」"
-          }
-        }
-      }
-    },
-    "设置没能写入磁盘（检查磁盘空间/权限）——工作模式未删除": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn't write settings (check disk space/permissions) — work mode not deleted"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "设置没能写入磁盘（检查磁盘空间/权限）——工作模式未删除"
-          }
-        }
-      }
-    },
-    "已删除工作模式「%@」": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deleted work mode \"%@\""
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已删除工作模式「%@」"
-          }
-        }
-      }
-    },
-    "设置没能写入磁盘（检查磁盘空间/权限）——当前模式未记住": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn't write settings (check disk space/permissions) — current mode not remembered"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "设置没能写入磁盘（检查磁盘空间/权限）——当前模式未记住"
-          }
-        }
-      }
-    },
-    "已是「%@」的盘面，无需切换": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Already on \"%@\" — nothing to switch"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已是「%@」的盘面，无需切换"
-          }
-        }
-      }
-    },
-    "盘面已切换，但当前模式没能写入磁盘": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Layout switched, but the current mode couldn't be saved"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "盘面已切换，但当前模式没能写入磁盘"
-          }
-        }
-      }
-    },
-    "开 %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "On %lld"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "开 %lld"
-          }
-        }
-      }
-    },
-    "关 %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Off %lld"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "关 %lld"
-          }
-        }
-      }
-    },
-    "跳过 %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skipped %lld"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "跳过 %lld"
-          }
-        }
-      }
-    },
-    "失败 %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Failed: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "失败 %@"
-          }
-        }
-      }
-    },
-    "无变更": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No changes"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无变更"
-          }
-        }
-      }
-    },
-    "已切换到「%@」：%@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Switched to \"%@\": %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已切换到「%@」：%@"
-          }
-        }
-      }
-    },
-    "「%@」未完全套用：%@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "\"%@\" applied only in part: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「%@」未完全套用：%@"
-          }
-        }
-      }
-    },
-    "保存为工作模式": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save as work mode"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存为工作模式"
-          }
-        }
-      }
-    },
-    "记下此刻每个工具挂了哪些技能。切换时只改有差异的链接，不动没写进模式的工具。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Snapshot which skills are mounted on each tool. Switching only changes the diffs and leaves tools not in the mode untouched."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "记下此刻每个工具挂了哪些技能。切换时只改有差异的链接，不动没写进模式的工具。"
-          }
-        }
-      }
-    },
-    "保存": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存"
-          }
-        }
-      }
-    },
-    "例如：写作 / 画图 / 开发": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "e.g. Writing / Drawing / Dev"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "例如：写作 / 画图 / 开发"
-          }
-        }
-      }
-    },
-    "切换到「%@」？": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Switch to \"%@\"?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "切换到「%@」？"
-          }
-        }
-      }
-    },
-    "切换": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Switch"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "切换"
-          }
-        }
-      }
-    },
-    "源、工具、工作模式与 store — 全部配置都在这一页。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sources, tools, work modes and the store — all on this page."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "源、工具、工作模式与 store — 全部配置都在这一页。"
-          }
-        }
-      }
-    },
-    "Claude / Codex / Cursor 始终占一列。其余工具本机有 App 或 CLI 才出现开关，默认不进首页。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claude, Codex and Cursor always get a column. Other tools only get a toggle when their app or CLI is on this Mac, and stay off the home page until you turn them on."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claude / Codex / Cursor 始终占一列。其余工具本机有 App 或 CLI 才出现开关，默认不进首页。"
-          }
-        }
-      }
-    },
-    "工作模式（%lld）": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Work modes (%lld)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "工作模式（%lld）"
-          }
-        }
-      }
-    },
-    "空——把此刻的挂载组合存成「写作 / 画图 / 开发」，下次一键切回去。套装管来源，模式管场景。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Empty — save today's mounts as Writing / Drawing / Dev and switch back in one click. Bundles are where skills come from; modes are the task scene."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "空——把此刻的挂载组合存成「写作 / 画图 / 开发」，下次一键切回去。套装管来源，模式管场景。"
-          }
-        }
-      }
-    },
-    "删除此工作模式": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete this work mode"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除此工作模式"
-          }
-        }
-      }
-    },
-    "+ 保存当前为新模式": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "+ Save current as new mode"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "+ 保存当前为新模式"
-          }
-        }
-      }
-    },
-    "用当前盘面更新选中项": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Update selected from current layout"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用当前盘面更新选中项"
-          }
-        }
-      }
-    },
-    "盘面和选中模式不一致时才能更新": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enabled only when the layout no longer matches the selected mode"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "盘面和选中模式不一致时才能更新"
-          }
-        }
-      }
-    },
-    "%lld 个工具 · %lld 项已挂载": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld tools · %lld mounted"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld 个工具 · %lld 项已挂载"
-          }
-        }
-      }
-    },
-    " · 当前（已改动）": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": " · current (edited)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": " · 当前（已改动）"
-          }
-        }
-      }
-    },
-    " · 当前": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": " · current"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": " · 当前"
-          }
-        }
-      }
-    },
-    "把各工具目录里的真实技能目录收编进 store 并换成 symlink": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adopt real skill folders from each tool into the store and replace them with symlinks"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "把各工具目录里的真实技能目录收编进 store 并换成 symlink"
-          }
-        }
-      }
-    },
-    "还没有工作模式": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No work modes yet"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "还没有工作模式"
-          }
-        }
-      }
-    },
-    "%@（已改动）": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ (edited)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@（已改动）"
-          }
-        }
-      }
-    },
-    "保存当前为新模式…": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save current as new mode…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存当前为新模式…"
-          }
-        }
-      }
-    },
-    "用当前盘面更新此模式": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Update this mode from current layout"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用当前盘面更新此模式"
-          }
-        }
-      }
-    },
-    "删除此模式": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete this mode"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除此模式"
-          }
-        }
-      }
-    },
-    "在设置里管理…": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Manage in Settings…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在设置里管理…"
-          }
-        }
-      }
-    },
-    "%@·改": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@·edited"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@·改"
-          }
-        }
-      }
-    },
-    "工作模式": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Work mode"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "工作模式"
-          }
-        }
-      }
-    },
-    "工作模式：一键切换某类任务该挂哪些技能": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Work modes: switch which skills a task scene should mount"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "工作模式：一键切换某类任务该挂哪些技能"
-          }
-        }
-      }
-    },
-    "保存为工作模式…": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save as work mode…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存为工作模式…"
-          }
-        }
-      }
-    },
-    "没有可检查的源": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No sources to check"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "没有可检查的源"
-          }
-        }
-      }
-    },
-    "没有可检查的技能源——正在核对常用 CLI": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No skill sources to check — verifying common CLIs"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "没有可检查的技能源——正在核对常用 CLI"
-          }
-        }
-      }
-    },
-    "正在更新": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Updating"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在更新"
-          }
-        }
-      }
-    },
-    " %lld 个技能源": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": " %lld skill sources"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": " %lld 个技能源"
-          }
-        }
-      }
-    },
-    " %lld 个 CLI": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": " %lld CLIs"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": " %lld 个 CLI"
-          }
-        }
-      }
-    },
-    " + %lld 个 CLI": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": " + %lld CLIs"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": " + %lld 个 CLI"
-          }
-        }
-      }
-    },
-    "；%lld 个本地改过的技能已跳过": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "; skipped %lld locally edited skill(s)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "；%lld 个本地改过的技能已跳过"
-          }
-        }
-      }
-    },
-    "按真实安装位置升级：npm 多前缀、Homebrew、pipx、uv。基础工具只展示不升级。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Upgrade at the real install location: npm prefixes, Homebrew, pipx, uv. Foundation tools are listed but not one-click upgraded."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "按真实安装位置升级：npm 多前缀、Homebrew、pipx、uv。基础工具只展示不升级。"
-          }
-        }
-      }
-    },
-    "位置": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Location"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "位置"
-          }
-        }
-      }
-    },
-    "PATH 命中另一份": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "PATH hits another copy"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "PATH 命中另一份"
-          }
-        }
-      }
-    },
-    "命令行命中 %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shell resolves %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "命令行命中 %@"
-          }
-        }
-      }
-    },
-    "版本查询失败（网络）——点右下重新扫描": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Version lookup failed (network) — rescan from the lower right"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "版本查询失败（网络）——点右下重新扫描"
-          }
-        }
-      }
-    },
-    "从 GitHub / 本地安装，不跟 PyPI 同名包比版本": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Installed from GitHub / a local path — not compared with the PyPI package of the same name"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "从 GitHub / 本地安装，不跟 PyPI 同名包比版本"
-          }
-        }
-      }
-    },
-    "不自动升": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No auto-upgrade"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不自动升"
-          }
-        }
-      }
-    },
-    "基础工具（node / npm / TypeScript 等）不在一键升级范围": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Foundation tools (node / npm / TypeScript, etc.) are not one-click upgraded"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "基础工具（node / npm / TypeScript 等）不在一键升级范围"
-          }
-        }
-      }
-    },
-    "升级打回这份 CLI 真正所在的前缀，避免升错副本。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Upgrades write back to the prefix that actually owns this CLI, so a second copy isn't created."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "升级打回这份 CLI 真正所在的前缀，避免升错副本。"
-          }
-        }
-      }
-    },
-    "已写入 %@，但 PATH 仍命中 %@——命令行用的还是另一份": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wrote to %@, but PATH still hits %@ — the shell is still using the other copy"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已写入 %@，但 PATH 仍命中 %@——命令行用的还是另一份"
-          }
-        }
-      }
-    },
-    "连不上 PyPI——检查网络后重试。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Can't reach PyPI — check the network and retry."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "连不上 PyPI——检查网络后重试。"
-          }
-        }
-      }
-    },
-    "PyPI 响应异常：%@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unexpected PyPI response: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "PyPI 响应异常：%@"
-          }
-        }
-      }
-    },
-    "%@ 是基础工具，不在一键升级范围": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ is a foundation tool and is not one-click upgraded"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ 是基础工具，不在一键升级范围"
-          }
-        }
-      }
-    },
-    "brew 升级失败：%@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "brew upgrade failed: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "brew 升级失败：%@"
-          }
-        }
-      }
-    },
-    "pipx 升级失败：%@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "pipx upgrade failed: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "pipx 升级失败：%@"
-          }
-        }
-      }
-    },
-    "uv 升级失败：%@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "uv tool upgrade failed: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "uv 升级失败：%@"
-          }
-        }
-      }
-    },
-    "常用命令行工具有新版——按真实安装位置升级，点击查看": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Common CLI tools have updates — upgrade at the real install location"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "常用命令行工具有新版——按真实安装位置升级，点击查看"
-          }
-        }
-      }
-    },
-    "仍要覆盖本地修改": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Overwrite local edits anyway"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "仍要覆盖本地修改"
-          }
-        }
-      }
-    },
-    "检查更新时巡检全部全局 npm CLI": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Also inspect every global npm CLI when checking updates"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "检查更新时巡检全部全局 npm CLI"
-          }
-        }
-      }
-    },
-    "默认只查 Claude / Codex / 飞书 / GetNote 等常用工具。打开后才会把本机全部全局 npm 包名发给 registry。CLI 面板打开时始终全量扫描。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "By default only common tools (Claude / Codex / Lark / GetNote, etc.) are queried. Turn this on to send every global npm package name to the registry. Opening the CLI panel always does a full scan."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "默认只查 Claude / Codex / 飞书 / GetNote 等常用工具。打开后才会把本机全部全局 npm 包名发给 registry。CLI 面板打开时始终全量扫描。"
-          }
-        }
-      }
-    },
-    "%@ 本地改过，已跳过覆盖。要覆盖请选「仍要覆盖本地修改」。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ was edited locally and was not overwritten. Choose “Overwrite local edits anyway” to replace it."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ 本地改过，已跳过覆盖。要覆盖请选「仍要覆盖本地修改」。"
-          }
-        }
-      }
-    },
-    "没有发现可巡检的 CLI（或未安装 Node.js / Homebrew / pipx）": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No CLIs found to inspect (or Node.js / Homebrew / pipx isn't installed)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "没有发现可巡检的 CLI（或未安装 Node.js / Homebrew / pipx）"
-          }
-        }
-      }
-    },
-    "一键只升常用白名单；其它全局包装在行内点升级。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "One-click upgrades only the common allowlist; upgrade other global packages from the row."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一键只升常用白名单；其它全局包装在行内点升级。"
-          }
-        }
-      }
-    },
-    "将挂载 %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Will mount %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将挂载 %@"
-          }
-        }
-      }
-    },
-    "将断开 %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Will unmount %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将断开 %@"
           }
         }
       }

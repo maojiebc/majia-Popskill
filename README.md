@@ -97,7 +97,7 @@ Popskill 的回答是把管理建立在一个最简单的事实上：**技能就
 1. 下载 DMG，拖进「应用程序」打开。**首次打开** macOS 可能提示「来自互联网/未验证开发者」——它已签名+公证，右键图标选「打开」即可（仅第一次）
 2. 装好打开——如果你已经在用 `~/.agents/skills/`（`npx skills` 生态约定目录），矩阵会直接铺满你现有的技能
 3. 还没有？点「+ 添加」粘贴一个 GitHub 仓库试试，比如 `github.com/anthropics/skills`（**安装 GitHub 来源的技能需要系统已装 git**——没装会提示你运行 `xcode-select --install`）
-4. 在卡片上点 Claude / Codex pill 挂载；点 ✕ 或 ◐ 修复异常；右键卡片可「移除 / 在访达中显示」；设置里开「自动更新」
+4. 在卡片上点 Claude / Codex pill 挂载；点 ✕ 或 ◐ 修复异常；右键卡片可「移除 / 在访达中显示」；在设置的「自动维护」中配置更新策略
 
 ---
 
@@ -117,7 +117,7 @@ Popskill 的回答是把管理建立在一个最简单的事实上：**技能就
 App Store 的 sandbox 不允许应用管理 `~/.claude`、`~/.codex` 这些目录的 symlink。直接分发才能让它真正干活。签名 + 公证保证安全性等价。
 
 **Q：收集任何数据吗？**
-不。100% 本地运行、无统计、无遥测，也没有我方服务器。「本地」不等于「绝不联网」——它只访问你看得见的功能对应的端点：① 检查/安装你添加的 GitHub 技能源（`git clone` / `ls-remote`）；② npm 源更新与 CLI 巡检查询 registry.npmjs.org（默认只查常用白名单；打开「巡检全部」或 CLI 面板才送出全部全局 npm 包名）；③ pipx / uv 工具查 PyPI；④ well-known 协议源拉取 SKILL.md；⑤ Sparkle 检查应用自身更新。完整端点与读写路径清单见 [SECURITY.md](./SECURITY.md)。
+不。100% 本地运行、无统计、无遥测，也没有我方服务器。「本地」不等于「绝不联网」——它只访问你看得见的功能对应的端点：① 检查/安装你添加的 GitHub 技能源（`git clone` / `ls-remote`）；② npm 源更新与 CLI 巡检查询 registry.npmjs.org（默认只查常用白名单；明确授权全量检查后才送出全部待查全局 npm 包名）；③ pipx / uv 工具查 PyPI；④ well-known 协议源拉取 SKILL.md；⑤ Sparkle 检查应用自身更新。完整端点与读写路径清单见 [SECURITY.md](./SECURITY.md)。
 
 **Q：数据存在哪？怎么卸载？**
 技能本体在 `~/.agents/`（这是你的数据，不是 Popskill 的）；应用自身的元数据只有一个 `~/.agents/.popskill.json`。卸载 = 把 Popskill.app 拖进废纸篓，你的技能和 symlink 原样保留。

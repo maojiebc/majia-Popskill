@@ -231,10 +231,10 @@ extension StoreFS {
     }
 
     /// 扫本机维护型 CLI。full=false 只查白名单（启动 / 检查更新默认）。
-    func scanMaintainedClis(extraNpm: Set<String> = [], full: Bool = false) -> [GlobalCli] {
+    func scanMaintainedClis(extraNpm: Set<String> = [], full: Bool = false, checkVersions: Bool = true) -> [GlobalCli] {
         var out: [GlobalCli] = []
         out += scanNpmClis(extra: extraNpm, full: full)
-        out += scanBrewClis()
+        out += scanBrewClis(checkVersions: checkVersions)
         out += scanPipxClis()
         out += scanUvClis()
         return out.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
@@ -266,7 +266,7 @@ extension StoreFS {
         return rows
     }
 
-    private func scanBrewClis() -> [GlobalCli] {
+    private func scanBrewClis(checkVersions: Bool) -> [GlobalCli] {
         let brew = loginWhich("brew")
         guard brew != nil else { return [] }
         var installed: [String: String] = [:]
@@ -279,7 +279,7 @@ extension StoreFS {
         }
         guard !installed.isEmpty else { return [] }
         var latestByName: [String: String] = [:]
-        let outdated = runProcess("/bin/zsh", ["-lc", "brew outdated --json=v2"], timeout: 40)
+        let outdated = checkVersions ? runProcess("/bin/zsh", ["-lc", "HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ANALYTICS=1 brew outdated --json=v2"], timeout: 40) : (status: Int32(-1), out: "", err: "")
         if outdated.status == 0 {
             for row in parseBrewOutdated(Data(outdated.out.utf8)) {
                 latestByName[row.name] = row.latest
@@ -288,7 +288,7 @@ extension StoreFS {
         return installed.keys.sorted().map { name in
             let ver = installed[name] ?? ""
             return GlobalCli(
-                name: name, installed: ver, latest: latestByName[name] ?? ver,
+                name: name, installed: ver, latest: outdated.status == 0 ? (latestByName[name] ?? ver) : nil,
                 displayName: name, channel: .brew,
                 excluded: isFoundationTool(name), allowlisted: true
             )

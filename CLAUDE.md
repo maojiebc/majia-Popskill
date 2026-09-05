@@ -2,6 +2,18 @@
 
 > 项目快照 — 让任何 Claude Code session 在这个目录下都能 5 秒 catch up。
 
+## 二级交互重构（2026-09-05，PR #8）
+
+本节覆盖下文旧版“设置/CLI 弹层”描述。主屏矩阵不变；维护中心是主窗口内的二级页面（技能来源 / Agent CLI），设置使用共享同一 AppModel 的原生 Settings 场景，固定为工具 / 自动维护 / 数据与恢复 / 关于。添加和系统后台任务使用原生 sheet，不再使用自绘遮罩。
+
+- `MaintenanceState.swift` 保存会话视图状态、授权范围和实际动作收据，不存第二份库存。`OperationReport.swift` 保存最后批次结果；排队/运行/失败/版本未确认必须区分。
+- `MaintenanceIO.swift`：打开页面仅本地盘点；过滤不联网；显式检查使用当前授权范围，不因打开页面扩大包名外发范围。
+- `SettingsView.swift`：新来源默认策略与应用现有来源是两个动作。禁止恢复之前被撤回的永久 known-ID 并集。
+- `CliSheet.swift` 现为 `MaintenanceView`；菜单/⌘J 与主屏都进入同一页面，⌘, 走系统设置。来源详情和搜索上下文留在共享 session。
+- CLI 升级前复核同一安装身份，命令后重新盘点实测版本，不把目标版本伪装成已安装。保持原有队列、StoreFS、跨进程锁及恢复保护。
+- `SecondaryUISnapshotTests` 通过 `POPSKILL_UI_SNAPSHOT_DIR` / `POPSKILL_UI_SNAPSHOT_LANG` 显式启用，CI 保存中文与英文原生截图；未执行的用户实机交互不得报为已验收。
+- 设计与验收：`docs/design/secondary-ui-2026-09-05.md`。安装进行中不能关闭 sheet 清掉 staging；同名恢复明确拒绝，不承诺直接回滚。
+
 ## 是什么（v2，2026-06-10 推倒重来）
 
 **Popskill v2** = 本地 AI 能力管理器。在 `~/.agents/` 维护一份能力仓库（store，按类型分 `skills/ agents/ mcp/ bin/`），通过 **symlink** 把每项能力挂载到多个 AI 工具（Claude Code `~/.claude/`、Codex CLI `~/.codex/`）。

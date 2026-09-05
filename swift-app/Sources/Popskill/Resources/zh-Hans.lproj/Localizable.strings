@@ -10,10 +10,6 @@
 	<string> + %lld 个 CLI</string>
 	<key> · 上游另有 %lld 个未安装技能</key>
 	<string> · 上游另有 %lld 个未安装技能</string>
-	<key> · 当前</key>
-	<string> · 当前</string>
-	<key> · 当前（已改动）</key>
-	<string> · 当前（已改动）</string>
 	<key> 等 %lld 个时间点</key>
 	<string> 等 %lld 个时间点</string>
 	<key>%@ — 空</key>
@@ -36,8 +32,6 @@
 	<string>%@·改</string>
 	<key>%@（已改动）</key>
 	<string>%@（已改动）</string>
-	<key>%@，已装 %@</key>
-	<string>%@，已装 %@</string>
 	<key>%@：%@</key>
 	<string>%@：%@</string>
 	<key>%@：%@。点击切换 / 处理</key>
@@ -46,12 +40,12 @@
 	<string>%lld symlinks</string>
 	<key>%lld 个 CLI 可升级</key>
 	<string>%lld 个 CLI 可升级</string>
-	<key>%lld 个工具 · %lld 项已挂载</key>
-	<string>%lld 个工具 · %lld 项已挂载</string>
 	<key>%lld 个成员的 SKILL.md 拉取失败（%@）</key>
 	<string>%lld 个成员的 SKILL.md 拉取失败（%@）</string>
 	<key>%lld 个技能可更新</key>
 	<string>%lld 个技能可更新</string>
+	<key>%lld 个来源检查失败，请查看维护中心。</key>
+	<string>%lld 个来源检查失败，请查看维护中心。</string>
 	<key>%lld 个源检查失败（网络或源不可达）</key>
 	<string>%lld 个源检查失败（网络或源不可达）</string>
 	<key>%lld 个链接问题</key>
@@ -64,6 +58,8 @@
 	<string>%lld 天后</string>
 	<key>%lld 套装 · %lld 独立能力 · %@ 已激活</key>
 	<string>%lld 套装 · %lld 独立能力 · %@ 已激活</string>
+	<key>%lld 小时</key>
+	<string>%lld 小时</string>
 	<key>%lld 小时后</key>
 	<string>%lld 小时后</string>
 	<key>%lld 断链</key>
@@ -78,16 +74,18 @@
 	<string>%lld 项中 %lld 项已激活</string>
 	<key>%lld 项匹配</key>
 	<string>%lld 项匹配</string>
-	<key>+ 保存当前为新模式</key>
-	<string>+ 保存当前为新模式</string>
+	<key>%lld 项排队</key>
+	<string>%lld 项排队</string>
+	<key>%lld 项能力</key>
+	<string>%lld 项能力</string>
 	<key>+ 添加</key>
 	<string>+ 添加</string>
 	<key>+ 粘贴 URL 添加</key>
 	<string>+ 粘贴 URL 添加</string>
 	<key>+%lld 未装</key>
 	<string>+%lld 未装</string>
-	<key>/plugin 管理</key>
-	<string>/plugin 管理</string>
+	<key>Agent CLI</key>
+	<string>Agent CLI</string>
 	<key>App</key>
 	<string>App</string>
 	<key>App: Popskill v%@
@@ -100,28 +98,16 @@ macOS: %@
 
 &lt;!-- 描述问题。若 app 崩溃过，请附上 ~/Library/Logs/DiagnosticReports 里最新的 Popskill-*.ips 文件 --&gt;
 </string>
-	<key>CLI 升级收工：%lld 个成功，%lld 个失败（%@）</key>
-	<string>CLI 升级收工：%lld 个成功，%lld 个失败（%@）</string>
-	<key>CLI 巡检</key>
-	<string>CLI 巡检</string>
-	<key>CLI 巡检…</key>
-	<string>CLI 巡检…</string>
-	<key>Claude / Codex / Cursor 始终占一列。其余工具本机有 App 或 CLI 才出现开关，默认不进首页。</key>
-	<string>Claude / Codex / Cursor 始终占一列。其余工具本机有 App 或 CLI 才出现开关，默认不进首页。</string>
 	<key>Claude Code Marketplace 插件——只读展示，操作用 /plugin</key>
 	<string>Claude Code Marketplace 插件——只读展示，操作用 /plugin</string>
-	<key>Git · 已同步</key>
-	<string>Git · 已同步</string>
-	<key>Git · 有未提交改动</key>
-	<string>Git · 有未提交改动</string>
+	<key>Homebrew 检查失败，请重试。</key>
+	<string>Homebrew 检查失败，请重试。</string>
 	<key>Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 卸载</key>
 	<string>Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 卸载</string>
 	<key>Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 操作</key>
 	<string>Marketplace 插件由 Claude Code 管理——在 Claude Code 里用 /plugin 操作</string>
 	<key>Marketplace 插件（%@）· 由 Claude Code 管理，操作用 /plugin</key>
 	<string>Marketplace 插件（%@）· 由 Claude Code 管理，操作用 /plugin</string>
-	<key>PATH 命中另一份</key>
-	<string>PATH 命中另一份</string>
 	<key>PID %lld</key>
 	<string>PID %lld</string>
 	<key>Popskill 帮你把一份 AI 技能装一次，同时挂给 Claude Code 和 Codex 等工具。
@@ -134,8 +120,6 @@ macOS: %@
 	<string>PyPI 响应异常：%@</string>
 	<key>SKILL.MD · 文档摘要</key>
 	<string>SKILL.MD · 文档摘要</string>
-	<key>Store 与同步</key>
-	<string>Store 与同步</string>
 	<key>brew 升级失败：%@</key>
 	<string>brew 升级失败：%@</string>
 	<key>cron 任务请在终端手动执行</key>
@@ -152,8 +136,6 @@ macOS: %@
 	<string>launchctl unload——不再按时执行，plist 文件原样保留，随时可重新启用。</string>
 	<key>launchctl 退出码 %lld</key>
 	<string>launchctl 退出码 %lld</string>
-	<key>npm 全局 CLI 的版本矩阵与一键升级</key>
-	<string>npm 全局 CLI 的版本矩阵与一键升级</string>
 	<key>npm 包装的是 CLI 本体，装技能请用 GitHub 仓库或本地路径；已装的 npm 源 CLI 会自动纳入更新检查</key>
 	<string>npm 包装的是 CLI 本体，装技能请用 GitHub 仓库或本地路径；已装的 npm 源 CLI 会自动纳入更新检查</string>
 	<key>npm 安装失败</key>
@@ -176,8 +158,6 @@ macOS: %@
 	<string>store 副本与全部 symlink 已清理</string>
 	<key>store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。</key>
 	<string>store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。</string>
-	<key>store 在设备间同步；symlink 是各机本地状态，不参与同步。</key>
-	<string>store 在设备间同步；symlink 是各机本地状态，不参与同步。</string>
 	<key>store 已有同名条目「%@」。想换新版：回主界面对它「检查更新」；确要重装：先移除旧的（会进回收站）再回来安装。</key>
 	<string>store 已有同名条目「%@」。想换新版：回主界面对它「检查更新」；确要重装：先移除旧的（会进回收站）再回来安装。</string>
 	<key>uv 升级失败：%@</key>
@@ -192,18 +172,16 @@ macOS: %@
 	<string>↗ 在访达中显示</string>
 	<key>↗ 打开 %@</key>
 	<string>↗ 打开 %@</string>
-	<key>↗ 打开回收站文件夹</key>
-	<string>↗ 打开回收站文件夹</string>
 	<key>✗ 码 %lld</key>
 	<string>✗ 码 %lld</string>
 	<key>、</key>
 	<string>、</string>
 	<key>「%@」未完全套用：%@</key>
 	<string>「%@」未完全套用：%@</string>
-	<key>一键只升常用白名单；其它全局包装在行内点升级。</key>
-	<string>一键只升常用白名单；其它全局包装在行内点升级。</string>
 	<key>上次 %@ %@</key>
 	<string>上次 %@ %@</string>
+	<key>上次检查</key>
+	<string>上次检查</string>
 	<key>上次退出码 %lld</key>
 	<string>上次退出码 %lld</string>
 	<key>上游新增 %lld 个未装</key>
@@ -218,18 +196,16 @@ macOS: %@
 	<string>不会再跑</string>
 	<key>不再询问</key>
 	<string>不再询问</string>
+	<key>不在批量升级范围；单独更新前会再次确认目标。</key>
+	<string>不在批量升级范围；单独更新前会再次确认目标。</string>
 	<key>不安全的目录名：%@</key>
 	<string>不安全的目录名：%@</string>
-	<key>不自动升</key>
-	<string>不自动升</string>
 	<key>二进制 CLI，无 SKILL.md。</key>
 	<string>二进制 CLI，无 SKILL.md。</string>
 	<key>人话备注，留空恢复默认</key>
 	<string>人话备注，留空恢复默认</string>
 	<key>仅保存到 store</key>
 	<string>仅保存到 store</string>
-	<key>仅列最近 5 项，其余在文件夹里</key>
-	<string>仅列最近 5 项，其余在文件夹里</string>
 	<key>今天 %@</key>
 	<string>今天 %@</string>
 	<key>今天还会跑 %lld 个：%@</key>
@@ -242,16 +218,14 @@ macOS: %@
 	<string>从 %@ 拉取新版，重链 symlink</string>
 	<key>从 %@ 重新获取该项</key>
 	<string>从 %@ 重新获取该项</string>
-	<key>从 GitHub / 本地安装，不跟 PyPI 同名包比版本</key>
-	<string>从 GitHub / 本地安装，不跟 PyPI 同名包比版本</string>
 	<key>从源重新拉取</key>
 	<string>从源重新拉取</string>
 	<key>仓库中发现多个同名 skill「%@」——请粘贴具体 skill 的本地目录</key>
 	<string>仓库中发现多个同名 skill「%@」——请粘贴具体 skill 的本地目录</string>
-	<key>位置</key>
-	<string>位置</string>
 	<key>作者</key>
 	<string>作者</string>
+	<key>使用帮助</key>
+	<string>使用帮助</string>
 	<key>例如：写作 / 画图 / 开发</key>
 	<string>例如：写作 / 画图 / 开发</string>
 	<key>保存</key>
@@ -278,12 +252,20 @@ macOS: %@
 	<string>停用 %@？</string>
 	<key>停用（launchctl unload，不删文件）</key>
 	<string>停用（launchctl unload，不删文件）</string>
+	<key>允许后续检查</key>
+	<string>允许后续检查</string>
+	<key>允许已识别的 Agent 自动升级</key>
+	<string>允许已识别的 Agent 自动升级</string>
+	<key>允许本次会话</key>
+	<string>允许本次会话</string>
+	<key>允许检查全部全局 CLI？</key>
+	<string>允许检查全部全局 CLI？</string>
 	<key>全部</key>
 	<string>全部</string>
 	<key>全部修复 (%lld)</key>
 	<string>全部修复 (%lld)</string>
-	<key>全部升级 (%lld)</key>
-	<string>全部升级 (%lld)</string>
+	<key>全部全局 CLI</key>
+	<string>全部全局 CLI</string>
 	<key>全部安装 (%lld)</key>
 	<string>全部安装 (%lld)</string>
 	<key>全部更新 (%lld)</key>
@@ -292,34 +274,26 @@ macOS: %@
 	<string>全部源</string>
 	<key>全部源已是最新</key>
 	<string>全部源已是最新</string>
-	<key>关</key>
-	<string>关</string>
 	<key>关 %lld</key>
 	<string>关 %lld</string>
 	<key>关于</key>
 	<string>关于</string>
+	<key>关闭</key>
+	<string>关闭</string>
 	<key>内容已是最新</key>
 	<string>内容已是最新</string>
 	<key>切换</key>
 	<string>切换</string>
 	<key>切换到「%@」？</key>
 	<string>切换到「%@」？</string>
-	<key>删除此工作模式</key>
-	<string>删除此工作模式</string>
 	<key>删除此模式</key>
 	<string>删除此模式</string>
 	<key>刷新</key>
 	<string>刷新</string>
-	<key>包名</key>
-	<string>包名</string>
 	<key>包名不合法：%@</key>
 	<string>包名不合法：%@</string>
-	<key>升级</key>
-	<string>升级</string>
-	<key>升级 %@ 失败：%@</key>
-	<string>升级 %@ 失败：%@</string>
-	<key>升级打回这份 CLI 真正所在的前缀，避免升错副本。</key>
-	<string>升级打回这份 CLI 真正所在的前缀，避免升错副本。</string>
+	<key>包名：%@</key>
+	<string>包名：%@</string>
 	<key>占位</key>
 	<string>占位</string>
 	<key>占位 (stub)</key>
@@ -328,6 +302,14 @@ macOS: %@
 	<string>占位待校验</string>
 	<key>卡片视图</key>
 	<string>卡片视图</string>
+	<key>卸载来源 %@？</key>
+	<string>卸载来源 %@？</string>
+	<key>卸载此来源…</key>
+	<string>卸载此来源…</string>
+	<key>原位置为空时可恢复；同名仍存在时不覆盖。CLI 包管理器升级不提供这里的文件夹回滚。</key>
+	<string>原位置为空时可恢复；同名仍存在时不覆盖。CLI 包管理器升级不提供这里的文件夹回滚。</string>
+	<key>原位置已有同名内容；保留现状，请先查看备份。</key>
+	<string>原位置已有同名内容；保留现状，请先查看备份。</string>
 	<key>原型数据模式不可导入</key>
 	<string>原型数据模式不可导入</string>
 	<key>原型数据模式不检查更新</key>
@@ -346,12 +328,18 @@ macOS: %@
 	<string>取消</string>
 	<key>另一个 Popskill 正在修改 Store，请稍后重试</key>
 	<string>另一个 Popskill 正在修改 Store，请稍后重试</string>
+	<key>只在 Popskill 运行时执行。自动升级仅限明确识别且安装渠道、路径符合条件的 Agent；不保证上游新版没有问题。</key>
+	<string>只在 Popskill 运行时执行。自动升级仅限明确识别且安装渠道、路径符合条件的 Agent；不保证上游新版没有问题。</string>
+	<key>只影响以后新添加的来源，不覆盖现有来源的选择。</key>
+	<string>只影响以后新添加的来源，不覆盖现有来源的选择。</string>
 	<key>只有 GitHub / 本地路径来源支持安装上游新增技能</key>
 	<string>只有 GitHub / 本地路径来源支持安装上游新增技能</string>
+	<key>可更新</key>
+	<string>可更新</string>
+	<key>可清除搜索或筛选后再检查；首次读取失败时也可能没有清单。</key>
+	<string>可清除搜索或筛选后再检查；首次读取失败时也可能没有清单。</string>
 	<key>同步于%@</key>
 	<string>同步于%@</string>
-	<key>同步后端</key>
-	<string>同步后端</string>
 	<key>同步未开启</key>
 	<string>同步未开启</string>
 	<key>同步未开启（可选）</key>
@@ -362,6 +350,8 @@ macOS: %@
 	<string>名称</string>
 	<key>后天</key>
 	<string>后天</string>
+	<key>后续检查包含全部全局 npm CLI</key>
+	<string>后续检查包含全部全局 npm CLI</string>
 	<key>启用</key>
 	<string>启用</string>
 	<key>启用 %@？</key>
@@ -382,26 +372,24 @@ macOS: %@
 	<string>周四</string>
 	<key>周日</key>
 	<string>周日</string>
-	<key>命令行命中 %@</key>
-	<string>命令行命中 %@</string>
 	<key>命令超时且输出管道无法排空，已放弃：%@</key>
 	<string>命令超时且输出管道无法排空，已放弃：%@</string>
 	<key>命令超时（%lld s）已终止：%@ %@</key>
 	<string>命令超时（%lld s）已终止：%@ %@</string>
 	<key>回收站已清空</key>
 	<string>回收站已清空</string>
-	<key>回收站（%lld）</key>
-	<string>回收站（%lld）</string>
+	<key>固定显示</key>
+	<string>固定显示</string>
 	<key>图例</key>
 	<string>图例</string>
 	<key>在 Claude / Codex 的 %@ 目录里发现现有能力（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。</key>
 	<string>在 Claude / Codex 的 %@ 目录里发现现有能力（如 %@…）。导入 store 统一管理，原位替换为 symlink？原目录会进 store 回收站，可恢复。</string>
-	<key>在设置里管理…</key>
-	<string>在设置里管理…</string>
+	<key>在维护中心查看</key>
+	<string>在维护中心查看</string>
 	<key>在访达中显示</key>
 	<string>在访达中显示</string>
-	<key>基础工具（node / npm / TypeScript 等）不在一键升级范围</key>
-	<string>基础工具（node / npm / TypeScript 等）不在一键升级范围</string>
+	<key>备份与回收站（%lld）</key>
+	<string>备份与回收站（%lld）</string>
 	<key>失败 %@</key>
 	<string>失败 %@</string>
 	<key>套装连同 %lld 个子项的 store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。</key>
@@ -422,14 +410,16 @@ macOS: %@
 	<string>安装上游新增的 %lld 个技能？</string>
 	<key>安装中…</key>
 	<string>安装中…</string>
+	<key>安装位置：%@</key>
+	<string>安装位置：%@</string>
+	<key>安装信息已变化，请重新检查。</key>
+	<string>安装信息已变化，请重新检查。</string>
 	<key>安装并链接 (%lld)</key>
 	<string>安装并链接 (%lld)</string>
-	<key>定时任务</key>
-	<string>定时任务</string>
-	<key>定时任务…</key>
-	<string>定时任务…</string>
-	<key>定时任务（launchd / crontab）</key>
-	<string>定时任务（launchd / crontab）</string>
+	<key>安装渠道：%@</key>
+	<string>安装渠道：%@</string>
+	<key>定期检查未开启；已授权的来源仍可能在启动时更新。</key>
+	<string>定期检查未开启；已授权的来源仍可能在启动时更新。</string>
 	<key>导入 %lld 个</key>
 	<string>导入 %lld 个</string>
 	<key>导入中断：%@——已导入的保留，重开设置页可续导剩余项</key>
@@ -438,20 +428,24 @@ macOS: %@
 	<string>导入中断：%@——已导入的保留，重试可续导剩余项</string>
 	<key>导入未托管目录</key>
 	<string>导入未托管目录</string>
+	<key>将修改 %lld 个现有远端来源；不改变新来源默认值，本地改动保护仍然有效。</key>
+	<string>将修改 %lld 个现有远端来源；不改变新来源默认值，本地改动保护仍然有效。</string>
 	<key>将写入</key>
 	<string>将写入</string>
 	<key>将挂载 %@</key>
 	<string>将挂载 %@</string>
 	<key>将断开 %@</key>
 	<string>将断开 %@</string>
+	<key>将更新 %@，位置：%@。这不是符合批量条件的 Agent，请确认安装渠道和路径。</key>
+	<string>将更新 %@，位置：%@。这不是符合批量条件的 Agent，请确认安装渠道和路径。</string>
+	<key>尚未检查</key>
+	<string>尚未检查</string>
 	<key>工作模式</key>
 	<string>工作模式</string>
-	<key>工作模式（%lld）</key>
-	<string>工作模式（%lld）</string>
 	<key>工作模式：一键切换某类任务该挂哪些技能</key>
 	<string>工作模式：一键切换某类任务该挂哪些技能</string>
-	<key>工具（挂载目标）</key>
-	<string>工具（挂载目标）</string>
+	<key>工具</key>
+	<string>工具</string>
 	<key>已从源重新拉取 %@</key>
 	<string>已从源重新拉取 %@</string>
 	<key>已从链接打开添加流程</key>
@@ -482,12 +476,6 @@ macOS: %@
 	<string>已加载，上次运行失败（退出码 %lld）</string>
 	<key>已加载，上次运行正常</key>
 	<string>已加载，上次运行正常</string>
-	<key>已升级 %@ → v%@</key>
-	<string>已升级 %@ → v%@</string>
-	<key>已升级 %lld 个 CLI</key>
-	<string>已升级 %lld 个 CLI</string>
-	<key>已升级全局 CLI %@（npm i -g）</key>
-	<string>已升级全局 CLI %@（npm i -g）</string>
 	<key>已同步</key>
 	<string>已同步</string>
 	<key>已启用 %@</key>
@@ -504,6 +492,8 @@ macOS: %@
 	<string>已导入 %lld 个未托管目录进 store（原目录已入回收站）</string>
 	<key>已就绪</key>
 	<string>已就绪</string>
+	<key>已应用到 %lld 个现有来源。</key>
+	<string>已应用到 %lld 个现有来源。</string>
 	<key>已恢复 %@ 到 store——按需重新链接工具</key>
 	<string>已恢复 %@ 到 store——按需重新链接工具</string>
 	<key>已恢复 %@ 的更新提醒——当前检查结束后将复查此源</key>
@@ -532,8 +522,6 @@ macOS: %@
 	<string>已更新 %lld 项（%@）后失败：%@</string>
 	<key>已最新</key>
 	<string>已最新</string>
-	<key>已添加的源（%lld）</key>
-	<string>已添加的源（%lld）</string>
 	<key>已激活</key>
 	<string>已激活</string>
 	<key>已用当前盘面更新「%@」</key>
@@ -542,8 +530,6 @@ macOS: %@
 	<string>已移除 %@ 在 %@ 侧的副本</string>
 	<key>已移除 %@ 在 %@ 侧的链接</key>
 	<string>已移除 %@ 在 %@ 侧的链接</string>
-	<key>已装</key>
-	<string>已装</string>
 	<key>已触发 %@</key>
 	<string>已触发 %@</string>
 	<key>已跳过</key>
@@ -554,12 +540,16 @@ macOS: %@
 	<string>已跳过当前上游版本，上游再出新版会重新提醒——点击立即恢复提醒并重查</string>
 	<key>已跳过更新，点击恢复提醒</key>
 	<string>已跳过更新，点击恢复提醒</string>
+	<key>已配置 Git；提交状态不代表远端已同步。</key>
+	<string>已配置 Git；提交状态不代表远端已同步。</string>
 	<key>已重新扫描 store 与工具目录</key>
 	<string>已重新扫描 store 与工具目录</string>
 	<key>已重链 %@ · %@</key>
 	<string>已重链 %@ · %@</string>
 	<key>已链接 %@ → %@</key>
 	<string>已链接 %@ → %@</string>
+	<key>常用 AI 工具</key>
+	<string>常用 AI 工具</string>
 	<key>常用命令行工具有新版——按真实安装位置升级，点击查看</key>
 	<string>常用命令行工具有新版——按真实安装位置升级，点击查看</string>
 	<key>常驻 daemon</key>
@@ -568,38 +558,54 @@ macOS: %@
 	<string>常驻任务在册但没有进程——停摆了</string>
 	<key>常驻后台（%lld）</key>
 	<string>常驻后台（%lld）</string>
-	<key>开</key>
-	<string>开</string>
+	<key>应用到现有来源…</key>
+	<string>应用到现有来源…</string>
+	<key>应用到现有来源？</key>
+	<string>应用到现有来源？</string>
+	<key>应用设置</key>
+	<string>应用设置</string>
+	<key>应用运行时定期检查</key>
+	<string>应用运行时定期检查</string>
 	<key>开 %lld</key>
 	<string>开 %lld</string>
-	<key>开关 = 自动更新。移除源会同时卸载它提供的能力与 symlink。</key>
-	<string>开关 = 自动更新。移除源会同时卸载它提供的能力与 symlink。</string>
+	<key>开启</key>
+	<string>开启</string>
+	<key>恢复</key>
+	<string>恢复</string>
 	<key>恢复 %@ 失败：%@</key>
 	<string>恢复 %@ 失败：%@</string>
-	<key>恢复到 store</key>
-	<string>恢复到 store</string>
 	<key>恢复更新提醒</key>
 	<string>恢复更新提醒</string>
-	<key>打开 GitHub issue，自动带上 app 与 macOS 版本</key>
-	<string>打开 GitHub issue，自动带上 app 与 macOS 版本</string>
+	<key>手动和自动检查将向 npm registry 发送全部待查全局包名。不需要全量检查时，请保持常用工具范围。</key>
+	<string>手动和自动检查将向 npm registry 发送全部待查全局包名。不需要全量检查时，请保持常用工具范围。</string>
+	<key>打开文件夹</key>
+	<string>打开文件夹</string>
 	<key>打开日志</key>
 	<string>打开日志</string>
+	<key>打开来源</key>
+	<string>打开来源</string>
 	<key>扫描中…</key>
 	<string>扫描中…</string>
 	<key>扫描完成：发现 %lld 项能力</key>
 	<string>扫描完成：发现 %lld 项能力</string>
 	<key>扫描本地目录</key>
 	<string>扫描本地目录</string>
+	<key>批量设置</key>
+	<string>批量设置</string>
 	<key>找不到这个仓库——检查地址是否写对、是否为公开仓库。</key>
 	<string>找不到这个仓库——检查地址是否写对、是否为公开仓库。</string>
 	<key>找出你已经手动放进 Claude / Codex 的技能，收编进 Popskill 统一管理（动手前会先让你确认）</key>
 	<string>找出你已经手动放进 Claude / Codex 的技能，收编进 Popskill 统一管理（动手前会先让你确认）</string>
 	<key>技能 / Agent / MCP / CLI</key>
 	<string>技能 / Agent / MCP / CLI</string>
+	<key>技能来源</key>
+	<string>技能来源</string>
+	<key>技能源自动更新</key>
+	<string>技能源自动更新</string>
+	<key>技能目录</key>
+	<string>技能目录</string>
 	<key>把 store（~/.agents）做成 git 仓库即可在多台 Mac 间同步——这是可选项，不影响本机使用。</key>
 	<string>把 store（~/.agents）做成 git 仓库即可在多台 Mac 间同步——这是可选项，不影响本机使用。</string>
-	<key>把各工具目录里的真实技能目录收编进 store 并换成 symlink</key>
-	<string>把各工具目录里的真实技能目录收编进 store 并换成 symlink</string>
 	<key>把检查到的上游新增技能全部装进 store 并按默认工具挂载</key>
 	<string>把检查到的上游新增技能全部装进 store 并按默认工具挂载</string>
 	<key>报告问题…</key>
@@ -610,36 +616,40 @@ macOS: %@
 	<string>挂载会在 %@ 创建目录。如果你还没用这个工具，可以先不挂。确定要创建并挂载吗？</string>
 	<key>挂载到</key>
 	<string>挂载到</string>
+	<key>挂载到 %@</key>
+	<string>挂载到 %@</string>
 	<key>指向别处：%@</key>
 	<string>指向别处：%@</string>
 	<key>指回 store 中现存的目录</key>
 	<string>指回 store 中现存的目录</string>
 	<key>按时间跑（%lld）· 按下次运行排序</key>
 	<string>按时间跑（%lld）· 按下次运行排序</string>
-	<key>按真实安装位置升级：npm 多前缀、Homebrew、pipx、uv。基础工具只展示不升级。</key>
-	<string>按真实安装位置升级：npm 多前缀、Homebrew、pipx、uv。基础工具只展示不升级。</string>
+	<key>排队中</key>
+	<string>排队中</string>
 	<key>推荐</key>
 	<string>推荐</string>
-	<key>提供 %@</key>
-	<string>提供 %@</string>
-	<key>提供 %@ 等 %lld 项</key>
-	<string>提供 %@ 等 %lld 项</string>
 	<key>提供 %lld 项</key>
 	<string>提供 %lld 项</string>
+	<key>搜索全部备份</key>
+	<string>搜索全部备份</string>
 	<key>搜索名称 / 描述 / 作者…</key>
 	<string>搜索名称 / 描述 / 作者…</string>
+	<key>搜索名称或来源</key>
+	<string>搜索名称或来源</string>
 	<key>撤掉这条 symlink，其他工具不受影响</key>
 	<string>撤掉这条 symlink，其他工具不受影响</string>
 	<key>改用 store 链接</key>
 	<string>改用 store 链接</string>
+	<key>数据与恢复</key>
+	<string>数据与恢复</string>
 	<key>断开 %@ 失败：%@</key>
 	<string>断开 %@ 失败：%@</string>
 	<key>断链</key>
 	<string>断链</string>
 	<key>断链/本地副本 %@，需先修复</key>
 	<string>断链/本地副本 %@，需先修复</string>
-	<key>新安装默认挂载</key>
-	<string>新安装默认挂载</string>
+	<key>新来源默认允许自动更新</key>
+	<string>新来源默认允许自动更新</string>
 	<key>新版</key>
 	<string>新版</string>
 	<key>无匹配结果</key>
@@ -656,10 +666,16 @@ macOS: %@
 	<string>明天</string>
 	<key>昨天 %@</key>
 	<string>昨天 %@</string>
+	<key>显示厂商任务</key>
+	<string>显示厂商任务</string>
 	<key>显示系统/第三方任务（%lld）</key>
 	<string>显示系统/第三方任务（%lld）</string>
 	<key>暂不</key>
 	<string>暂不</string>
+	<key>暂无备份</key>
+	<string>暂无备份</string>
+	<key>更多</key>
+	<string>更多</string>
 	<key>更新 %@ 失败：%@</key>
 	<string>更新 %@ 失败：%@</string>
 	<key>更新中</key>
@@ -670,12 +686,24 @@ macOS: %@
 	<string>更新到 %@</string>
 	<key>更新到 %@ 并修复</key>
 	<string>更新到 %@ 并修复</string>
+	<key>更新命令完成；请检查版本以确认结果。</key>
+	<string>更新命令完成；请检查版本以确认结果。</string>
+	<key>更新失败</key>
+	<string>更新失败</string>
+	<key>更新完成</key>
+	<string>更新完成</string>
+	<key>更新当前结果（%lld）</key>
+	<string>更新当前结果（%lld）</string>
 	<key>更新收工：%lld 个成功，%lld 个失败（%@）</key>
 	<string>更新收工：%lld 个成功，%lld 个失败（%@）</string>
 	<key>更新此套装</key>
 	<string>更新此套装</string>
-	<key>最新</key>
-	<string>最新</string>
+	<key>更新此工具</key>
+	<string>更新此工具</string>
+	<key>更新此来源</key>
+	<string>更新此来源</string>
+	<key>更新这份安装？</key>
+	<string>更新这份安装？</string>
 	<key>有新版，点击更新所属套装</key>
 	<string>有新版，点击更新所属套装</string>
 	<key>有新版：%@——点击全部更新</key>
@@ -684,6 +712,8 @@ macOS: %@
 	<string>有未提交改动</string>
 	<key>未加载（已停用）</key>
 	<string>未加载（已停用）</string>
+	<key>未发现工具目录</key>
+	<string>未发现工具目录</string>
 	<key>未安装</key>
 	<string>未安装</string>
 	<key>未找到 SKILL.md — 该源不是 skill 也不是套装</key>
@@ -700,48 +730,72 @@ macOS: %@
 	<string>未检测到 npm——请先安装 Node.js。</string>
 	<key>未能安装任何上游新增技能——检查源是否仍包含这些目录</key>
 	<string>未能安装任何上游新增技能——检查源是否仍包含这些目录</string>
-	<key>未配置</key>
-	<string>未配置</string>
 	<key>未配置调度</key>
 	<string>未配置调度</string>
 	<key>未配置调度（手动）</key>
 	<string>未配置调度（手动）</string>
+	<key>未配置跨设备同步，不影响本机使用。</key>
+	<string>未配置跨设备同步，不影响本机使用。</string>
 	<key>未链接</key>
 	<string>未链接</string>
+	<key>本地 AI 能力管理器</key>
+	<string>本地 AI 能力管理器</string>
 	<key>本地副本</key>
 	<string>本地副本</string>
+	<key>本批结果：已完成 %lld/%lld</key>
+	<string>本批结果：已完成 %lld/%lld</string>
+	<key>本机 launchd / cron 任务，与 Popskill 应用内自动维护分开管理。</key>
+	<string>本机 launchd / cron 任务，与 Popskill 应用内自动维护分开管理。</string>
 	<key>本机已发现</key>
 	<string>本机已发现</string>
 	<key>来源</key>
 	<string>来源</string>
 	<key>来源 URL</key>
 	<string>来源 URL</string>
+	<key>来源待确认</key>
+	<string>来源待确认</string>
 	<key>来自 %@：%@%@。将写入 store 并按默认工具挂载。</key>
 	<string>来自 %@：%@%@。将写入 store 并按默认工具挂载。</string>
 	<key>查找</key>
 	<string>查找</string>
+	<key>查看备份</key>
+	<string>查看备份</string>
 	<key>查看详情</key>
 	<string>查看详情</string>
-	<key>检查 App 更新…</key>
-	<string>检查 App 更新…</string>
+	<key>检查 Popskill 更新…</key>
+	<string>检查 Popskill 更新…</string>
+	<key>检查与自动升级</key>
+	<string>检查与自动升级</string>
 	<key>检查中…</key>
 	<string>检查中…</string>
+	<key>检查全部全局 CLI？</key>
+	<string>检查全部全局 CLI？</string>
+	<key>检查失败</key>
+	<string>检查失败</string>
 	<key>检查更新</key>
 	<string>检查更新</string>
-	<key>检查更新…</key>
-	<string>检查更新…</string>
-	<key>检查更新时巡检全部全局 npm CLI</key>
-	<string>检查更新时巡检全部全局 npm CLI</string>
+	<key>检查此来源</key>
+	<string>检查此来源</string>
+	<key>检查范围</key>
+	<string>检查范围</string>
+	<key>检查间隔</key>
+	<string>检查间隔</string>
+	<key>检测到本地改动，已阻止覆盖。请先处理或备份本地版本。</key>
+	<string>检测到本地改动，已阻止覆盖。请先处理或备份本地版本。</string>
 	<key>正在从源重新拉取 %@…</key>
 	<string>正在从源重新拉取 %@…</string>
-	<key>正在扫描全局 npm 包…</key>
-	<string>正在扫描全局 npm 包…</string>
+	<key>正在处理 %@</key>
+	<string>正在处理 %@</string>
 	<key>正在更新</key>
 	<string>正在更新</string>
+	<key>此来源允许自动更新</key>
+	<string>此来源允许自动更新</string>
 	<key>每 %lld 分钟</key>
 	<string>每 %lld 分钟</string>
 	<key>每 %lld 小时</key>
 	<string>每 %lld 小时</string>
+	<key>每 %lld 小时检查；自动更新按已授权策略执行。</key>
+	<string>每 %lld 小时检查；自动更新按已授权策略执行。</string>
 	<key>每 %lld 小时的第 %lld 分</key>
 	<string>每 %lld 小时的第 %lld 分</string>
 	<key>每 %lld 秒</key>
@@ -774,14 +828,14 @@ macOS: %@
 	<string>每月 %lld 日 %@</string>
 	<key>永久删除全部 %lld 项备份，不可恢复。</key>
 	<string>永久删除全部 %lld 项备份，不可恢复。</string>
-	<key>永久删除全部回收站备份——此前只能去 Finder 手删</key>
-	<string>永久删除全部回收站备份——此前只能去 Finder 手删</string>
+	<key>永久删除全部备份</key>
+	<string>永久删除全部备份</string>
 	<key>没有 %@ 类型的能力。点 + 添加，或切回「全部」。</key>
 	<string>没有 %@ 类型的能力。点 + 添加，或切回「全部」。</string>
 	<key>没有 plist 路径</key>
 	<string>没有 plist 路径</string>
-	<key>没有发现可巡检的 CLI（或未安装 Node.js / Homebrew / pipx）</key>
-	<string>没有发现可巡检的 CLI（或未安装 Node.js / Homebrew / pipx）</string>
+	<key>没有匹配的项目</key>
+	<string>没有匹配的项目</string>
 	<key>没有发现未托管的能力目录</key>
 	<string>没有发现未托管的能力目录</string>
 	<key>没有可显示的任务</key>
@@ -792,20 +846,16 @@ macOS: %@
 	<string>没有可检查的源</string>
 	<key>没有能力匹配 “</key>
 	<string>没有能力匹配 “</string>
+	<key>添加来源…</key>
+	<string>添加来源…</string>
 	<key>添加能力</key>
 	<string>添加能力</string>
-	<key>清空</key>
-	<string>清空</string>
-	<key>清空…</key>
-	<string>清空…</string>
-	<key>清空回收站失败：%@</key>
-	<string>清空回收站失败：%@</string>
+	<key>清空回收站…</key>
+	<string>清空回收站…</string>
 	<key>清空回收站？</key>
 	<string>清空回收站？</string>
 	<key>源</key>
 	<string>源</string>
-	<key>源、工具、工作模式与 store — 全部配置都在这一页。</key>
-	<string>源、工具、工作模式与 store — 全部配置都在这一页。</string>
 	<key>点击 ✕ / ◐ / ↑ / + 可逐项处理</key>
 	<string>点击 ✕ / ◐ / ↑ / + 可逐项处理</string>
 	<key>点击切换 / 处理</key>
@@ -818,36 +868,36 @@ macOS: %@
 	<string>点击定位有上游新增技能的套装（循环）</string>
 	<key>点击展开套装</key>
 	<string>点击展开套装</string>
+	<key>点击检查时会向 npm registry 发送全部待查全局包名。这里只授权本次会话，不改变自动检查范围。</key>
+	<string>点击检查时会向 npm registry 发送全部待查全局包名。这里只授权本次会话，不改变自动检查范围。</string>
 	<key>点击逐个定位待更新的技能（循环）</key>
 	<string>点击逐个定位待更新的技能（循环）</string>
 	<key>版本</key>
 	<string>版本</string>
-	<key>版本查询失败（网络）——点右下重新扫描</key>
-	<string>版本查询失败（网络）——点右下重新扫描</string>
+	<key>版本待确认</key>
+	<string>版本待确认</string>
+	<key>状态筛选</key>
+	<string>状态筛选</string>
+	<key>现有来源已开启 %lld/%lld</key>
+	<string>现有来源已开启 %lld/%lld</string>
 	<key>用当前盘面更新此模式</key>
 	<string>用当前盘面更新此模式</string>
-	<key>用当前盘面更新选中项</key>
-	<string>用当前盘面更新选中项</string>
+	<key>由原渠道管理</key>
+	<string>由原渠道管理</string>
 	<key>登录自启</key>
 	<string>登录自启</string>
 	<key>登录自启（%lld）</key>
 	<string>登录自启（%lld）</string>
-	<key>盘面和选中模式不一致时才能更新</key>
-	<string>盘面和选中模式不一致时才能更新</string>
 	<key>盘面已切换，但当前模式没能写入磁盘</key>
 	<string>盘面已切换，但当前模式没能写入磁盘</string>
 	<key>目录移入 store 回收站，不建链接</key>
 	<string>目录移入 store 回收站，不建链接</string>
 	<key>知道了</key>
 	<string>知道了</string>
-	<key>移回 store 原目录（%@/）——同名能力已存在时会拒绝</key>
-	<string>移回 store 原目录（%@/）——同名能力已存在时会拒绝</string>
 	<key>移除</key>
 	<string>移除</string>
 	<key>移除 %@ 失败：%@</key>
 	<string>移除 %@ 失败：%@</string>
-	<key>移除 %@？</key>
-	<string>移除 %@？</string>
 	<key>移除套装</key>
 	<string>移除套装</string>
 	<key>移除套装（含全部子项）</key>
@@ -856,36 +906,46 @@ macOS: %@
 	<string>移除该侧副本</string>
 	<key>移除该侧链接</key>
 	<string>移除该侧链接</string>
-	<key>移除该源（含其能力）</key>
-	<string>移除该源（含其能力）</string>
-	<key>空——把此刻的挂载组合存成「写作 / 画图 / 开发」，下次一键切回去。套装管来源，模式管场景。</key>
-	<string>空——把此刻的挂载组合存成「写作 / 画图 / 开发」，下次一键切回去。套装管来源，模式管场景。</string>
-	<key>空——移除能力和更新换版时，旧目录会进这里（最多留 %lld 份，先进先出）。</key>
-	<string>空——移除能力和更新换版时，旧目录会进这里（最多留 %lld 份，先进先出）。</string>
 	<key>立刻跑一次（launchctl kickstart）</key>
 	<string>立刻跑一次（launchctl kickstart）</string>
 	<key>立刻运行 %@？</key>
 	<string>立刻运行 %@？</string>
-	<key>立即向更新源询问新版本</key>
-	<string>立即向更新源询问新版本</string>
 	<key>等价于 launchctl kickstart -k——不等下次调度时间，现在就跑一遍。任务输出看它自己的日志。</key>
 	<string>等价于 launchctl kickstart -k——不等下次调度时间，现在就跑一遍。任务输出看它自己的日志。</string>
 	<key>等价于 launchctl kickstart -k——杀掉旧进程重新拉起。任务输出看它自己的日志。</key>
 	<string>等价于 launchctl kickstart -k——杀掉旧进程重新拉起。任务输出看它自己的日志。</string>
+	<key>管理自动维护…</key>
+	<string>管理自动维护…</string>
 	<key>类型</key>
 	<string>类型</string>
 	<key>粘贴 GitHub 仓库 / 本地路径 — 安装一次进 store，再选择挂载到哪些工具。</key>
 	<string>粘贴 GitHub 仓库 / 本地路径 — 安装一次进 store，再选择挂载到哪些工具。</string>
 	<key>粘贴一个 GitHub 仓库或本地文件夹，安装进 store 并挂载到所选工具</key>
 	<string>粘贴一个 GitHub 仓库或本地文件夹，安装进 store 并挂载到所选工具</string>
+	<key>系统后台任务</key>
+	<string>系统后台任务</string>
+	<key>系统后台任务…</key>
+	<string>系统后台任务…</string>
+	<key>终端命中：%@</key>
+	<string>终端命中：%@</string>
+	<key>终端正在使用另一份安装：%@</key>
+	<string>终端正在使用另一份安装：%@</string>
+	<key>维护中心</key>
+	<string>维护中心</string>
+	<key>维护中心…</key>
+	<string>维护中心…</string>
+	<key>维护对象</key>
+	<string>维护对象</string>
 	<key>编辑人话备注（存在 Popskill，不动 plist）</key>
 	<string>编辑人话备注（存在 Popskill，不动 plist）</string>
 	<key>能力矩阵</key>
 	<string>能力矩阵</string>
 	<key>自动更新 %lld 个源</key>
 	<string>自动更新 %lld 个源</string>
-	<key>自动检查 App 更新（每天一次）</key>
-	<string>自动检查 App 更新（每天一次）</string>
+	<key>自动检查 Popskill 更新</key>
+	<string>自动检查 Popskill 更新</string>
+	<key>自动维护</key>
+	<string>自动维护</string>
 	<key>获取仓库失败——请检查地址与网络后重试。</key>
 	<string>获取仓库失败——请检查地址与网络后重试。</string>
 	<key>获取仓库失败：%@</key>
@@ -900,8 +960,8 @@ macOS: %@
 	<string>记下此刻每个工具挂了哪些技能。切换时只改有差异的链接，不动没写进模式的工具。</string>
 	<key>设置</key>
 	<string>设置</string>
-	<key>设置…</key>
-	<string>设置…</string>
+	<key>设置未保存，请检查目录权限和磁盘空间。</key>
+	<string>设置未保存，请检查目录权限和磁盘空间。</string>
 	<key>设置没能写入磁盘（检查磁盘空间/权限）——「恢复更新提醒」未保存</key>
 	<string>设置没能写入磁盘（检查磁盘空间/权限）——「恢复更新提醒」未保存</string>
 	<key>设置没能写入磁盘（检查磁盘空间/权限）——「跳过此版本」未保存</key>
@@ -930,8 +990,8 @@ macOS: %@
 	<string>该源没有记录 URL，无法更新</string>
 	<key>该源没有记录 npm 包名，无法更新</key>
 	<string>该源没有记录 npm 包名，无法更新</string>
-	<key>谁在跑、下次什么时候跑、上次结果如何。点名字旁的 ✎ 加人话备注。</key>
-	<string>谁在跑、下次什么时候跑、上次结果如何。点名字旁的 ✎ 加人话备注。</string>
+	<key>请先授权全部全局 CLI 的检查范围。</key>
+	<string>请先授权全部全局 CLI 的检查范围。</string>
 	<key>跑一次</key>
 	<string>跑一次</string>
 	<key>路径不存在：%@</key>
@@ -942,6 +1002,8 @@ macOS: %@
 	<string>跳过此版本</string>
 	<key>运行中</key>
 	<string>运行中</string>
+	<key>返回能力矩阵</key>
+	<string>返回能力矩阵</string>
 	<key>还没有任何能力</key>
 	<string>还没有任何能力</string>
 	<key>还没有工作模式</key>
@@ -958,28 +1020,32 @@ macOS: %@
 	<string>连不上网络，没法获取这个仓库——检查网络后重试。</string>
 	<key>逐源比对上游内容，发现新版亮出更新徽标</key>
 	<string>逐源比对上游内容，发现新版亮出更新徽标</string>
+	<key>部分成员未能检查，请重试。</key>
+	<string>部分成员未能检查，请重试。</string>
 	<key>重启</key>
 	<string>重启</string>
 	<key>重启 %@？</key>
 	<string>重启 %@？</string>
 	<key>重启（launchctl kickstart -k）</key>
 	<string>重启（launchctl kickstart -k）</string>
-	<key>重新扫描</key>
-	<string>重新扫描</string>
 	<key>重新拉取 %@ 失败：%@</key>
 	<string>重新拉取 %@ 失败：%@</string>
+	<key>重试本批失败项（%lld）</key>
+	<string>重试本批失败项（%lld）</string>
 	<key>重链到 store 中本地版本</key>
 	<string>重链到 store 中本地版本</string>
 	<key>链接 %@ 失败：%@</key>
 	<string>链接 %@ 失败：%@</string>
 	<key>错误：%@</key>
 	<string>错误：%@</string>
-	<key>首页列</key>
-	<string>首页列</string>
+	<key>需处理</key>
+	<string>需处理</string>
 	<key>首页显示</key>
 	<string>首页显示</string>
-	<key>默认只查 Claude / Codex / 飞书 / GetNote 等常用工具。打开后才会把本机全部全局 npm 包名发给 registry。CLI 面板打开时始终全量扫描。</key>
-	<string>默认只查 Claude / Codex / 飞书 / GetNote 等常用工具。打开后才会把本机全部全局 npm 包名发给 registry。CLI 面板打开时始终全量扫描。</string>
+	<key>首页显示只影响界面；默认挂载只影响以后安装。这里不会改动已有技能链接或创建工具目录。</key>
+	<string>首页显示只影响界面；默认挂载只影响以后安装。这里不会改动已有技能链接或创建工具目录。</string>
+	<key>默认挂载</key>
+	<string>默认挂载</string>
 	<key>，</key>
 	<string>，</string>
 	<key>，%lld 项占位</key>

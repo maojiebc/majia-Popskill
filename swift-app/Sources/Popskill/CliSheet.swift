@@ -1,495 +1,282 @@
+import Combine
 import SwiftUI
 
-// 维护中心（v2.21）：把来源自动更新、Agent CLI 识别、版本检查与升级收成一个闭环。
-// npm 全量扫描只在打开本页时发生；定时巡检仍只发送内置白名单包名。
-
-struct CliSheet: View {
+// Long-running work belongs in the main window, not a dismissible overlay.
+struct MaintenanceView: View {
     @Environment(AppModel.self) private var model
-    @State private var hoverRow: String?
-    @State private var showAll = false
-    @State private var policy = MaintenancePolicyStore.loadPolicy()
-    @State private var runStatus = MaintenancePolicyStore.loadStatus()
+    @Environment(\.openSettings) private var openSettings
+    @FocusState private var searchFocused: Bool
+    @State private var confirmFullScope = false
+    @State private var policy = MaintenancePolicy()
 
     var body: some View {
-        SheetShell(width: 720, onDismiss: { model.sheet = nil }) {
-            VStack(spacing: 0) {
-                head
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        automationPanel
-                        inventorySummary
-                        inventory
-                    }
-                    .padding(EdgeInsets(top: 14, leading: 20, bottom: 16, trailing: 20))
+        @Bindable var state = model.maintenance
+        VStack(spacing: 0) {
+            HStack(spacing: 16) {
+                Button { model.returnToMatrix() } label: { Label(L("返回能力矩阵"), systemImage: "chevron.left") }
+                Text(L("维护中心")).font(.system(size: 22, weight: .semibold))
+                Spacer()
+                Button(L("管理自动维护…")) { state.settingsSection = .automation; openSettings() }
+            }.padding(.horizontal, 24).padding(.top, 20).padding(.bottom, 14)
+            HStack {
+                Picker(L("维护对象"), selection: $state.tab) {
+                    Text(L("技能来源")).tag(MaintenanceTab.sources)
+                    Text(L("Agent CLI")).tag(MaintenanceTab.clis)
+                }.pickerStyle(.segmented).frame(width: 280)
+                Spacer()
+                Text(policy.periodicCheckEnabled ? L("每 \(policy.intervalHours) 小时检查；自动更新按已授权策略执行。") : L("定期检查未开启；已授权的来源仍可能在启动时更新。"))
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+            }.padding(.horizontal, 24).padding(.bottom, 12)
+            HStack(spacing: 12) {
+                TextField(L("搜索名称或来源"), text: Binding(
+                    get: { state.tab == .sources ? state.sourceQuery : state.cliQuery },
+                    set: { if state.tab == .sources { state.sourceQuery = $0 } else { state.cliQuery = $0 } }
+                )).textFieldStyle(.roundedBorder).focused($searchFocused).frame(maxWidth: 340)
+                Picker(L("状态筛选"), selection: Binding(
+                    get: { state.tab == .sources ? state.sourceFilter : state.cliFilter },
+                    set: { if state.tab == .sources { state.sourceFilter = $0 } else { state.cliFilter = $0 } }
+                )) { ForEach(MaintenanceFilter.allCases, id: \.self) { Text($0.label).tag($0) } }
+                    .pickerStyle(.segmented).frame(width: 250)
+                Spacer()
+                if state.tab == .clis {
+                    Picker(L("检查范围"), selection: Binding(get: { state.cliScope }, set: { scope in
+                        if scope == .all && !model.autoCliPatrol && !state.allCliInspectionAuthorized { confirmFullScope = true }
+                        else { state.cliScope = scope }
+                    })) { ForEach(CliScanScope.allCases, id: \.self) { Text($0.label).tag($0) } }
+                        .fixedSize()
                 }
-                .frame(maxHeight: 580)
-                foot
+            }.padding(.horizontal, 24).padding(.bottom, 14)
+            Divider()
+            ZStack {
+                sourceList.opacity(state.tab == .sources ? 1 : 0)
+                    .disabled(state.tab != .sources).allowsHitTesting(state.tab == .sources).accessibilityHidden(state.tab != .sources)
+                cliList.opacity(state.tab == .clis ? 1 : 0)
+                    .disabled(state.tab != .clis).allowsHitTesting(state.tab == .clis).accessibilityHidden(state.tab != .clis)
             }
-            // 旧表先显示，后台重新扫。打开面板才全量看 npm；日常定时检查仍是低泄露白名单。
-            .onAppear {
-                policy = MaintenancePolicyStore.loadPolicy()
-                runStatus = MaintenancePolicyStore.loadStatus()
-                _ = model.reconcileRemoteSourceDefaults()
-                model.checkCliUpdates()
-            }
-            .task {
-                while !Task.isCancelled {
-                    policy = MaintenancePolicyStore.loadPolicy()
-                    runStatus = MaintenancePolicyStore.loadStatus()
-                    do { try await Task.sleep(for: .seconds(1)) }
-                    catch { return }
-                }
-            }
+            resultPanel
+            Divider()
+            footer
         }
+        .background(Ink.window).font(.system(size: 13)).buttonStyle(.bordered).controlSize(.regular)
+        .onAppear { policy = model.maintenancePolicy }
+        .onChange(of: state.searchRequested) { _, _ in searchFocused = true }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification,
+                    object: model.maintenanceDefaults).receive(on: RunLoop.main)) { _ in policy = model.maintenancePolicy }
+        .confirmationDialog(L("检查全部全局 CLI？"), isPresented: $confirmFullScope, titleVisibility: .visible) {
+            Button(L("允许本次会话")) { state.allCliInspectionAuthorized = true; state.cliScope = .all }
+            Button(L("取消"), role: .cancel) {}
+        } message: { Text(L("点击检查时会向 npm registry 发送全部待查全局包名。这里只授权本次会话，不改变自动检查范围。")) }
     }
 
-    private var head: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(L("CLI 巡检"))
-                    .font(.ui(9.5, .bold)).kerning(0.6).foregroundStyle(Ink.tertiary)
-                Text(maintenanceText("维护中心", "Maintenance Center"))
-                    .font(.ui(15.5, .bold)).foregroundStyle(Ink.ink)
-                Text(maintenanceText(
-                    "统一管理技能源自动更新与本机 Agent CLI。",
-                    "Manage source auto-updates and local agent CLIs in one place."
-                ) + " " + L("按真实安装位置升级：npm 多前缀、Homebrew、pipx、uv。基础工具只展示不升级。"))
-                .font(.ui(11.5)).foregroundStyle(Ink.secondary)
-            }
-            Spacer()
-            Button { model.sheet = nil } label: {
-                Text("esc")
-                    .font(.mono(11))
-                    .foregroundStyle(Color(hex: 0x666666))
-                    .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(RoundedRectangle(cornerRadius: 4).fill(.white))
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Ink.control2, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(EdgeInsets(top: 16, leading: 20, bottom: 13, trailing: 20))
-        .background(Ink.chrome)
-        .overlay(alignment: .bottom) { Ink.hairline.frame(height: 1) }
+    private var sourceList: some View {
+        @Bindable var state = model.maintenance
+        return ScrollView {
+            LazyVStack(spacing: 10) {
+                if model.filteredMaintenanceSources.isEmpty { emptyState }
+                ForEach(model.filteredMaintenanceSources) { entry in sourceRow(entry).id(entry.id) }
+            }.scrollTargetLayout().padding(24)
+        }.scrollPosition(id: $state.sourceScrollID, anchor: .top)
+    }
+    private var cliList: some View {
+        @Bindable var state = model.maintenance
+        return ScrollView {
+            LazyVStack(spacing: 10) {
+                if model.filteredMaintenanceClis.isEmpty { emptyState }
+                ForEach(model.filteredMaintenanceClis) { cli in cliRow(cli).id(cli.id) }
+            }.scrollTargetLayout().padding(24)
+        }.scrollPosition(id: $state.cliScrollID, anchor: .top)
+    }
+    private var emptyState: some View {
+        VStack(spacing: 10) {
+            Text(L("没有匹配的项目")).font(.system(size: 16, weight: .medium))
+            Text(L("可清除搜索或筛选后再检查；首次读取失败时也可能没有清单。"))
+                .foregroundStyle(.secondary)
+        }.frame(maxWidth: .infinity).padding(40)
     }
 
-    // ── 自动更新策略 ──────────────────────────────────────
-
-    private var automationPanel: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(maintenanceText("自动更新", "AUTOMATIC UPDATES"))
-                .font(.ui(10.5, .bold)).kerning(0.6).foregroundStyle(Ink.tertiary)
-
-            HStack(spacing: 10) {
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 8) {
-                        Text(maintenanceText("全部远端技能源", "All remote skill sources"))
-                            .font(.ui(12.5, .semibold)).foregroundStyle(Ink.ink)
-                        Text("\(enabledSourceCount)/\(sourceCandidates.count)")
-                            .font(.mono(10)).foregroundStyle(sourceAutoAll ? Ink.green : Ink.tertiary)
-                    }
-                    Text(sourcePolicyDescription)
-                        .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 12)
-                PsSwitch(on: sourceAutoAll && policy.inheritRemoteAutoUpdate) {
-                    setAllSourceAutoUpdate(!(sourceAutoAll && policy.inheritRemoteAutoUpdate))
-                }
-                .help(maintenanceText(
-                    "一次覆盖当前全部 GitHub / npm / well-known 来源，并作为未来新来源的默认值",
-                    "Cover all current GitHub, npm, and well-known sources and use the choice as the default for new sources"
-                ))
-            }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 8).fill(.white))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Ink.hairline, lineWidth: 1))
-
-            VStack(spacing: 8) {
-                HStack(spacing: 10) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(maintenanceText("定时维护巡检", "Scheduled maintenance"))
-                            .font(.ui(12.5, .semibold)).foregroundStyle(Ink.ink)
-                        Text(maintenanceText(
-                            "应用运行时按节奏检查已开启的技能源与内置 Agent 白名单。",
-                            "While Popskill is running, periodically check enabled skill sources and the built-in agent allowlist."
-                        ))
-                        .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-                    }
-                    Spacer(minLength: 12)
-                    PsSwitch(on: policy.periodicCheckEnabled) { togglePeriodicCheck() }
-                }
-
-                if policy.periodicCheckEnabled {
-                    HStack(spacing: 8) {
-                        Text(maintenanceText("间隔", "Interval"))
-                            .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-                        ForEach(MaintenancePolicy.allowedIntervals, id: \.self) { hours in
-                            intervalButton(hours)
+    private func sourceRow(_ entry: Entry) -> some View {
+        let expanded = model.maintenance.expandedSources.contains(entry.id)
+        let check = model.maintenance.sourceChecks[entry.id]
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 18) {
+                Button { toggleSource(entry.id) } label: {
+                    HStack {
+                        Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(entry.name).fontWeight(.semibold)
+                            Text(entry.sourceUrl ?? L("来源待确认")).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(2)
                         }
-                        Spacer()
-                        Text(maintenanceText("安全 Agent 自动升级", "Auto-upgrade safe agents"))
-                            .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-                        PsSwitch(on: policy.autoUpgradeRecognizedAgents) { toggleAgentAutoUpgrade() }
-                    }
-                    .padding(.top, 2)
-                }
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }.buttonStyle(.plain)
+                Text(L("\(entry.allCaps.count) 项能力")).foregroundStyle(.secondary)
+                status(entry.id, check: check, hasUpdate: entry.hasUpdate,
+                       fallback: entry.isManagedExternally ? L("由原渠道管理") : L("尚未检查"))
+                    .frame(width: 120, alignment: .leading)
+                Button(L("更新此来源")) { model.runUpdate(entry.id) }
+                    .disabled(!entry.hasUpdate || entry.localDrifted || entry.isManagedExternally || model.maintenanceMutationBusy || check?.outcome == .failed)
             }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 8).fill(.white))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Ink.hairline, lineWidth: 1))
-
-            HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(runStatus.summary)
-                        .font(.ui(10.5, .medium))
-                        .foregroundStyle(runStatus.outcome == .partial || runStatus.outcome == .failed ? Ink.amberText : Ink.secondary2)
-                    if let date = runStatus.finishedAt ?? runStatus.startedAt {
-                        Text(maintenanceText("最近运行：", "Last run: ") + relativeMaintenanceDate(date))
-                            .font(.ui(9.5)).foregroundStyle(Ink.tertiary)
-                    }
+            if entry.localDrifted { warning(L("检测到本地改动，已阻止覆盖。请先处理或备份本地版本。")) }
+            if let error = check?.error { warning(error) }
+            if expanded { sourceDetails(entry) }
+        }.padding(16).background(.white, in: RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Ink.hairline))
+    }
+    private func sourceDetails(_ entry: Entry) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Divider()
+            Text(entry.allCaps.map(\.name).joined(separator: " · ")).textSelection(.enabled).foregroundStyle(.secondary)
+            HStack {
+                if supportsBulkAutomaticUpdate(sourceUrl: entry.sourceUrl, managedExternally: entry.isManagedExternally) {
+                    Toggle(L("此来源允许自动更新"), isOn: Binding(get: {
+                        model.entries.first { $0.id == entry.id }?.autoUpdate ?? false
+                    }, set: { value in
+                        if value != entry.autoUpdate { model.toggleAutoUpdate(entry.id) }
+                    })).toggleStyle(.switch).fixedSize()
+                    Button(L("检查此来源")) { model.checkUpdates(auto: false, only: [entry.id]) }
+                        .disabled(model.checkingUpdates || model.maintenanceMutationBusy)
                 }
                 Spacer()
-                Button { model.runMaintenanceNow() } label: {
-                    Text(runStatus.outcome == .running
-                         ? maintenanceText("运行中…", "Running…")
-                         : maintenanceText("立即运行", "Run now"))
-                        .font(.ui(10.5, .semibold)).foregroundStyle(Color(hex: 0x444444))
-                        .padding(.horizontal, 9).frame(height: 25)
-                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Ink.control2, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                .disabled(runStatus.outcome == .running || model.checkingUpdates || model.checkingClis)
-            }
-            .padding(.horizontal, 4)
-
-            HStack(spacing: 8) {
-                Text(maintenanceText(
-                    "安全边界：更新前仍检查本地改动；改过的技能、Marketplace 插件、本地路径和 PATH 冲突 CLI 不会被批量覆盖。",
-                    "Safety boundary: local edits are checked; modified skills, Marketplace plugins, local paths, and PATH-conflicted CLIs are never bulk-overwritten."
-                ))
-                .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-                Spacer()
-                if driftedSourceCount > 0 {
-                    Text(maintenanceText("跳过本地改动 \(driftedSourceCount)", "Skip \(driftedSourceCount) local edits"))
-                        .font(.ui(9.5, .semibold)).foregroundStyle(Ink.amberText)
-                        .padding(.horizontal, 7).padding(.vertical, 2)
-                        .background(Capsule().fill(Ink.amberBadgeBg))
-                        .overlay(Capsule().stroke(Ink.amberBadgeBorder, lineWidth: 1))
-                }
+                if let source = entry.sourceUrl { Button(L("打开来源")) { model.openSourceLink(source) } }
+                Menu(L("更多")) {
+                    if entry.hasUpdate { Button(L("跳过此版本")) { model.skipUpdate(entry) } }
+                    if entry.skippedUpdate { Button(L("恢复更新提醒")) { model.unskipUpdate(entry) } }
+                    if !entry.isManagedExternally {
+                        Button(L("卸载此来源…"), role: .destructive) { model.removeEntry(entry) }
+                    }
+                }.disabled(model.maintenanceMutationBusy)
             }
         }
     }
-
-    private var sourceCandidates: [Entry] {
-        model.entries.filter {
-            supportsBulkAutomaticUpdate(sourceUrl: $0.sourceUrl, managedExternally: $0.isManagedExternally)
-        }
-    }
-
-    private var enabledSourceCount: Int { sourceCandidates.filter(\.autoUpdate).count }
-    private var driftedSourceCount: Int { sourceCandidates.filter(\.localDrifted).count }
-    private var sourceAutoAll: Bool {
-        sourceCandidates.isEmpty
-            ? policy.inheritRemoteAutoUpdate
-            : enabledSourceCount == sourceCandidates.count
-    }
-
-    private var sourcePolicyDescription: String {
-        guard !sourceCandidates.isEmpty else {
-            return policy.inheritRemoteAutoUpdate
-                ? maintenanceText("当前没有远端来源；以后新添加的来源会默认开启。", "No remote source yet; newly added remote sources will default to on.")
-                : maintenanceText("还没有可自动更新的远端来源。", "No remote source is eligible for auto-update yet.")
-        }
-        if sourceAutoAll && policy.inheritRemoteAutoUpdate {
-            return maintenanceText("当前来源全部开启，未来新增远端来源也会自动继承。", "All current sources are enabled and future remote sources will inherit the policy.")
-        }
-        if enabledSourceCount > 0 {
-            return maintenanceText("已有 \(enabledSourceCount) 个开启；右侧开关会同时覆盖当前与未来来源。", "\(enabledSourceCount) sources are enabled; the switch covers both current and future sources.")
-        }
-        return maintenanceText("一次开启当前全部来源，并记住为未来新来源的默认值。", "Enable every current source and remember the choice for future sources.")
-    }
-
-    private func setAllSourceAutoUpdate(_ on: Bool) {
-        if model.setAllRemoteSourceAutoUpdate(on) {
-            policy = MaintenancePolicyStore.loadPolicy()
-        }
-    }
-
-    private func togglePeriodicCheck() {
-        var next = policy
-        next.periodicCheckEnabled.toggle()
-        if !next.periodicCheckEnabled { next.autoUpgradeRecognizedAgents = false }
-        savePolicy(next)
-    }
-
-    private func toggleAgentAutoUpgrade() {
-        var next = policy
-        next.autoUpgradeRecognizedAgents.toggle()
-        if next.autoUpgradeRecognizedAgents { next.periodicCheckEnabled = true }
-        savePolicy(next)
-    }
-
-    private func savePolicy(_ next: MaintenancePolicy) {
-        policy = next.normalized
-        MaintenancePolicyStore.savePolicy(policy)
-        model.startMaintenanceAutomation()
-    }
-
-    private func intervalButton(_ hours: Int) -> some View {
-        Button { var next = policy; next.intervalHours = hours; savePolicy(next) } label: {
-            Text(hours == 72 ? maintenanceText("3 天", "3d") : "\(hours)h")
-                .font(.mono(9.5, .semibold))
-                .foregroundStyle(policy.intervalHours == hours ? .white : Ink.secondary2)
-                .padding(.horizontal, 7).padding(.vertical, 3)
-                .background(Capsule().fill(policy.intervalHours == hours ? Ink.ink : Ink.chrome))
-                .overlay(Capsule().stroke(Ink.hairline, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func relativeMaintenanceDate(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.locale = l10nLocale
-        formatter.unitsStyle = .short
-        return formatter.localizedString(for: date, relativeTo: Date())
-    }
-
-    // ── CLI 清单 ──────────────────────────────────────────
-
-    private var inventorySummary: some View {
-        HStack(spacing: 8) {
-            summaryChip(
-                value: recognizedAgentCount,
-                label: maintenanceText("已识别 Agent", "recognized agents"),
-                emphasis: false
-            )
-            summaryChip(
-                value: recognizedAgentUpdates.count,
-                label: maintenanceText("可安全升级", "safe updates"),
-                emphasis: !recognizedAgentUpdates.isEmpty
-            )
-            summaryChip(
-                value: pathConflictCount,
-                label: maintenanceText("PATH 冲突", "PATH conflicts"),
-                emphasis: pathConflictCount > 0
-            )
-            Spacer()
-            HStack(spacing: 5) {
-                Text(maintenanceText("仅看 Agent", "Agents only"))
-                    .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-                PsSwitch(on: !showAll) { showAll.toggle() }
-                Text(maintenanceText("全部", "All"))
-                    .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+    private func cliRow(_ cli: GlobalCli) -> some View {
+        let expanded = model.maintenance.expandedClis.contains(cli.id)
+        let check = model.maintenance.cliChecks[cli.id]
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 18) {
+                Button { toggleCli(cli.id) } label: {
+                    HStack {
+                        Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(cli.maintenanceName).fontWeight(.semibold)
+                            Text(cli.maintenanceSummary).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(2)
+                        }
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }.buttonStyle(.plain)
+                Text("\(cli.installed) → \(cli.latest ?? "—")").monospacedDigit()
+                    .frame(width: 190, alignment: .leading)
+                status(cli.id, check: check, hasUpdate: cli.hasUpdate,
+                       fallback: cli.excluded || !cli.tracksIndex ? L("由原渠道管理") : L("尚未检查"))
+                    .frame(width: 120, alignment: .leading)
+                Button(L("更新此工具")) { requestCliUpdate(cli) }
+                    .disabled(!cli.hasUpdate || model.maintenanceMutationBusy || model.checkingClis || check?.outcome == .failed)
             }
-        }
-    }
-
-    private func summaryChip(value: Int, label: String, emphasis: Bool) -> some View {
-        HStack(spacing: 5) {
-            Text("\(value)").font(.mono(11, .bold)).monospacedDigit()
-            Text(label).font(.ui(10.5))
-        }
-        .foregroundStyle(emphasis ? Ink.amberText : Ink.secondary2)
-        .padding(.horizontal, 8).padding(.vertical, 4)
-        .background(Capsule().fill(emphasis ? Ink.amberBadgeBg : Ink.chrome))
-        .overlay(Capsule().stroke(emphasis ? Ink.amberBadgeBorder : Ink.hairline, lineWidth: 1))
-    }
-
-    private var inventory: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if visibleClis.isEmpty {
-                Text(emptyMessage)
-                    .font(.ui(11.5)).foregroundStyle(Ink.tertiary)
-                    .padding(.vertical, 24)
-                    .frame(maxWidth: .infinity)
-            } else {
-                tableHead
-                ForEach(visibleClis) { cli in row(cli) }
+            if !cli.pathMatchesPrefix {
+                let path = cli.pathHit ?? "—"
+                warning(L("终端正在使用另一份安装：\(path)"))
             }
-        }
+            if let error = check?.error { warning(error) }
+            if expanded {
+                Divider()
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L("包名：\(cli.name)"))
+                    Text(L("安装渠道：\(cli.channel.label)"))
+                    if let prefix = cli.prefix { Text(L("安装位置：\(prefix)")) }
+                    if let path = cli.pathHit { Text(L("终端命中：\(path)")) }
+                    if !cli.safeRecognizedAgentUpdate { Text(L("不在批量升级范围；单独更新前会再次确认目标。")) }
+                }.textSelection(.enabled).font(.system(size: 12)).foregroundStyle(.secondary)
+            }
+        }.padding(16).background(.white, in: RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Ink.hairline))
     }
 
-    private var visibleClis: [GlobalCli] {
-        let rows = showAll ? model.globalClis : model.globalClis.filter(\.looksLikeAgent)
-        return rows.sorted { a, b in
-            let ar = a.agentDefinition != nil ? 0 : (a.looksLikeAgent ? 1 : 2)
-            let br = b.agentDefinition != nil ? 0 : (b.looksLikeAgent ? 1 : 2)
-            if ar != br { return ar < br }
-            if a.hasUpdate != b.hasUpdate { return a.hasUpdate }
-            return a.maintenanceName.localizedStandardCompare(b.maintenanceName) == .orderedAscending
-        }
-    }
-
-    private var recognizedAgentCount: Int {
-        model.globalClis.filter { $0.agentDefinition != nil }.count
-    }
-    private var recognizedAgentUpdates: [GlobalCli] {
-        model.globalClis.filter {
-            $0.safeRecognizedAgentUpdate && $0.pathMatchesPrefix && !$0.excluded && $0.tracksIndex
-        }
-    }
-    private var pathConflictCount: Int {
-        model.globalClis.filter { !$0.pathMatchesPrefix }.count
-    }
-
-    private var emptyMessage: String {
-        if model.checkingClis { return L("正在扫描全局 npm 包…") }
-        return showAll
-            ? L("没有发现可巡检的 CLI（或未安装 Node.js / Homebrew / pipx）")
-            : maintenanceText("没有发现 Agent CLI；切到“全部”可查看其它工具。", "No agent CLI was found; switch to All to inspect other tools.")
-    }
-
-    private var tableHead: some View {
-        HStack(spacing: 10) {
-            Text(L("包名") + " / " + maintenanceText("说明", "DESCRIPTION"))
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Text(maintenanceText("类型", "ROLE")).frame(width: 86, alignment: .leading)
-            Text(L("位置")).frame(width: 92, alignment: .leading)
-            Text(L("已装") + " / " + L("最新")).frame(width: 104, alignment: .trailing)
-            Color.clear.frame(width: 70)
-        }
-        .font(.ui(9.5, .bold)).tracking(0.5)
-        .foregroundStyle(Ink.tertiary)
-        .padding(.horizontal, 8).padding(.vertical, 6)
-        .overlay(alignment: .bottom) { Ink.hairline.frame(height: 1) }
-    }
-
-    private func row(_ cli: GlobalCli) -> some View {
-        HStack(alignment: .center, spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
+    private func status(_ id: String, check: CheckRecord?, hasUpdate: Bool, fallback: String) -> some View {
+        let receipt = model.maintenance.report.items.first { $0.id == id }
+        let useReceipt = receipt.map { item in
+            item.phase.isActive || (check?.checkedAt ?? .distantPast) <= (item.finishedAt ?? model.maintenance.report.startedAt ?? .distantFuture)
+        } ?? false
+        return VStack(alignment: .leading, spacing: 4) {
+            if let receipt, useReceipt {
                 HStack(spacing: 6) {
-                    Text(cli.maintenanceName)
-                        .font(.ui(11.8, .semibold)).foregroundStyle(Ink.ink)
-                        .lineLimit(1)
-                    if cli.maintenanceName != cli.name {
-                        Text(cli.name)
-                            .font(.mono(9.5)).foregroundStyle(Ink.tertiary)
-                            .lineLimit(1).truncationMode(.middle)
-                    }
+                    if receipt.phase == .running { ProgressView().controlSize(.small) }
+                    Text(receipt.phase.label)
                 }
-                Text(cli.maintenanceSummary)
-                    .font(.ui(9.8)).foregroundStyle(Ink.tertiary)
-                    .lineLimit(2)
-                if !cli.pathMatchesPrefix {
-                    Text(L("PATH 命中另一份") + "：" + abbrev(cli.pathHit ?? ""))
-                        .font(.ui(9.3)).foregroundStyle(Ink.amberText)
-                        .lineLimit(1).truncationMode(.middle)
-                }
+            } else {
+                Text(check?.outcome.label ?? (hasUpdate ? L("可更新") : fallback))
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Text(cli.maintenanceRole)
-                .font(.ui(9.5, .semibold))
-                .foregroundStyle(cli.agentDefinition != nil ? Ink.blue : Ink.tertiary)
-                .lineLimit(2)
-                .frame(width: 86, alignment: .leading)
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(cli.channel.label)
-                    .font(.ui(9.5, .semibold)).foregroundStyle(Ink.secondary2)
-                Text(cli.prefix.map(abbrev) ?? cli.channel.label)
-                    .font(.mono(9.5)).foregroundStyle(Ink.tertiary)
-                    .lineLimit(1).truncationMode(.middle)
-            }
-            .frame(width: 92, alignment: .leading)
-            .help(cli.pathHit.map { L("命令行命中 \(abbrev($0))") } ?? cli.channel.label)
-
-            VStack(alignment: .trailing, spacing: 1) {
-                Text("v\(cli.installed)")
-                    .font(.mono(10.5)).foregroundStyle(Ink.secondary2).monospacedDigit()
-                Text(cli.latest.map { "→ v\($0)" } ?? "—")
-                    .font(.mono(9.5)).monospacedDigit()
-                    .foregroundStyle(cli.hasUpdate ? Ink.amberText : Ink.tertiary)
-            }
-            .frame(width: 104, alignment: .trailing)
-            .help(cliLatestHelp(cli))
-
-            Group {
-                if model.upgradingClis.contains(cli.id) {
-                    UpdatingDot()
-                } else if cli.excluded {
-                    Text(L("不自动升"))
-                        .font(.ui(9.5)).foregroundStyle(Ink.tertiary)
-                        .help(L("基础工具（node / npm / TypeScript 等）不在一键升级范围"))
-                } else if cli.hasUpdate {
-                    Button { model.upgradeCli(cli) } label: {
-                        Text(L("升级"))
-                            .font(.ui(10.5, .semibold)).foregroundStyle(Color(hex: 0x5A4A14))
-                            .padding(.horizontal, 9).padding(.vertical, 3)
-                            .background(RoundedRectangle(cornerRadius: 4).fill(Ink.amberBadgeBg))
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Ink.amberBadgeBorder, lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                    .help(upgradeCommandHelp(cli))
-                } else {
-                    Text(cli.latest == nil ? "" : L("已最新"))
-                        .font(.ui(10)).foregroundStyle(Ink.green)
-                }
-            }
-            .frame(width: 70, alignment: .trailing)
+            if let date = check?.checkedAt { Text(date, style: .relative).font(.system(size: 11)).foregroundStyle(.secondary) }
         }
-        .padding(.horizontal, 8).padding(.vertical, 8)
-        .background(RoundedRectangle(cornerRadius: 6).fill(hoverRow == cli.id ? Ink.chrome : .clear))
-        .onHover { hoverRow = $0 ? cli.id : (hoverRow == cli.id ? nil : hoverRow) }
-        .overlay(alignment: .bottom) { Ink.tableHairline.frame(height: 1) }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(L("\(cli.maintenanceName)，已装 \(cli.installed)"))
     }
-
-    // ── 底部操作 ──────────────────────────────────────────
-
-    private var foot: some View {
-        HStack {
-            Text(L("升级打回这份 CLI 真正所在的前缀，避免升错副本。"))
-                .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
+    private var resultPanel: some View {
+        @Bindable var state = model.maintenance
+        return Group {
+            if !state.report.items.isEmpty {
+                DisclosureGroup(isExpanded: $state.showResults) {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(state.report.items) { item in
+                                HStack(alignment: .top, spacing: 14) {
+                                    Text(item.name).fontWeight(.medium).frame(width: 200, alignment: .leading)
+                                    Text(item.phase.label).frame(width: 100, alignment: .leading)
+                                    Text(item.detail ?? "").foregroundStyle(.secondary).textSelection(.enabled)
+                                    Spacer()
+                                }
+                            }
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }.frame(maxHeight: 145)
+                } label: {
+                    HStack {
+                        Text(L("本批结果：已完成 \(state.report.completedCount)/\(state.report.items.count)"))
+                        if let name = state.report.runningName { Text(L("正在处理 \(name)")) }
+                        if state.report.queuedCount > 0 { Text(L("\(state.report.queuedCount) 项排队")) }
+                        Spacer()
+                        if model.retryableMaintenanceCount > 0 {
+                            Button(L("重试本批失败项（\(model.retryableMaintenanceCount)）")) { model.retryMaintenanceFailures() }
+                                .disabled(model.maintenanceMutationBusy || model.checkingClis || model.checkingUpdates)
+                        }
+                    }
+                }.padding(.horizontal, 24).padding(.vertical, 12)
+            }
+        }
+    }
+    private var footer: some View {
+        let state = model.maintenance
+        let count = state.tab == .sources ? model.maintenanceSourceTargets.count : model.maintenanceCliTargets.count
+        let last = state.tab == .sources ? state.lastSourceCheck : state.lastCliCheck
+        return HStack(spacing: 12) {
+            if let last {
+                Text(L("上次检查")); Text(last, style: .relative)
+                if state.tab == .clis, let scope = state.lastCliScope { Text(scope.label) }
+            } else { Text(L("尚未检查")) }
             Spacer()
-            Button { model.checkUpdates() } label: {
-                Text(model.checkingUpdates || model.checkingClis ? L("检查中…") : L("重新扫描"))
-                    .font(.ui(11.5, .semibold)).foregroundStyle(Ink.secondary2)
-                    .padding(.horizontal, 11).padding(.vertical, 4)
-                    .background(RoundedRectangle(cornerRadius: 5).fill(.white))
-                    .overlay(RoundedRectangle(cornerRadius: 5).stroke(Ink.control2, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .disabled(model.checkingUpdates || model.checkingClis)
-
-            if !recognizedAgentUpdates.isEmpty {
-                Button { upgradeRecognizedAgents() } label: {
-                    Text(L("全部升级 (\(recognizedAgentUpdates.count))"))
-                        .font(.ui(11.5, .semibold)).foregroundStyle(.white)
-                        .padding(.horizontal, 11).padding(.vertical, 4)
-                        .background(RoundedRectangle(cornerRadius: 5).fill(Ink.ink))
-                }
-                .buttonStyle(.plain)
-                .help(L("一键只升常用白名单；其它全局包装在行内点升级。"))
-            }
-        }
-        .padding(EdgeInsets(top: 11, leading: 20, bottom: 13, trailing: 20))
-        .background(Ink.chrome)
-        .overlay(alignment: .top) { Ink.hairline.frame(height: 1) }
+            if state.tab == .sources { Button(L("添加来源…")) { model.sheet = .add } }
+            Button(model.checkingClis || model.checkingUpdates ? L("检查中…") : L("检查更新")) {
+                if state.tab == .sources { model.checkMaintenanceSources() }
+                else { model.checkMaintenanceClis() }
+            }.disabled(model.checkingClis || model.checkingUpdates || model.maintenanceMutationBusy)
+            Button(L("更新当前结果（\(count)）")) { model.updateMaintenanceSelection() }
+                .buttonStyle(.borderedProminent).tint(Ink.ink)
+                .disabled(count == 0 || model.checkingClis || model.checkingUpdates || model.maintenanceMutationBusy)
+        }.font(.system(size: 12)).padding(20)
     }
-
-    private func upgradeRecognizedAgents() {
-        for cli in recognizedAgentUpdates { model.upgradeCli(cli) }
-        model.say(maintenanceText("已将 \(recognizedAgentUpdates.count) 个 Agent CLI 加入升级队列",
-                                  "Queued \(recognizedAgentUpdates.count) agent CLIs for upgrade"))
+    private func warning(_ text: String) -> some View {
+        Label(text, systemImage: "exclamationmark.triangle").foregroundStyle(Ink.amberText)
+            .font(.system(size: 12)).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
     }
-
-    private func cliLatestHelp(_ cli: GlobalCli) -> String {
-        if !cli.tracksIndex {
-            return L("从 GitHub / 本地安装，不跟 PyPI 同名包比版本")
-        }
-        if cli.latest == nil {
-            return L("版本查询失败（网络）——点右下重新扫描")
-        }
-        return ""
+    private func toggleSource(_ id: String) {
+        if !model.maintenance.expandedSources.insert(id).inserted { model.maintenance.expandedSources.remove(id) }
     }
-
-    private func upgradeCommandHelp(_ cli: GlobalCli) -> String {
-        if cli.channel == .npm {
-            return "npm i -g --prefix \(cli.prefix ?? "") \(cli.name)@\(cli.latest ?? "")"
+    private func toggleCli(_ id: String) {
+        if !model.maintenance.expandedClis.insert(id).inserted { model.maintenance.expandedClis.remove(id) }
+    }
+    private func requestCliUpdate(_ cli: GlobalCli) {
+        if !cli.safeRecognizedAgentUpdate {
+            let alert = NSAlert()
+            alert.messageText = L("更新这份安装？")
+            let location = cli.prefix ?? cli.channel.label
+            alert.informativeText = L("将更新 \(cli.name)，位置：\(location)。这不是符合批量条件的 Agent，请确认安装渠道和路径。")
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: L("更新此工具")); alert.addButton(withTitle: L("取消"))
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
         }
-        return maintenanceText("通过 \(cli.channel.label) 升级 \(cli.maintenanceName) → \(cli.latest ?? "")",
-                               "Upgrade \(cli.maintenanceName) via \(cli.channel.label) → \(cli.latest ?? "")")
+        model.upgradeCli(cli)
     }
 }

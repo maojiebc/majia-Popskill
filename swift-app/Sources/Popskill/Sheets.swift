@@ -4,28 +4,6 @@ import SwiftUI
 
 // ── 共享件 ──────────────────────────────────────────────
 
-struct PsSwitch: View {
-    let on: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ZStack(alignment: on ? .trailing : .leading) {
-                Capsule().fill(on ? Ink.blue : Ink.control2)
-                Circle()
-                    .fill(.white)
-                    .shadow(color: .black.opacity(0.2), radius: 1, y: 1)
-                    .frame(width: 13, height: 13)
-                    .padding(2)
-            }
-            .frame(width: 30, height: 17)
-            .animation(.easeOut(duration: 0.15), value: on)
-        }
-        .buttonStyle(.plain)
-        .accessibilityValue(on ? L("开") : L("关"))
-    }
-}
-
 struct SheetButton: View {
     let label: String
     var primary = false
@@ -35,10 +13,10 @@ struct SheetButton: View {
     var body: some View {
         Button(action: action) {
             Text(label)
-                .font(.ui(12.5, .semibold))
+                .font(.ui(13, .semibold))
                 .foregroundStyle(primary ? .white : Color(hex: 0x444444))
                 .padding(.horizontal, 14)
-                .frame(height: 30)
+                .frame(height: 32)
                 .background(RoundedRectangle(cornerRadius: 7).fill(primary ? (disabled ? Color(hex: 0xB3AEA0) : Ink.ink) : .clear))
                 .overlay(RoundedRectangle(cornerRadius: 7).stroke(primary ? .clear : Ink.control2, lineWidth: 1))
         }
@@ -81,27 +59,6 @@ struct SheetRow<Content: View>: View {
     }
 }
 
-/// 弹层外壳：遮罩 + 居中模卡
-struct SheetShell<Content: View>: View {
-    let width: CGFloat
-    let onDismiss: () -> Void
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        ZStack {
-            Color(hex: 0x18140C, alpha: 0.34)
-                .ignoresSafeArea()
-                .onTapGesture { onDismiss() }
-            content
-                .frame(width: width)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Ink.window))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Ink.control, lineWidth: 1))
-                .compositingGroup()   // 先压成一层再投影——否则每个子行各自投影，把暖纸底糊成灰
-                .shadow(color: .black.opacity(0.30), radius: 32, y: 24)
-        }
-    }
-}
-
 // ── 添加弹层 ─────────────────────────────────────────────
 
 struct AddSheet: View {
@@ -117,16 +74,19 @@ struct AddSheet: View {
     private let examples = ["github.com/dotey/prompt-engineering", "github.com/anthropics/skills", "~/work/my-skills/ppt-generator"]
 
     var body: some View {
-        SheetShell(width: 520, onDismiss: { model.sheet = nil }) {
+        Group {
             VStack(spacing: 0) {
                 head
                 if let plan { planBody(plan) } else { urlBody }
                 foot
             }
         }
+        .frame(width: 660)
+        .background(Ink.window)
+        .interactiveDismissDisabled(model.installing)
         // 任何方式离开弹层（取消/遮罩/esc/安装完成）都清掉临时 staging——
         // 曾经取消即把整仓副本泄漏在临时目录；解析进行中离开由 resolve 的取消回调兜底
-        .onDisappear { resolveTask?.cancel(); discardPlan(plan) }
+        .onDisappear { resolveTask?.cancel(); if !model.installing { discardPlan(plan) } }
         .onAppear {
             // 未安装的工具默认不挂载（避免给新用户凭空创建 ~/.codex）
             targets = Dictionary(uniqueKeysWithValues: model.tools.map { ($0.id, $0.defaultTarget && $0.connected) })
@@ -212,7 +172,7 @@ struct AddSheet: View {
                     VStack(spacing: 6) {
                         ForEach(plan.items) { item in
                             SheetRow {
-                                Text(item.name).font(.ui(12.5, .semibold)).foregroundStyle(Ink.ink)
+                                Text(item.name).font(.ui(13, .semibold)).foregroundStyle(Ink.ink)
                                 TypeTag(type: item.type)
                                 Spacer()
                                 if item.tokens > 0 {
@@ -227,7 +187,7 @@ struct AddSheet: View {
                     VStack(spacing: 6) {
                         ForEach(model.tools) { t in
                             SheetRow {
-                                Text(t.name).font(.ui(12.5, .semibold)).foregroundStyle(Ink.ink)
+                                Text(t.name).font(.ui(13, .semibold)).foregroundStyle(Ink.ink)
                                 Text("\(t.rootDisplay)\(CapType.skill.dirName)/")
                                     .font(.mono(10.5)).foregroundStyle(Ink.tertiary)
                                 if !t.connected {
@@ -241,9 +201,9 @@ struct AddSheet: View {
                                         .help(L("该工具目录不存在——挂载会创建它，安装时会先跟你确认"))
                                 }
                                 Spacer()
-                                PsSwitch(on: targets[t.id] ?? false) {
-                                    targets[t.id] = !(targets[t.id] ?? false)
-                                }
+                                Toggle(L("挂载到 \(t.name)"), isOn: Binding(
+                                    get: { targets[t.id] ?? false }, set: { targets[t.id] = $0 }
+                                )).toggleStyle(.switch).labelsHidden().disabled(model.installing)
                             }
                         }
                     }
@@ -286,10 +246,10 @@ struct AddSheet: View {
     private var foot: some View {
         HStack(spacing: 8) {
             if plan != nil {
-                SheetButton(label: L("← 返回")) { discardPlan(plan); plan = nil; error = nil; model.installError = nil }
+                SheetButton(label: L("← 返回"), disabled: model.installing) { discardPlan(plan); plan = nil; error = nil; model.installError = nil }
             }
             Spacer()
-            SheetButton(label: L("取消")) { model.sheet = nil }
+            SheetButton(label: L("取消"), disabled: model.installing) { model.dismissShortTask() }
             if let plan {
                 let n = model.tools.filter { targets[$0.id] == true }.count
                 SheetButton(label: model.installing ? L("安装中…") : (n > 0 ? L("安装并链接 (\(n))") : L("仅保存到 store")),
@@ -330,418 +290,5 @@ struct AddSheet: View {
         guard let p, p.cleanupRoot != nil, !model.fake else { return }
         let fsCopy = model.fs
         Task.detached { fsCopy.discardStaging(p) }
-    }
-}
-
-// ── 设置弹层 ─────────────────────────────────────────────
-
-struct SettingsSheet: View {
-    @Environment(AppModel.self) private var model
-    @State private var sparkleAuto = false
-    @State private var cliPatrol = false
-    @State private var trashItems: [StoreFS.TrashItem] = []
-
-    var body: some View {
-        SheetShell(width: 560, onDismiss: { model.sheet = nil }) {
-            VStack(spacing: 0) {
-                head
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 22) {
-                        sourcesSection
-                        toolsSection
-                        profileSection
-                        storeSection
-                        trashSection
-                        aboutSection
-                    }
-                    .padding(EdgeInsets(top: 16, leading: 20, bottom: 16, trailing: 20))
-                }
-                .frame(maxHeight: 560)
-            }
-        }
-    }
-
-    private var head: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(L("设置")).font(.ui(15.5, .bold)).foregroundStyle(Ink.ink)
-                Text(L("源、工具、工作模式与 store — 全部配置都在这一页。"))
-                    .font(.ui(11.5)).foregroundStyle(Ink.secondary)
-            }
-            Spacer()
-            Button { model.sheet = nil } label: {
-                Text("esc")
-                    .font(.mono(11))
-                    .foregroundStyle(Color(hex: 0x666666))
-                    .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(RoundedRectangle(cornerRadius: 4).fill(.white))
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Ink.control2, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(EdgeInsets(top: 16, leading: 20, bottom: 13, trailing: 20))
-        .background(Ink.chrome)
-        .overlay(alignment: .bottom) { Ink.hairline.frame(height: 1) }
-    }
-
-    private var sourcesSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionLabel(text: L("已添加的源（\(model.entries.count)）"))
-            VStack(spacing: 6) {
-                ForEach(model.entries) { e in
-                    SheetRow {
-                        KindTag(kind: SourceKind.of(e.sourceUrl))
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(e.sourceUrl ?? abbrev(e.cap.dirURL.path))
-                                .font(.mono(11.5)).foregroundStyle(Ink.ink)
-                                .lineLimit(1).truncationMode(.tail)
-                            Text(sourceSub(e)).font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-                        }
-                        Spacer(minLength: 8)
-                        if e.isManagedExternally {
-                            Text(L("/plugin 管理")).font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-                        } else {
-                            if e.hasUpdate, let latest = e.latest {
-                                UpdateBadge(latest: latest) { model.runUpdate(e.id) }
-                            } else if e.skippedUpdate {
-                                SkippedTag { model.unskipUpdate(e) }
-                            }
-                            PsSwitch(on: e.autoUpdate) { model.toggleAutoUpdate(e.id) }
-                            HoverAction(symbol: "✕", danger: true, help: L("移除该源（含其能力）")) { model.removeEntry(e) }
-                        }
-                    }
-                }
-            }
-            HStack(spacing: 8) {
-                Button { model.sheet = .add } label: {
-                    Text(L("+ 粘贴 URL 添加"))
-                        .font(.ui(11.5, .semibold)).foregroundStyle(Color(hex: 0x444444))
-                        .padding(.horizontal, 10).frame(height: 26)
-                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                Button { model.checkUpdates() } label: {
-                    Text(model.checkingUpdates ? L("检查中…") : L("检查更新"))
-                        .font(.ui(11.5, .semibold)).foregroundStyle(Color(hex: 0x444444))
-                        .padding(.horizontal, 10).frame(height: 26)
-                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                .disabled(model.checkingUpdates)
-                Button { model.sheet = .cli } label: {   // 面板 onAppear 自会重扫（v2.16）
-                    Text(L("CLI 巡检…"))
-                        .font(.ui(11.5, .semibold)).foregroundStyle(Color(hex: 0x444444))
-                        .padding(.horizontal, 10).frame(height: 26)
-                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                .help(L("npm 全局 CLI 的版本矩阵与一键升级"))
-                Text(L("开关 = 自动更新。移除源会同时卸载它提供的能力与 symlink。"))
-                    .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-            }
-            .padding(.top, 6)
-        }
-    }
-
-    private func sourceSub(_ e: Entry) -> String {
-        let n = e.allCaps.count
-        var s = n > 1 ? L("提供 \(e.name) 等 \(n) 项") : L("提供 \(e.name)")
-        if let v = e.cap.version { s += " · v\(v)" }
-        return s
-    }
-
-    private var toolsSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionLabel(text: L("工具（挂载目标）"))
-            SectionLabel(text: L("首页列"))
-            VStack(spacing: 6) {
-                ForEach(model.tools) { t in
-                    SheetRow {
-                        Circle().fill(t.connected ? Ink.green : Ink.offDot).frame(width: 7, height: 7)
-                        Text(t.name).font(.ui(12.5, .semibold)).foregroundStyle(Ink.ink)
-                        Text(t.rootDisplay).font(.mono(10.5)).foregroundStyle(Ink.tertiary)
-                        Spacer()
-                        Text(L("新安装默认挂载")).font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-                        PsSwitch(on: t.defaultTarget) { model.toggleDefaultTarget(t.id) }
-                    }
-                }
-            }
-            if !model.detectedOptionals.isEmpty {
-                SectionLabel(text: L("本机已发现"))
-                    .padding(.top, 14)
-                VStack(spacing: 6) {
-                    ForEach(model.detectedOptionals) { d in
-                        SheetRow {
-                            Text(d.name).font(.ui(12.5, .semibold)).foregroundStyle(Ink.ink)
-                            if !d.hint.isEmpty {
-                                Text(d.hint).font(.mono(10.5)).foregroundStyle(Ink.tertiary)
-                            }
-                            Spacer()
-                            Text(L("首页显示")).font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-                            PsSwitch(on: d.showOnHome) { model.toggleShowOnHome(d.id) }
-                        }
-                    }
-                }
-            }
-            Text(L("Claude / Codex / Cursor 始终占一列。其余工具本机有 App 或 CLI 才出现开关，默认不进首页。"))
-                .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-                .padding(.top, 4)
-        }
-    }
-
-    private var profileSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionLabel(text: L("工作模式（\(model.profiles.count)）"))
-            if model.profiles.isEmpty {
-                Text(L("空——把此刻的挂载组合存成「写作 / 画图 / 开发」，下次一键切回去。套装管来源，模式管场景。"))
-                    .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-            } else {
-                VStack(spacing: 6) {
-                    ForEach(model.profiles) { p in
-                        SheetRow {
-                            Circle()
-                                .fill(p.id == model.activeProfileId ? Ink.green : Ink.offDot)
-                                .frame(width: 7, height: 7)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(p.name).font(.ui(12.5, .semibold)).foregroundStyle(Ink.ink)
-                                Text(profileSub(p)).font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-                            }
-                            Spacer(minLength: 8)
-                            Button { model.applyProfile(p.id) } label: {
-                                Text(L("切换"))
-                                    .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
-                                    .padding(.horizontal, 8).frame(height: 24)
-                                    .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
-                            }
-                            .buttonStyle(.plain)
-                            HoverAction(symbol: "✕", danger: true, help: L("删除此工作模式")) {
-                                model.deleteProfile(p.id)
-                            }
-                        }
-                    }
-                }
-            }
-            HStack(spacing: 8) {
-                Button { model.promptSaveProfile() } label: {
-                    Text(L("+ 保存当前为新模式"))
-                        .font(.ui(11.5, .semibold)).foregroundStyle(Color(hex: 0x444444))
-                        .padding(.horizontal, 10).frame(height: 26)
-                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                if model.activeProfile != nil {
-                    Button { model.updateActiveProfile() } label: {
-                        Text(L("用当前盘面更新选中项"))
-                            .font(.ui(11.5, .semibold)).foregroundStyle(Color(hex: 0x444444))
-                            .padding(.horizontal, 10).frame(height: 26)
-                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!model.profileDirty)
-                    .help(L("盘面和选中模式不一致时才能更新"))
-                }
-            }
-            .padding(.top, 6)
-        }
-    }
-
-    private func profileSub(_ p: WorkProfile) -> String {
-        let n = p.tools.values.reduce(0) { $0 + $1.count }
-        var s = L("\(p.tools.count) 个工具 · \(n) 项已挂载")
-        if p.id == model.activeProfileId {
-            s += model.profileDirty ? L(" · 当前（已改动）") : L(" · 当前")
-        }
-        return s
-    }
-
-    private var storeSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionLabel(text: L("Store 与同步"))
-            VStack(spacing: 6) {
-                SheetRow {
-                    Text(abbrev(model.fs.env.storeRoot.path)).font(.mono(11.5)).foregroundStyle(Ink.ink)
-                    Spacer()
-                    Button { model.importUnmanaged() } label: {
-                        Text(L("导入未托管目录"))
-                            .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
-                            .padding(.horizontal, 8).frame(height: 24)
-                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                    .help(L("把各工具目录里的真实技能目录收编进 store 并换成 symlink"))
-                    Button { model.openStore() } label: {
-                        Text(L("↗ 在访达中显示"))
-                            .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
-                            .padding(.horizontal, 8).frame(height: 24)
-                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                }
-                SheetRow {
-                    Text(L("同步后端")).font(.ui(12.5)).foregroundStyle(Ink.ink)
-                    Spacer()
-                    Text(syncBackendLabel)
-                        .font(.ui(11.5, .semibold))
-                        .foregroundStyle(model.syncInfo.isGitRepo ? Color(hex: 0x5A7A5F) : Ink.tertiary)
-                }
-            }
-            Text(L("store 在设备间同步；symlink 是各机本地状态，不参与同步。"))
-                .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-                .padding(.top, 4)
-        }
-    }
-
-    private var syncBackendLabel: String {
-        guard model.syncInfo.isGitRepo else { return L("未配置") }
-        return model.syncInfo.clean ? L("Git · 已同步") : L("Git · 有未提交改动")
-    }
-
-    // ── 回收站（v2.8：兑现「进回收站，可恢复」的全部 UI 承诺）──
-
-    private var trashSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionLabel(text: L("回收站（\(trashItems.count)）"))
-            if trashItems.isEmpty {
-                Text(L("空——移除能力和更新换版时，旧目录会进这里（最多留 \(StoreFS.trashRetainCount) 份，先进先出）。"))
-                    .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-            } else {
-                VStack(spacing: 6) {
-                    ForEach(trashItems.prefix(5)) { item in
-                        SheetRow {
-                            Text(item.name)
-                                .font(.mono(11.5)).foregroundStyle(Ink.ink)
-                                .lineLimit(1).truncationMode(.middle)
-                            Spacer(minLength: 8)
-                            if let d = item.date {
-                                Text(relativeLabel(d)).font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-                            }
-                            Button {
-                                model.restoreTrashItem(item)
-                                trashItems = model.fs.listTrash()
-                            } label: {
-                                Text(L("恢复到 store"))
-                                    .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
-                                    .padding(.horizontal, 8).frame(height: 24)
-                                    .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
-                            }
-                            .buttonStyle(.plain)
-                            .help(L("移回 store 原目录（\(item.kindDir)/）——同名能力已存在时会拒绝"))
-                        }
-                    }
-                }
-                HStack(spacing: 8) {
-                    if trashItems.count > 5 {
-                        Text(L("仅列最近 5 项，其余在文件夹里")).font(.ui(10.5)).foregroundStyle(Ink.tertiary)
-                    }
-                    Button { model.openTrash() } label: {
-                        Text(L("↗ 打开回收站文件夹"))
-                            .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
-                            .padding(.horizontal, 8).frame(height: 24)
-                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                    Button { emptyTrashConfirmed() } label: {
-                        Text(L("清空…"))
-                            .font(.ui(11)).foregroundStyle(Ink.red)
-                            .padding(.horizontal, 8).frame(height: 24)
-                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.red.opacity(0.35), lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                    .help(L("永久删除全部回收站备份——此前只能去 Finder 手删"))
-                }
-                .padding(.top, 6)
-            }
-        }
-        // 读盘一次进 @State，不在每次渲染路径上扫目录；
-        // 盘面变了（本页 ✕ 移除源 / 导入未托管）同步重读——曾停在打开时的旧清单（v2.16）
-        .onAppear { trashItems = model.fs.listTrash() }
-        .onChange(of: model.entries) { _, _ in trashItems = model.fs.listTrash() }
-    }
-
-    private func emptyTrashConfirmed() {
-        let alert = NSAlert()
-        alert.messageText = L("清空回收站？")
-        alert.informativeText = L("永久删除全部 \(trashItems.count) 项备份，不可恢复。")
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: L("清空"))
-        alert.addButton(withTitle: L("取消"))
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-        do {
-            try model.fs.emptyTrash()
-            trashItems = model.fs.listTrash()
-            model.say(L("回收站已清空"))
-        } catch {
-            model.sayError(L("清空回收站失败：\(error.localizedDescription)"))
-        }
-    }
-
-    private func relativeLabel(_ d: Date) -> String {
-        let f = RelativeDateTimeFormatter()
-        f.locale = l10nLocale
-        f.unitsStyle = .short
-        return f.localizedString(for: d, relativeTo: Date())
-    }
-
-    private var aboutSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionLabel(text: L("关于"))
-            HStack(spacing: 10) {
-                Text(aboutLine).font(.ui(11.5)).foregroundStyle(Ink.secondary)
-                Spacer()
-                Button { model.reportIssue() } label: {
-                    Text(L("报告问题…"))
-                        .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
-                        .padding(.horizontal, 8).frame(height: 24)
-                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                .help(L("打开 GitHub issue，自动带上 app 与 macOS 版本"))
-                if model.checkAppUpdate != nil {
-                    Button { model.checkAppUpdate?() } label: {
-                        Text(L("检查 App 更新…"))
-                            .font(.ui(11)).foregroundStyle(Color(hex: 0x444444))
-                            .padding(.horizontal, 8).frame(height: 24)
-                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Ink.control2, lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                    .help(L("立即向更新源询问新版本"))
-                }
-            }
-            // Sparkle 自动检查曾硬编码开启、无开关——成熟 app 必须让用户能关掉
-            if model.sparkleAutoCheckGet != nil {
-                HStack(spacing: 10) {
-                    Text(L("自动检查 App 更新（每天一次）"))
-                        .font(.ui(11.5)).foregroundStyle(Ink.secondary)
-                    Spacer()
-                    PsSwitch(on: sparkleAuto) {
-                        sparkleAuto.toggle()
-                        model.sparkleAutoCheckSet?(sparkleAuto)
-                    }
-                }
-                .padding(.top, 8)
-                .onAppear { sparkleAuto = model.sparkleAutoCheckGet?() ?? false }
-            }
-            // v2.20：检查更新默认只查常用 CLI 白名单。此开关才扩到全部全局 npm 包。
-            HStack(spacing: 10) {
-                Text(L("检查更新时巡检全部全局 npm CLI"))
-                    .font(.ui(11.5)).foregroundStyle(Ink.secondary)
-                Spacer()
-                PsSwitch(on: cliPatrol) {
-                    cliPatrol.toggle()
-                    model.autoCliPatrol = cliPatrol
-                }
-            }
-            .padding(.top, 8)
-            .help(L("默认只查 Claude / Codex / 飞书 / GetNote 等常用工具。打开后才会把本机全部全局 npm 包名发给 registry。CLI 面板打开时始终全量扫描。"))
-            .onAppear { cliPatrol = model.autoCliPatrol }
-        }
-        .padding(.bottom, 4)
-    }
-
-    private var aboutLine: String {
-        var parts = ["popskill v\(popskillVersion)"]
-        if let mb = model.syncInfo.storeSizeMB { parts.append("store \(mb) MB") }
-        parts.append("MIT")
-        return parts.joined(separator: " · ")
     }
 }

@@ -39,7 +39,10 @@ struct FixOption: Identifiable {
     let toast: String
 }
 
-enum SheetKind { case add, settings, sched, cli }
+enum SheetKind: String, Identifiable {
+    case add, sched
+    var id: String { rawValue }
+}
 
 /// 环境探测警告（v2.17）：git / npm 不在 PATH 时横幅提示，避免「无法识别仓库」黑洞
 struct EnvWarning: Identifiable, Equatable {
@@ -59,6 +62,9 @@ struct KbItem: Equatable, Identifiable {
 @Observable
 final class AppModel {
     var fs: StoreFS
+    let maintenance: MaintenanceState
+    @ObservationIgnored let maintenanceDefaults: UserDefaults
+    @ObservationIgnored var cliInventoryReader: (@Sendable (StoreFS, Bool, Bool) -> [GlobalCli])?
     var fake = false
 
     var tools: [Tool] = []
@@ -91,13 +97,13 @@ final class AppModel {
     var checkingClis = false
     var upgradingClis: Set<String> = []
     var cliUpdates: [GlobalCli] { globalClis.filter(\.hasUpdate) }
-    var safeCliUpdates: [GlobalCli] { cliUpdates.filter { $0.allowlisted || $0.channel != .npm } }
+    var safeCliUpdates: [GlobalCli] { cliUpdates.filter { $0.safeRecognizedAgentUpdate && maintenance.cliChecks[$0.id]?.outcome != .failed } }
 
     /// 随「检查更新」把巡检范围从「常用白名单」扩到全部全局 npm 包（v2.18 默认关，v2.20 语义保留）。
     /// 白名单巡检现在每次检查都会跑（只发常用包名）；打开 CLI 面板始终全量扫。
     var autoCliPatrol: Bool {
-        get { UserDefaults.standard.bool(forKey: "autoCliPatrol") }
-        set { UserDefaults.standard.set(newValue, forKey: "autoCliPatrol") }
+        get { maintenanceDefaults.bool(forKey: "autoCliPatrol") }
+        set { maintenanceDefaults.set(newValue, forKey: "autoCliPatrol") }
     }
 
     // 定时任务面板（v2.9）
@@ -126,7 +132,6 @@ final class AppModel {
     @ObservationIgnored private var updateBatch: UpdateBatch?          // 「全部更新」的收工账本
     @ObservationIgnored private var cliQueue: [String] = []            // npm 升级串行队列（并发 npm i -g 会互相咬全局目录）
     @ObservationIgnored private var cliPumping = false
-    @ObservationIgnored private var cliBatch: (ok: Int, fail: [String])?
 
     struct UpdateBatch {
         var remaining: Set<String>
@@ -169,7 +174,9 @@ final class AppModel {
     var pendingAddURL: String?          // popskill://install?src=… 预填添加框
     @ObservationIgnored private var envProbed = false
 
-    init(env: StoreEnv = .real()) {
+    init(env: StoreEnv = .real(), defaults: UserDefaults = .standard) {
+        maintenanceDefaults = defaults
+        maintenance = MaintenanceState(defaults: defaults)
         fs = StoreFS(env: env)
         let pe = ProcessInfo.processInfo.environment
         if pe["POPSKILL_FAKE_DATA"] == "1" {
@@ -184,9 +191,9 @@ final class AppModel {
         if pe["POPSKILL_VIEW"] == "list" { viewMode = .list }   // 截图/E2E：直开表格视图
         switch pe["POPSKILL_SHEET"] {
         case "add": sheet = .add
-        case "settings": sheet = .settings
+        case "settings": break // RootView opens the native Settings scene
         case "sched": sheet = .sched; reloadSched()
-        case "cli": sheet = .cli; checkCliUpdates()
+        case "cli": maintenance.page = .maintenance; maintenance.tab = .clis
         default: break
         }
         // PATCH-02：套装默认全折叠（首屏密度），不再自动展开第一个
@@ -766,6 +773,7 @@ final class AppModel {
             $0.sourceUrl != nil && !$0.isManagedExternally && (only?.contains($0.id) ?? true)
         }
         checkingUpdates = true
+        for e in candidates { maintenance.sourceChecks[e.id] = CheckRecord(outcome: .checking) }
         // v2.20：每次全量检查都扫常用 CLI 白名单（只发那几个包名）。
         // autoCliPatrol = 扩到全部全局 npm 包。打开 CLI 面板始终全量。
         if only == nil { checkCliUpdates(full: autoCliPatrol) }
@@ -780,6 +788,7 @@ final class AppModel {
             var found: [StoreFS.UpdateCheck] = []
             var fresh: [String] = []   // 检查成功且确认无更新的 entryId（用于熄灭残留徽标）
             var failed = 0
+            var failureDetails: [String: String] = [:]
             // 失败和「确实最新」必须是两个态——曾用 try? 把断网/源被删压成 nil，
             // 然后对用户谎报「全部源已是最新」
             await withTaskGroup(of: (String, Result<StoreFS.UpdateCheck?, Error>).self) { group in
@@ -802,17 +811,28 @@ final class AppModel {
                     running -= 1
                     switch result {
                     case .success(let check): if let check { found.append(check) } else { fresh.append(id) }
-                    case .failure: failed += 1
+                    case .failure(let error):
+                        failed += 1
+                        failureDetails[id] = error.localizedDescription
                     }
                     enqueue()
                 }
             }
             let failedCount = failed
             let freshIds = fresh
+            let checkedFailures = failureDetails
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 self.checkingUpdates = false
+                self.maintenance.lastSourceCheck = Date()
+                for id in freshIds { self.maintenance.sourceChecks[id] = CheckRecord(outcome: .current) }
+                for (id, reason) in checkedFailures {
+                    self.maintenance.sourceChecks[id] = CheckRecord(outcome: .failed, error: reason)
+                }
                 for check in found {
+                    self.maintenance.sourceChecks[check.entryId] = CheckRecord(
+                        outcome: check.partialFailures > 0 ? .failed : (check.contentUnchanged ? .current : .updateAvailable),
+                        error: check.partialFailures > 0 ? L("部分成员未能检查，请重试。") : nil)
                     if let i = self.entries.firstIndex(where: { $0.id == check.entryId }) {
                         // contentUnchanged = 仅上游新增，不亮更新徽标
                         if check.contentUnchanged {
@@ -905,6 +925,8 @@ final class AppModel {
         }
         guard !updatingIds.contains(entryId) else { return }
         updatingIds.insert(entryId)
+        maintenance.report.enqueue(id: entryId, name: entry.name, kind: .source)
+        maintenance.report.setPhase(entryId, .running)
         let fsCopy = fs
         Task { [weak self] in
             let result: Result<(updated: [String], upstreamNew: [String]), Error> = await Task.detached {
@@ -918,12 +940,16 @@ final class AppModel {
                 case .success(let r):
                     plog.info("更新 \(entry.name, privacy: .public) 完成：\(r.updated.joined(separator: ","), privacy: .public)")
                     self.refresh()
+                    let sourceIsNpm = SourceKind.of(entry.sourceUrl) == .npm
+                    self.maintenance.report.setPhase(entryId,
+                        sourceIsNpm ? .unverified : (r.updated.isEmpty ? .skipped : .succeeded),
+                        detail: sourceIsNpm ? L("更新命令完成；请检查版本以确认结果。") : nil)
                     let inBatch = self.batchNote(entryId, name: entry.name, ok: true)
                     if !quiet && !inBatch {
                         // npm 源的「更新」= npm i -g 全局 CLI，全程不碰回收站——
                         // 曾统一说「旧版已入回收站」，谎报可回滚（v2.16 审计）
                         if SourceKind.of(entry.sourceUrl) == .npm {
-                            self.say(L("已升级全局 CLI \(r.updated.first ?? entry.name)（npm i -g）"))
+                            self.say(L("更新命令完成；请检查版本以确认结果。"))
                         } else {
                             let names = r.updated.count <= 3 ? r.updated.joined(separator: L("、"))
                                 : L("\(r.updated.prefix(3).joined(separator: L("、"))) 等")
@@ -941,6 +967,7 @@ final class AppModel {
                         }
                     }
                 case .failure(let err):
+                    self.maintenance.report.setPhase(entryId, .failed, detail: err.localizedDescription)
                     plog.error("更新 \(entry.name, privacy: .public) 失败：\(err.localizedDescription, privacy: .public)")
                     if !self.batchNote(entryId, name: entry.name, ok: false) {
                         self.sayError(L("更新 \(entry.name) 失败：\(err.localizedDescription)"))
@@ -1027,113 +1054,77 @@ final class AppModel {
 
     // ── 全局 CLI 巡检（v2.14）────────────────────────────
 
-    /// npm ls -g 全量 → 逐包比 registry。entries 里 npm 源对应的包走 entry 更新链，
-    /// 这里排除掉——同一个更新在横幅出现两处计数比漏报更糟。
-    func checkCliUpdates(full: Bool = true) {
-        guard !fake, !checkingClis else { return }
-        checkingClis = true
-        let fsCopy = fs
-        let entryPkgs = Set(entries.compactMap { npmPkgName($0.sourceUrl) })
-        Task { [weak self] in
-            let clis: [GlobalCli] = await Task.detached {
-                let rows = fsCopy.scanMaintainedClis(extraNpm: entryPkgs, full: full)
-                    .filter { !entryPkgs.contains($0.name) || $0.channel != .npm }
-                return rows.map { row in
-                    var cli = row
-                    switch cli.channel {
-                    case .npm:
-                        if !cli.excluded { cli.latest = try? fsCopy.npmLatestVersion(cli.name) }
-                    case .pipx, .uv:
-                        if cli.tracksIndex {
-                            cli.latest = (try? fsCopy.pypiLatestVersion(cli.name)) ?? cli.latest
-                        }
-                    case .brew:
-                        break
-                    }
-                    return cli
-                }
-            }.value
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                self.globalClis = clis
-                self.checkingClis = false
-            }
-        }
-    }
+    /// All CLI entry points share this queue and its persisted action receipts.
+    func upgradeCli(_ cli: GlobalCli) { enqueueCliUpgrades([cli.id]) }
 
-    /// 升级单个全局 CLI 到 registry 最新版（实际执行走串行队列）
-    func upgradeCli(_ cli: GlobalCli) {
-        enqueueCliUpgrades([cli.id])
-    }
+    func upgradeAllClis() { enqueueCliUpgrades(safeCliUpdates.map(\.id)) }
 
-    /// 「全部升级」：批量入队 + 收工汇总（v2.16：曾并发喷 N 个 npm i -g——
-    /// 同一全局前缀无锁并发写会互相咬，且成功/失败 toast 互相覆盖只剩最后一条）
-    func upgradeAllClis() {
-        let targets = safeCliUpdates.map(\.id)
-        guard !targets.isEmpty else { return }
-        if cliBatch == nil { cliBatch = (0, []) }
-        enqueueCliUpgrades(targets)
-    }
-
-    private func enqueueCliUpgrades(_ ids: [String]) {
+    func enqueueCliUpgrades(_ ids: [String]) {
         let fresh = ids.filter { id in
-            globalClis.first(where: { $0.id == id })?.hasUpdate == true
+            guard let cli = globalClis.first(where: { $0.id == id }) else { return false }
+            return cli.hasUpdate && !cli.excluded && cli.tracksIndex
                 && !upgradingClis.contains(id) && !cliQueue.contains(id)
+                && maintenance.cliChecks[id]?.outcome != .failed
         }
         guard !fresh.isEmpty else { return }
-        upgradingClis.formUnion(fresh)   // 排队即转 spinner——「点了没反应」是最迷惑的失败模式
+        for id in fresh {
+            if let cli = globalClis.first(where: { $0.id == id }) {
+                maintenance.report.enqueue(id: id, name: cli.maintenanceName, kind: .cli)
+            }
+        }
+        upgradingClis.formUnion(fresh)
         cliQueue.append(contentsOf: fresh)
         pumpCliQueue()
     }
 
     private func pumpCliQueue() {
-        guard !cliPumping, !cliQueue.isEmpty else {
-            // 队列干了才结账
-            if cliQueue.isEmpty, !cliPumping, let b = cliBatch {
-                cliBatch = nil
-                if b.fail.isEmpty {
-                    say(L("已升级 \(b.ok) 个 CLI"))
-                } else {
-                    sayError(L("CLI 升级收工：\(b.ok) 个成功，\(b.fail.count) 个失败（\(b.fail.joined(separator: L("、")))）"))
-                }
-            }
-            return
-        }
+        guard !cliPumping, !cliQueue.isEmpty else { return }
         cliPumping = true
         let id = cliQueue.removeFirst()
         guard let cli = globalClis.first(where: { $0.id == id }), let latest = cli.latest else {
+            maintenance.report.setPhase(id, .skipped, detail: L("安装信息已变化，请重新检查。"))
             upgradingClis.remove(id)
             cliPumping = false
             pumpCliQueue()
             return
         }
+        maintenance.report.setPhase(id, .running)
         let fsCopy = fs
         Task { [weak self] in
-            let result: Result<Void, Error> = await Task.detached {
-                do { try fsCopy.upgradeMaintainedCli(cli); return .success(()) }
-                catch { return .failure(error) }
-            }.value
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                self.upgradingClis.remove(id)
-                switch result {
-                case .success:
-                    if let i = self.globalClis.firstIndex(where: { $0.id == id }) {
-                        self.globalClis[i] = GlobalCli(
-                            name: cli.name, installed: latest, latest: latest,
-                            displayName: cli.displayName, channel: cli.channel, prefix: cli.prefix,
-                            pathHit: cli.pathHit, pathMatchesPrefix: true,
-                            excluded: cli.excluded, allowlisted: cli.allowlisted
-                        )
+            let result: Result<GlobalCli?, Error> = await Task.detached {
+                do {
+                    // Re-read the exact channel/prefix before writing; never silently target another copy.
+                    guard var current = fsCopy.scanMaintainedClis(extraNpm: [cli.name], full: false, checkVersions: false)
+                        .first(where: { $0.id == id }), sameCliInstallation(current, as: cli) else {
+                        throw StoreError.resolveFailed(L("安装信息已变化，请重新检查。"))
                     }
-                    if self.cliBatch != nil { self.cliBatch!.ok += 1 } else { self.say(L("已升级 \(cli.displayName) → v\(latest)")) }
-                case .failure(let e):
-                    plog.error("升级 CLI \(cli.name, privacy: .public) 失败：\(e.localizedDescription, privacy: .public)")
-                    if self.cliBatch != nil { self.cliBatch!.fail.append(cli.displayName) } else { self.sayError(L("升级 \(cli.displayName) 失败：\(e.localizedDescription)")) }
+                    current.latest = latest
+                    try fsCopy.upgradeMaintainedCli(current)
+                    let observed = fsCopy.scanMaintainedClis(extraNpm: [cli.name], full: false, checkVersions: false)
+                        .first(where: { $0.id == id })
+                    return .success(observed)
+                } catch { return .failure(error) }
+            }.value
+            guard let self else { return }
+            self.upgradingClis.remove(id)
+            switch result {
+            case .success(let observed):
+                let phase = verifiedUpgradePhase(observed: observed?.installed, target: latest)
+                if var observed, let i = self.globalClis.firstIndex(where: { $0.id == id }) {
+                    observed.latest = latest
+                    self.globalClis[i] = observed
                 }
-                self.cliPumping = false
-                self.pumpCliQueue()
+                self.maintenance.report.setPhase(id, phase,
+                    detail: phase == .unverified ? L("更新命令完成；请检查版本以确认结果。") : nil)
+                self.maintenance.cliChecks[id] = CheckRecord(
+                    outcome: phase == .succeeded ? .current : .failed,
+                    error: phase == .unverified ? L("更新命令完成；请检查版本以确认结果。") : nil)
+            case .failure(let error):
+                self.maintenance.report.setPhase(id, .failed, detail: error.localizedDescription)
+                plog.error("CLI upgrade failed: \(error.localizedDescription, privacy: .public)")
             }
+            self.cliPumping = false
+            self.pumpCliQueue()
         }
     }
 
@@ -1378,7 +1369,7 @@ final class AppModel {
             return
         }
         let alert = NSAlert()
-        alert.messageText = L("移除 \(entry.name)？")
+        alert.messageText = L("卸载来源 \(entry.name)？")
         alert.informativeText = entry.isBundle
             ? L("套装连同 \(entry.children?.count ?? 0) 个子项的 store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。")
             : L("store 副本与全部 symlink 都会清理（store 副本进回收站，可恢复）。")

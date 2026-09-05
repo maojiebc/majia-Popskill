@@ -154,7 +154,7 @@ private enum MaintenanceAutomationRegistry {
 extension AppModel {
     /// 退出时必须等真正写盘的动作；只读检查可以安全中断。
     var maintenanceMutationBusy: Bool {
-        !updatingIds.isEmpty || !upgradingClis.isEmpty
+        installing || !updatingIds.isEmpty || !upgradingClis.isEmpty
     }
 
     private var remoteMaintenanceEntries: [Entry] {
@@ -163,47 +163,35 @@ extension AppModel {
         }
     }
 
-    /// 当前来源总开关同时成为未来新来源的默认值；一次 meta 事务写完，不再逐源连刷。
+    /// Future defaults never change existing per-source choices. Record the current
+    /// inventory before changing the default so the next reconciliation cannot do so either.
+    func setFutureSourceAutoUpdate(_ on: Bool) {
+        MaintenancePolicyStore.saveKnownSourceIDs(Set(remoteMaintenanceEntries.map(\.id)), defaults: maintenanceDefaults)
+        var policy = maintenancePolicy
+        policy.inheritRemoteAutoUpdate = on
+        MaintenancePolicyStore.savePolicy(policy, defaults: maintenanceDefaults)
+    }
+
+    /// An explicit batch action for current sources only. It does not change the future default.
     @discardableResult
-    func setAllRemoteSourceAutoUpdate(_ on: Bool, showFeedback: Bool = true) -> Bool {
+    func applyAutoUpdateToExistingSources(_ on: Bool) -> Bool {
         let candidates = remoteMaintenanceEntries
         let ids = Set(candidates.map(\.id))
-        let sourceById = Dictionary(uniqueKeysWithValues: candidates.compactMap { entry in
-            entry.sourceUrl.map { (entry.id, $0) }
-        })
-
-        if !fake, !ids.isEmpty {
-            let ok = fs.mutateMeta { meta in
-                for id in ids {
-                    var item = meta.entries[id] ?? StoreMeta.EntryMeta()
-                    if item.sourceUrl == nil { item.sourceUrl = sourceById[id] }
-                    item.autoUpdate = on
-                    meta.entries[id] = item
-                }
-            }
-            guard ok else {
-                if showFeedback {
-                    sayError(maintenanceText(
-                        "自动更新策略没能写入磁盘——请检查 store 权限或剩余空间。",
-                        "The auto-update policy could not be saved. Check store permissions and free space."
-                    ))
-                }
-                return false
+        let ok = fake || fs.mutateMeta { meta in
+            for entry in candidates {
+                var item = meta.entries[entry.id] ?? StoreMeta.EntryMeta()
+                if item.sourceUrl == nil { item.sourceUrl = entry.sourceUrl }
+                item.autoUpdate = on
+                meta.entries[entry.id] = item
             }
         }
-
-        for index in entries.indices where ids.contains(entries[index].id) {
-            entries[index].autoUpdate = on
+        guard ok else {
+            maintenance.settingsFeedback = L("设置未保存，请检查目录权限和磁盘空间。")
+            return false
         }
-        var policy = MaintenancePolicyStore.loadPolicy()
-        policy.inheritRemoteAutoUpdate = on
-        MaintenancePolicyStore.savePolicy(policy)
-        MaintenancePolicyStore.saveKnownSourceIDs(ids)
-        if showFeedback {
-            say(on
-                ? maintenanceText("已开启当前 \(ids.count) 个来源，并让未来新来源默认继承。", "Enabled \(ids.count) current sources and made new remote sources inherit the policy.")
-                : maintenanceText("已关闭当前 \(ids.count) 个来源；未来新来源也默认关闭。", "Disabled \(ids.count) current sources; new remote sources will also default to off."))
-        }
+        for i in entries.indices where ids.contains(entries[i].id) { entries[i].autoUpdate = on }
+        MaintenancePolicyStore.saveKnownSourceIDs(ids, defaults: maintenanceDefaults)
+        maintenance.settingsFeedback = L("已应用到 \(ids.count) 个现有来源。")
         return true
     }
 
@@ -212,12 +200,12 @@ extension AppModel {
     func reconcileRemoteSourceDefaults() -> Int {
         let candidates = remoteMaintenanceEntries
         let current = Set(candidates.map(\.id))
-        let known = MaintenancePolicyStore.loadKnownSourceIDs()
-        let policy = MaintenancePolicyStore.loadPolicy()
+        let known = MaintenancePolicyStore.loadKnownSourceIDs(defaults: maintenanceDefaults)
+        let policy = MaintenancePolicyStore.loadPolicy(defaults: maintenanceDefaults)
         let newcomers = remoteSourceIDsToInherit(current: current, known: known,
                                                   inherit: policy.inheritRemoteAutoUpdate)
         guard !newcomers.isEmpty else {
-            MaintenancePolicyStore.saveKnownSourceIDs(current)
+            MaintenancePolicyStore.saveKnownSourceIDs(current, defaults: maintenanceDefaults)
             return 0
         }
         let sourceById = Dictionary(uniqueKeysWithValues: candidates.compactMap { entry in
@@ -241,7 +229,7 @@ extension AppModel {
         for index in entries.indices where newcomers.contains(entries[index].id) {
             entries[index].autoUpdate = true
         }
-        MaintenancePolicyStore.saveKnownSourceIDs(current)
+        MaintenancePolicyStore.saveKnownSourceIDs(current, defaults: maintenanceDefaults)
         plog.info("新远端来源继承自动更新：\(newcomers.count) 个")
         return newcomers.count
     }
@@ -251,11 +239,11 @@ extension AppModel {
         guard MaintenanceAutomationRegistry.tasks[id] == nil else { return }
         _ = reconcileRemoteSourceDefaults()
 
-        let stored = MaintenancePolicyStore.loadStatus()
+        let stored = MaintenancePolicyStore.loadStatus(defaults: maintenanceDefaults)
         let recovered = recoveredInterruptedMaintenanceStatus(stored)
         let shouldRetryInterruptedRun = recovered != stored
         if shouldRetryInterruptedRun {
-            MaintenancePolicyStore.saveStatus(recovered)
+            MaintenancePolicyStore.saveStatus(recovered, defaults: maintenanceDefaults)
             plog.warning("检测到上次维护中断，已收口状态并准备补跑")
         }
 
@@ -265,8 +253,8 @@ extension AppModel {
             while !Task.isCancelled {
                 guard let self else { return }
                 _ = self.reconcileRemoteSourceDefaults()
-                let policy = MaintenancePolicyStore.loadPolicy()
-                let status = MaintenancePolicyStore.loadStatus()
+                let policy = MaintenancePolicyStore.loadPolicy(defaults: maintenanceDefaults)
+                let status = MaintenancePolicyStore.loadStatus(defaults: maintenanceDefaults)
                 if retryInterruptedRun, policy.periodicCheckEnabled {
                     retryInterruptedRun = false
                     await self.performMaintenance(policy: policy, showFeedback: false, force: true)
@@ -289,7 +277,7 @@ extension AppModel {
     }
 
     func runMaintenanceNow(showFeedback: Bool = true) {
-        let policy = MaintenancePolicyStore.loadPolicy()
+        let policy = MaintenancePolicyStore.loadPolicy(defaults: maintenanceDefaults)
         Task { @MainActor [weak self] in
             await self?.performMaintenance(policy: policy, showFeedback: showFeedback, force: true)
         }
@@ -300,7 +288,7 @@ extension AppModel {
         showFeedback: Bool,
         force: Bool = false
     ) async {
-        let oldStatus = MaintenancePolicyStore.loadStatus()
+        let oldStatus = MaintenancePolicyStore.loadStatus(defaults: maintenanceDefaults)
         if oldStatus.outcome == .running || checkingUpdates || checkingClis || maintenanceMutationBusy {
             if showFeedback {
                 say(maintenanceText("已有检查或更新正在执行。", "Another check or update is already running."))
@@ -311,7 +299,7 @@ extension AppModel {
 
         var status = MaintenanceRunStatus(outcome: .running, startedAt: Date())
         status.checkedSources = remoteMaintenanceEntries.count
-        MaintenancePolicyStore.saveStatus(status)
+        MaintenancePolicyStore.saveStatus(status, defaults: maintenanceDefaults)
         if showFeedback {
             say(maintenanceText("正在检查技能源与 Agent CLI…", "Checking skill sources and agent CLIs…"))
         }
@@ -327,20 +315,24 @@ extension AppModel {
             status.outcome = .failed
             status.finishedAt = Date()
             status.error = maintenanceText("维护检查超时；旧版本未被删除。", "Maintenance check timed out; existing versions were kept.")
-            MaintenancePolicyStore.saveStatus(status)
+            MaintenancePolicyStore.saveStatus(status, defaults: maintenanceDefaults)
             if showFeedback { sayError(status.summary) }
             return
         }
 
-        status.sourceUpdatesStarted = updatingIds.count
         let sourceDeadline = Date().addingTimeInterval(420)
         while !updatingIds.isEmpty, Date() < sourceDeadline {
             do { try await Task.sleep(for: .milliseconds(300)) }
             catch { return }
         }
-        status.sourceFailures = remoteMaintenanceEntries.filter {
-            $0.autoUpdate && $0.hasUpdate && !$0.localDrifted
+        let sourceReceipts = (maintenance.report.startedAt ?? .distantPast) >= (status.startedAt ?? .distantPast)
+            ? maintenance.report.items.filter { $0.kind == .source } : []
+        status.sourceUpdatesStarted = sourceReceipts.count
+        status.sourceFailures = sourceReceipts.filter { $0.phase != .succeeded && $0.phase != .skipped }.count
+        let checkFailures = maintenance.sourceChecks.values.filter {
+            $0.checkedAt >= (status.startedAt ?? .distantPast) && $0.outcome == .failed
         }.count
+        if checkFailures > 0 { status.error = L("\(checkFailures) 个来源检查失败，请查看维护中心。") }
 
         let recognized = globalClis.filter { $0.agentDefinition != nil }
         let agentUpdates = recognized.filter(\.safeRecognizedAgentUpdate)
@@ -358,15 +350,17 @@ extension AppModel {
                 do { try await Task.sleep(for: .milliseconds(300)) }
                 catch { return }
             }
-            let remaining = globalClis.filter { ids.contains($0.id) && $0.hasUpdate }.count
-            status.failedAgentUpgrades = remaining
-            status.upgradedAgents = max(0, agentUpdates.count - remaining)
+            let receipts = maintenance.report.items.filter { $0.kind == .cli && ids.contains($0.id) }
+            status.failedAgentUpgrades = receipts.filter { $0.phase == .failed }.count
+            status.upgradedAgents = receipts.filter { $0.phase == .succeeded }.count
+            status.unresolvedAgents += receipts.filter { $0.phase == .unverified || $0.phase.isActive }.count
+                + ids.subtracting(Set(receipts.map(\.id))).count
         }
 
         status.finishedAt = Date()
-        let problems = status.sourceFailures + status.unresolvedAgents + status.failedAgentUpgrades
+        let problems = status.sourceFailures + status.unresolvedAgents + status.failedAgentUpgrades + checkFailures
         status.outcome = problems > 0 ? .partial : .success
-        MaintenancePolicyStore.saveStatus(status)
+        MaintenancePolicyStore.saveStatus(status, defaults: maintenanceDefaults)
         plog.info("统一维护完成：\(status.summary, privacy: .public)")
         if showFeedback {
             if status.outcome == .partial { sayError(status.summary) }

@@ -10,7 +10,7 @@ import Foundation
 // 或打开「巡检全部」才扫所有全局 npm 包。基础工具（node/npm/typescript…）
 // 永远出现在名单里但不给升级按钮。
 
-enum CliChannel: String, Codable {
+enum CliChannel: String, Codable, Sendable {
     case npm, brew, pipx, uv
     var label: String {
         switch self {
@@ -22,7 +22,7 @@ enum CliChannel: String, Codable {
     }
 }
 
-struct GlobalCli: Identifiable, Equatable {
+struct GlobalCli: Identifiable, Equatable, Sendable {
     let name: String
     var displayName: String
     let installed: String
@@ -213,4 +213,11 @@ func parsePipxList(_ data: Data) -> [String: PipxPackage] {
         out[name] = PipxPackage(version: ver, packageOrUrl: src)
     }
     return out
+}
+
+/// Refuse a queued write if the exact installation or its provenance changed after inspection.
+func sameCliInstallation(_ observed: GlobalCli, as planned: GlobalCli) -> Bool {
+    observed.id == planned.id && observed.installed == planned.installed
+        && observed.pathHit == planned.pathHit && observed.pathMatchesPrefix == planned.pathMatchesPrefix
+        && observed.tracksIndex == planned.tracksIndex && observed.excluded == planned.excluded
 }

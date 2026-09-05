@@ -83,3 +83,9 @@ Things Popskill explicitly does not defend against:
 ## Acknowledgements
 
 Security improvements that came out of community reports will be listed here with credit (with the reporter's permission).
+
+## 二级维护页的检查授权（2026-09-05）
+
+打开维护中心只盘点本地 CLI（包括本地 npm 清单），不因此查询全部包的远端版本。搜索、状态筛选不联网。手动全量版本检查需用户原有“全部全局 npm CLI”授权，或在本次会话显式确认；会话授权不会扩大自动检查策略。常用检查仍限制于内置白名单。
+
+最后一批更新的对象、阶段、错误原因保存在当前 Mac 的 UserDefaults（`maintenance.operation-report.v1`），不含技能正文或凭证，不上传遥测。异常退出留下的执行状态在下次打开标为版本待确认，不按队列消失推定成功。

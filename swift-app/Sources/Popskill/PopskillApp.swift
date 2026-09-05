@@ -84,15 +84,13 @@ struct PopskillApp: App {
         .defaultSize(width: 1280, height: 820)
         .commands {
             CommandGroup(after: .appInfo) {
-                Button(L("检查更新…")) { updaterController.checkForUpdates(nil) }
+                Button(L("检查 Popskill 更新…")) { updaterController.checkForUpdates(nil) }
             }
             // 标准 ⌘, ——设置一直在标题栏 ⚙ 里，但 mac 用户的手指头先去按 ⌘,
             // 添加弹层开着时不抢（已解析的安装计划不能被静默销毁）
-            CommandGroup(replacing: .appSettings) {
-                Button(L("设置…")) { if model.sheet == nil { model.sheet = .settings } }
-                    .keyboardShortcut(",", modifiers: .command)
-                Button(L("定时任务…")) { if model.sheet == nil { model.sheet = .sched; model.reloadSched() } }
-                Button(L("CLI 巡检…")) { if model.sheet == nil { model.sheet = .cli } }   // 面板 onAppear 自会重扫（v2.16）
+            CommandGroup(after: .appSettings) {
+                Button(L("系统后台任务…")) { if model.sheet == nil { model.sheet = .sched; model.reloadSched() } }
+                Button(L("维护中心…")) { model.openMaintenance(.clis) }   // 面板 onAppear 自会重扫（v2.16）
                     .keyboardShortcut("j", modifiers: .command)
                 Button(L("保存为工作模式…")) { model.promptSaveProfile() }
                     .keyboardShortcut("p", modifiers: [.command, .shift])
@@ -115,15 +113,35 @@ struct PopskillApp: App {
             }
             // 弹层开着时不偷焦点给背后的搜索框
             CommandGroup(after: .textEditing) {
-                Button(L("查找")) { if model.sheet == nil { model.searchFocused = true } }
+                Button(L("查找")) {
+                    if NSApp.keyWindow?.identifier?.rawValue == "popskill.settings" {
+                        model.maintenance.settingsSearchRequested += 1
+                    } else if model.sheet == nil {
+                        if model.maintenance.page == .maintenance { model.maintenance.searchRequested += 1 }
+                        else { model.searchFocused = true }
+                    }
+                }
                     .keyboardShortcut("f", modifiers: .command)
             }
         }
+        Settings {
+            SettingsView().environment(model).preferredColorScheme(.light).tint(Ink.blue)
+                .background(WindowIdentity(value: "popskill.settings"))
+        }
+    }
+}
+
+struct WindowIdentity: NSViewRepresentable {
+    let value: String
+    func makeNSView(context: Context) -> NSView { NSView() }
+    func updateNSView(_ view: NSView, context: Context) {
+        DispatchQueue.main.async { view.window?.identifier = NSUserInterfaceItemIdentifier(value) }
     }
 }
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openSettings) private var openSettings
     @State private var keyMonitor: Any?
 
     var body: some View {
@@ -131,10 +149,17 @@ struct RootView: View {
             ZStack(alignment: .topLeading) {
                 VStack(spacing: 0) {
                     Titlebar()
-                    if model.isEmpty {
-                        EmptyPane()
-                    } else {
-                        MainView()
+                    ZStack {
+                        Group {
+                            if model.isEmpty { EmptyPane() } else { MainView() }
+                        }
+                        .opacity(model.maintenance.page == .matrix ? 1 : 0)
+                        .disabled(model.maintenance.page != .matrix).allowsHitTesting(model.maintenance.page == .matrix)
+                        .accessibilityHidden(model.maintenance.page != .matrix)
+                        MaintenanceView()
+                            .opacity(model.maintenance.page == .maintenance ? 1 : 0)
+                            .disabled(model.maintenance.page != .maintenance).allowsHitTesting(model.maintenance.page == .maintenance)
+                            .accessibilityHidden(model.maintenance.page != .maintenance)
                     }
                     StatusBar()
                 }
@@ -162,17 +187,6 @@ struct RootView: View {
                     }
                 }
 
-                // 弹层
-                if model.sheet == .add {
-                    AddSheet().transition(.opacity)
-                } else if model.sheet == .settings {
-                    SettingsSheet().transition(.opacity)
-                } else if model.sheet == .sched {
-                    SchedSheet().transition(.opacity)
-                } else if model.sheet == .cli {
-                    CliSheet().transition(.opacity)
-                }
-
                 // toast：底部居中
                 if let toast = model.toast {
                     VStack {
@@ -188,7 +202,22 @@ struct RootView: View {
         .ignoresSafeArea(.all, edges: .top)
         .animation(.easeOut(duration: 0.12), value: model.toast)
         .onGeometryChange(for: CGSize.self, of: \.size) { model.winSize = $0 }
-        .onAppear { installKeyMonitor() }
+        .background(WindowIdentity(value: "popskill.main"))
+        .sheet(item: Binding(get: { model.sheet }, set: { value in
+            if !model.installing { model.sheet = value }
+        })) { task in
+            Group {
+                switch task {
+                case .add: AddSheet()
+                case .sched: SchedSheet()
+                }
+            }.environment(model).interactiveDismissDisabled(model.installing)
+        }
+        .onAppear {
+            installKeyMonitor()
+            if ProcessInfo.processInfo.environment["POPSKILL_SHEET"] == "settings" { openSettings() }
+            if model.maintenance.page == .maintenance { model.loadLocalCliInventoryIfNeeded() }
+        }
         .onDisappear {
             if let m = keyMonitor { NSEvent.removeMonitor(m) }
             model.stopMaintenanceAutomation()
@@ -205,6 +234,8 @@ struct RootView: View {
     private func installKeyMonitor() {
         guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            // The native Settings window and sheets own their own keyboard focus.
+            guard event.window?.identifier?.rawValue == "popskill.main" else { return event }
             if event.keyCode == 53 {   // Esc
                 // 输入框正在编辑：第一下 Esc 只退出编辑（v2.16——曾直接关掉整个弹层，
                 // 定时任务备注打到一半说没就没），第二下才走关闭链
@@ -214,7 +245,8 @@ struct RootView: View {
                 }
                 if model.peekTarget != nil { model.peekTarget = nil; return nil }
                 if model.fixTarget != nil { model.fixTarget = nil; return nil }
-                if model.sheet != nil { model.sheet = nil; return nil }
+                if model.sheet != nil { model.dismissShortTask(); return nil }
+                if model.maintenance.page == .maintenance { model.returnToMatrix(); return nil }
                 if model.kbFocusId != nil { model.kbFocusId = nil; return nil }
                 return event
             }
@@ -241,11 +273,12 @@ struct RootView: View {
                mods.subtracting(.shift).isEmpty,   // 德语等布局 / 在 ⇧7 上，shift 要留
                model.sheet == nil,
                !(NSApp.keyWindow?.firstResponder is NSTextView) {
-                model.searchFocused = true
+                if model.maintenance.page == .maintenance { model.maintenance.searchRequested += 1 }
+                else { model.searchFocused = true }
                 return nil
             }
             // 键盘导航（PATCH-02）：弹层/浮层/输入框打开时不响应
-            if mods.isEmpty, model.sheet == nil, model.fixTarget == nil, model.peekTarget == nil,
+            if mods.isEmpty, model.maintenance.page == .matrix, model.sheet == nil, model.fixTarget == nil, model.peekTarget == nil,
                !(NSApp.keyWindow?.firstResponder is NSTextView) {
                 switch event.keyCode {
                 case 125: model.kbMove(1); return nil          // ↓

@@ -25,7 +25,7 @@ struct SchedSheet: View {
     private var vendorCount: Int { model.schedTasks.filter(\.vendor).count }
 
     var body: some View {
-        SheetShell(width: 660, onDismiss: { model.sheet = nil }) {
+        Group {
             VStack(spacing: 0) {
                 head
                 ScrollView {
@@ -49,25 +49,21 @@ struct SchedSheet: View {
                 foot
             }
         }
+        .frame(width: 760)
+        .background(Ink.window)
     }
 
     private var head: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(L("定时任务")).font(.ui(15.5, .bold)).foregroundStyle(Ink.ink)
-                Text(L("谁在跑、下次什么时候跑、上次结果如何。点名字旁的 ✎ 加人话备注。"))
+                Text(L("系统后台任务")).font(.ui(15.5, .bold)).foregroundStyle(Ink.ink)
+                Text(L("本机 launchd / cron 任务，与 Popskill 应用内自动维护分开管理。"))
                     .font(.ui(11.5)).foregroundStyle(Ink.secondary)
             }
             Spacer()
-            Button { model.sheet = nil } label: {
-                Text("esc")
-                    .font(.mono(11))
-                    .foregroundStyle(Color(hex: 0x666666))
-                    .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(RoundedRectangle(cornerRadius: 4).fill(.white))
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Ink.control2, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
+            Button(L("关闭")) { model.dismissShortTask() }
+                .keyboardShortcut(.cancelAction)
+                .buttonStyle(.bordered)
         }
         .padding(EdgeInsets(top: 16, leading: 20, bottom: 13, trailing: 20))
         .background(Ink.chrome)
@@ -289,7 +285,7 @@ struct SchedSheet: View {
         HStack(spacing: 10) {
             if vendorCount > 0 {
                 HStack(spacing: 6) {
-                    PsSwitch(on: model.schedShowVendor) { model.schedShowVendor.toggle() }
+                    Toggle(L("显示厂商任务"), isOn: Binding(get: { model.schedShowVendor }, set: { model.schedShowVendor = $0 })).toggleStyle(.switch).labelsHidden()
                     Text(L("显示系统/第三方任务（\(vendorCount)）"))
                         .font(.ui(10.5)).foregroundStyle(Ink.tertiary)
                 }
