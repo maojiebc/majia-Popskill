@@ -57,7 +57,7 @@ chmod +x "$MACOS_DIR/Popskill"
 # 不带上它 app 启动直接 fatalError
 L10N_BUNDLE="$ROOT_DIR/swift-app/.build/release/Popskill_Popskill.bundle"
 if [[ -d "$L10N_BUNDLE" ]]; then
-  ditto "$L10N_BUNDLE" "$RESOURCES_DIR/Popskill_Popskill.bundle"
+  ditto --norsrc --noextattr "$L10N_BUNDLE" "$RESOURCES_DIR/Popskill_Popskill.bundle"
 else
   echo "error: 找不到 ${L10N_BUNDLE}（资源 bundle 没构建出来？）" >&2
   exit 70
@@ -71,7 +71,7 @@ fi
 
 SPARKLE_FRAMEWORK="$(find "$ROOT_DIR/swift-app/.build/artifacts" -path "*/Sparkle.framework" -type d 2>/dev/null | sort | head -n 1 || true)"
 if [[ -n "$SPARKLE_FRAMEWORK" ]]; then
-  ditto "$SPARKLE_FRAMEWORK" "$FRAMEWORKS_DIR/Sparkle.framework"
+  ditto --norsrc --noextattr "$SPARKLE_FRAMEWORK" "$FRAMEWORKS_DIR/Sparkle.framework"
   if ! otool -l "$MACOS_DIR/Popskill" | grep -q "@executable_path/../Frameworks"; then
     run_quietly install_name_tool -add_rpath "@executable_path/../Frameworks" "$MACOS_DIR/Popskill"
   fi
