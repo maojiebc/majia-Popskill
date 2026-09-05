@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 // 维护中心（v2.21）：把来源自动更新、Agent CLI 识别、版本检查与升级收成一个闭环。
@@ -32,13 +33,11 @@ struct CliSheet: View {
                 _ = model.reconcileRemoteSourceDefaults()
                 model.checkCliUpdates()
             }
-            .task {
-                while !Task.isCancelled {
-                    policy = MaintenancePolicyStore.loadPolicy()
-                    runStatus = MaintenancePolicyStore.loadStatus()
-                    do { try await Task.sleep(for: .seconds(1)) }
-                    catch { return }
-                }
+            .onReceive(NotificationCenter.default.publisher(
+                for: UserDefaults.didChangeNotification, object: UserDefaults.standard
+            ).receive(on: RunLoop.main)) { _ in
+                policy = MaintenancePolicyStore.loadPolicy()
+                runStatus = MaintenancePolicyStore.loadStatus()
             }
         }
     }
@@ -144,7 +143,8 @@ struct CliSheet: View {
                         .font(.ui(10.5, .medium))
                         .foregroundStyle(runStatus.outcome == .partial || runStatus.outcome == .failed ? Ink.amberText : Ink.secondary2)
                     if let date = runStatus.finishedAt ?? runStatus.startedAt {
-                        Text(maintenanceText("最近运行：", "Last run: ") + relativeMaintenanceDate(date))
+                        (Text(maintenanceText("最近运行：", "Last run: ")) + Text(date, style: .relative))
+                            .environment(\.locale, l10nLocale)
                             .font(.ui(9.5)).foregroundStyle(Ink.tertiary)
                     }
                 }
@@ -247,13 +247,6 @@ struct CliSheet: View {
         .buttonStyle(.plain)
     }
 
-    private func relativeMaintenanceDate(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.locale = l10nLocale
-        formatter.unitsStyle = .short
-        return formatter.localizedString(for: date, relativeTo: Date())
-    }
-
     // ── CLI 清单 ──────────────────────────────────────────
 
     private var inventorySummary: some View {
@@ -324,9 +317,7 @@ struct CliSheet: View {
         model.globalClis.filter { $0.agentDefinition != nil }.count
     }
     private var recognizedAgentUpdates: [GlobalCli] {
-        model.globalClis.filter {
-            $0.safeRecognizedAgentUpdate && $0.pathMatchesPrefix && !$0.excluded && $0.tracksIndex
-        }
+        model.globalClis.filter(\.safeRecognizedAgentUpdate)
     }
     private var pathConflictCount: Int {
         model.globalClis.filter { !$0.pathMatchesPrefix }.count
