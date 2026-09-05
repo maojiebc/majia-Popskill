@@ -50,11 +50,11 @@ Popskill 的回答是把管理建立在一个最简单的事实上：**技能就
 
 <table>
 <tr>
-<td><img src="docs/screenshots/settings.png" alt="来源自动识别"></td>
+<td><img src="docs/screenshots/settings.png" alt="原生设置与自动维护"></td>
 <td><img src="docs/screenshots/peek.png" alt="详情 peek"></td>
 </tr>
 <tr>
-<td><b>来源自动识别</b> — 五级回填（lock 文件 / git remote / frontmatter / 内置目录），装过的东西不用告诉它从哪来</td>
+<td><b>原生设置</b> — 新来源默认值与现有来源批量设置分开，检查范围和自动升级策略各自明确</td>
 <td><b>详情 peek</b> — 点名称看 SKILL.md 摘要，看完即走，深读去编辑器</td>
 </tr>
 <tr>

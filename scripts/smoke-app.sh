@@ -7,6 +7,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_SECONDS="${1:-3}"
 LOG_FILE="$(mktemp)"
 APP_PID=""
+SMOKE_ROOT="$(mktemp -d)"
+SMOKE_DEFAULTS="popskill-app-smoke.$(uuidgen)"
 
 cleanup() {
   if [[ -n "$APP_PID" ]] && kill -0 "$APP_PID" 2> /dev/null; then
@@ -14,12 +16,18 @@ cleanup() {
     wait "$APP_PID" 2> /dev/null || true
   fi
   rm -f "$LOG_FILE"
+  rm -rf "$SMOKE_ROOT"
+  defaults delete "$SMOKE_DEFAULTS" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
 "$ROOT_DIR/scripts/swiftpm.sh" build --package-path "$ROOT_DIR/swift-app"
 
+# Xcode 27 SwiftPM places frameworks beside the bare executable without a matching rpath.
+DYLD_FRAMEWORK_PATH="$ROOT_DIR/swift-app/.build/debug" \
 POPSKILL_FAKE_DATA=1 POPSKILL_NO_AUTOCHECK=1 \
+POPSKILL_STORE_ROOT="$SMOKE_ROOT/store" POPSKILL_TOOLS_ROOT="$SMOKE_ROOT/tools" \
+POPSKILL_DEFAULTS_SUITE="$SMOKE_DEFAULTS" \
   "$ROOT_DIR/swift-app/.build/debug/Popskill" > "$LOG_FILE" 2>&1 &
 APP_PID="$!"
 

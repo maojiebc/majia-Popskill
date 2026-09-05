@@ -20,7 +20,7 @@
 
 核心场景一句话：**技能装一次，挂到多个 AI 工具上；坏了能修，旧了能升。**
 
-产品刻意做小：**一个主屏（卡片矩阵）+ 三个弹层（添加 / 设置 / 定时任务）+ 行内修复弹层 + 详情 peek + 空态**。没有侧栏、没有路由。
+产品页面：**能力矩阵 + 主窗口内维护中心 + 原生 Settings 窗口**；添加 / 系统后台任务使用原生短任务 sheet，保留行内修复与详情 peek。当前二级交互以 `docs/design/secondary-ui-2026-09-05.md` 为准。
 
 - 设计真源：`docs/design/v2-handoff/`（原始包）+ `v2-handoff-patch-01/`（详情 peek）+ `v2-handoff-patch-02/`（**当前定稿**：绿激活色语义/默认折叠/键盘导航/套装 tokens/列对齐，SPEC.md 以此为准）
 - v1（sidecar + cc-switch + 6 目的地账本）止于 tag `v1.1.0`，复盘见 `docs/history/PLAN-v1.md` 与 `PLAN-v2.md`
@@ -102,7 +102,7 @@ Tests/PopskillTests/MatrixLayoutTests.swift  折叠套装网格打包（展开�
 - **安装/重拉事务（v2.18，审查 P1-03）**：install = 预检全部链接位（真实目录冲突动盘前报错）→ 同卷 `.popskill-incoming-*` → 原子 rename（并发同名靠 rename 竞争，输家绝不删赢家）→ 记账建链（失败只撤本次对象）；`repullSwap` 取代 removeEntry+install 裸序，撤链/让位/换名/建链四段全记账可回滚——任一步失败磁盘回到操作前。故障注入测试盯着（testInstall*/testRepullSwap*）。
 - **跨进程写锁（vNext）**：所有 meta read-modify-write 与 store/link/trash 变更走 `StoreProcessLock`。锁文件按标准化 store 路径哈希落用户临时目录，不随 store 删除失效；POSIX `flock` 在进程崩溃/被杀后由内核自动释放；同进程共享 `NSRecursiveLock` Gate 支持 install→mutateMeta 等同步重入。GitHub/local resolve 与 well-known 下载在锁外，磁盘提交阶段才占锁；15 秒超时返回 `storeBusy`，不无限卡 UI。双进程测试覆盖等待合并、超时、SIGKILL 自动释放。
 - **meta 写盘可见（v2.18）**：saveMeta/mutateMeta 返回 Bool；自动更新/默认挂载/跳过/恢复提醒/任务备注五个用户动作写失败必须回滚内存态 + sayError，不许谎报「已保存」。
-- **CLI 巡检（v2.20，改写 v2.18）**：每次「检查更新」默认只查常用白名单（Claude Code / Codex / lark-cli / GetNote / guanskill / pi / clawhub / mcporter + brew `gemini-cli` `aliyun-cli` + pipx `agent-reach` `yt-dlp` + uv `specify-cli`）。`autoCliPatrol` 打开才把**全部**全局 npm 包名发给 registry；打开 CLI 面板始终全量扫。升级打回真实前缀（`npm i -g --prefix` / `brew upgrade` / `pipx upgrade` / `uv tool upgrade`），PATH 仍命中另一份就报人话错。node / npm / TypeScript 等基础工具只展示不升级。横幅「全部更新」只带走白名单。pipx 从 GitHub zip / 本地装的不跟 PyPI 同名包比版本；升级按钮只在远端版本更新时出现。详见 `CliInventory.swift`。联网披露在 SECURITY.md。
+- **CLI 巡检（v2.20，改写 v2.18）**：每次「检查更新」默认只查常用白名单（Claude Code / Codex / lark-cli / GetNote / guanskill / pi / clawhub / mcporter + brew `gemini-cli` `aliyun-cli` + pipx `agent-reach` `yt-dlp` + uv `specify-cli`）。`autoCliPatrol` 打开才把**全部**全局 npm 包名发给 registry；打开维护中心只读本地清单，联网检查全量 npm 需授权。升级打回真实前缀（`npm i -g --prefix` / `brew upgrade` / `pipx upgrade` / `uv tool upgrade`），PATH 仍命中另一份就报人话错。node / npm / TypeScript 等基础工具只展示不升级。横幅「全部更新」只带走白名单。pipx 从 GitHub zip / 本地装的不跟 PyPI 同名包比版本；升级按钮只在远端版本更新时出现。详见 `CliInventory.swift`。联网披露在 SECURITY.md。
 - **技能本地漂移（v2.20）**：`EntryMeta.appliedDigest` 记上次成功落盘的内容哈希。本地改过就默认不覆盖（`StoreError.localDrift`），「全部更新」跳过并 toast；右键「仍要覆盖本地修改」才 `applyUpdate(force:)`。旧 meta 无此字段仍能解码——第一次与上游对齐的检查会补基线。
 - **工作模式（v2.20）**：`WorkProfile` 快照「此刻各工具挂了哪些」。缺 toolId 键 = 切换时不动该列；键在数组空 = 明确全断。套装管来源，模式管场景。
 - **严格并发零警告（v2.18）**：同步桥（httpGet/runProcess 管道）一律走带锁 `ResultBox`（semaphore 超时后迟到回调只写盒子）；StoreFS/SchedEngine 标 `@unchecked Sendable`（唯一非值成员 FileManager.default 官方线程安全）；NpmEnv.cached 用 `nonisolated(unsafe)`+既有锁。CI 的 release build 是严格并发模式且零 warning 门，别引入新警告。
@@ -115,7 +115,8 @@ Tests/PopskillTests/MatrixLayoutTests.swift  折叠套装网格打包（展开�
 ```bash
 POPSKILL_FAKE_DATA=1            # 加载原型 fixture（3 套装 + 15 独立，全状态组合）
 POPSKILL_EMPTY=1                # 空 store 态
-POPSKILL_SHEET=add|settings|sched # 启动即开弹层
+POPSKILL_SHEET=add|settings|sched|cli # 启动指定短任务、原生设置或维护页
+POPSKILL_DEFAULTS_SUITE=<suite> # 测试专用维护偏好/回执域，配合 store/tools 沙盘
 POPSKILL_ADD_URL=<url>          # 配合 SHEET=add 预填并自动解析
 POPSKILL_FIXPOP=<capId>:<toolId># 启动即开修复弹层
 POPSKILL_PEEK=<capId>           # 启动即开详情 peek
@@ -199,9 +200,12 @@ scripts/release.sh
 21. **SwiftPM 把 lproj 目录名小写化 → 别拿协商结果跟 "zh-Hans" 裸比** — 仓库源是 `zh-Hans.lproj`，**SwiftPM 复制进 `Popskill_Popskill.bundle` 时小写成 `zh-hans.lproj`**（打包只是 ditto 忠实搬运）。`Bundle.localizations` 返回磁盘真实名 → 协商结果 = `"zh-hans"` → `l10nIsChinese = (lang == "zh-Hans")` 判 **false**，中文界面下 Catalog 精选目录（80+411 条）整片走英文面。**v2.14 潜伏到 v2.18.0 三个版本**没被发现，因为 macOS 文件系统大小写不敏感（`path(forResource:)` 照样命中 → L() 全中文）——**「界面是中文」永远不能证明协商正确**：key 就是中文原文，协商彻底失败退回 main bundle 也照样显示中文。处方：判定走 `l10nLangIsChinese()`（大小写/后缀无关），`POPSKILL_L10N_PROBE=1` 在打包 .app 上自检。**测试陷阱**：测试进程里 resourceBundle 找不到资源会走兜底 `return ("zh-Hans", module)`，断言全局 `l10nIsChinese` 是**结构性假绿**（拿 bug 版代码也照过）——只有喂真实形态（`available: ["zh-hans","en"]`）的纯函数测试抓得住，写完必须做变异验证（注入 bug 版确认测试会红）
 22. **CI 编译器小版本 ≠ 本地——零警告门可能拦到本地不报的警告** — v2.18.0 首轮发版实撞：runner 的 Xcode 16 旧小版本对 `attr[range].backgroundColor =`（AttributedString 动态成员）报「cannot form key path…non-sendable」`<unknown>:0` 两条，本地新编译器零警告。处方：`gh run view <id> --log-failed | grep warning:` 定位 → 改等价写法规避（显式 attribute 类型下标 `attr[range][AttributeScopes.SwiftUIAttributes.BackgroundColorAttribute.self] =`，不构造 keypath）。发布门此刻的价值：CI 红时 tag/DMG/appcast 零泄漏，修好重跑即续发
 
-## 当前状态（2026-08-21）
+## 当前状态（2026-09-05）
 
-- **公开 Latest = v2.20.2 / build 288**（2026-08-21；CI run 32396292182 一次过；appcast 第 2 轮刷到）。开发仍以本目录 `/Users/majia/projects/majia-Popskill-release-v2.19.0` 为准；`/Users/majia/projects/popskill` 停在 v2.18.1，不要当正式工程。
+- **发版候选 v2.22.0 / build 290**：PR #8 原生设置、主窗口维护中心与更新回执；已保留 PR #7 的通知刷新测试（页面实现已被 #8 取代）。上一正式版为 v2.21.0 / build 289。是否正式上线以 GitHub Latest 与在线 appcast 为准。
+- 本次隔离整合目录为 `/Users/majia/projects/popskill-release-20260905`，原工程 `/Users/majia/projects/popskill` 有未提交设计稿，禁止覆盖。后续以当前 `origin/main` 与工作树为准，不再依赖历史目录快照判断版本。
+- 冷启动 smoke 通过 LaunchServices 显式传入 fixture、store/tools 沙盘和独立维护偏好域，进程筛选限定本 checkout。不能用旧的全局 `/build/Popskill.app` 匹配来终止其它开发实例。
+
 - **v2.20.2「首页默认 Claude / Codex / Cursor」已发版上线**：矩阵默认三列；Grok / Gemini / OpenCode / Pi 本机有 App 或 CLI 才在设置里出「首页显示」开关（默认关）。折叠套装仍是两列卡片。pipx GitHub/本地安装不跟 PyPI 同名包比版本。Cursor 挂 `~/.cursor/skills`，不碰 `skills-cursor`。不要加回 CodeBuddy。
 - **v2.20.1「折叠套装卡不再被工具列挤成竖排字母」已发版上线**：v2.20.0 按需露出 Grok/Gemini/OpenCode/Pi 后，折叠套装卡右侧分数条无固定列宽，六列把 `CLAUDE` 拆成竖排字母。固定列宽 + 单行标签，挤占只截名称。
 - **v2.20.0「技能本地改过不覆盖 + CLI 按真实位置升级」已发版上线**（2026-08-20，build 286；CI run 32326497927 一次过）：①技能 `appliedDigest`，本地改过默认不覆盖，右键才 `force`；「全部更新」跳过漂移并 toast ②CLI 按真实前缀/渠道升级（npm `--prefix` / brew / pipx / uv），检查更新默认白名单，`autoCliPatrol` 才全量扫 npm ③工作模式快照 + 按需工具列（Claude/Codex 常显）。本机 09:45 Codex `skill-cli` 每日任务可降为兜底。发版链：Xcode 27 beta 构建（无 `Xcode.app`）+ notary profile 重存 + smoke 在无屏幕录制宿主跳过窗口枚举（坑 #19，正式 2.19 同样看不见窗）。测试 160（1 skip）。不要加回 CodeBuddy。

@@ -9,11 +9,12 @@ BUNDLED_SPARKLE="$APP_DIR/Contents/Frameworks/Sparkle.framework/Versions/B/Spark
 WINDOW_CHECKER="$(mktemp "${TMPDIR:-/tmp}/popskill-window-check.XXXXXX.swift")"
 SMOKE_STAMP="$(mktemp "${TMPDIR:-/tmp}/popskill-smoke-stamp.XXXXXX")"
 APP_PID=""
+SMOKE_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/popskill-bundle-smoke.XXXXXX")"
+SMOKE_DEFAULTS="popskill-bundle-smoke.$(uuidgen)"
 
 running_app_pids() {
-  # 带 /build/ 段的后缀匹配：避开 APFS 大小写漂移（Projects ↔ projects 全路径
-  # pgrep 会漏），同时绝不命中 /Applications 里用户正在跑的正式版
-  pgrep -f "/build/Popskill.app/Contents/MacOS/Popskill" 2> /dev/null || true
+  # Scope discovery to this checkout; never stop another developer's bundle.
+  ps -axo pid=,comm= | awk -v app="$APP_BIN" '$2 == app {print $1}'
 }
 
 # v2.13.1 起：冷启前把 .build 里的 release 资源 bundle 移开，逼打包的 .app 只能用
@@ -39,6 +40,8 @@ cleanup() {
   fi
   restore_build_bundles
   rm -f "$WINDOW_CHECKER" "$SMOKE_STAMP"
+  rm -rf "$SMOKE_ROOT"
+  defaults delete "$SMOKE_DEFAULTS" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -126,7 +129,10 @@ SWIFT
 
 hide_build_bundles   # 复现干净机器：.app 不能靠 .build 绝对路径找资源
 touch "$SMOKE_STAMP"
-open -n "$APP_DIR"
+open -n "$APP_DIR" --env POPSKILL_FAKE_DATA=1 --env POPSKILL_NO_AUTOCHECK=1 \
+  --env POPSKILL_NO_WATCH=1 --env "POPSKILL_STORE_ROOT=$SMOKE_ROOT/store" \
+  --env "POPSKILL_TOOLS_ROOT=$SMOKE_ROOT/tools" --env "POPSKILL_DEFAULTS_SUITE=$SMOKE_DEFAULTS" \
+  --args -SUEnableAutomaticChecks NO
 
 for _ in {1..50}; do
   APP_PID="$(running_app_pids | head -n 1)"

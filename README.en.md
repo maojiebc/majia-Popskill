@@ -50,11 +50,11 @@ The filesystem is the database. No sidecar, no SQLite — your directory tree al
 
 <table>
 <tr>
-<td><img src="docs/screenshots/settings.png" alt="Automatic provenance"></td>
+<td><img src="docs/screenshots/settings.png" alt="Native settings and automation"></td>
 <td><img src="docs/screenshots/peek.png" alt="Detail peek"></td>
 </tr>
 <tr>
-<td><b>Automatic provenance</b> — five-level backfill (lock file / git remote / frontmatter / curated catalog); installed skills know where they came from</td>
+<td><b>Native settings</b> — future-source defaults, existing-source choices, inspection scope, and automatic upgrades have separate controls</td>
 <td><b>Detail peek</b> — click a name for the SKILL.md digest; deep reading happens in your editor</td>
 </tr>
 <tr>
@@ -97,7 +97,7 @@ The filesystem is the database. No sidecar, no SQLite — your directory tree al
 1. Download the DMG, drag into Applications, and open. **On first launch** macOS may warn “from the internet / unidentified developer” — it’s signed + notarized, so right-click the icon and choose **Open** (first time only)
 2. Launch — if you already use `~/.agents/skills/` (the `npx skills` ecosystem convention), the matrix fills with your existing skills immediately
 3. Starting fresh? Hit **+ Add** and paste a GitHub repo, e.g. `github.com/anthropics/skills` (**installing GitHub-sourced skills needs git** — if it’s missing you’ll be prompted to run `xcode-select --install`)
-4. Click the Claude / Codex pill on a card to mount; click ✕ or ◐ to repair; right-click a card for “Remove / Reveal in Finder”; flip on auto-update in Settings
+4. Click the Claude / Codex pill on a card to mount; click ✕ or ◐ to repair; right-click a card for “Remove / Reveal in Finder”; configure update policy in Settings → Automation
 
 ---
 

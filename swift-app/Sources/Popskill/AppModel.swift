@@ -175,10 +175,12 @@ final class AppModel {
     @ObservationIgnored private var envProbed = false
 
     init(env: StoreEnv = .real(), defaults: UserDefaults = .standard) {
-        maintenanceDefaults = defaults
-        maintenance = MaintenanceState(defaults: defaults)
-        fs = StoreFS(env: env)
         let pe = ProcessInfo.processInfo.environment
+        // A sandboxed bundle smoke must not overwrite the user's maintenance receipts or policy.
+        let isolatedDefaults = pe["POPSKILL_DEFAULTS_SUITE"].flatMap { UserDefaults(suiteName: $0) } ?? defaults
+        maintenanceDefaults = isolatedDefaults
+        maintenance = MaintenanceState(defaults: isolatedDefaults)
+        fs = StoreFS(env: env)
         if pe["POPSKILL_FAKE_DATA"] == "1" {
             fake = true
             (tools, entries) = Fixtures.make()
