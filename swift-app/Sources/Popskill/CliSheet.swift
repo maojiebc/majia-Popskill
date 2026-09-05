@@ -36,7 +36,7 @@ struct MaintenanceView: View {
                     get: { state.tab == .sources ? state.sourceFilter : state.cliFilter },
                     set: { if state.tab == .sources { state.sourceFilter = $0 } else { state.cliFilter = $0 } }
                 )) { ForEach(MaintenanceFilter.allCases, id: \.self) { Text($0.label).tag($0) } }
-                    .pickerStyle(.segmented).frame(width: 250)
+                    .pickerStyle(.segmented).labelsHidden().frame(width: 250)
                 Spacer()
                 if state.tab == .clis {
                     Picker(L("检查范围"), selection: Binding(get: { state.cliScope }, set: { scope in
@@ -221,7 +221,7 @@ struct MaintenanceView: View {
                                 }
                             }
                         }.frame(maxWidth: .infinity, alignment: .leading)
-                    }.frame(maxHeight: 145)
+                    }.frame(height: min(145, CGFloat(state.report.items.count) * 48))
                 } label: {
                     HStack {
                         Text(L("本批结果：已完成 \(state.report.completedCount)/\(state.report.items.count)"))

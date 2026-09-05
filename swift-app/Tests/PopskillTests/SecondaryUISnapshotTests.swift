@@ -60,10 +60,12 @@ final class SecondaryUISnapshotTests: XCTestCase {
             model.maintenance.report.enqueue(id: cli.id, name: cli.maintenanceName, kind: .cli)
         }
         model.maintenance.report.setPhase(model.globalClis[0].id, .running)
+        model.upgradingClis = Set(model.maintenance.report.items.map(\.id))
         model.maintenance.showResults = true
         model.maintenance.tab = .clis
         try render(MaintenanceView().environment(model), size: CGSize(width: 1080, height: 680), to: output.appendingPathComponent("maintenance-clis.png"))
         model.maintenance.report = OperationReport()
+        model.upgradingClis = []
         model.maintenance.tab = .sources
         try render(MaintenanceView().environment(model), size: CGSize(width: 1080, height: 680), to: output.appendingPathComponent("maintenance-sources.png"))
         for i in 1...9 {
