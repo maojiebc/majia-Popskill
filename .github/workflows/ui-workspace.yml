@@ -1,4 +1,4 @@
-name: Apply reviewed UI changes
+name: Apply reviewed UI sources
 on:
   pull_request:
     branches: [main]
@@ -24,6 +24,8 @@ jobs:
           raw = bz2.decompress(base64.b64decode(encoded, validate=True))
           assert hashlib.sha256(raw).hexdigest() == 'fb9958da04b0cdbefefb47a2dbd505f19eb103023facbc79208f9d9b92bdb97c'
           for name, spec in json.loads(raw).items():
+              # Workflow changes are submitted through the authorized connector, not GITHUB_TOKEN.
+              if name.startswith('.github/workflows/'): continue
               path = (root / name).resolve()
               assert root in path.parents
               old = path.read_bytes() if path.exists() else b''
@@ -42,7 +44,6 @@ jobs:
               path.write_text(new)
               print('Applied', name)
           for i in range(3): (root / f'.ui-edit-{i}.txt').unlink()
-          (root / '.github/workflows/ui-workspace.yml').unlink()
           PY
       - name: Select Xcode and generate catalog artifacts
         run: |
@@ -52,7 +53,7 @@ jobs:
           scripts/gen-l10n.sh
           scripts/gen-l10n.sh --check
           for f in scripts/*.sh; do bash -n "$f"; done
-      - name: Commit only source changes and generated localization
+      - name: Commit application sources only
         env:
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
@@ -61,6 +62,7 @@ jobs:
           ACTUAL="$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)"
           test "$ACTUAL" = "$EXPECTED_HEAD"
           git add -A
+          test -z "$(git diff --cached --name-only -- .github/workflows)"
           git diff --cached --check
           git -c user.name='Popskill UI refactor' -c user.email='74524515+maojiebc@users.noreply.github.com' commit -m 'feat: rebuild native settings and explicit maintenance workflows'
           git push origin "HEAD:refs/heads/$BRANCH"
