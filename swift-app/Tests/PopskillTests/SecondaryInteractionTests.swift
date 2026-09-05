@@ -1,3 +1,5 @@
+import AppKit
+import SwiftUI
 import XCTest
 @testable import Popskill
 
@@ -29,6 +31,11 @@ final class SecondaryInteractionTests: XCTestCase {
         defaults.removePersistentDomain(forName: suite)
         try? FileManager.default.removeItem(at: root)
         super.tearDown()
+    }
+    func testBackgroundTaskSheetHasReadableMinimumHeight() {
+        let host = NSHostingController(rootView: SchedSheet().environment(model))
+        let size = host.sizeThatFits(in: CGSize(width: 760, height: 0))
+        XCTAssertGreaterThanOrEqual(size.height, 480, "A native task sheet must not collapse its scrolling list")
     }
     private func source(_ id: String, remote: Bool = true, enabled: Bool = false) -> Entry {
         let cap = Capability(id: id, name: id, type: .skill, desc: "", version: "1", author: nil,

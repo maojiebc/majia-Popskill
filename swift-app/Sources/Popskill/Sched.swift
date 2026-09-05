@@ -158,6 +158,24 @@ struct SchedEngine: @unchecked Sendable {
         return .manual
     }
 
+    // Display command fragments lexically. They may be HTTP arguments, not file URLs;
+    // Foundation can trap when a packaged app passes them to URL(fileURLWithPath:).
+    static func commandSummary(_ command: String) -> String {
+        // 副行展示脚本本体的 basename，整行命令太长没人读。
+        // 跳过解释器、flag、env 赋值和引号碎片（zsh -lc 'export HOME="…"; python3 x.py' 这种）；
+        // 优先认有脚本扩展名的 token，找不到再退回第一个干净路径。
+        let interpreters = ["/bin/bash", "/bin/zsh", "/bin/sh", "/usr/bin/env", "/usr/bin/python3"]
+        let parts = command.split(separator: " ").map(String.init)
+            .filter { $0.contains("/") && !$0.hasPrefix("-") && !$0.contains("://") && !$0.contains("=") && !$0.contains("\"") && !$0.contains("'") && !interpreters.contains($0) }
+        let exts = ["sh", "py", "mjs", "js", "rb", "pl", "swift"]
+        let script = parts.first { exts.contains(($0 as NSString).pathExtension) } ?? parts.first
+        if let script {
+            let name = (script as NSString).lastPathComponent
+            if !name.isEmpty { return name }
+        }
+        return command
+    }
+
     private static func commandLine(_ dict: [String: Any]) -> String {
         if let args = dict["ProgramArguments"] as? [String] { return args.joined(separator: " ") }
         if let prog = dict["Program"] as? String { return prog }
@@ -342,7 +360,7 @@ struct SchedEngine: @unchecked Sendable {
             let timing = Array(fields[0..<5])
             let rawCmd = fields[5...].joined(separator: " ")
             let (cmd, log) = splitRedirect(rawCmd)
-            let name = cmd.split(separator: " ").first.map { URL(fileURLWithPath: String($0)).lastPathComponent } ?? cmd
+            let name = cmd.split(separator: " ").first.map { (String($0) as NSString).lastPathComponent } ?? cmd
             tasks.append(SchedTask(
                 id: "cron:\(n)", kind: .cron, label: name,
                 behavior: .timed,

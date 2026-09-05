@@ -18,6 +18,20 @@ final class SchedTests: XCTestCase {
         try PropertyListSerialization.data(fromPropertyList: dict, format: .xml, options: 0)
     }
 
+    func testCommandSummaryDoesNotTreatWebArgumentsAsFiles() {
+        let command = "/bin/sh -c http://127.0.0.1:7897;"
+        XCTAssertEqual(SchedEngine.commandSummary(command), command)
+        XCTAssertEqual(SchedEngine.commandSummary("/usr/bin/python3 https://example.com/input.py /tmp/run.py"), "run.py")
+        XCTAssertEqual(SchedEngine.commandSummary("/usr/bin/python3 /tmp/run.py"), "run.py")
+        XCTAssertEqual(SchedEngine.commandSummary("/bin/zsh ~/scripts/run.sh"), "run.sh")
+        XCTAssertEqual(SchedEngine.commandSummary(""), "")
+    }
+
+    func testCronDisplayNameHandlesCommandTextWithoutFileURLConversion() {
+        let tasks = SchedEngine.parseCrontab("0 8 * * * ~/scripts/daily.sh\n0 9 * * * ./bin/worker")
+        XCTAssertEqual(tasks.map(\.label), ["daily.sh", "worker"])
+    }
+
     // ── plist 解析 ────────────────────────────────────────
 
     func testParsePlistCalendarDaily() throws {

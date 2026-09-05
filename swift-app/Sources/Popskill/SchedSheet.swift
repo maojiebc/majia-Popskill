@@ -45,7 +45,8 @@ struct SchedSheet: View {
                     }
                     .padding(EdgeInsets(top: 14, leading: 20, bottom: 16, trailing: 20))
                 }
-                .frame(maxHeight: 560)
+                // Keep the initially empty/scanning sheet usable before asynchronous tasks arrive.
+                .frame(minHeight: 380, idealHeight: 500, maxHeight: 560)
                 foot
             }
         }
@@ -149,7 +150,7 @@ struct SchedSheet: View {
                         }
                     }
                 }
-                Text(commandShort(t))
+                Text(SchedEngine.commandSummary(t.command))
                     .font(.mono(10)).foregroundStyle(Ink.tertiary)
                     .lineLimit(1).truncationMode(.middle)
             }
@@ -214,22 +215,6 @@ struct SchedSheet: View {
             parts.append(L("上次退出码 \(exit)"))
         }
         return parts.joined(separator: " · ")
-    }
-
-    private func commandShort(_ t: SchedTask) -> String {
-        // 副行展示脚本本体的 basename，整行命令太长没人读。
-        // 跳过解释器、flag、env 赋值和引号碎片（zsh -lc 'export HOME="…"; python3 x.py' 这种）；
-        // 优先认有脚本扩展名的 token，找不到再退回第一个干净路径。
-        let interpreters = ["/bin/bash", "/bin/zsh", "/bin/sh", "/usr/bin/env", "/usr/bin/python3"]
-        let parts = t.command.split(separator: " ").map(String.init)
-            .filter { $0.contains("/") && !$0.hasPrefix("-") && !$0.contains("=") && !$0.contains("\"") && !$0.contains("'") && !interpreters.contains($0) }
-        let exts = ["sh", "py", "mjs", "js", "rb", "pl", "swift"]
-        let script = parts.first { exts.contains(URL(fileURLWithPath: $0).pathExtension) } ?? parts.first
-        if let script {
-            let name = URL(fileURLWithPath: script).lastPathComponent
-            if !name.isEmpty { return name }
-        }
-        return t.command
     }
 
     @ViewBuilder
