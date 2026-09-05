@@ -202,7 +202,7 @@ scripts/release.sh
 
 ## 当前状态（2026-09-05）
 
-- **发版候选 v2.22.0 / build 290**：PR #8 原生设置、主窗口维护中心与更新回执；已保留 PR #7 的通知刷新测试（页面实现已被 #8 取代）。上一正式版为 v2.21.0 / build 289。是否正式上线以 GitHub Latest 与在线 appcast 为准。
+- **已正式发布 v2.22.0 / build 290**：PR #8 原生设置、主窗口维护中心与更新回执；已保留 PR #7 的通知刷新测试（页面实现已被 #8 取代）。GitHub Latest 与在线 appcast 均已验证为 v2.22.0；实际下载 DMG 的签名、公证票据、Gatekeeper、Sparkle 公钥验签与独立资源双语探针均通过。发版提交 `21bc8ef` 的 CI run `33950392634` 通过。
 - 本次隔离整合目录为 `/Users/majia/projects/popskill-release-20260905`，原工程 `/Users/majia/projects/popskill` 有未提交设计稿，禁止覆盖。后续以当前 `origin/main` 与工作树为准，不再依赖历史目录快照判断版本。
 - 冷启动 smoke 通过 LaunchServices 显式传入 fixture、store/tools 沙盘和独立维护偏好域，进程筛选限定本 checkout。不能用旧的全局 `/build/Popskill.app` 匹配来终止其它开发实例。
 
