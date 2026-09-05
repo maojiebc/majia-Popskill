@@ -113,7 +113,7 @@ struct MaintenanceView: View {
                        fallback: entry.isManagedExternally ? L("由原渠道管理") : L("尚未检查"))
                     .frame(width: 120, alignment: .leading)
                 Button(L("更新此来源")) { model.runUpdate(entry.id) }
-                    .disabled(!entry.hasUpdate || entry.localDrifted || entry.isManagedExternally || model.maintenanceMutationBusy || check?.outcome == .failed)
+                    .disabled(!entry.hasUpdate || entry.localDrifted || entry.isManagedExternally || model.maintenanceMutationBusy || model.checkingUpdates || check?.outcome == .failed)
             }
             if entry.localDrifted { warning(L("检测到本地改动，已阻止覆盖。请先处理或备份本地版本。")) }
             if let error = check?.error { warning(error) }

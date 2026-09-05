@@ -103,7 +103,7 @@ final class SecondaryInteractionTests: XCTestCase {
     func testFullManualInspectionRequiresSeparateAuthorization() async throws {
         let spy = InspectionSpy()
         model.fake = false
-        model.cliInventoryReader = { _, full, versions in spy.append(full: full, versions: versions); return [] }
+        model.cliInventoryReader = { @Sendable _, full, versions in spy.append(full: full, versions: versions); return [] }
         model.maintenance.cliScope = .all
         XCTAssertFalse(model.checkMaintenanceClis())
         XCTAssertTrue(spy.calls.isEmpty)
@@ -117,7 +117,7 @@ final class SecondaryInteractionTests: XCTestCase {
     func testOpeningInventoryDoesNotQueryVersions() async throws {
         let spy = InspectionSpy()
         model.fake = false
-        model.cliInventoryReader = { _, full, versions in spy.append(full: full, versions: versions); return [] }
+        model.cliInventoryReader = { @Sendable _, full, versions in spy.append(full: full, versions: versions); return [] }
         model.openMaintenance(.clis)
         for _ in 0..<100 where model.checkingClis { try? await Task.sleep(for: .milliseconds(10)) }
         XCTAssertEqual(spy.calls.count, 1)

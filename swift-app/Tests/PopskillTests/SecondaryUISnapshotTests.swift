@@ -11,7 +11,26 @@ final class SecondaryUISnapshotTests: XCTestCase {
             throw XCTSkip("Set POPSKILL_UI_SNAPSHOT_DIR to capture native secondary-page fixtures")
         }
         let language = ProcessInfo.processInfo.environment["POPSKILL_UI_SNAPSHOT_LANG"] ?? "en"
+        // SwiftPM keeps resources next to the xctest bundle. Embed that real build
+        // artifact for this test so production bundle discovery does not fall back
+        // to Chinese keys. Do not fake translations or change production lookup.
+        let testBundle = Bundle(for: Self.self)
+        let resources = testBundle.bundleURL.deletingLastPathComponent()
+            .appendingPathComponent("Popskill_Popskill.bundle")
+        let embedded = testBundle.bundleURL.appendingPathComponent("Popskill_Popskill.bundle")
+        var embeddedByTest = false
+        if !FileManager.default.fileExists(atPath: embedded.path) {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: resources.path), resources.path)
+            try FileManager.default.copyItem(at: resources, to: embedded)
+            embeddedByTest = true
+        }
+        let previousLanguages = UserDefaults.standard.object(forKey: "AppleLanguages")
+        defer {
+            if embeddedByTest { try? FileManager.default.removeItem(at: embedded) }
+            UserDefaults.standard.set(previousLanguages, forKey: "AppleLanguages")
+        }
         UserDefaults.standard.set([language], forKey: "AppleLanguages")
+        print("Snapshot resources: \(resources.path); test bundle: \(testBundle.bundleURL.path)")
         setenv("POPSKILL_NO_AUTOCHECK", "1", 1)
         let app = NSApplication.shared
         app.setActivationPolicy(.regular)

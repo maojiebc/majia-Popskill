@@ -18,12 +18,21 @@ struct SettingsView: View {
     var body: some View {
         @Bindable var state = model.maintenance
         VStack(spacing: 0) {
-            TabView(selection: $state.settingsSection) {
-                tools.tabItem { Label(L("工具"), systemImage: "wrench.and.screwdriver") }.tag(SettingsSection.tools)
-                automation.tabItem { Label(L("自动维护"), systemImage: "clock.arrow.circlepath") }.tag(SettingsSection.automation)
-                data.tabItem { Label(L("数据与恢复"), systemImage: "externaldrive") }.tag(SettingsSection.data)
-                about.tabItem { Label(L("关于"), systemImage: "info.circle") }.tag(SettingsSection.about)
-            }
+            Picker(L("设置"), selection: $state.settingsSection) {
+                Text(L("工具")).tag(SettingsSection.tools)
+                Text(L("自动维护")).tag(SettingsSection.automation)
+                Text(L("数据与恢复")).tag(SettingsSection.data)
+                Text(L("关于")).tag(SettingsSection.about)
+            }.pickerStyle(.segmented).labelsHidden().padding(20)
+            Divider()
+            Group {
+                switch state.settingsSection {
+                case .tools: tools
+                case .automation: automation
+                case .data: data
+                case .about: about
+                }
+            }.frame(maxWidth: .infinity, maxHeight: .infinity)
             if let message = state.settingsFeedback {
                 Text(message).font(.system(size: 12)).foregroundStyle(Ink.secondary)
                     .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(16)
@@ -40,7 +49,7 @@ struct SettingsView: View {
         .onChange(of: model.tools) { _, _ in meta = model.fs.loadMeta() }
         .onChange(of: model.entries) { _, _ in reload() }
         .onChange(of: model.toast) { _, value in
-            if model.toastIsError { model.maintenance.settingsFeedback = value }
+            if model.toastIsError, let value { model.maintenance.settingsFeedback = value }
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification,
                     object: model.maintenanceDefaults).receive(on: RunLoop.main)) { _ in policy = model.maintenancePolicy }
