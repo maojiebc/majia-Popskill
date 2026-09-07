@@ -47,7 +47,16 @@ final class SecondaryUISnapshotTests: XCTestCase {
         }
         let model = AppModel(env: StoreEnv(storeRoot: root, toolRoots: StoreEnv.toolRoots(at: root)), defaults: defaults)
         model.fake = true
+        // Keep the About controls present, matching the app's Sparkle wiring.
+        model.checkAppUpdate = {}
+        model.sparkleAutoCheckGet = { false }
+        model.sparkleAutoCheckSet = { _ in }
         (model.tools, model.entries) = Fixtures.make()
+        // Match the user machine: three permanent rows plus discovered Grok and Pi.
+        model.detectedOptionals = [
+            DetectedOptional(id: "grok", name: "Grok", presence: .cli("/usr/local/bin/grok"), showOnHome: false),
+            DetectedOptional(id: "pi", name: "Pi", presence: .cli("/usr/local/bin/pi"), showOnHome: false),
+        ]
         model.maintenance.cliInventoryLoaded = true
         model.globalClis = [
             GlobalCli(name: "@openai/codex", installed: "1.0.0", latest: "1.1.0", prefix: "/opt/homebrew", pathHit: "/opt/homebrew/bin/codex", allowlisted: true),
@@ -88,14 +97,28 @@ final class SecondaryUISnapshotTests: XCTestCase {
         try FileManager.default.createDirectory(at: root.appendingPathComponent("skills/backup-9"), withIntermediateDirectories: true)
         for section in SettingsSection.allCases {
             model.maintenance.settingsSection = section
-            try render(SettingsView().environment(model), size: CGSize(width: 780, height: 660), to: output.appendingPathComponent("settings-\(section.rawValue).png"))
+            try render(SettingsView().environment(model), size: CGSize(width: 780, height: 660), to: output.appendingPathComponent("settings-\(section.rawValue).png"), toolIDs: section == .tools ? ["claude", "codex", "cursor", "grok", "pi"] : nil)
         }
+        model.detectedOptionals = ToolDef.builtins.filter { !$0.alwaysShow }.map {
+            DetectedOptional(id: $0.id, name: $0.name, presence: .cli("/usr/local/bin/" + $0.id), showOnHome: false)
+        }
+        model.maintenance.settingsSection = .tools
+        try render(SettingsView().environment(model), size: CGSize(width: 780, height: 660),
+                   to: output.appendingPathComponent("settings-tools-all.png"), toolIDs: ToolDef.builtins.map(\.id))
         XCTAssertEqual(l10nIsChinese, language.hasPrefix("zh"), "Render the actual requested localization")
-        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: output.path).filter { $0.hasSuffix(".png") }.count, 7)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: output.path).filter { $0.hasSuffix(".png") }.count, 8)
     }
 
-    private func render<V: View>(_ view: V, size: CGSize, to url: URL) throws {
-        let host = NSHostingView(rootView: view.preferredColorScheme(.light).environment(\.locale, l10nLocale))
+    private func render<V: View>(_ view: V, size: CGSize, to url: URL, toolIDs: [String]? = nil) throws {
+        let capture = ToolBoundsCapture()
+        let measured = view.preferredColorScheme(.light).tint(Ink.blue).environment(\.locale, l10nLocale)
+            .overlayPreferenceValue(SettingsToolBoundsKey.self) { anchors in
+                GeometryReader { proxy in
+                    Color.clear.preference(key: ResolvedToolBoundsKey.self, value: anchors.mapValues { proxy[$0] })
+                }.allowsHitTesting(false)
+            }
+            .onPreferenceChange(ResolvedToolBoundsKey.self) { capture.frames = $0 }
+        let host = NSHostingView(rootView: measured)
         let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
         window.contentView = host
@@ -105,10 +128,36 @@ final class SecondaryUISnapshotTests: XCTestCase {
         RunLoop.main.run(until: Date().addingTimeInterval(0.35))
         host.layoutSubtreeIfNeeded()
         host.displayIfNeeded()
+        if let toolIDs {
+            let frames = capture.frames.filter { !$0.key.contains(":") }
+            XCTAssertEqual(Set(frames.keys), Set(toolIDs))
+            XCTAssertEqual(capture.frames.keys.filter { $0.hasPrefix("default:") }.count, toolIDs.count)
+            XCTAssertEqual(capture.frames.keys.filter { $0.hasPrefix("home:") }.count, toolIDs.count - 3)
+            let contentFrame = host.bounds
+            for (id, frame) in capture.frames {
+                XCTAssertGreaterThanOrEqual(frame.minX, contentFrame.minX + 16, "\(id) title clips past the left edge")
+                XCTAssertLessThanOrEqual(frame.maxX, contentFrame.maxX - 16, "\(id) title clips past the right edge")
+                XCTAssertGreaterThan(frame.width, 10)
+            }
+            let centers = frames.values.map(\.midY).sorted()
+            for (first, second) in zip(centers, centers.dropFirst()) {
+                XCTAssertLessThanOrEqual(second - first, 100, "A tool row stretches instead of fitting its controls")
+            }
+        }
         let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
         host.cacheDisplay(in: host.bounds, to: bitmap)
         let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
         XCTAssertGreaterThan(data.count, 5_000, "A blank capture is not UI evidence")
         try data.write(to: url)
     }
+}
+
+private struct ResolvedToolBoundsKey: PreferenceKey {
+    static var defaultValue: [String: CGRect] { [:] }
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue()) { _, next in next }
+    }
+}
+private final class ToolBoundsCapture {
+    var frames: [String: CGRect] = [:]
 }

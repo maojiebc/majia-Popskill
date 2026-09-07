@@ -1,6 +1,14 @@
 import Combine
 import SwiftUI
 
+// Layout anchors let native rendering tests check clipping without controlling another app.
+struct SettingsToolBoundsKey: PreferenceKey {
+    static var defaultValue: [String: Anchor<CGRect>] { [:] }
+    static func reduce(value: inout [String: Anchor<CGRect>], nextValue: () -> [String: Anchor<CGRect>]) {
+        value.merge(nextValue()) { _, next in next }
+    }
+}
+
 /// One native Settings scene sharing the application's model; no second scanner or scheduler.
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
@@ -80,35 +88,48 @@ struct SettingsView: View {
         }
     }
     private var tools: some View {
-        Form {
-            Section {
-                ForEach(toolRows, id: \.id) { def in
-                    HStack(spacing: 18) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(def.name).fontWeight(.semibold)
-                            Text(model.tools.first { $0.id == def.id }?.connected == true
-                                 || model.detectedOptionals.contains { $0.id == def.id }
-                                 ? L("本机已发现") : L("未发现工具目录"))
-                                .font(.system(size: 12)).foregroundStyle(.secondary)
-                        }.frame(maxWidth: .infinity, alignment: .leading)
-                        if def.alwaysShow {
-                            Text(L("固定显示")).foregroundStyle(.secondary).frame(width: 110)
-                        } else {
-                            Toggle(L("首页显示"), isOn: Binding(
-                                get: { meta.tools[def.id]?.showOnHome ?? false },
-                                set: { _ = model.setToolPreference(def.id, showOnHome: $0); meta = model.fs.loadMeta() }
-                            )).toggleStyle(.switch).fixedSize()
-                        }
-                        Toggle(L("默认挂载"), isOn: Binding(
-                            get: { meta.tools[def.id]?.defaultTarget ?? def.alwaysShow },
-                            set: { _ = model.setToolPreference(def.id, defaultTarget: $0); meta = model.fs.loadMeta() }
-                        )).toggleStyle(.switch).fixedSize()
-                    }.padding(.vertical, 6)
+        // A grouped Form applies its own label/control grid to nested Toggles.
+        // Optional tools have two switches, so mixed rows can push labels offscreen.
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(L("工具")).fontWeight(.semibold)
+                VStack(spacing: 0) {
+                    ForEach(toolRows, id: \.id) { def in
+                        if def.id != toolRows.first?.id { Divider().padding(.horizontal, 16) }
+                        HStack(spacing: 16) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(def.name).fontWeight(.semibold)
+                                    .anchorPreference(key: SettingsToolBoundsKey.self, value: .bounds) { [def.id: $0] }
+                                Text(model.tools.first { $0.id == def.id }?.connected == true
+                                     || model.detectedOptionals.contains { $0.id == def.id }
+                                     ? L("本机已发现") : L("未发现工具目录"))
+                                    .font(.system(size: 12)).foregroundStyle(.secondary)
+                            }.frame(minWidth: 160, maxWidth: .infinity, alignment: .leading)
+                            Group {
+                                if def.alwaysShow {
+                                    Text(L("固定显示")).foregroundStyle(.secondary)
+                                } else {
+                                    Toggle(L("首页显示"), isOn: Binding(
+                                        get: { meta.tools[def.id]?.showOnHome ?? false },
+                                        set: { _ = model.setToolPreference(def.id, showOnHome: $0); meta = model.fs.loadMeta() }
+                                    )).toggleStyle(.switch)
+                                        .anchorPreference(key: SettingsToolBoundsKey.self, value: .bounds) { ["home:" + def.id: $0] }
+                                }
+                            }.frame(width: 160, alignment: .trailing)
+                            Toggle(L("默认挂载"), isOn: Binding(
+                                get: { meta.tools[def.id]?.defaultTarget ?? def.alwaysShow },
+                                set: { _ = model.setToolPreference(def.id, defaultTarget: $0); meta = model.fs.loadMeta() }
+                            )).toggleStyle(.switch).frame(width: 180, alignment: .trailing)
+                                .anchorPreference(key: SettingsToolBoundsKey.self, value: .bounds) { ["default:" + def.id: $0] }
+                        }.padding(.horizontal, 16).padding(.vertical, 12)
+                    }
                 }
-            } header: { Text(L("工具")) } footer: {
+                .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
                 Text(L("首页显示只影响界面；默认挂载只影响以后安装。这里不会改动已有技能链接或创建工具目录。"))
-            }
-        }.formStyle(.grouped)
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(24)
+        }
     }
 
     private var automation: some View {
