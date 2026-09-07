@@ -8,6 +8,24 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.22.1</title>
+      <pubDate>Mon, 07 Sep 2026 05:59:55 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.22.1 — 修复后台任务闪退与弹窗高度</h2>
+        <p>修复打开“系统后台任务”时的闪退：任务命令中的 HTTP/HTTPS 参数不再被当成文件路径，命令摘要与 cron 名称使用纯文本路径处理。</p>
+        <p>后台任务弹窗在扫描和空列表阶段也保留可用高度，避免初次打开时列表被压缩到一两行。</p>
+        <p>新增代理地址、脚本选择、cron 名称和原生弹窗最小高度回归测试；中英文原生截图覆盖加入后台任务页面。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.22.1/Popskill-2.22.1.dmg"
+        sparkle:version="291"
+        sparkle:shortVersionString="2.22.1"
+        sparkle:edSignature="rmI5V19x4qlEQRcmgVd9HnOKMMRNwXRw4+d+VDl71SNur1aDA0QSiJ3f/GIcIs1GSvlRw8eCZZcTzEfIKehICA=="
+        length="3404762"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.22.0</title>
       <pubDate>Sat, 05 Sep 2026 06:41:47 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
