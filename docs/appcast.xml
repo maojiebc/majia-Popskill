@@ -8,6 +8,23 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.22.2</title>
+      <pubDate>Mon, 07 Sep 2026 08:06:39 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.22.2 — 修复设置页工具布局</h2>
+        <p>修复设置中同时显示固定工具和可选工具时，工具名称被裁切、开关错位和行间出现大块空白的问题。工具名称、首页显示和默认挂载按固定列对齐，保留原有偏好设置与技能链接。</p>
+        <p>补充五个工具及全部七个工具的中英文原生布局回归检查，覆盖名称和开关边界、控件数量与行间距。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.22.2/Popskill-2.22.2.dmg"
+        sparkle:version="292"
+        sparkle:shortVersionString="2.22.2"
+        sparkle:edSignature="seitQnbPABSQkrWw6Fp+LgQQuuG38BvnA847x8SvuMc6Se4GcROEDI33UbegmZTgrajIiZ5jsg25wdOcXA4UDw=="
+        length="3422550"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.22.1</title>
       <pubDate>Mon, 07 Sep 2026 05:59:55 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
