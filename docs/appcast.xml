@@ -8,6 +8,24 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.22.3</title>
+      <pubDate>Tue, 22 Sep 2026 02:42:02 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.22.3 — 主屏多列不再挤掉名称和按钮</h2>
+        <p>工具列开到五个以上时，标题栏按钮会被摘要挤出窗口，统计条里的工具名被裁切，折叠套装的名称被挤成一个字，说明和版本还会竖着折行。</p>
+        <p>三列及以上的统计条改用与套装列头相同的短名。摘要按剩余宽度换行，检查更新、搜索和添加保持原宽。折叠套装在分数条放不下时改为名称在上、分数在下；当前三列首页仍并排。紧凑按钮不再追加占位或断链文字，避免把工具名截断。</p>
+        <p>中英文原生渲染覆盖 1080 宽和全部七个工具列，检查按钮是否留在窗口内、统计名是否完整、套装名称是否保持单行。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.22.3/Popskill-2.22.3.dmg"
+        sparkle:version="293"
+        sparkle:shortVersionString="2.22.3"
+        sparkle:edSignature="lVnKwqCGB9H6r+ucFAIGkbfQk4jmhZOhMY9oTyodwiZulfFYB5S9vCtdlzAGcBxmbyOBjauM7tJTcpe1ab7VDw=="
+        length="3440358"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.22.2</title>
       <pubDate>Mon, 07 Sep 2026 08:06:39 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
