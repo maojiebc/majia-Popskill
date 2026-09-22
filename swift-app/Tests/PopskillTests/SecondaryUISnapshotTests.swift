@@ -105,11 +105,19 @@ final class SecondaryUISnapshotTests: XCTestCase {
         model.maintenance.settingsSection = .tools
         try render(SettingsView().environment(model), size: CGSize(width: 780, height: 660),
                    to: output.appendingPathComponent("settings-tools-all.png"), toolIDs: ToolDef.builtins.map(\.id))
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        model.tools = ToolDef.builtins.map { def in
+            Tool(id: def.id, name: def.name, root: home.appendingPathComponent(def.rootRelative),
+                 connected: true, defaultTarget: true)
+        }
+        try render(MainView().environment(model), size: CGSize(width: 1080, height: 720),
+                   to: output.appendingPathComponent("main-seven-tools.png"),
+                   chromeIDs: ["hero:summary", "hero:actions"] + model.tools.map { "stat:\($0.id)" })
         XCTAssertEqual(l10nIsChinese, language.hasPrefix("zh"), "Render the actual requested localization")
-        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: output.path).filter { $0.hasSuffix(".png") }.count, 8)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: output.path).filter { $0.hasSuffix(".png") }.count, 9)
     }
 
-    private func render<V: View>(_ view: V, size: CGSize, to url: URL, toolIDs: [String]? = nil) throws {
+    private func render<V: View>(_ view: V, size: CGSize, to url: URL, toolIDs: [String]? = nil, chromeIDs: [String]? = nil) throws {
         let capture = ToolBoundsCapture()
         let measured = view.preferredColorScheme(.light).tint(Ink.blue).environment(\.locale, l10nLocale)
             .overlayPreferenceValue(SettingsToolBoundsKey.self) { anchors in
@@ -144,11 +152,50 @@ final class SecondaryUISnapshotTests: XCTestCase {
                 XCTAssertLessThanOrEqual(second - first, 100, "A tool row stretches instead of fitting its controls")
             }
         }
+        if let chromeIDs {
+            let contentFrame = host.bounds
+            XCTAssertEqual(Set(chromeIDs).subtracting(capture.frames.keys), [])
+            let summary = try XCTUnwrap(capture.frames["hero:summary"])
+            let actions = try XCTUnwrap(capture.frames["hero:actions"])
+            XCTAssertGreaterThanOrEqual(summary.minX, 16, "Hero summary clips past the left edge")
+            XCTAssertLessThanOrEqual(summary.maxX, actions.minX + 1, "Hero summary overlaps the action buttons")
+            XCTAssertGreaterThanOrEqual(actions.width, 360, "Action buttons were compressed: \(actions)")
+            XCTAssertLessThanOrEqual(actions.maxX, contentFrame.maxX - 16, "Action buttons clip past the right edge")
+            let statFrames = chromeIDs.filter { $0.hasPrefix("stat:") }.compactMap { capture.frames[$0] }
+            XCTAssertEqual(statFrames.count, ToolDef.builtins.count)
+            for id in chromeIDs where id.hasPrefix("stat:") {
+                let frame = try XCTUnwrap(capture.frames[id])
+                let toolID = String(id.dropFirst("stat:".count))
+                let def = try XCTUnwrap(ToolDef.builtins.first { $0.id == toolID })
+                let tool = Tool(id: def.id, name: def.name, root: URL(fileURLWithPath: "/"), connected: true, defaultTarget: true)
+                XCTAssertGreaterThanOrEqual(frame.minX, 16, "\(toolID) label clips past the left edge")
+                XCTAssertLessThanOrEqual(frame.maxX, contentFrame.maxX - 16, "\(toolID) label clips past the right edge")
+                XCTAssertGreaterThanOrEqual(frame.width, statLabelWidth(toolColLabel(tool)) - 2,
+                                            "\(toolID) label is truncated")
+            }
+            let centers = statFrames.map(\.midY)
+            XCTAssertLessThanOrEqual((centers.max() ?? 0) - (centers.min() ?? 0), 6, "Stat labels wrap onto a second line")
+            let bundleNames = capture.frames.filter { $0.key.hasPrefix("bundle-name:") }
+            XCTAssertGreaterThanOrEqual(bundleNames.count, 3, "Folded bundle names were not measured")
+            for (id, frame) in bundleNames {
+                XCTAssertGreaterThanOrEqual(frame.width, 72, "\(id) name was crushed by the tool columns")
+                XCTAssertLessThanOrEqual(frame.height, 26, "\(id) name wrapped vertically")
+                let entryID = String(id.dropFirst("bundle-name:".count))
+                let fractions = try XCTUnwrap(capture.frames["bundle-fractions:" + entryID])
+                XCTAssertGreaterThan(fractions.minY, frame.maxY - 4, "\(entryID) fractions still sit beside a crushed name")
+            }
+        }
         let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
         host.cacheDisplay(in: host.bounds, to: bitmap)
         let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
         XCTAssertGreaterThan(data.count, 5_000, "A blank capture is not UI evidence")
         try data.write(to: url)
+    }
+
+    /// Matches the 9pt bold + 0.6 tracking used by the stat strip.
+    private func statLabelWidth(_ text: String) -> CGFloat {
+        let font = NSFont.systemFont(ofSize: 9, weight: .bold)
+        return NSAttributedString(string: text, attributes: [.font: font, .kern: 0.6]).size().width
     }
 }
 

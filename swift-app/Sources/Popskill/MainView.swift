@@ -77,11 +77,16 @@ struct MainView: View {
                 Text(L("能力矩阵"))
                     .font(.ui(25, .bold))
                     .foregroundStyle(Ink.ink)
+                    .lineLimit(1)
                 Text(heroSub)
                     .font(.ui(12.5))
                     .foregroundStyle(Ink.secondary2)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer()
+            // 摘要按剩余宽度换行。不限制时，七个工具列的理想宽度会把右侧按钮挤出窗口。
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            .anchorPreference(key: SettingsToolBoundsKey.self, value: .bounds) { ["hero:summary": $0] }
             HStack(spacing: 8) {
                 checkUpdatesButton
                 searchPill
@@ -96,6 +101,9 @@ struct MainView: View {
                 .buttonStyle(.plain)
             }
             .padding(.top, 2)
+            .fixedSize(horizontal: true, vertical: false)
+            .layoutPriority(1)
+            .anchorPreference(key: SettingsToolBoundsKey.self, value: .bounds) { ["hero:actions": $0] }
         }
         .padding(EdgeInsets(top: 18, leading: 28, bottom: 14, trailing: 28))
         .overlay(alignment: .bottom) { Ink.hairline.frame(height: 1) }
@@ -167,12 +175,15 @@ struct MainView: View {
         Rectangle().fill(Ink.hairline2).frame(width: 1).opacity(show ? 1 : 0)
     }
 
-    private func statKey(_ glyph: String?, _ label: String) -> some View {
+    private func statKey(_ glyph: String?, _ label: String, measure id: String? = nil) -> some View {
         HStack(spacing: 4) {
             if let glyph { Text(glyph).font(.ui(11)).foregroundStyle(Ink.statGlyph) }
             Text(label.uppercased())
                 .font(.ui(9, .bold)).tracking(0.6)
-                .foregroundStyle(Ink.tertiary).lineLimit(1)
+                .foregroundStyle(Ink.tertiary).lineLimit(1).minimumScaleFactor(0.8)
+                .anchorPreference(key: SettingsToolBoundsKey.self, value: .bounds) { anchor in
+                    id.map { [$0: anchor] } ?? [:]
+                }
         }
     }
 
@@ -191,7 +202,8 @@ struct MainView: View {
             ? "\(t.name)，\(on) \(L("已激活"))，\(off) \(L("未挂载"))"
             : L("\(t.name) 似乎还没安装")
         return VStack(alignment: .leading, spacing: 3) {
-            statKey(nil, t.name)
+            // 宽矩阵与列头用同一个短名。全名（Claude Code / Gemini CLI）在五列以上会被裁成看不出是谁。
+            statKey(nil, compact ? toolColLabel(t) : t.name, measure: "stat:" + t.id)
             if t.connected {
                 HStack(alignment: .firstTextBaseline, spacing: compact ? 8 : 10) {
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
@@ -714,82 +726,53 @@ struct MainView: View {
 
 // ── 折叠套装紧凑卡（v2.7）：与独立卡同宽混排，展开才通栏 ──
 
+private struct CompactCardWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 struct BundleCompactCard: View {
     @Environment(AppModel.self) private var model
     let entry: Entry
     let query: String
     @State private var hovered = false
+    @State private var cardWidth: CGFloat = 0
+
+    /// 分数条的固有宽度。并排时还要留给名称列，装不下就改成上下排。
+    private var fractionRowWidth: CGFloat {
+        let count = CGFloat(model.tools.count)
+        return count * 48 + CGFloat(max(0, model.tools.count - 1)) * 8
+    }
+    private var stackFractions: Bool { cardWidth < fractionRowWidth + 252 }
 
     var body: some View {
         let focused = model.kbFocusId == entry.id
-        HStack(alignment: .top, spacing: 12) {
-            Text("▶")
-                .font(.mono(11))
-                .foregroundStyle(Color(hex: 0x444444))
-                .frame(width: 38, height: 38)
-                .background(RoundedRectangle(cornerRadius: 9).fill(Ink.bundleHead))
-                .overlay(RoundedRectangle(cornerRadius: 9).stroke(Ink.hairline, lineWidth: 1))
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(highlight(entry.name, query))
-                        .font(.ui(13.5, .bold))
-                        .foregroundStyle(Ink.ink)
-                        .lineLimit(1)
-                    TypeTag(type: .bundle)
-                    Text(L("\(entry.children?.count ?? 0) 项"))
-                        .font(.ui(11))
-                        .foregroundStyle(Ink.secondary)
-                        .fixedSize()
-                    Spacer(minLength: 0)
-                    if hovered {
-                        HoverAction(symbol: "↗", danger: false, help: L("在访达中显示")) { model.openInEditor(entry.cap.dirURL) }
-                        if !entry.isManagedExternally {
-                            HoverAction(symbol: "✕", danger: true, help: L("移除套装（含全部子项）")) { model.removeEntry(entry) }
-                        }
+        Group {
+            if stackFractions {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .top, spacing: 12) {
+                        marker
+                        textColumn
                     }
+                    fractions.frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(height: 22)
-                Text(highlight(entry.cap.desc, query))
-                    .font(.ui(11.5))
-                    .foregroundStyle(Ink.secondary)
-                    .lineLimit(1)
-                HStack(spacing: 8) {
-                    if entry.isManagedExternally {
-                        Text("MARKETPLACE").font(.ui(8.5, .bold)).kerning(0.5).foregroundStyle(Ink.monoDim)
-                    }
-                    if let v = entry.cap.version { Text("v\(v)") }
-                    if model.updatingIds.contains(entry.id) {
-                        UpdatingDot()
-                    } else if entry.hasUpdate, let latest = entry.latest {
-                        UpdateBadge(latest: latest) { model.runUpdate(entry.id) }
-                    } else if entry.skippedUpdate {
-                        SkippedTag { model.unskipUpdate(entry) }
-                    }
-                    if entry.hasUpstreamNew {
-                        UpstreamNewBadge(count: entry.upstreamNewCount, help: entry.upstreamNewHelp) {
-                            model.installUpstreamNew(entry)
-                        }
-                    }
-                    if entry.cap.tokens >= 100 { Text(formatTokens(entry.cap.tokens)) }
-                    if let url = entry.sourceUrl {
-                        Text("↗ \(url)").font(.mono(10)).lineLimit(1).truncationMode(.tail)
-                    }
+            } else {
+                HStack(alignment: .top, spacing: 12) {
+                    marker
+                    textColumn.frame(minWidth: 160, alignment: .leading)
+                    fractions
                 }
-                .font(.ui(11))
-                .foregroundStyle(Ink.tertiary)
-                .monospacedDigit()
             }
-            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-            BundleToolFractions(
-                tools: model.tools,
-                children: entry.children ?? [],
-                colWidth: 48,
-                labelSize: 8.5,
-                kerning: 0.3)
-                .padding(.top, 2)
-                .layoutPriority(1)
         }
         .padding(EdgeInsets(top: 13, leading: 15, bottom: 13, trailing: 15))
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(key: CompactCardWidthKey.self, value: proxy.size.width)
+            }
+        }
+        .onPreferenceChange(CompactCardWidthKey.self) { cardWidth = $0 }
         .background(RoundedRectangle(cornerRadius: 10).fill(Ink.bundleBody))
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(focused ? Ink.blue : Ink.hairline, lineWidth: 1))
         .kbRowFocus(focused, radius: 10, model: model)
@@ -808,6 +791,87 @@ struct BundleCompactCard: View {
             }
         }
         .id(entry.id)
+    }
+
+    private var marker: some View {
+        Text("▶")
+            .font(.mono(11))
+            .foregroundStyle(Color(hex: 0x444444))
+            .frame(width: 38, height: 38)
+            .background(RoundedRectangle(cornerRadius: 9).fill(Ink.bundleHead))
+            .overlay(RoundedRectangle(cornerRadius: 9).stroke(Ink.hairline, lineWidth: 1))
+    }
+
+    private var fractions: some View {
+        BundleToolFractions(
+            tools: model.tools,
+            children: entry.children ?? [],
+            colWidth: 48,
+            labelSize: 8.5,
+            kerning: 0.3)
+            .padding(.top, 2)
+            .layoutPriority(1)
+            .anchorPreference(key: SettingsToolBoundsKey.self, value: .bounds) { ["bundle-fractions:\(entry.id)": $0] }
+    }
+
+    private var textColumn: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Text(highlight(entry.name, query))
+                    .font(.ui(13.5, .bold))
+                    .foregroundStyle(Ink.ink)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .anchorPreference(key: SettingsToolBoundsKey.self, value: .bounds) { ["bundle-name:\(entry.id)": $0] }
+                TypeTag(type: .bundle)
+                Text(L("\(entry.children?.count ?? 0) 项"))
+                    .font(.ui(11))
+                    .foregroundStyle(Ink.secondary)
+                    .fixedSize()
+                Spacer(minLength: 0)
+                if hovered {
+                    HoverAction(symbol: "↗", danger: false, help: L("在访达中显示")) { model.openInEditor(entry.cap.dirURL) }
+                    if !entry.isManagedExternally {
+                        HoverAction(symbol: "✕", danger: true, help: L("移除套装（含全部子项）")) { model.removeEntry(entry) }
+                    }
+                }
+            }
+            .frame(height: 22)
+            Text(highlight(entry.cap.desc, query))
+                .font(.ui(11.5))
+                .foregroundStyle(Ink.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 8) {
+                if entry.isManagedExternally {
+                    Text("MARKETPLACE").font(.ui(8.5, .bold)).kerning(0.5).foregroundStyle(Ink.monoDim)
+                }
+                if let v = entry.cap.version { Text("v\(v)").lineLimit(1).fixedSize() }
+                if model.updatingIds.contains(entry.id) {
+                    UpdatingDot()
+                } else if entry.hasUpdate, let latest = entry.latest {
+                    UpdateBadge(latest: latest) { model.runUpdate(entry.id) }
+                } else if entry.skippedUpdate {
+                    SkippedTag { model.unskipUpdate(entry) }
+                }
+                if entry.hasUpstreamNew {
+                    UpstreamNewBadge(count: entry.upstreamNewCount, help: entry.upstreamNewHelp) {
+                        model.installUpstreamNew(entry)
+                    }
+                }
+                if entry.cap.tokens >= 100 { Text(formatTokens(entry.cap.tokens)).lineLimit(1).fixedSize() }
+                if let url = entry.sourceUrl {
+                    Text("↗ \(url)").font(.mono(10)).lineLimit(1).truncationMode(.tail)
+                        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .font(.ui(11))
+            .foregroundStyle(Ink.tertiary)
+            .monospacedDigit()
+            .lineLimit(1)
+        }
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -1332,8 +1396,8 @@ enum TableCols {
 
 /// 工具列短名（"Claude Code" → "Claude"）
 private func toolShort(_ t: Tool) -> String { String(t.name.split(separator: " ").first ?? "") }
-/// 折叠套装卡 / 套装头的列标签。必须单行：列一多 SwiftUI 会把 CLAUDE 竖着拆字母。
-private func toolColLabel(_ t: Tool) -> String {
+/// 折叠套装卡 / 套装头 / 宽统计条的列标签。必须单行：列一多 SwiftUI 会把 CLAUDE 竖着拆字母。
+func toolColLabel(_ t: Tool) -> String {
     switch t.id {
     case "opencode": return "OPEN"
     default: return toolShort(t).uppercased()

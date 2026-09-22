@@ -264,7 +264,8 @@ struct TogglePill: View {
             HStack(spacing: compact ? 4 : 6) {
                 Text(status.pillGlyph).font(.mono(compact ? 10 : 11)).frame(width: 12)
                 Text(label).lineLimit(1).minimumScaleFactor(0.7)
-                if showState {
+                // 紧凑 pill 已经用颜色和符号表示占位/断链。再写状态词会把「Codex」截成「Cod…」。
+                if showState && !compact {
                     Text(status.stateLabel).font(.ui(10, .medium)).opacity(0.75).lineLimit(1)
                 }
             }
