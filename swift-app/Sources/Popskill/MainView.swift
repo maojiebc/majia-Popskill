@@ -726,10 +726,50 @@ struct MainView: View {
 
 // ── 折叠套装紧凑卡（v2.7）：与独立卡同宽混排，展开才通栏 ──
 
-private struct CompactCardWidthKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
+/// 分数条放得下就和名称并排；放不下就名称在上、分数在下。不用 PreferenceKey，
+/// 避免旧编译器把卡宽测量当成共享可变状态。
+private struct CompactBundleLayout: Layout {
+    var fractionRowWidth: CGFloat
+    private let gap: CGFloat = 12
+    private let nameMin: CGFloat = 160
+
+    private func stacks(in width: CGFloat?) -> Bool {
+        guard let width, width.isFinite else { return false }
+        return width < fractionRowWidth + nameMin + 38 + gap * 2
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let marker = subviews[0].sizeThatFits(.unspecified)
+        let fractions = subviews[2].sizeThatFits(.unspecified)
+        if stacks(in: proposal.width), let width = proposal.width {
+            let text = subviews[1].sizeThatFits(ProposedViewSize(width: max(0, width - marker.width - gap), height: nil))
+            let frac = subviews[2].sizeThatFits(ProposedViewSize(width: width, height: nil))
+            return CGSize(width: width, height: max(marker.height, text.height) + 8 + frac.height)
+        }
+        let textWidth = max(nameMin, (proposal.width ?? (marker.width + fractions.width + nameMin + gap * 2)) - marker.width - fractions.width - gap * 2)
+        let text = subviews[1].sizeThatFits(ProposedViewSize(width: textWidth, height: nil))
+        let width = proposal.width ?? (marker.width + text.width + fractions.width + gap * 2)
+        return CGSize(width: width, height: max(marker.height, text.height, fractions.height))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let marker = subviews[0].sizeThatFits(.unspecified)
+        let fractions = subviews[2].sizeThatFits(.unspecified)
+        if stacks(in: bounds.width) {
+            subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.minY), anchor: .topLeading, proposal: ProposedViewSize(width: marker.width, height: marker.height))
+            let textX = bounds.minX + marker.width + gap
+            let text = subviews[1].sizeThatFits(ProposedViewSize(width: max(0, bounds.width - marker.width - gap), height: nil))
+            subviews[1].place(at: CGPoint(x: textX, y: bounds.minY), anchor: .topLeading, proposal: ProposedViewSize(width: max(0, bounds.width - marker.width - gap), height: text.height))
+            let fracY = bounds.minY + max(marker.height, text.height) + 8
+            subviews[2].place(at: CGPoint(x: bounds.minX, y: fracY), anchor: .topLeading, proposal: ProposedViewSize(width: bounds.width, height: nil))
+        } else {
+            subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.minY), anchor: .topLeading, proposal: ProposedViewSize(width: marker.width, height: marker.height))
+            let fracX = bounds.maxX - fractions.width
+            subviews[2].place(at: CGPoint(x: fracX, y: bounds.minY), anchor: .topLeading, proposal: ProposedViewSize(width: fractions.width, height: fractions.height))
+            let textX = bounds.minX + marker.width + gap
+            let textW = max(nameMin, fracX - gap - textX)
+            subviews[1].place(at: CGPoint(x: textX, y: bounds.minY), anchor: .topLeading, proposal: ProposedViewSize(width: textW, height: nil))
+        }
     }
 }
 
@@ -738,41 +778,21 @@ struct BundleCompactCard: View {
     let entry: Entry
     let query: String
     @State private var hovered = false
-    @State private var cardWidth: CGFloat = 0
 
     /// 分数条的固有宽度。并排时还要留给名称列，装不下就改成上下排。
     private var fractionRowWidth: CGFloat {
         let count = CGFloat(model.tools.count)
         return count * 48 + CGFloat(max(0, model.tools.count - 1)) * 8
     }
-    private var stackFractions: Bool { cardWidth < fractionRowWidth + 252 }
 
     var body: some View {
         let focused = model.kbFocusId == entry.id
-        Group {
-            if stackFractions {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .top, spacing: 12) {
-                        marker
-                        textColumn
-                    }
-                    fractions.frame(maxWidth: .infinity, alignment: .leading)
-                }
-            } else {
-                HStack(alignment: .top, spacing: 12) {
-                    marker
-                    textColumn.frame(minWidth: 160, alignment: .leading)
-                    fractions
-                }
-            }
+        CompactBundleLayout(fractionRowWidth: fractionRowWidth) {
+            marker
+            textColumn
+            fractions
         }
         .padding(EdgeInsets(top: 13, leading: 15, bottom: 13, trailing: 15))
-        .background {
-            GeometryReader { proxy in
-                Color.clear.preference(key: CompactCardWidthKey.self, value: proxy.size.width)
-            }
-        }
-        .onPreferenceChange(CompactCardWidthKey.self) { cardWidth = $0 }
         .background(RoundedRectangle(cornerRadius: 10).fill(Ink.bundleBody))
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(focused ? Ink.blue : Ink.hairline, lineWidth: 1))
         .kbRowFocus(focused, radius: 10, model: model)
