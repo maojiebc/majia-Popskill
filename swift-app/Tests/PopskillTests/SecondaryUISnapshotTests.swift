@@ -75,6 +75,24 @@ final class SecondaryUISnapshotTests: XCTestCase {
         try render(MaintenanceView().environment(model), size: CGSize(width: 1080, height: 680), to: output.appendingPathComponent("maintenance-clis.png"))
         model.maintenance.report = OperationReport()
         model.upgradingClis = []
+        model.globalClis = [
+            GlobalCli(name: "@anthropic-ai/claude-code", installed: "2.1.283", latest: "2.1.284", channel: .native,
+                prefix: "/Users/example/.local/bin", pathHit: "/Users/example/.local/bin/claude", allowlisted: true,
+                resolvedPath: "/Users/example/.local/share/claude/versions/2.1.283",
+                updateCommand: CliUpdateCommand(executable: "/Users/example/.local/bin/claude", arguments: ["update"])),
+            GlobalCli(name: "@openai/codex", installed: "0.155.0", latest: "0.155.1", channel: .bun,
+                prefix: "/Users/example/.bun/install/global", pathHit: "/Users/example/.bun/bin/codex", allowlisted: true),
+            GlobalCli(name: "@earendil-works/pi-coding-agent", installed: "0.99.0", latest: "0.99.1", channel: .pnpm,
+                prefix: "/Users/example/Library/pnpm/global/5", pathHit: "/Users/example/Library/pnpm/pi", allowlisted: true),
+        ]
+        model.maintenance.expandedClis = [model.globalClis[0].id]
+        try render(MaintenanceView().environment(model), size: CGSize(width: 1080, height: 680), to: output.appendingPathComponent("maintenance-native.png"))
+        if let i = model.entries.firstIndex(where: { $0.isBundle && !$0.isManagedExternally }) {
+            model.entries[i].latest = "2.0.0"
+            model.entries[i].changedMembers = [model.entries[i].allCaps[0].name]
+            model.entries[i].upstreamNew = ["new-upstream-skill"]
+            model.maintenance.expandedSources = [model.entries[i].id]
+        }
         model.maintenance.tab = .sources
         try render(MaintenanceView().environment(model), size: CGSize(width: 1080, height: 680), to: output.appendingPathComponent("maintenance-sources.png"))
         // Include the real command shapes that crashed the installed v2.22.0 app.
@@ -111,10 +129,10 @@ final class SecondaryUISnapshotTests: XCTestCase {
                  connected: true, defaultTarget: true)
         }
         try render(MainView().environment(model), size: CGSize(width: 1080, height: 720),
-                   to: output.appendingPathComponent("main-seven-tools.png"),
+                   to: output.appendingPathComponent("main-all-tools.png"),
                    chromeIDs: ["hero:summary", "hero:actions"] + model.tools.map { "stat:\($0.id)" })
         XCTAssertEqual(l10nIsChinese, language.hasPrefix("zh"), "Render the actual requested localization")
-        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: output.path).filter { $0.hasSuffix(".png") }.count, 9)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: output.path).filter { $0.hasSuffix(".png") }.count, 10)
     }
 
     private func render<V: View>(_ view: V, size: CGSize, to url: URL, toolIDs: [String]? = nil, chromeIDs: [String]? = nil) throws {
@@ -183,6 +201,7 @@ final class SecondaryUISnapshotTests: XCTestCase {
                 let entryID = String(id.dropFirst("bundle-name:".count))
                 let fractions = try XCTUnwrap(capture.frames["bundle-fractions:" + entryID])
                 XCTAssertGreaterThan(fractions.minY, frame.maxY - 4, "\(entryID) fractions still sit beside a crushed name")
+                XCTAssertLessThanOrEqual(fractions.maxX, contentFrame.maxX - 16, "\(entryID) tool columns overflow the window")
             }
         }
         let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))

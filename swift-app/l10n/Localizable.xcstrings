@@ -689,6 +689,22 @@
         }
       }
     },
+    "%lld 项上游新增": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld new upstream skills"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 项上游新增"
+          }
+        }
+      }
+    },
     "%lld 项中 %lld 项已激活": {
       "localizations": {
         "en": {
@@ -729,6 +745,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 项匹配"
+          }
+        }
+      }
+    },
+    "%lld 项技能可更新": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld skill updates"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 项技能可更新"
           }
         }
       }
@@ -1533,6 +1565,22 @@
         }
       }
     },
+    "上游新增": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New upstream skills"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上游新增"
+          }
+        }
+      }
+    },
     "上游新增 %lld 个未装": {
       "localizations": {
         "en": {
@@ -1577,6 +1625,22 @@
         }
       }
     },
+    "上游新增，尚未安装": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New upstream skills, not installed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上游新增，尚未安装"
+          }
+        }
+      }
+    },
     "上游有新版——点击更新所属套装": {
       "localizations": {
         "en": {
@@ -1605,6 +1669,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "上游有新版——点套装头部 ↑ 徽标更新"
+          }
+        }
+      }
+    },
+    "上游未找到技能「%@」，请核对来源；本地内容已保留。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upstream skill \"%@\" was not found. Check its source; local content was preserved."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上游未找到技能「%@」，请核对来源；本地内容已保留。"
           }
         }
       }
@@ -2325,6 +2405,22 @@
         }
       }
     },
+    "内容已一致，无需替换。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Content already matches; nothing was replaced."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "内容已一致，无需替换。"
+          }
+        }
+      }
+    },
     "内容已是最新": {
       "localizations": {
         "en": {
@@ -2593,6 +2689,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "原型数据模式不检查更新"
+          }
+        }
+      }
+    },
+    "原生安装": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Native install"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原生安装"
           }
         }
       }
@@ -3461,6 +3573,54 @@
         }
       }
     },
+    "安装此技能": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install skill"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装此技能"
+          }
+        }
+      }
+    },
+    "安装渠道待确认": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installation channel unverified"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装渠道待确认"
+          }
+        }
+      }
+    },
+    "安装渠道待确认，请使用原安装渠道维护。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installation channel is unverified; use its original installer to maintain it."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装渠道待确认，请使用原安装渠道维护。"
+          }
+        }
+      }
+    },
     "安装渠道：%@": {
       "localizations": {
         "en": {
@@ -3489,6 +3649,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "定期检查未开启；已授权的来源仍可能在启动时更新。"
+          }
+        }
+      }
+    },
+    "实际文件：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resolved executable: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "实际文件：%@"
           }
         }
       }
@@ -3985,6 +4161,22 @@
         }
       }
     },
+    "已安装": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已安装"
+          }
+        }
+      }
+    },
     "已安装 %@ 并链接到 %lld 个工具": {
       "localizations": {
         "en": {
@@ -4349,6 +4541,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "已更新 %lld 项（%@）后失败：%@"
+          }
+        }
+      }
+    },
+    "已更新：%@；旧版已备份。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updated: %@; previous content was backed up."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已更新：%@；旧版已备份。"
           }
         }
       }
@@ -5481,6 +5689,22 @@
         }
       }
     },
+    "无法确认最新版本，请稍后重试。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not confirm the latest version. Try again later."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法确认最新版本，请稍后重试。"
+          }
+        }
+      }
+    },
     "无法识别 GitHub 仓库：%@": {
       "localizations": {
         "en": {
@@ -5733,6 +5957,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "更新失败"
+          }
+        }
+      }
+    },
+    "更新失败：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update failed: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新失败：%@"
           }
         }
       }
@@ -6389,6 +6629,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "检查失败"
+          }
+        }
+      }
+    },
+    "检查技能和 CLI": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check skills and CLIs"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检查技能和 CLI"
           }
         }
       }
@@ -8513,6 +8769,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新拉取 %@ 失败：%@"
+          }
+        }
+      }
+    },
+    "重新读取本机": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rescan local installs"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新读取本机"
           }
         }
       }

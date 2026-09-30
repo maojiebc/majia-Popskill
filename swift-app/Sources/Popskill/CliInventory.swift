@@ -11,13 +11,17 @@ import Foundation
 // 永远出现在名单里但不给升级按钮。
 
 enum CliChannel: String, Codable, Sendable {
-    case npm, brew, pipx, uv
+    case npm, brew, pipx, uv, native, bun, pnpm, unmanaged
     var label: String {
         switch self {
         case .npm: "npm"
         case .brew: "Homebrew"
         case .pipx: "pipx"
         case .uv: "uv"
+        case .native: L("原生安装")
+        case .bun: "bun"
+        case .pnpm: "pnpm"
+        case .unmanaged: L("安装渠道待确认")
         }
     }
 }
@@ -35,6 +39,9 @@ struct GlobalCli: Identifiable, Equatable, Sendable {
     var allowlisted: Bool = false
     /// pipx 从 GitHub zip / 本地路径装的，不跟 PyPI 同名包比版本。
     var tracksIndex: Bool = true
+    var resolvedPath: String?
+    var updateCommand: CliUpdateCommand?
+    var brewCask: Bool = false
 
     var id: String { "\(channel.rawValue)|\(name)|\(prefix ?? "")" }
     var hasUpdate: Bool {
@@ -46,7 +53,8 @@ struct GlobalCli: Identifiable, Equatable, Sendable {
          displayName: String? = nil, channel: CliChannel = .npm, prefix: String? = nil,
          pathHit: String? = nil, pathMatchesPrefix: Bool = true,
          excluded: Bool = false, allowlisted: Bool = false,
-         tracksIndex: Bool = true) {
+         tracksIndex: Bool = true, resolvedPath: String? = nil,
+         updateCommand: CliUpdateCommand? = nil, brewCask: Bool = false) {
         self.name = name
         self.displayName = displayName ?? name
         self.installed = installed
@@ -58,6 +66,9 @@ struct GlobalCli: Identifiable, Equatable, Sendable {
         self.excluded = excluded
         self.allowlisted = allowlisted
         self.tracksIndex = tracksIndex
+        self.resolvedPath = resolvedPath
+        self.updateCommand = updateCommand
+        self.brewCask = brewCask
     }
 }
 
@@ -70,16 +81,19 @@ let maintainedNpmPackages: [String: String] = [
     "@openai/codex": "codex",
     "@google/gemini-cli": "gemini",
     "@qwen-code/qwen-code": "qwen",
-    "opencode": "opencode",
+    "opencode-ai": "opencode",
     "@larksuite/cli": "lark-cli",
     "@getnote/cli": "getnote",
     "@guandata/guanskill": "guanskill",
     "@earendil-works/pi-coding-agent": "pi",
+    "@mariozechner/pi-coding-agent": "pi",
+    "@github/copilot": "copilot",
+    "@charmland/crush": "crush",
     "clawhub": "clawhub",
     "mcporter": "mcporter",
 ]
 
-let maintainedBrewFormulae: [String] = ["gemini-cli", "opencode", "aliyun-cli"]
+let maintainedBrewFormulae: [String] = ["gemini-cli", "opencode", "aliyun-cli", "codex", "claude-code", "copilot-cli", "crush", "block-goose-cli"]
 let maintainedPipxPackages: [String] = ["agent-reach", "aider-chat", "open-interpreter", "yt-dlp"]
 let maintainedUvTools: [String] = ["aider-chat", "open-interpreter", "specify-cli"]
 
@@ -95,6 +109,11 @@ func isFoundationTool(_ name: String) -> Bool {
 
 func cliBinName(_ package: String) -> String {
     if let bin = maintainedNpmPackages[package] { return bin }
+    if package == "claude-code" { return "claude" }
+    if package == "gemini-cli" { return "gemini" }
+    if package == "aliyun-cli" { return "aliyun" }
+    if package == "copilot-cli" { return "copilot" }
+    if package == "block-goose-cli" { return "goose" }
     if package.contains("/") { return String(package.split(separator: "/").last ?? Substring(package)) }
     return package
 }
@@ -169,14 +188,29 @@ func pipxTracksIndex(_ packageOrUrl: String) -> Bool {
 func cliVersionIsNewer(_ candidate: String, than installed: String) -> Bool {
     let a = cliVersionComponents(candidate)
     let b = cliVersionComponents(installed)
-    guard !a.isEmpty, !b.isEmpty else { return candidate != installed }
+    guard !a.isEmpty, !b.isEmpty else { return false }
     let n = max(a.count, b.count)
     for i in 0..<n {
         let x = i < a.count ? a[i] : 0
         let y = i < b.count ? b[i] : 0
         if x != y { return x > y }
     }
-    return false
+    func prerelease(_ raw: String) -> [String] {
+        let base = raw.split(separator: "+", maxSplits: 1).first ?? Substring(raw)
+        return base.split(separator: "-", maxSplits: 1).dropFirst().first?
+            .split(separator: ".").map(String.init) ?? []
+    }
+    let ap = prerelease(candidate), bp = prerelease(installed)
+    if ap.isEmpty || bp.isEmpty { return ap.isEmpty && !bp.isEmpty }
+    for i in 0..<min(ap.count, bp.count) where ap[i] != bp[i] {
+        switch (Int(ap[i]), Int(bp[i])) {
+        case let (x?, y?): return x > y
+        case (nil, .some): return true
+        case (.some, nil): return false
+        case (nil, nil): return ap[i] > bp[i]
+        }
+    }
+    return ap.count > bp.count
 }
 
 func cliVersionComponents(_ raw: String) -> [Int] {
@@ -220,4 +254,6 @@ func sameCliInstallation(_ observed: GlobalCli, as planned: GlobalCli) -> Bool {
     observed.id == planned.id && observed.installed == planned.installed
         && observed.pathHit == planned.pathHit && observed.pathMatchesPrefix == planned.pathMatchesPrefix
         && observed.tracksIndex == planned.tracksIndex && observed.excluded == planned.excluded
+        && observed.resolvedPath == planned.resolvedPath && observed.updateCommand == planned.updateCommand
+        && observed.brewCask == planned.brewCask
 }

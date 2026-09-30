@@ -3,8 +3,8 @@ import Foundation
 @MainActor
 extension AppModel {
     /// Opening a page inventories local installations; it does not grant registry access.
-    func loadLocalCliInventoryIfNeeded() {
-        guard !fake, !maintenance.cliInventoryLoaded, !checkingClis, upgradingClis.isEmpty else { return }
+    func loadLocalCliInventoryIfNeeded(force: Bool = false) {
+        guard !fake, force || !maintenance.cliInventoryLoaded, !checkingClis, upgradingClis.isEmpty else { return }
         checkingClis = true
         let engine = fs
         let reader = cliInventoryReader
@@ -54,6 +54,10 @@ extension AppModel {
                     do {
                         switch cli.channel {
                         case .npm: cli.latest = try engine.npmLatestVersion(cli.name)
+                        case .native, .bun, .pnpm: cli.latest = try engine.latestPathCliVersion(cli)
+                        case .unmanaged:
+                            records[cli.id] = CheckRecord(outcome: .unsupported)
+                            return cli
                         case .pipx, .uv: cli.latest = try engine.pypiLatestVersion(cli.name)
                         case .brew:
                             guard cli.latest != nil else {

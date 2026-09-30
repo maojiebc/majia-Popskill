@@ -104,7 +104,8 @@ extension StoreFS {
 
     /// well-known 源更新执行：只换有变化成员的 SKILL.md（旧文件备份进回收站），
     /// references/ 等附属文件原样保留——协议只分发单文件
-    func applyWellKnownUpdate(_ entry: Entry, host: String) throws -> (updated: [String], upstreamNew: [String]) {
+    func applyWellKnownUpdate(_ entry: Entry, host: String, force: Bool = false) throws -> (updated: [String], upstreamNew: [String]) {
+        let snapshot = try snapshotForUpdate(entry)
         let members = entry.isBundle ? (entry.children ?? []) : [entry.cap]
         // 网络阶段不占 store 写锁；全部下载成功后才进入磁盘事务，避免慢 CDN
         // 让另一个实例的开关/安装无谓超时，也把旧版“下到一半就已换掉前几项”
@@ -121,6 +122,8 @@ extension StoreFS {
 
         try lockStoreMutation()
         defer { unlockStoreMutation() }
+        try assertUpdateSnapshot(entry, snapshot: snapshot)
+        if !force { try assertNotDrifted(entry) }
         var updated: [String] = []
         for (cap, remote) in pending {
             let localFile = cap.dirURL.appendingPathComponent("SKILL.md")
@@ -132,6 +135,8 @@ extension StoreFS {
             try? fm.removeItem(at: incoming)
             do { try remote.write(to: incoming) }
             catch { try? fm.removeItem(at: incoming); throw error }
+            do { try assertUpdateMember(cap, snapshot: snapshot) }
+            catch { try? fm.removeItem(at: incoming); throw partialFailure(error, done: updated) }
             let backupDir = try moveToTrash(localFile)
             do { try fm.moveItem(at: incoming, to: localFile) }
             catch {

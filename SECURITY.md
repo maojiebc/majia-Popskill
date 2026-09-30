@@ -24,10 +24,12 @@ Popskill runs **100% locally** on the user's Mac. It does **NOT** collect usage 
 | GitHub — `git clone` / `git ls-remote` | Installing or update-checking a GitHub-sourced skill | The upstream repo URL of **your own skill** |
 | `registry.npmjs.org` | ① Update-checking an entry whose source is an npm package ② the **global CLI patrol** (see below) | The npm package name(s) being checked |
 | `pypi.org` | Version-checking allowlisted pipx / uv tools (agent-reach, yt-dlp, specify-cli) | The PyPI package name |
+| `formulae.brew.sh` | Explicit or authorized automatic checks of known Homebrew CLI installations | The formula or cask name being checked |
+| `api.github.com/repos/yetone/magpie-releases/releases/latest` | Checking a recognized native Magpie installation | A public latest-release request; no credentials or local configuration |
 | Well-known hosts (e.g. `open.feishu.cn`) | Installing or update-checking a skill distributed via the `/.well-known/skills/` protocol | HTTPS GET of that skill's `SKILL.md` |
 | `maojiebc.github.io` (GitHub Pages) | Sparkle app-update check (daily; toggle in Settings) | Standard Sparkle appcast request |
 
-**Global CLI patrol (v2.20):** every Check Updates run queries a small allowlist (Claude Code, Codex, Lark CLI, GetNote, guanskill, ClawHub, mcporter, plus Homebrew / pipx / uv tools Popskill already knows). Package names outside that list leave the machine only if you enable “巡检全部全局 npm CLI” in Settings, or open the CLI panel (⌨). Upgrades use the prefix/channel that actually owns the install (`npm i -g --prefix …`, `brew upgrade`, `pipx upgrade`, `uv tool upgrade`) — never a bare `npm i -g` that might write a second copy.
+**Global CLI patrol:** checks query a small allowlist of Agent and companion tools. Package names outside that list leave the machine only after the saved all-npm inspection preference or explicit session authorization. Opening the maintenance page, filtering, and local rescanning do not query remote versions. Upgrades use the installation's prefix/channel: npm, Homebrew formula/cask, pipx, uv, bun, pnpm, or a recognized native updater. Unknown channels have no update action. CLI upgrades do not imply a Popskill-managed rollback.
 
 At launch (2 s after start) Popskill runs one background update check against **the sources of skills you added**. Disable globally with `POPSKILL_NO_AUTOCHECK=1`.
 
@@ -41,10 +43,12 @@ Popskill reads/writes the paths below. Two of them can live **outside your home 
 | `~/.agents/.popskill.json` | App metadata: sources / auto-update flags |
 | `~/.agents/.trash/` | Recycle bin — anything replaced or removed lands here (200 kept, FIFO) |
 | `~/.claude/skills/`, `~/.codex/skills/` | Per-tool symlinks into the store |
+| `~/.cursor/skills/`, `~/.grok/skills/`, `~/.gemini/skills/`, `~/.config/opencode/skills/`, `~/.pi/agent/skills/`, `~/.copilot/skills/`, `~/.config/crush/skills/`, `~/.hermes/skills/` | Optional per-tool skill links; written only by explicit mount/install operations |
 | `~/.agents/.skill-lock.json` | Read-only — provenance from the `npx skills` ecosystem |
 | `~/Library/Caches/Sparkle/` | Sparkle's update download cache |
 | `$TMPDIR/popskill-stage-*` | Transient shallow clones during GitHub install / update check (removed afterwards) |
 | npm global prefix (`npm prefix -g`) | Written **only** by `npm i -g` when you upgrade a CLI from the CLI panel |
+| Recognized bun / pnpm global store, Homebrew prefix, native CLI installation | Written by the recorded installer/updater only when upgrading that CLI; queue preflight rechecks provenance |
 
 Three hard safety rules, enforced by unit tests: only symlinks are ever deleted; real directories always go to `~/.agents/.trash/`; store directories are never touched by enable/disable toggles.
 

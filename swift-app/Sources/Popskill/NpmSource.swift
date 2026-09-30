@@ -237,6 +237,7 @@ extension StoreFS {
         out += scanBrewClis(checkVersions: checkVersions)
         out += scanPipxClis()
         out += scanUvClis()
+        out += scanPathClis(known: out)
         return out.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
     }
 
@@ -252,14 +253,15 @@ extension StoreFS {
                 let ver = installed[pkg] ?? ""
                 let bin = cliBinName(pkg)
                 let hit = loginWhich(bin)
+                let real = hit.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath().path }
                 let allow = maintainedNpmPackages[pkg] != nil || extra.contains(pkg)
                 rows.append(GlobalCli(
                     name: pkg, installed: ver, latest: nil,
                     displayName: pkg, channel: .npm, prefix: prefix,
                     pathHit: hit,
-                    pathMatchesPrefix: hit.map { pathHitsPrefix($0, prefix: prefix) } ?? true,
+                    pathMatchesPrefix: real.map { pathHitsPrefix($0, prefix: prefix + "/lib/node_modules/" + pkg) } ?? false,
                     excluded: isFoundationTool(pkg),
-                    allowlisted: allow
+                    allowlisted: allow, resolvedPath: real
                 ))
             }
         }
@@ -267,30 +269,36 @@ extension StoreFS {
     }
 
     private func scanBrewClis(checkVersions: Bool) -> [GlobalCli] {
-        let brew = loginWhich("brew")
-        guard brew != nil else { return [] }
-        var installed: [String: String] = [:]
-        for formula in maintainedBrewFormulae {
-            guard !formula.contains("'") else { continue }
-            let r = runProcess("/bin/zsh", ["-lc", "brew list --versions '\(formula)'"], timeout: 20)
+        guard let brew = loginWhich("brew") else { return [] }
+        let prefix = URL(fileURLWithPath: brew).deletingLastPathComponent().deletingLastPathComponent().path
+        var installed: [String: (version: String, cask: Bool)] = [:]
+        for cask in [false, true] {
+            let r = runCliUpdateCommand(CliUpdateCommand(executable: brew,
+                arguments: ["list", cask ? "--cask" : "--formula", "--versions"],
+                environment: ["HOMEBREW_NO_AUTO_UPDATE": "1", "HOMEBREW_NO_ANALYTICS": "1"]), version: "", timeout: 20)
             guard r.status == 0 else { continue }
-            let parts = r.out.split(whereSeparator: { $0.isWhitespace }).map(String.init)
-            if parts.count >= 2 { installed[formula] = parts[1] }
-        }
-        guard !installed.isEmpty else { return [] }
-        var latestByName: [String: String] = [:]
-        let outdated = checkVersions ? runProcess("/bin/zsh", ["-lc", "HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ANALYTICS=1 brew outdated --json=v2"], timeout: 40) : (status: Int32(-1), out: "", err: "")
-        if outdated.status == 0 {
-            for row in parseBrewOutdated(Data(outdated.out.utf8)) {
-                latestByName[row.name] = row.latest
+            for line in r.out.split(separator: "\n") {
+                let parts = line.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+                guard parts.count >= 2, maintainedBrewFormulae.contains(parts[0]) else { continue }
+                installed[parts[0]] = (parts.last!, cask)
             }
         }
+        guard !installed.isEmpty else { return [] }
         return installed.keys.sorted().map { name in
-            let ver = installed[name] ?? ""
+            let info = installed[name]!
+            let hit = loginWhich(cliBinName(name))
+            let real = hit.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath().path }
+            let ownerRoot = prefix + (info.cask ? "/Caskroom/" : "/Cellar/") + name
+            let matches = real.map { pathHitsPrefix($0, prefix: ownerRoot) } ?? false
+            let versionResult = hit.flatMap { matches ? runCliUpdateCommand(
+                CliUpdateCommand(executable: $0, arguments: ["--version"]), version: "", timeout: 10).out : nil }
+            let ver = versionResult.flatMap(parseCliExecutableVersion) ?? info.version
             return GlobalCli(
-                name: name, installed: ver, latest: outdated.status == 0 ? (latestByName[name] ?? ver) : nil,
-                displayName: name, channel: .brew,
-                excluded: isFoundationTool(name), allowlisted: true
+                name: name, installed: ver, latest: checkVersions ? try? brewLatestVersion(name, cask: info.cask) : nil,
+                displayName: name, channel: .brew, prefix: prefix, pathHit: hit, pathMatchesPrefix: matches,
+                excluded: isFoundationTool(name), allowlisted: true, resolvedPath: real,
+                updateCommand: CliUpdateCommand(executable: brew, arguments: ["upgrade"] + (info.cask ? ["--cask"] : []) + [name]),
+                brewCask: info.cask
             )
         }
     }
@@ -331,9 +339,24 @@ extension StoreFS {
         }
         guard let latest = cli.latest, latest != cli.installed else { return }
         switch cli.channel {
+        case .native, .bun, .pnpm:
+            guard let command = cli.updateCommand else {
+                throw StoreError.resolveFailed(L("安装渠道待确认，请使用原安装渠道维护。"))
+            }
+            let r = runCliUpdateCommand(command, version: latest)
+            guard r.status == 0 else {
+                throw StoreError.resolveFailed(L("更新失败：\(String((r.out + r.err).suffix(200)))"))
+            }
+        case .unmanaged:
+            throw StoreError.resolveFailed(L("安装渠道待确认，请使用原安装渠道维护。"))
         case .npm:
             try npmGlobalInstall(cli.name, version: latest, prefix: cli.prefix)
         case .brew:
+            if let command = cli.updateCommand {
+                let r = runCliUpdateCommand(command, version: latest)
+                guard r.status == 0 else { throw StoreError.resolveFailed(L("brew 升级失败：\(String((r.out + r.err).suffix(160)))")) }
+                return
+            }
             guard !cli.name.contains("'") else { throw StoreError.unsafeName(cli.name) }
             let r = runProcess("/bin/zsh", ["-lc", "brew upgrade '\(cli.name)' 2>&1"], timeout: 300)
             guard r.status == 0 else {

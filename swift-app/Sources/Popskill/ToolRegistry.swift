@@ -51,6 +51,9 @@ extension ToolDef {
         ToolDef(id: "gemini", name: "Gemini CLI", rootRelative: ".gemini", alwaysShow: false, cliNames: ["gemini"]),
         ToolDef(id: "opencode", name: "OpenCode", rootRelative: ".config/opencode", alwaysShow: false, cliNames: ["opencode"]),
         ToolDef(id: "pi", name: "Pi", rootRelative: ".pi/agent", alwaysShow: false, cliNames: ["pi"]),
+        ToolDef(id: "copilot", name: "Copilot CLI", rootRelative: ".copilot", alwaysShow: false, cliNames: ["copilot"]),
+        ToolDef(id: "crush", name: "Crush", rootRelative: ".config/crush", alwaysShow: false, cliNames: ["crush"]),
+        ToolDef(id: "hermes", name: "Hermes Agent", rootRelative: ".hermes", alwaysShow: false, cliNames: ["hermes"]),
     ]
 
     /// 系统级与当前用户级 Applications 都是 macOS 的合法安装位置。

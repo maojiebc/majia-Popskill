@@ -4,6 +4,26 @@ import XCTest
 
 /// 真实环境只读冒烟（POPSKILL_REAL_SMOKE=1 才跑）：扫真 ~/.agents 验证来源回填与归拢，零写入。
 final class RealEnvSmoke: XCTestCase {
+    func testScanRealCliInstallationsReadOnly() throws {
+        guard ProcessInfo.processInfo.environment["POPSKILL_REAL_SMOKE"] == "1" else { throw XCTSkip("仅手动触发") }
+        let fs = StoreFS(env: .real())
+        let rows = fs.scanMaintainedClis(checkVersions: false)
+        XCTAssertFalse(rows.isEmpty)
+        for cli in rows {
+            print("CLI inventory: \(cli.displayName) · \(cli.channel.rawValue) · \(cli.installed) · active=\(cli.pathMatchesPrefix)")
+            if cli.tracksIndex { XCTAssertNil(cli.latest, "Local inventory must not contact version registries") }
+            if [.native, .bun, .pnpm].contains(cli.channel) {
+                let executable = try XCTUnwrap(cli.updateCommand?.executable)
+                XCTAssertTrue(FileManager.default.isExecutableFile(atPath: executable))
+                XCTAssertNotNil(cli.resolvedPath)
+            }
+        }
+        if let claude = fs.loginWhich("claude"),
+           URL(fileURLWithPath: claude).resolvingSymlinksInPath().path.hasPrefix(FileManager.default.homeDirectoryForCurrentUser.path + "/.local/share/claude/versions/") {
+            XCTAssertTrue(rows.contains { $0.name == "@anthropic-ai/claude-code" && $0.channel == .native && $0.pathHit == claude })
+        }
+    }
+
     func testScanRealEnvironmentReadOnly() throws {
         guard ProcessInfo.processInfo.environment["POPSKILL_REAL_SMOKE"] == "1" else {
             throw XCTSkip("仅手动触发")
@@ -261,6 +281,7 @@ final class StoreFSTests: XCTestCase {
         let cap = Capability(id: "skill:drifty", name: "drifty", type: .skill, linkKind: .skill, desc: "",
                              version: "1.0.0", author: nil, tokens: 0, dirURL: local)
         let entry = Entry(id: "skill:drifty", cap: cap, children: nil, sourceUrl: upstream.path)
+        fs.mutateMeta { $0.entries[entry.id] = StoreMeta.EntryMeta(sourceUrl: upstream.path) }
         XCTAssertNil(try fs.checkUpdate(entry), "先与上游对齐，写入 appliedDigest")
         XCTAssertNotNil(fs.loadMeta().entries["skill:drifty"]?.appliedDigest)
 
@@ -1009,6 +1030,10 @@ final class StoreFSTests: XCTestCase {
         var head = cap("bundle-head"); head.type = .bundle
         let entry = Entry(id: "src:test", cap: head, children: [cap("s-a"), cap("s-b")],
                           bundleKind: .source, sourceUrl: upstream.path)
+        try writeLock([
+            "s-a": ["source": upstream.path, "skillPath": "skills/s-a/SKILL.md"],
+            "s-b": ["source": upstream.path, "skillPath": "skills/s-b/SKILL.md"],
+        ])
 
         for n in ["s-a", "s-b"] {
             try "---\nname: \(n)\nversion: 2.0.0\n---\n新\n".write(

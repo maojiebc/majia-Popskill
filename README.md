@@ -77,6 +77,8 @@ Popskill 的回答是把管理建立在一个最简单的事实上：**技能就
 
 ## 功能
 
+开发分支已补充维护中心的成员变更与上游新增明细，CLI 原生 / bun / pnpm 安装维护，以及 Copilot / Crush / Hermes 技能挂载。实现与验证范围见[能力维护迭代](./docs/dev/capability-maintenance.md)；下方下载仍为正式发布版本。
+
 - **能力矩阵** — 全部技能一张表：每行一个能力，Claude / Codex 两枚状态 pill，点一下挂载/摘除
 - **实时同步** — 终端里 `npx skills add`、`rm -rf`、手动 `ln -s` 之后，界面秒级自动跟上（FSEvents），不用 ⌘R 也不用重启（v2.15）
 - **源式套装** — 同一上游仓库的技能自动归拢成一张卡（宝玉系 22 项、飞书系 26 项），磁盘平铺、symlink 不动
@@ -145,6 +147,7 @@ v2 是一次按第一性原理的重写（一个屏幕、文件系统即数据�
 
 - **[CC Switch](https://github.com/farion1231/cc-switch)** — 这个项目的起点。Popskill v1 以零 fork 方式（git submodule）把它的 Rust services 层直接当存储引擎用；v2 虽然改为纯 Swift 直写文件系统，但 v2.1 的更新机制——内容哈希比对上游、更新前自动备份、按应用独立启用位——都直接借鉴自它的 skill 管理设计。
 - **[Sparkle](https://sparkle-project.org)** — Mac 应用内自动更新的事实标准，本应用的更新分发由它驱动。
+- **[Magpie](https://github.com/yetone/magpie)** — 本轮按实际安装渠道维护 CLI 与扩展工具目录的设计参考；固定源码与许可见[迭代说明](./docs/dev/capability-maintenance.md)。
 - **`npx skills` 生态** — `~/.agents/skills/` 跨工具约定目录与 `.skill-lock.json` 锁文件，是 Popskill 来源识别与互操作的基石。
 
 ---

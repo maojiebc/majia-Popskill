@@ -151,15 +151,19 @@ struct MainView: View {
     private var statStrip: some View {
         let s = model.stats
         let wide = model.wideMatrix
-        return HStack(spacing: 0) {
-            ForEach(CapType.allCases) { t in
-                typeCell(t, s.byType[t] ?? 0)
+        return VStack(spacing: 0) {
+            if model.tools.count > 7 {
+                HStack(spacing: 0) {
+                    ForEach(CapType.allCases) { t in typeCell(t, s.byType[t] ?? 0) }
+                }
+                Ink.hairline2.frame(height: 1)
+                HStack(spacing: 0) { toolStats(s, wide: wide) }
+            } else {
+                HStack(spacing: 0) {
+                    ForEach(CapType.allCases) { t in typeCell(t, s.byType[t] ?? 0) }
+                    toolStats(s, wide: wide)
+                }
             }
-            ForEach(Array(model.tools.enumerated()), id: \.element.id) { i, t in
-                toolCell(t, on: s.activeByTool[t.id] ?? 0, off: s.inactiveByTool[t.id] ?? 0,
-                         last: !wide && i == model.tools.count - 1, compact: wide)
-            }
-            if wide { statLegend }
         }
         .fixedSize(horizontal: false, vertical: true)   // 只取内容高度，别让内部边框把条撑高
         .frame(maxWidth: .infinity)
@@ -168,6 +172,15 @@ struct MainView: View {
         .clipShape(RoundedRectangle(cornerRadius: 9))
         .padding(EdgeInsets(top: 12, leading: 28, bottom: 2, trailing: 28))
         .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private func toolStats(_ s: Stats, wide: Bool) -> some View {
+        ForEach(Array(model.tools.enumerated()), id: \.element.id) { i, t in
+            toolCell(t, on: s.activeByTool[t.id] ?? 0, off: s.inactiveByTool[t.id] ?? 0,
+                     last: !wide && i == model.tools.count - 1, compact: wide)
+        }
+        if wide { statLegend }
     }
 
     /// cell 右侧 1px 分隔（border-right，overlay 不占布局、不撑高）
@@ -1435,22 +1448,31 @@ private struct BundleToolFractions: View {
     var kerning: CGFloat = 0.3
 
     var body: some View {
-        HStack(spacing: 8) {
-            ForEach(tools) { t in
-                VStack(spacing: 3) {
-                    Text(toolColLabel(t))
-                        .font(.ui(labelSize, .bold))
-                        .kerning(kerning)
-                        .foregroundStyle(Ink.tertiary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                    FractionCell(agg: aggregate(children, toolId: t.id))
+        Group {
+            if tools.count > 7 {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(0..<((tools.count + 4) / 5), id: \.self) { row in
+                        HStack(spacing: 8) {
+                            ForEach(Array(tools.dropFirst(row * 5).prefix(5))) { fractionColumn($0) }
+                        }
+                    }
                 }
-                .frame(width: colWidth)
-                .help(t.name)
+            } else {
+                HStack(spacing: 8) { ForEach(tools) { fractionColumn($0) } }
             }
         }
         .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private func fractionColumn(_ tool: Tool) -> some View {
+        VStack(spacing: 3) {
+            Text(toolColLabel(tool))
+                .font(.ui(labelSize, .bold)).kerning(kerning)
+                .foregroundStyle(Ink.tertiary).lineLimit(1).minimumScaleFactor(0.6)
+            FractionCell(agg: aggregate(children, toolId: tool.id))
+        }
+        .frame(width: colWidth)
+        .help(tool.name)
     }
 }
 
