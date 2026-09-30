@@ -8,6 +8,27 @@
     <description>Popskill 自动更新源</description>
     <language>zh-CN</language>
     <item>
+      <title>v2.23.0</title>
+      <pubDate>Wed, 30 Sep 2026 05:52:55 +0000</pubDate>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>v2.23.0 — 技能与 CLI 维护更完整</h2>
+        <p>维护中心现在能展开查看套装里哪些技能有变化、哪些技能是上游新增，并从名单直接安装新增技能。增加本地重新扫描、分类筛选和检查全部入口，CLI 列表显示实际安装位置、管理方式与可用更新。</p>
+        <p>CLI 更新按检测到的安装方式执行，支持 npm、Homebrew、pipx、uv，以及原生安装、Bun 和 pnpm。pnpm 更新绑定实际安装代际与目录，无法可靠确认归属的安装只显示状态，不自动更新。补充 Copilot、Crush、Goose、Magpie，修正 OpenCode 与 Pi 的包名映射，以及 Homebrew 稳定版和预发布版的比较。</p>
+        <p>技能更新在下载前及替换前检查本地内容、来源记录与套装成员是否发生变化；本地内容已改、来源丢失或上游缺少成员时会停止更新，原内容保留。被替换的内容仍先备份到回收站。</p>
+        <p>新增 Copilot、Crush、Hermes 技能挂载目标，默认关闭，按需启用。十个工具列同时显示时，统计条分两行，套装名称和维护按钮保持可读；中英文界面同步覆盖新增能力。</p>
+        <p>参考 CC Switch 和 Magpie 的开放源码实现与使用方式，保留两项目的 MIT 许可及来源致谢。实现范围和限制见仓库的能力维护说明。</p>
+        <p>发布前验证覆盖完整单元测试、中英文原生界面渲染、真实 CLI 安装只读扫描、严格并发构建和打包应用冷启动。正式安装包使用 Developer ID 签名与 Apple 公证，并通过 Sparkle 提供自动更新。</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/maojiebc/majia-Popskill/releases/download/v2.23.0/Popskill-2.23.0.dmg"
+        sparkle:version="294"
+        sparkle:shortVersionString="2.23.0"
+        sparkle:edSignature="dtaZJlG1K7/YSCSsA3uUYZK4Qxm2ygmN1nTVVtAIfWZLH/CPtYRfxG2yrxcyReyK73x7Vv43PjHQYfDgMG0SCg=="
+        length="3504992"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>v2.22.3</title>
       <pubDate>Tue, 22 Sep 2026 02:42:02 +0000</pubDate>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
