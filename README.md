@@ -77,7 +77,7 @@ Popskill 的回答是把管理建立在一个最简单的事实上：**技能就
 
 ## 功能
 
-开发分支已补充维护中心的成员变更与上游新增明细，CLI 原生 / bun / pnpm 安装维护，以及 Copilot / Crush / Hermes 技能挂载。实现与验证范围见[能力维护迭代](./docs/dev/capability-maintenance.md)；下方下载仍为正式发布版本。
+维护中心可查看成员变更与上游新增明细，CLI 支持原生 / bun / pnpm 安装维护，并提供可选的 Copilot / Crush / Hermes 技能挂载。实现与验证范围见[能力维护迭代](./docs/dev/capability-maintenance.md)。
 
 - **能力矩阵** — 全部技能一张表：每行一个能力，Claude / Codex 两枚状态 pill，点一下挂载/摘除
 - **实时同步** — 终端里 `npx skills add`、`rm -rf`、手动 `ln -s` 之后，界面秒级自动跟上（FSEvents），不用 ⌘R 也不用重启（v2.15）
