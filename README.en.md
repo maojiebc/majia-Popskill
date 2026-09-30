@@ -1,5 +1,7 @@
 # Popskill
 
+The development branch adds per-skill maintenance details, upstream skill installation, native / bun / pnpm CLI maintenance, and optional Copilot / Crush / Hermes skill targets. See [the implementation notes](./docs/dev/capability-maintenance.md). Published download links still point to the stable release.
+
 > **Local AI capability manager.** Install a skill once, mount it to every AI tool; fix what breaks, update what's stale. One ledger for all your Claude Code and Codex skills.
 
 <p align="center">

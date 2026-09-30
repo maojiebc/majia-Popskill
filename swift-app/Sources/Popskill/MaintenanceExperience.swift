@@ -66,14 +66,14 @@ enum AgentCliCatalog {
             id: "opencode", displayName: "OpenCode", role: .codingAgent,
             zh: "面向终端的开源编码 Agent，可连接多种模型与开发工具。",
             en: "An open-source terminal coding agent that works with multiple models and developer tools.",
-            aliases: ["opencode"],
+            aliases: ["opencode", "opencode-ai"],
             safeAutomaticUpgrade: true
         ),
         AgentCliDefinition(
             id: "pi", displayName: "Pi", role: .codingAgent,
             zh: "轻量可扩展的终端编码 Agent，强调提示词、工具和扩展组合。",
             en: "A lightweight extensible terminal coding agent built around prompts, tools, and extensions.",
-            aliases: ["@earendil-works/pi-coding-agent", "pi", "pi-coding-agent"],
+            aliases: ["@earendil-works/pi-coding-agent", "@mariozechner/pi-coding-agent", "pi", "pi-coding-agent"],
             safeAutomaticUpgrade: true
         ),
         AgentCliDefinition(
@@ -132,6 +132,30 @@ enum AgentCliCatalog {
             aliases: ["mcporter"],
             safeAutomaticUpgrade: true
         ),
+        AgentCliDefinition(
+            id: "copilot", displayName: "Copilot CLI", role: .codingAgent,
+            zh: "GitHub 的终端编码 Agent，支持项目操作、Skills 和 MCP。",
+            en: "GitHub's terminal coding agent with project operations, Skills, and MCP.",
+            aliases: ["@github/copilot", "copilot", "copilot-cli"], safeAutomaticUpgrade: true
+        ),
+        AgentCliDefinition(
+            id: "crush", displayName: "Crush", role: .codingAgent,
+            zh: "Charm 的终端编码 Agent，可连接多种模型与本地技能。",
+            en: "Charm's terminal coding agent for multiple models and local skills.",
+            aliases: ["@charmland/crush", "crush"], safeAutomaticUpgrade: true
+        ),
+        AgentCliDefinition(
+            id: "goose", displayName: "Goose", role: .codingAgent,
+            zh: "Block 的开源 Agent，通过扩展连接本机开发工具。",
+            en: "Block's open-source agent with extensions for local development tools.",
+            aliases: ["block-goose-cli", "goose"], safeAutomaticUpgrade: true
+        ),
+        AgentCliDefinition(
+            id: "magpie", displayName: "Magpie", role: .orchestration,
+            zh: "统一管理多个 Agent 的模型、能力库和本地网关。",
+            en: "Manages models, a shared capability library, and a local gateway for multiple agents.",
+            aliases: ["magpie"], safeAutomaticUpgrade: true
+        ),
     ]
 
     private static let hintTokens = [
@@ -140,12 +164,8 @@ enum AgentCliCatalog {
     ]
 
     static func definition(for cli: GlobalCli) -> AgentCliDefinition? {
-        let candidates = Set([
-            cli.name.lowercased(),
-            cli.displayName.lowercased(),
-            cliBinName(cli.name).lowercased(),
-        ])
-        return definitions.first { !candidates.isDisjoint(with: $0.aliases) }
+        if [.npm, .bun, .pnpm].contains(cli.channel), maintainedNpmPackages[cli.name] == nil { return nil }
+        return definitions.first { $0.aliases.contains(cli.name.lowercased()) }
     }
 
     static func looksLikeAgent(_ cli: GlobalCli) -> Bool {

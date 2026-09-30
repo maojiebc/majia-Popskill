@@ -27,6 +27,20 @@ struct MaintenanceView: View {
                 Text(policy.periodicCheckEnabled ? L("每 \(policy.intervalHours) 小时检查；自动更新按已授权策略执行。") : L("定期检查未开启；已授权的来源仍可能在启动时更新。"))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }.padding(.horizontal, 24).padding(.bottom, 12)
+            HStack(spacing: 18) {
+                Button(L("\(model.entries.reduce(0) { $0 + $1.updateCount }) 项技能可更新")) {
+                    state.tab = .sources; state.sourceQuery = ""; state.sourceFilter = .updates
+                }
+                Button(L("\(model.globalClis.filter(\.safeRecognizedAgentUpdate).count) 个 CLI 可升级")) {
+                    state.tab = .clis; state.cliQuery = ""; state.cliFilter = .updates
+                }
+                Button(L("\(model.entries.reduce(0) { $0 + $1.upstreamNewCount }) 项上游新增")) {
+                    state.tab = .sources; state.sourceQuery = ""; state.sourceFilter = .newSkills
+                }
+                Spacer()
+                Button(L("检查技能和 CLI")) { model.checkAllMaintenance() }
+                    .disabled(model.checkingClis || model.checkingUpdates || model.maintenanceMutationBusy)
+            }.font(.system(size: 12)).padding(.horizontal, 24).padding(.bottom, 14)
             HStack(spacing: 12) {
                 TextField(L("搜索名称或来源"), text: Binding(
                     get: { state.tab == .sources ? state.sourceQuery : state.cliQuery },
@@ -35,8 +49,8 @@ struct MaintenanceView: View {
                 Picker(L("状态筛选"), selection: Binding(
                     get: { state.tab == .sources ? state.sourceFilter : state.cliFilter },
                     set: { if state.tab == .sources { state.sourceFilter = $0 } else { state.cliFilter = $0 } }
-                )) { ForEach(MaintenanceFilter.allCases, id: \.self) { Text($0.label).tag($0) } }
-                    .pickerStyle(.segmented).labelsHidden().frame(width: 250)
+                )) { ForEach(MaintenanceFilter.allCases.filter { state.tab == .sources || $0 != .newSkills }, id: \.self) { Text($0.label).tag($0) } }
+                    .pickerStyle(.segmented).labelsHidden().frame(width: state.tab == .sources ? 310 : 250)
                 Spacer()
                 if state.tab == .clis {
                     Picker(L("检查范围"), selection: Binding(get: { state.cliScope }, set: { scope in
@@ -124,7 +138,28 @@ struct MaintenanceView: View {
     private func sourceDetails(_ entry: Entry) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Divider()
-            Text(entry.allCaps.map(\.name).joined(separator: " · ")).textSelection(.enabled).foregroundStyle(.secondary)
+            ForEach(entry.allCaps) { cap in
+                HStack {
+                    Text(cap.name).textSelection(.enabled)
+                    if let version = cap.version { Text(version).foregroundStyle(.secondary) }
+                    Spacer()
+                    if entry.changedMembers?.contains(cap.name) == true || (!entry.isBundle && entry.hasUpdate) {
+                        Text(L("可更新")).foregroundStyle(Ink.blue)
+                    } else { Text(L("已安装")).foregroundStyle(.secondary) }
+                }.font(.system(size: 12))
+            }
+            if entry.hasUpstreamNew {
+                Divider()
+                Text(L("上游新增，尚未安装")).fontWeight(.medium)
+                ForEach((entry.upstreamNew ?? []).sorted(), id: \.self) { name in
+                    HStack {
+                        Text(name).textSelection(.enabled)
+                        Spacer()
+                        Button(L("安装此技能")) { model.installUpstreamNew(entry, names: [name]) }
+                            .disabled(entry.isManagedExternally || model.maintenanceMutationBusy || model.checkingUpdates)
+                    }.font(.system(size: 12))
+                }
+            }
             HStack {
                 if supportsBulkAutomaticUpdate(sourceUrl: entry.sourceUrl, managedExternally: entry.isManagedExternally) {
                     Toggle(L("此来源允许自动更新"), isOn: Binding(get: {
@@ -181,6 +216,10 @@ struct MaintenanceView: View {
                     Text(L("安装渠道：\(cli.channel.label)"))
                     if let prefix = cli.prefix { Text(L("安装位置：\(prefix)")) }
                     if let path = cli.pathHit { Text(L("终端命中：\(path)")) }
+                    if let resolved = cli.resolvedPath { Text(L("实际文件：\(resolved)")) }
+                    if let command = cli.updateCommand {
+                        Text(L("更新命令：\(command.display.replacingOccurrences(of: "{version}", with: cli.latest ?? "latest"))"))
+                    }
                     if !cli.safeRecognizedAgentUpdate { Text(L("不在批量升级范围；单独更新前会再次确认目标。")) }
                 }.textSelection(.enabled).font(.system(size: 12)).foregroundStyle(.secondary)
             }
@@ -248,6 +287,10 @@ struct MaintenanceView: View {
             } else { Text(L("尚未检查")) }
             Spacer()
             if state.tab == .sources { Button(L("添加来源…")) { model.sheet = .add } }
+            else {
+                Button(L("重新读取本机")) { model.loadLocalCliInventoryIfNeeded(force: true) }
+                    .disabled(model.checkingClis || model.maintenanceMutationBusy)
+            }
             Button(model.checkingClis || model.checkingUpdates ? L("检查中…") : L("检查更新")) {
                 if state.tab == .sources { model.checkMaintenanceSources() }
                 else { model.checkMaintenanceClis() }

@@ -4,7 +4,7 @@ import Observation
 enum WorkspacePage { case matrix, maintenance }
 enum SettingsSection: String, CaseIterable { case tools, automation, data, about }
 enum MaintenanceTab: String, CaseIterable { case sources, clis }
-enum MaintenanceFilter: String, CaseIterable { case all, updates, issues }
+enum MaintenanceFilter: String, CaseIterable { case all, updates, newSkills, issues }
 enum CliScanScope: String, CaseIterable { case common, all }
 enum CheckOutcome: Sendable { case checking, current, updateAvailable, failed, unsupported }
 struct CheckRecord: Sendable {
@@ -88,6 +88,7 @@ extension MaintenanceFilter {
         switch self {
         case .all: L("全部")
         case .updates: L("可更新")
+        case .newSkills: L("上游新增")
         case .issues: L("需处理")
         }
     }
@@ -112,6 +113,7 @@ extension AppModel {
             switch maintenance.sourceFilter {
             case .all: return matches
             case .updates: return matches && e.hasUpdate
+            case .newSkills: return matches && e.hasUpstreamNew
             case .issues: return matches && (failed || e.localDrifted || e.sourceUrl == nil || e.allCaps.contains { $0.isBroken(tools) })
             }
         }
@@ -120,12 +122,13 @@ extension AppModel {
         globalClis.filter { c in
             guard cliInMaintenanceScope(c, scope: maintenance.cliScope) else { return false }
             let matches = maintenance.cliQuery.isEmpty ||
-                "\(c.name) \(c.maintenanceName)".localizedCaseInsensitiveContains(maintenance.cliQuery)
+                "\(c.name) \(c.maintenanceName) \(c.channel.label) \(c.prefix ?? "")".localizedCaseInsensitiveContains(maintenance.cliQuery)
             let failed = maintenance.cliChecks[c.id]?.outcome == .failed ||
                 maintenance.report.items.contains { $0.id == c.id && ($0.phase == .failed || $0.phase == .unverified) }
             switch maintenance.cliFilter {
             case .all: return matches
             case .updates: return matches && c.hasUpdate
+            case .newSkills: return false
             case .issues: return matches && (failed || !c.pathMatchesPrefix || !c.tracksIndex)
             }
         }
@@ -174,6 +177,10 @@ extension AppModel {
     func checkMaintenanceSources() {
         let ids = Set(remoteSourceCandidates.map(\.id))
         checkUpdates(auto: false, only: ids)
+    }
+    func checkAllMaintenance() {
+        guard checkMaintenanceClis() else { return }
+        checkMaintenanceSources()
     }
     func updateMaintenanceSelection() {
         if maintenance.tab == .sources {

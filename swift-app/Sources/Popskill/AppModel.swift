@@ -945,7 +945,8 @@ final class AppModel {
                     let sourceIsNpm = SourceKind.of(entry.sourceUrl) == .npm
                     self.maintenance.report.setPhase(entryId,
                         sourceIsNpm ? .unverified : (r.updated.isEmpty ? .skipped : .succeeded),
-                        detail: sourceIsNpm ? L("更新命令完成；请检查版本以确认结果。") : nil)
+                        detail: sourceIsNpm ? L("更新命令完成；请检查版本以确认结果。")
+                            : (r.updated.isEmpty ? L("内容已一致，无需替换。") : L("已更新：\(r.updated.joined(separator: L("、")))；旧版已备份。")))
                     let inBatch = self.batchNote(entryId, name: entry.name, ok: true)
                     if !quiet && !inBatch {
                         // npm 源的「更新」= npm i -g 全局 CLI，全程不碰回收站——

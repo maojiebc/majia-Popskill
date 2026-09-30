@@ -1530,12 +1530,13 @@ struct StoreFS: @unchecked Sendable {
         if cap.type == .bundle { return staging }   // 目录形套装 = 整仓比对
         if let sub = cap.repoSubdir {
             let d = staging.appendingPathComponent(sub)
-            if fm.fileExists(atPath: d.path) { return d }
+            if hasManifest(d) { return d }
         }
-        if hasManifest(staging) { return staging }
+        if hasManifest(staging), staging.lastPathComponent == cap.name
+            || frontmatter(staging.appendingPathComponent("SKILL.md"))["name"] == cap.name { return staging }
         for candidate in ["skills/\(cap.name)", cap.name] {
             let d = staging.appendingPathComponent(candidate)
-            if fm.fileExists(atPath: d.path) { return d }
+            if hasManifest(d) { return d }
         }
         return nil
     }
@@ -1609,7 +1610,9 @@ struct StoreFS: @unchecked Sendable {
         var changedPairs: [(name: String, hash: String)] = []
         var changedVersion: String?
         for cap in members where !isSymlink(cap.dirURL) {
-            guard let staged = stagedMemberDir(staging: resolved.stagingDir, cap: cap) else { continue }
+            guard let staged = stagedMemberDir(staging: resolved.stagingDir, cap: cap) else {
+                throw StoreError.resolveFailed(L("上游未找到技能「\(cap.name)」，请核对来源；本地内容已保留。"))
+            }
             let stagedHash = computeDirHash(staged)
             if computeDirHash(cap.dirURL) != stagedHash {
                 changed.append(cap.name)
@@ -1689,33 +1692,128 @@ struct StoreFS: @unchecked Sendable {
 
     /// 执行更新：clone 一次，只换有变化的成员；每个被换的成员先备份进回收站。
     /// symlink 路径不变自动延续。返回 (更新了哪些, 上游新增未装)。
+    struct UpdateSnapshot {
+        let digest: String
+        let directories: [String: UInt64]
+        let source: String?
+        let memberDigests: [String: String]
+        let provenance: [String: UpdateProvenance]
+        let membership: Set<String>?
+    }
+
+    struct UpdateProvenance: Equatable {
+        let source: String?
+        let subdir: String?
+    }
+
+    private func updateProvenance(_ cap: Capability, meta: StoreMeta, lock: [String: LockEntry]) -> UpdateProvenance {
+        let current = provenance(name: cap.name, dir: cap.dirURL, type: cap.layoutKind, meta: meta, lock: lock)
+        return UpdateProvenance(source: current.source, subdir: current.subdir)
+    }
+
+    private func updateMembership(_ entry: Entry, meta: StoreMeta) throws -> Set<String>? {
+        // Local development sources do not form source bundles in the inventory.
+        guard entry.bundleKind == .source, let source = entry.sourceUrl, SourceKind.of(source) != .local else { return nil }
+        guard let current = scanEntries(tools: [], meta: meta).first(where: { $0.id == entry.id && $0.bundleKind == .source }) else {
+            throw StoreError.resolveFailed(L("安装信息已变化，请重新检查。"))
+        }
+        let paths = Set(current.allCaps.map { $0.dirURL.path })
+        guard paths == Set(entry.allCaps.map { $0.dirURL.path }) else {
+            throw StoreError.resolveFailed(L("安装信息已变化，请重新检查。"))
+        }
+        return paths
+    }
+
+    func snapshotForUpdate(_ entry: Entry) throws -> UpdateSnapshot {
+        let meta = loadMeta()
+        let lock = loadLock()
+        let membership = try updateMembership(entry, meta: meta)
+        let members = entry.bundleKind == .source ? entry.allCaps : [entry.cap]
+        var directories: [String: UInt64] = [:]
+        var memberDigests: [String: String] = [:]
+        var sources: [String: UpdateProvenance] = [:]
+        for cap in members where !isSymlink(cap.dirURL) {
+            let current = updateProvenance(cap, meta: meta, lock: lock)
+            let adoptedOrphan = entry.bundleKind == .source && membership != nil && current.source == nil
+            guard adoptedOrphan || (current.source == entry.sourceUrl.map(StoreFS.normalizeSource) && current.subdir == cap.repoSubdir) else {
+                throw StoreError.resolveFailed(L("安装信息已变化，请重新检查。"))
+            }
+            let attributes = try fm.attributesOfItem(atPath: cap.dirURL.path)
+            guard let inode = attributes[.systemFileNumber] as? NSNumber else {
+                throw StoreError.resolveFailed(L("安装信息已变化，请重新检查。"))
+            }
+            directories[cap.dirURL.path] = inode.uint64Value
+            memberDigests[cap.dirURL.path] = computeDirHash(cap.dirURL)
+            sources[cap.dirURL.path] = current
+        }
+        return UpdateSnapshot(digest: localDigest(entry), directories: directories,
+                              source: meta.entries[entry.id]?.sourceUrl, memberDigests: memberDigests,
+                              provenance: sources, membership: membership)
+    }
+
+    func assertUpdateSnapshot(_ entry: Entry, snapshot: UpdateSnapshot) throws {
+        let current = try snapshotForUpdate(entry)
+        guard current.directories == snapshot.directories, current.source == snapshot.source,
+              current.provenance == snapshot.provenance, current.membership == snapshot.membership else {
+            throw StoreError.resolveFailed(L("安装信息已变化，请重新检查。"))
+        }
+        guard current.digest == snapshot.digest else { throw StoreError.localDrift(entry.name) }
+    }
+
+    /// Recheck immediately before replacing each member. A source transaction's
+    /// earlier members may already be updated, while an editor can still change
+    /// this member during the incoming copy without taking Popskill's write lock.
+    func assertUpdateMember(_ cap: Capability, snapshot: UpdateSnapshot) throws {
+        let path = cap.dirURL.path
+        let attributes = try fm.attributesOfItem(atPath: path)
+        guard !isSymlink(cap.dirURL),
+              let inode = attributes[.systemFileNumber] as? NSNumber,
+              inode.uint64Value == snapshot.directories[path],
+              updateProvenance(cap, meta: loadMeta(), lock: loadLock()) == snapshot.provenance[path] else {
+            throw StoreError.resolveFailed(L("安装信息已变化，请重新检查。"))
+        }
+        guard computeDirHash(cap.dirURL) == snapshot.memberDigests[path] else { throw StoreError.localDrift(cap.name) }
+    }
+
     @discardableResult
     func applyUpdate(_ entry: Entry, force: Bool = false) throws -> (updated: [String], upstreamNew: [String]) {
         guard let url = entry.sourceUrl else { throw StoreError.resolveFailed(L("该源没有记录 URL，无法更新")) }
         if SourceKind.of(url) == .npm { return try applyNpmUpdate(entry) }   // 升级全局 CLI（v2.14）
         if !force { try assertNotDrifted(entry) }
         if SourceKind.of(url) == .wellKnown, url.hasPrefix("wk:") {          // 换 SKILL.md 单文件（v2.14）
-            let result = try applyWellKnownUpdate(entry, host: String(url.dropFirst(3)))
+            let result = try applyWellKnownUpdate(entry, host: String(url.dropFirst(3)), force: force)
             saveAppliedDigest(entry.id, localDigest(entry))
             saveDrifted(entry.id, false)
             return result
         }
+        let snapshot = try snapshotForUpdate(entry)
         let resolved = try resolve(url)
         defer { discardStaging(resolved) }
         try lockStoreMutation()
         defer { unlockStoreMutation() }
+        try assertUpdateSnapshot(entry, snapshot: snapshot)
+        if !force { try assertNotDrifted(entry) }
 
         let members = entry.isBundle && entry.bundleKind == .source ? (entry.children ?? []) : [entry.cap]
+        // Validate the whole source before writing any member. A removed/renamed skill
+        // is an actionable failure, never a successful empty or partial update.
+        let stagedMembers: [(Capability, URL)] = try members.filter { !isSymlink($0.dirURL) }.map { cap in
+            guard let staged = stagedMemberDir(staging: resolved.stagingDir, cap: cap) else {
+                throw StoreError.resolveFailed(L("上游未找到技能「\(cap.name)」，请核对来源；本地内容已保留。"))
+            }
+            return (cap, staged)
+        }
         var updated: [String] = []
-        for cap in members where !isSymlink(cap.dirURL) {
-            guard let staged = stagedMemberDir(staging: resolved.stagingDir, cap: cap),
-                  computeDirHash(cap.dirURL) != computeDirHash(staged) else { continue }
+        for (cap, staged) in stagedMembers {
+            guard computeDirHash(cap.dirURL) != computeDirHash(staged) else { continue }
             // 原子换版：先把新版拷到隐藏临时名——copy 失败（磁盘满/源不可读）时旧版原样无损。
             // 曾经是先弃旧版再 copy，失败即丢数据且 symlink 全断。
             let incoming = cap.dirURL.deletingLastPathComponent()
                 .appendingPathComponent(".popskill-incoming-\(cap.name)")
             try? fm.removeItem(at: incoming)
             do { try fm.copyItem(at: staged, to: incoming) }
+            catch { try? fm.removeItem(at: incoming); throw partialFailure(error, done: updated) }
+            do { try assertUpdateMember(cap, snapshot: snapshot) }
             catch { try? fm.removeItem(at: incoming); throw partialFailure(error, done: updated) }
             let backup = try moveToTrash(cap.dirURL)
             do { try fm.moveItem(at: incoming, to: cap.dirURL) }

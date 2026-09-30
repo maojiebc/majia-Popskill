@@ -5,7 +5,7 @@ final class MaintenanceExperienceTests: XCTestCase {
     func testAgentCatalogRecognizesMainstreamNpmAgents() {
         let gemini = GlobalCli(name: "@google/gemini-cli", installed: "1.0.0")
         let qwen = GlobalCli(name: "@qwen-code/qwen-code", installed: "1.0.0")
-        let opencode = GlobalCli(name: "opencode", installed: "1.0.0")
+        let opencode = GlobalCli(name: "opencode-ai", installed: "1.0.0")
 
         XCTAssertEqual(gemini.agentDefinition?.displayName, "Gemini CLI")
         XCTAssertEqual(qwen.agentDefinition?.displayName, "Qwen Code")
